@@ -1,0 +1,439 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  EMPLOYER
+  JOB_SEEKER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  password      String?   @db.Text
+  role          UserRole  @default(JOB_SEEKER)
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  jobListings   JobListing[]
+  jobRequests   JobRequest[]
+  resumes       Resume[]
+  applications  Application[]
+  payments      Payment[]
+  reportsMade   Report[]  @relation("Reporter")
+  reportsReceived Report[] @relation("Reported")
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  emailConsents EmailConsent[]
+
+  @@map("users")
+}
+
+model Profile {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Common fields
+  phone           String?
+  country         String?
+  city            String?
+  address         String?
+  postalCode      String?  @map("postal_code")
+  latitude        Float?
+  longitude       Float?
+
+  // Job seeker fields
+  headline        String?
+  summary         String?  @db.Text
+  skills          String[] // e.g. ["React", "Node.js", "Project Management"]
+  expertiseLevel  String?  @map("expertise_level") // Entry, Mid, Senior, Executive
+  desiredSalary   Decimal? @map("desired_salary") @db.Decimal(12, 2)
+  desiredCurrency String?  @map("desired_currency") // USD, EUR, etc.
+  yearsExperience Int?     @map("years_experience")
+  education       Json?    // [{ institution, degree, field, year }]
+  workHistory     Json?    @map("work_history") // [{ company, title, dates, description }]
+  languages       String[]
+  isPublic        Boolean  @default(false) @map("is_public")
+
+  // Employer fields
+  companyName     String?  @map("company_name")
+  companyWebsite  String?  @map("company_website")
+  companySize     String?  @map("company_size")
+  industry        String?
+  isVerified      Boolean  @default(false) @map("is_verified")
+  verificationMethod String? @map("verification_method") // email_domain, phone, manual
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+  REMOTE
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_MODERATION
+  ACTIVE
+  REJECTED
+  EXPIRED
+  CLOSED
+}
+
+model JobListing {
+  id              String        @id @default(cuid())
+  employerId      String        @map("employer_id")
+  employer        User          @relation(fields: [employerId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String        @db.Text
+  requirements    String?       @db.Text
+  skillsRequired  String[]      @map("skills_required")
+  jobType         JobType       @map("job_type")
+  status          ListingStatus @default(PENDING_MODERATION)
+
+  // Location
+  country         String
+  city            String
+  address         String?
+  postalCode      String?       @map("postal_code")
+  latitude        Float?
+  longitude       Float?
+  isRemote        Boolean       @default(false) @map("is_remote")
+
+  // Salary
+  salaryMin       Decimal?      @map("salary_min") @db.Decimal(12, 2)
+  salaryMax       Decimal?      @map("salary_max") @db.Decimal(12, 2)
+  salaryCurrency  String        @map("salary_currency") @default("USD")
+  salaryPeriod    String        @map("salary_period") @default("yearly") // hourly, monthly, yearly
+
+  // Contact
+  contactName     String?       @map("contact_name")
+  contactEmail    String        @map("contact_email")
+  contactPhone    String?       @map("contact_phone")
+
+  // Source
+  source          String        @default("direct") // direct, arbeitnow, jooble, remoteok, usajobs
+  externalId      String?       @map("external_id")
+  externalUrl     String?       @map("external_url")
+
+  // Moderation
+  moderationNotes String?       @map("moderation_notes") @db.Text
+  moderatedById   String?       @map("moderated_by_id")
+  moderatedAt     DateTime?     @map("moderated_at")
+
+  // Analytics
+  viewCount       Int           @default(0) @map("view_count")
+  applicationCount Int          @default(0) @map("application_count")
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  expiresAt       DateTime?     @map("expires_at")
+
+  applications    Application[]
+  reports         Report[]
+
+  @@index([status, createdAt])
+  @@index([latitude, longitude])
+  @@index([country, city])
+  @@index([employerId])
+  @@map("job_listings")
+}
+
+model JobRequest {
+  id              String   @id @default(cuid())
+  seekerId        String   @map("seeker_id")
+  seeker          User     @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+
+  title           String
+  summary         String   @db.Text
+  skills          String[]
+  expertiseLevel  String   @map("expertise_level")
+  desiredSalary   Decimal? @map("desired_salary") @db.Decimal(12, 2)
+  desiredCurrency String   @map("desired_currency") @default("USD")
+
+  // Location preference
+  preferredCountry String? @map("preferred_country")
+  preferredCity    String? @map("preferred_city")
+  isRemoteOk       Boolean @default(true) @map("is_remote_ok")
+
+  status          String   @default("active") // active, filled, closed
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([seekerId])
+  @@index([status])
+  @@map("job_requests")
+}
+
+model Resume {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  content     String   @db.Text // The generated resume text
+  htmlContent String?  @map("html_content") @db.Text
+  targetJobId String?  @map("target_job_id")
+  language    String   @default("en")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model Application {
+  id              String   @id @default(cuid())
+  jobListingId    String   @map("job_listing_id")
+  jobListing      JobListing @relation(fields: [jobListingId], references: [id], onDelete: Cascade)
+  seekerId        String   @map("seeker_id")
+  seeker          User     @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+
+  resumeId        String?  @map("resume_id")
+  coverLetter     String?  @map("cover_letter") @db.Text
+  emailContent    String?  @map("email_content") @db.Text
+  emailSent       Boolean  @default(false) @map("email_sent")
+  emailSentAt     DateTime? @map("email_sent_at")
+  emailMessageId  String?  @map("email_message_id")
+
+  status          String   @default("pending") // pending, sent, viewed, rejected, hired
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([jobListingId, seekerId])
+  @@index([seekerId])
+  @@index([jobListingId])
+  @@map("applications")
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum PaymentMethod {
+  BTC
+  ETH
+  USDT_ERC20
+  USDT_TRC20
+  DOGE
+  TON
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String        @map("user_id")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amountUsd     Decimal       @map("amount_usd") @db.Decimal(12, 2)
+  method        PaymentMethod
+  txHash        String        @unique @map("tx_hash")
+  walletAddress String        @map("wallet_address")
+  status        PaymentStatus @default(PENDING)
+
+  reviewedById  String?       @map("reviewed_by_id")
+  reviewedAt    DateTime?     @map("reviewed_at")
+  notes         String?       @db.Text
+
+  membershipMonths Int       @map("membership_months") @default(1)
+  membershipActivatedAt DateTime? @map("membership_activated_at")
+  membershipExpiresAt DateTime? @map("membership_expires_at")
+
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([txHash])
+  @@map("payments")
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportReason {
+  FRAUD
+  DISCRIMINATION
+  ILLEGAL_CONTENT
+  SPAM
+  MISLEADING
+  OTHER
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  reporterId  String       @map("reporter_id")
+  reporter    User         @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedId  String?      @map("reported_id")
+  reported    User?        @relation("Reported", fields: [reportedId], references: [id], onDelete: SetNull)
+
+  jobListingId String?     @map("job_listing_id")
+  jobListing   JobListing? @relation(fields: [jobListingId], references: [id], onDelete: Cascade)
+
+  reason      ReportReason
+  description String       @db.Text
+  status      ReportStatus @default(OPEN)
+
+  resolvedById String?    @map("resolved_by_id")
+  resolvedAt   DateTime?  @map("resolved_at")
+  resolution   String?    @db.Text
+
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([reporterId])
+  @@map("reports")
+}
+
+model EmailConsent {
+  id          String   @id @default(cuid())
+  userId      String   @unique @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  consented   Boolean  @default(false)
+  consentText String   @map("consent_text") @db.Text
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  consentedAt DateTime? @map("consented_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("email_consents")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action      String   // e.g. "EMAIL_SENT", "PAYMENT_APPROVED", "LISTING_MODERATED"
+  entityType  String   @map("entity_type") // e.g. "Application", "Payment", "JobListing"
+  entityId    String?  @map("entity_id")
+  details     Json?    // Flexible JSON for context
+  ipAddress   String?  @map("ip_address")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model AdminSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  updatedById String?  @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_settings")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String   // e.g. "NEW_MATCH", "APPLICATION_RESPONSE", "PAYMENT_CONFIRMED"
+  title       String
+  message     String   @db.Text
+  data        Json?    // Related IDs, URLs, etc.
+  read        Boolean  @default(false)
+  emailed     Boolean  @default(false)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model RateLimit {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. "email:userId:2024-01-15"
+  count       Int      @default(0)
+  windowStart DateTime @map("window_start")
+  expiresAt   DateTime @map("expires_at")
+
+  @@index([key])
+  @@index([expiresAt])
+  @@map("rate_limits")
+}
