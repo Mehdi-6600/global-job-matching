@@ -22,8 +22,8 @@ export const {
   session: { strategy: "jwt" },
   secret: env.AUTH_SECRET,
   pages: {
-    signIn: "/en/login",
-    error: "/en/login",
+    signIn: "/login",
+    error: "/login",
   },
   providers: [
     Credentials({
