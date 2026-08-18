@@ -1,23 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { Link as IntlLink } from "@/lib/i18n/routing";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
   const t = useTranslations("Nav");
   const { data: session } = useSession();
-  const pathname = usePathname();
 
   return (
     <nav className="border-b bg-background">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <IntlLink href="/" className="text-xl font-bold">
+        <Link href="/" className="text-xl font-bold">
           GlobalJob
-        </IntlLink>
+        </Link>
 
         <div className="flex items-center gap-4">
           {session?.user ? (
@@ -31,12 +28,12 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <IntlLink href="/login">
+              <Link href="/login">
                 <Button variant="ghost" size="sm">{t("login")}</Button>
-              </IntlLink>
-              <IntlLink href="/register">
+              </Link>
+              <Link href="/register">
                 <Button size="sm">{t("register")}</Button>
-              </IntlLink>
+              </Link>
             </>
           )}
         </div>
