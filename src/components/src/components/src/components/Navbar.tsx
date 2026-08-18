@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
-  const t = useTranslations("Nav");
   const { data: session } = useSession();
 
   return (
@@ -23,16 +21,16 @@ export function Navbar() {
                 {session.user.name || session.user.email}
               </span>
               <Button variant="outline" size="sm" onClick={() => signOut()}>
-                {t("logout")}
+                Logout
               </Button>
             </>
           ) : (
             <>
               <Link href="/login">
-                <Button variant="ghost" size="sm">{t("login")}</Button>
+                <Button variant="ghost" size="sm">Login</Button>
               </Link>
               <Link href="/register">
-                <Button size="sm">{t("register")}</Button>
+                <Button size="sm">Register</Button>
               </Link>
             </>
           )}
