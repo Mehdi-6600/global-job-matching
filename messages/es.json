@@ -2,6 +2,35 @@
   "Nav": {
     "login": "Iniciar sesión",
     "register": "Registrarse",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "dashboard": "Panel",
+    "jobs": "Empleos",
+    "profile": "Perfil",
+    "admin": "Admin"
+  },
+  "Home": {
+    "title": "Encuentra tu próximo trabajo en cualquier lugar",
+    "subtitle": "Búsqueda global de empleo impulsada por IA. Gratis para empezar.",
+    "ctaJobs": "Explorar empleos",
+    "ctaRegister": "Empezar"
+  },
+  "Auth": {
+    "loginTitle": "Iniciar sesión",
+    "registerTitle": "Crear cuenta",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "name": "Nombre completo",
+    "role": "Soy un...",
+    "jobSeeker": "Buscador de empleo",
+    "employer": "Empleador",
+    "submitLogin": "Iniciar sesión",
+    "submitRegister": "Crear cuenta",
+    "noAccount": "¿No tienes cuenta?",
+    "hasAccount": "¿Ya tienes cuenta?",
+    "errors": {
+      "invalidCredentials": "Correo o contraseña inválidos",
+      "emailExists": "El correo ya está registrado",
+      "generic": "Algo salió mal"
+    }
   }
 }
