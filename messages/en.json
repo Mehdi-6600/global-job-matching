@@ -2,6 +2,35 @@
   "Nav": {
     "login": "Login",
     "register": "Register",
-    "logout": "Logout"
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "jobs": "Jobs",
+    "profile": "Profile",
+    "admin": "Admin"
+  },
+  "Home": {
+    "title": "Find Your Next Job Anywhere",
+    "subtitle": "Global job matching powered by AI. Free to start.",
+    "ctaJobs": "Browse Jobs",
+    "ctaRegister": "Get Started"
+  },
+  "Auth": {
+    "loginTitle": "Sign In",
+    "registerTitle": "Create Account",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full Name",
+    "role": "I am a...",
+    "jobSeeker": "Job Seeker",
+    "employer": "Employer",
+    "submitLogin": "Sign In",
+    "submitRegister": "Create Account",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "emailExists": "Email already registered",
+      "generic": "Something went wrong"
+    }
   }
 }
