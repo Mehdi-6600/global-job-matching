@@ -1,98 +1,78 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 export default function RegisterPage() {
-  const t = useTranslations("Auth");
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("jobSeeker");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError("");
+    setLoading(true);
+    const form = new FormData(e.currentTarget);
+    const name = form.get("name") as string;
+    const email = form.get("email") as string;
+    const password = form.get("password") as string;
+    const role = form.get("role") as string;
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role }),
-    });
-
-    if (res.ok) {
-      await signIn("credentials", { email, password, redirect: false });
-      router.push("/dashboard");
-    } else {
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password, role }),
+      });
       const data = await res.json();
-      setError(data.error || t("errors.generic"));
+
+      if (!res.ok) {
+        toast({ title: "Error", description: data.error || "Something went wrong", variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "Account created. Please sign in." });
+        router.push("/login");
+      }
+    } catch {
+      toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-6">{t("registerTitle")}</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">{t("name")}</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 mt-1"
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">{t("email")}</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 mt-1"
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">{t("password")}</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 mt-1"
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">{t("role")}</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 mt-1"
-            >
-              <option value="jobSeeker">{t("jobSeeker")}</option>
-              <option value="employer">{t("employer")}</option>
-            </select>
-          </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <Button type="submit" className="w-full">
-            {t("submitRegister")}
-          </Button>
-        </form>
-        <p className="text-sm text-muted-foreground mt-4 text-center">
-          {t("hasAccount")}{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            {t("loginTitle")}
-          </Link>
-        </p>
-      </div>
+    <div className="mx-auto max-w-sm py-12">
+      <h1 className="text-2xl font-bold mb-6">Create Account</h1>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Full Name</label>
+          <input name="name" required className="w-full rounded-md border px-3 py-2" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Email</label>
+          <input name="email" type="email" required className="w-full rounded-md border px-3 py-2" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Password</label>
+          <input name="password" type="password" required minLength={6} className="w-full rounded-md border px-3 py-2" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">I am a...</label>
+          <select name="role" defaultValue="JOB_SEEKER" className="w-full rounded-md border px-3 py-2">
+            <option value="JOB_SEEKER">Job Seeker</option>
+            <option value="EMPLOYER">Employer</option>
+          </select>
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "..." : "Create Account"}
+        </Button>
+      </form>
+      <p className="mt-4 text-sm text-center text-muted-foreground">
+        Already have an account?{" "}
+        <Link href="/login" className="underline">
+          Sign In
+        </Link>
+      </p>
     </div>
   );
 }
