@@ -1,32 +1,15 @@
-"use client";
-
-import { useSession } from "next-auth/react";
+import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/Navbar";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session, status } = useSession();
-
-  if (status === "loading") {
-    return <div className="p-8">Loading...</div>;
+  const session = await auth();
+  if (!isAdmin(session?.user?.role)) {
+    redirect("/");
   }
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  if (session.user?.role !== "admin") {
-    redirect("/dashboard");
-  }
-
-  return (
-    <div>
-      <Navbar />
-      <main>{children}</main>
-    </div>
-  );
+  return <>{children}</>;
 }
