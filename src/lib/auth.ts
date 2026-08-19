@@ -58,22 +58,21 @@ export const {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        (token as any).id = user.id;
+        (token as any).role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.id = (token as any).id as string;
+        session.user.role = (token as any).role as string;
       }
       return session;
     },
   },
   events: {
-    async signIn({ user, account, profile, isNewUser }) {
-      // Auto-promote OWNER based on email
+    async signIn({ user, isNewUser }) {
       if (isNewUser && user.email === env.OWNER_EMAIL) {
         await db.user.update({
           where: { id: user.id },
@@ -84,7 +83,7 @@ export const {
   },
 });
 
-// Types augmentation
+// Types augmentation — only augment next-auth, NOT next-auth/jwt
 declare module "next-auth" {
   interface Session {
     user: {
@@ -96,13 +95,6 @@ declare module "next-auth" {
     };
   }
   interface User {
-    role: string;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
     role: string;
   }
 }
