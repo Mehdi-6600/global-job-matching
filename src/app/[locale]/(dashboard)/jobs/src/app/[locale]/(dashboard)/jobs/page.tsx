@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { JobCard } from "@/components/job-card";
 import type { JobMatch } from "@/lib/jobs/matcher";
 
@@ -17,7 +16,6 @@ interface SearchStats {
 }
 
 export default function JobsPage() {
-  const t = useTranslations("Jobs");
   const [jobTitle, setJobTitle] = useState("");
   const [location, setLocation] = useState("");
   const [skills, setSkills] = useState("");
@@ -34,7 +32,6 @@ export default function JobsPage() {
     setLoading(true);
 
     try {
-      // Parse skills from comma-separated input
       const skillsArray = skills
         .split(",")
         .map((s) => s.trim())
@@ -82,7 +79,6 @@ export default function JobsPage() {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Find Your Next Job
@@ -92,13 +88,11 @@ export default function JobsPage() {
           </p>
         </div>
 
-        {/* Search Form */}
         <form
           onSubmit={handleSearch}
           className="bg-card border border-border rounded-lg p-6 mb-8 shadow-sm"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {/* Job Title */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Job Title
@@ -112,7 +106,6 @@ export default function JobsPage() {
               />
             </div>
 
-            {/* Location */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Location
@@ -126,7 +119,6 @@ export default function JobsPage() {
               />
             </div>
 
-            {/* Skills */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Skills (comma-separated)
@@ -140,7 +132,6 @@ export default function JobsPage() {
               />
             </div>
 
-            {/* Min Salary */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Min Salary (optional)
@@ -164,14 +155,12 @@ export default function JobsPage() {
           </button>
         </form>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md mb-6">
             {error}
           </div>
         )}
 
-        {/* Stats */}
         {stats && !loading && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-card border border-border rounded-lg p-4">
@@ -198,7 +187,6 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Loading State */}
         {loading && (
           <div className="flex justify-center py-12">
             <div className="animate-spin">
@@ -207,7 +195,6 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Job Results Grid */}
         {!loading && matches.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-6">
@@ -221,7 +208,6 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Empty State */}
         {!loading && matches.length === 0 && stats && (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">
@@ -230,7 +216,6 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Initial State */}
         {!loading && matches.length === 0 && !stats && (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">
