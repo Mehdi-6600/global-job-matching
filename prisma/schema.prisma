@@ -123,6 +123,9 @@ model Profile {
   isVerified      Boolean  @default(false) @map("is_verified")
   verificationMethod String? @map("verification_method") // email_domain, phone, manual
 
+  // Search settings
+  searchRadiusKm  Int?     @map("search_radius_km") @default(50)
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
