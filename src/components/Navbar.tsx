@@ -13,7 +13,6 @@ export function Navbar() {
         <Link href="/" className="text-xl font-bold">
           GlobalJob
         </Link>
-
         <div className="flex items-center gap-4">
           {session?.user ? (
             <>
