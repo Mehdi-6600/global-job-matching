@@ -4,16 +4,44 @@ export default async function JobsPage() {
   // دریافت مشاغل از APIهای خارجی
   const jobs = await fetchAllJobs("developer", "remote");
 
+  // اگر هیچ شغلی دریافت نشد، داده‌های نمونه رو نشون بده
+  const sampleJobs = [
+    {
+      id: "1",
+      title: "Senior React Developer",
+      company: "Tech Corp",
+      location: "Remote",
+      salary: "$120k/year",
+      description: "We are looking for a Senior React Developer...",
+      url: "https://example.com",
+      source: "sample",
+      postedAt: new Date(),
+    },
+    {
+      id: "2",
+      title: "Full Stack Engineer",
+      company: "Startup Inc",
+      location: "Berlin, Germany",
+      salary: "$90k/year",
+      description: "Join our team as a Full Stack Engineer...",
+      url: "https://example.com",
+      source: "sample",
+      postedAt: new Date(),
+    },
+  ];
+
+  const displayJobs = jobs.length > 0 ? jobs : sampleJobs;
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Available Jobs</h1>
-      {jobs.length === 0 ? (
+      {displayJobs.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No active listings yet. Check back soon!</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {jobs.map((job) => (
+          {displayJobs.map((job) => (
             <div key={job.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div>
@@ -29,6 +57,11 @@ export default async function JobsPage() {
             </div>
           ))}
         </div>
+      )}
+      {jobs.length === 0 && (
+        <p className="text-sm text-muted-foreground mt-4 text-center">
+          ⚠️ Using sample data. API connection failed.
+        </p>
       )}
     </div>
   );
