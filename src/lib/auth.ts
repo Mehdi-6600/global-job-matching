@@ -5,7 +5,6 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "./db";
 import { env } from "./env";
-import { ROLES } from "./roles";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -58,32 +57,22 @@ export const {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        (token as any).id = user.id;
-        (token as any).role = user.role;
+        token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = (token as any).id as string;
-        session.user.role = (token as any).role as string;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
   },
-  events: {
-    async signIn({ user, isNewUser }) {
-      if (isNewUser && user.email === env.OWNER_EMAIL) {
-        await db.user.update({
-          where: { id: user.id },
-          data: { role: ROLES.OWNER },
-        });
-      }
-    },
-  },
 });
 
-// Types augmentation — only augment next-auth, NOT next-auth/jwt
+// Types augmentation
 declare module "next-auth" {
   interface Session {
     user: {
@@ -95,6 +84,13 @@ declare module "next-auth" {
     };
   }
   interface User {
+    role: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
     role: string;
   }
 }
