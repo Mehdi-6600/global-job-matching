@@ -76,7 +76,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* خدمات (جدید) */}
+      {/* خدمات */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-12">
@@ -125,6 +125,69 @@ export default function HomePage() {
                 <p className="text-gray-600 text-sm">{service.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About / Why Us (جدید) */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">About Us</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-6">
+                Why Global<span className="text-blue-600">Job</span>?
+              </h2>
+              <p className="text-gray-600 text-lg mb-6">
+                We connect talented professionals with global opportunities using cutting-edge AI technology.
+                Our platform is designed to make job searching simple, fast, and effective.
+              </p>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold mt-0.5">✓</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">AI-Powered Matching</h4>
+                    <p className="text-gray-600 text-sm">Our algorithm learns your preferences and finds the perfect match.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold mt-0.5">✓</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Global Opportunities</h4>
+                    <p className="text-gray-600 text-sm">Access job listings from companies around the world.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm font-bold mt-0.5">✓</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Secure & Private</h4>
+                    <p className="text-gray-600 text-sm">Your data is protected with enterprise-grade security.</p>
+                  </div>
+                </li>
+              </ul>
+              <Link href="/about">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Learn More →
+                </Button>
+              </Link>
+            </div>
+            <div className="relative">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-8 text-white">
+                <div className="text-6xl font-bold mb-4">AI</div>
+                <p className="text-lg opacity-90">Cutting-edge technology for job matching</p>
+              </div>
+              <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl p-4 max-w-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                    <span className="text-2xl">🚀</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">98% Success Rate</p>
+                    <p className="text-xs text-gray-500">Based on user satisfaction</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
