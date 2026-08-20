@@ -1,113 +1,95 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Briefcase, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Menu, X, Sparkles } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
+
+const navLinks = [
+  { label: "Jobs", href: "/jobs" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Dashboard", href: "/dashboard" },
+];
 
 export function Navbar() {
-  const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navLinks = [
-    { href: "/jobs", label: "Jobs" },
-    { href: "/pricing", label: "Pricing" },
-    { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
-  ];
-
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b-0 mx-4 mt-4">
-      <div className="container mx-auto flex h-14 items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-          <Briefcase className="h-5 w-5 text-cyan-400" />
-          <span className="neon-text">Global Job Matching</span>
-        </Link>
+    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-lg font-bold bg-gradient-to-r from-slate-900 to-blue-700 dark:from-white dark:to-blue-200 bg-clip-text text-transparent">
+              GlobalJob
+            </span>
+          </Link>
 
-        <div className="hidden md:flex items-center gap-8 text-sm">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-white/70 hover:text-cyan-400 transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="hidden md:flex items-center gap-3">
-          {session?.user ? (
-            <>
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
-                  Dashboard
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => signOut()}
-                className="text-white/70 hover:text-white hover:bg-white/10"
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-all"
               >
-                Logout
-              </Button>
-            </>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
-                  Login
-                </Button>
+                {link.label}
               </Link>
-              <Link href="/register">
-                <Button size="sm" className="btn-primary">Register</Button>
-              </Link>
-            </>
-          )}
-        </div>
+            ))}
+          </div>
 
-        <button
-          className="md:hidden text-white/70"
-          onClick={() => setMobileOpen(!mobileOpen)}
-        >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+          {/* Right Actions */}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <ThemeToggle />
+
+            <Link
+              href="/login"
+              className="hidden sm:inline-flex h-9 px-4 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-shadow"
+            >
+              Sign In
+            </Link>
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden p-2 rounded-lg glass"
+            >
+              {mobileOpen ? (
+                <X className="w-5 h-5 text-slate-700 dark:text-white/70" />
+              ) : (
+                <Menu className="w-5 h-5 text-slate-700 dark:text-white/70" />
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden glass-strong border-t border-white/10 px-6 py-4 space-y-3">
-          {navLinks.map((link) => (
+        <div className="md:hidden glass border-t border-black/5 dark:border-white/10">
+          <div className="px-4 py-3 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="block px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-all"
+              >
+                {link.label}
+              </Link>
+            ))}
             <Link
-              key={link.href}
-              href={link.href}
-              className="block text-white/70 hover:text-cyan-400 transition-colors"
+              href="/login"
               onClick={() => setMobileOpen(false)}
+              className="block px-4 py-2 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-500/5 transition-all"
             >
-              {link.label}
+              Sign In
             </Link>
-          ))}
-          <div className="pt-3 border-t border-white/10 flex gap-3">
-            {session?.user ? (
-              <>
-                <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
-                  <Button size="sm" className="btn-primary w-full">Dashboard</Button>
-                </Link>
-                <Button size="sm" variant="ghost" onClick={() => signOut()} className="text-white/70 w-full">
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" onClick={() => setMobileOpen(false)}>
-                  <Button size="sm" variant="ghost" className="text-white/70 w-full">Login</Button>
-                </Link>
-                <Link href="/register" onClick={() => setMobileOpen(false)}>
-                  <Button size="sm" className="btn-primary w-full">Register</Button>
-                </Link>
-              </>
-            )}
           </div>
         </div>
       )}
