@@ -3,12 +3,12 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { auth } from "@/lib/auth";
 import { SessionProvider } from "@/components/session-provider";
-import { Navbar } from "@/components/navbar";  // ← اصلاح شد (n کوچک)
+import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/footer";
 import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
-  title: "Global Job Matching - v2",
+  title: "Global Job Matching",
   description: "Find jobs worldwide",
 };
 
@@ -21,14 +21,13 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${GeistSans.className} min-h-screen bg-background text-foreground antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <SessionProvider session={session}>
-            <Navbar />
-            <main className="container mx-auto px-4 py-6">{children}</main>
-            <Toaster />
-          </SessionProvider>
-        </ThemeProvider>
+      <body className={`${GeistSans.className} min-h-screen bg-background text-foreground antialiased flex flex-col`}>
+        <SessionProvider session={session}>
+          <Navbar />
+          <main className="container mx-auto px-4 py-6 flex-1">{children}</main>
+          <Footer />
+          <Toaster />
+        </SessionProvider>
       </body>
     </html>
   );
