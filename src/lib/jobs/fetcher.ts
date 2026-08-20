@@ -1,39 +1,51 @@
-export interface JobListing {
-  id: string;
+export interface ArbeitnowJob {
+  slug: string;
+  company_name: string;
   title: string;
-  company: string;
-  location: string;
-  salary?: string;
   description: string;
+  remote: boolean;
   url: string;
-  source: "arbeitnow" | "jooble" | "remoteok";
-  postedAt: Date;
+  tags: string[];
+  job_types: string[];
+  location: string;
+  created_at: number; // Unix timestamp
 }
 
+export interface FetchJobsResult {
+  jobs: ArbeitnowJob[];
+  total: number;
+}
+
+const ARBEITNOW_API = "https://www.arbeitnow.com/api/job-board-api";
+
 export async function fetchAllJobs(
-  title: string,
-  location: string
-): Promise<JobListing[]> {
-  try {
-    // Fetch from Arbeitnow
-    const response = await fetch(
-      `https://www.arbeitnow.com/api/v2/jobs?location=${encodeURIComponent(location)}`
-    );
-    const data = await response.json();
-    
-    return (data.data || []).slice(0, 10).map((job: any) => ({
-      id: `arbeitnow-${job.id}`,
-      title: job.title,
-      company: job.company,
-      location: job.location,
-      salary: job.salary || undefined,
-      description: job.description?.substring(0, 200) || "No description",
-      url: job.url,
-      source: "arbeitnow" as const,
-      postedAt: new Date(job.created_at),
-    }));
-  } catch (error) {
-    console.error("Fetch error:", error);
-    return [];
+  options: {
+    page?: number;
+    perPage?: number;
+  } = {}
+): Promise<FetchJobsResult> {
+  const { page = 1, perPage = 100 } = options;
+
+  const url = new URL(ARBEITNOW_API);
+  url.searchParams.set("page", String(page));
+  url.searchParams.set("limit", String(perPage));
+
+  const res = await fetch(url.toString(), {
+    headers: { Accept: "application/json" },
+    next: { revalidate: 60 },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Arbeitnow API error: ${res.status} ${res.statusText}`);
   }
+
+  const data = await res.json();
+
+  // The API returns { data: ArbeitnowJob[], meta: {...} } or just an array
+  const jobs: ArbeitnowJob[] = Array.isArray(data) ? data : data.data ?? [];
+
+  return {
+    jobs,
+    total: jobs.length,
+  };
 }
