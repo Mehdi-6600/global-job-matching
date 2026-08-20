@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -11,7 +11,6 @@ import {
   Bookmark,
   Filter,
   ChevronDown,
-  Star,
   Loader2,
   RefreshCw,
   ExternalLink,
@@ -49,24 +48,23 @@ function sourceBadge(source: string) {
     remoteok: "bg-sky-500/10 text-sky-400 border-sky-500/20",
     jooble: "bg-rose-500/10 text-rose-400 border-rose-500/20",
   };
-  return map[source] || "bg-white/5 text-white/50 border-white/10";
+  return map[source] || "bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 border-black/10 dark:border-white/10";
 }
 
 export default function JobsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Proper debounce
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { jobs, loading, error, refetch } = useJobs(debouncedQuery);
-
-  // Debounce search
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    const timer = setTimeout(() => setDebouncedQuery(value), 400);
-    return () => clearTimeout(timer);
-  };
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -118,13 +116,13 @@ export default function JobsPage() {
                   type="text"
                   placeholder="Job title, company, or keywords..."
                   value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-transparent text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/40 outline-none"
                 />
               </div>
               <button
                 onClick={() => refetch()}
-                className="h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
+                className="h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 text-white"
               >
                 <RefreshCw className="w-4 h-4" />
                 Refresh
