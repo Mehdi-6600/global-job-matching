@@ -1,11 +1,8 @@
-import { db } from "@/lib/db";
+import { fetchAllJobs } from "@/lib/jobs/fetcher";
 
 export default async function JobsPage() {
-  const jobs = await db.jobListing.findMany({
-    where: { status: "ACTIVE" },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  // دریافت مشاغل از APIهای خارجی
+  const jobs = await fetchAllJobs("developer", "remote");
 
   return (
     <div>
@@ -21,15 +18,13 @@ export default async function JobsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="font-semibold text-lg">{job.title}</h2>
-                  <p className="text-sm text-muted-foreground">{job.city}, {job.country}</p>
+                  <p className="text-sm text-muted-foreground">{job.location}</p>
                 </div>
-                <span className="text-xs bg-secondary px-2 py-1 rounded">{job.jobType}</span>
+                <span className="text-xs bg-secondary px-2 py-1 rounded">{job.source}</span>
               </div>
               <p className="mt-2 text-sm line-clamp-2">{job.description}</p>
-              {job.salaryMin && (
-                <p className="mt-2 text-sm font-medium">
-                  ${job.salaryMin.toString()} - ${job.salaryMax?.toString() || "?"} {job.salaryCurrency}/{job.salaryPeriod}
-                </p>
+              {job.salary && (
+                <p className="mt-2 text-sm font-medium">{job.salary}</p>
               )}
             </div>
           ))}
