@@ -4,12 +4,11 @@ import { Play, ChevronRight } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="pt-16"> {/* برای جبران ارتفاع هدر fixed */}
-      {/* بخش Hero */}
+    <div className="pt-16">
+      {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="container mx-auto px-4 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
-            {/* نشانگر */}
             <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-sm font-medium mb-6">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -18,7 +17,6 @@ export default function HomePage() {
               AI-Powered Job Matching
             </div>
 
-            {/* عنوان */}
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 mb-6">
               Find Your{' '}
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -27,12 +25,10 @@ export default function HomePage() {
               {' '}Anywhere
             </h1>
 
-            {/* توضیحات */}
             <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
               Global job matching powered by AI. Discover opportunities tailored to your skills and preferences — completely free to start.
             </p>
 
-            {/* دکمه‌ها */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Link href="/register">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg shadow-blue-200 hover:shadow-xl transition-all duration-200">
@@ -46,7 +42,6 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* آمار */}
             <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto">
               <div className="text-center">
                 <div className="text-3xl font-bold text-gray-900">500+</div>
@@ -65,7 +60,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* بخش مشتریان (برندها) */}
+      {/* برندها */}
       <section className="py-12 border-y border-gray-100 bg-white">
         <div className="container mx-auto px-4">
           <p className="text-center text-sm text-gray-500 uppercase tracking-wider mb-8">
@@ -77,6 +72,59 @@ export default function HomePage() {
             <span className="text-xl font-bold text-gray-400">Slack</span>
             <span className="text-xl font-bold text-gray-400">Dropbox</span>
             <span className="text-xl font-bold text-gray-400">GitHub</span>
+          </div>
+        </div>
+      </section>
+
+      {/* خدمات (جدید) */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Everything You Need to Succeed
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Powerful tools and features to help you find the perfect job or hire the best talent.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: "Smart Matching",
+                desc: "AI-powered algorithm connects you with the best opportunities.",
+                icon: "M9.75 17L15 11.75M9.75 17l-5.25-5.25M9.75 17l5.25-5.25",
+                color: "blue"
+              },
+              {
+                title: "Global Reach",
+                desc: "Access job listings from companies worldwide in one place.",
+                icon: "M12 4.5v15m7.5-7.5h-15",
+                color: "purple"
+              },
+              {
+                title: "Real-time Updates",
+                desc: "Get instant notifications for new job matches and applications.",
+                icon: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5",
+                color: "green"
+              },
+              {
+                title: "24/7 Support",
+                desc: "Dedicated support team ready to help you at any time.",
+                icon: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5",
+                color: "yellow"
+              }
+            ].map((service, index) => (
+              <div key={index} className="bg-white p-6 rounded-2xl border border-gray-100 hover:shadow-lg transition-shadow">
+                <div className={`w-12 h-12 bg-${service.color}-100 rounded-xl flex items-center justify-center mb-4`}>
+                  <svg className={`w-6 h-6 text-${service.color}-600`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d={service.icon} />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{service.title}</h3>
+                <p className="text-gray-600 text-sm">{service.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
