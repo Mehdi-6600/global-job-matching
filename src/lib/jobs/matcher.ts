@@ -67,10 +67,14 @@ function skillMatching(userSkills: string[], jobDescription: string): number {
   );
 }
 
-// Salary matching
-function salaryMatching(userMinSalary: number | undefined, jobSalaryMin: number | null | undefined, jobSalaryMax: number | null | undefined): number {
+// Salary matching (با تبدیل Decimal به Number)
+function salaryMatching(
+  userMinSalary: number | undefined,
+  jobSalaryMin: number | null | undefined,
+  jobSalaryMax: number | null | undefined
+): number {
   if (!userMinSalary) return 50; // neutral if user didn't specify
-  
+
   // استفاده از میانگین حقوق یا حداقل حقوق
   let jobSalaryNum = 0;
   if (jobSalaryMin && jobSalaryMax) {
@@ -124,8 +128,12 @@ export function matchJobs(
       const skillScore = skillMatching(profile.skills, job.description);
       if (skillScore > 60) matchReasons.push("Skills match");
 
-      // Salary score (20% weight)
-      const salaryScore = salaryMatching(profile.salaryMin, job.salaryMin, job.salaryMax);
+      // Salary score (20% weight) — با تبدیل Decimal به Number
+      const salaryScore = salaryMatching(
+        profile.salaryMin,
+        job.salaryMin ? Number(job.salaryMin) : null,
+        job.salaryMax ? Number(job.salaryMax) : null
+      );
       if (salaryScore === 100) matchReasons.push("Salary meets expectations");
       if (salaryScore >= 75) matchReasons.push("Salary is acceptable");
 
