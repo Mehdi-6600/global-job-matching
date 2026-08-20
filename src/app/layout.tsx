@@ -1,33 +1,24 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { auth } from "@/lib/auth";
-import { SessionProvider } from "@/components/session-provider";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { Toaster } from "@/components/ui/toaster";
+import { Providers } from "./providers";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Global Job Matching",
-  description: "Find jobs worldwide",
+  title: "GlobalJob — Find Your Dream Job",
+  description: "Connect with top opportunities from around the world.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${GeistSans.className} min-h-screen bg-background text-foreground antialiased flex flex-col`}>
-        <SessionProvider session={session}>
-          <Navbar />
-          <main className="container mx-auto px-4 py-6 flex-1">{children}</main>
-          <Footer />
-          <Toaster />
-        </SessionProvider>
+      <body className={inter.className}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
