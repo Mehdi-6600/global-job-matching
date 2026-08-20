@@ -2,89 +2,63 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchAllJobs } from "@/lib/jobs/fetcher";
 import { JobCard } from "@/components/job-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, Briefcase } from "lucide-react";
 
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  salary: string;
+  description: string;
+  url: string;
+  source: string;
+  postedAt: Date;
+}
+
 export default function JobsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // دریافت پارامترهای جستجو از URL
   const [title, setTitle] = useState(searchParams.get("title") || "");
   const [location, setLocation] = useState(searchParams.get("location") || "");
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  // بارگذاری مشاغل
   const loadJobs = async (searchTitle: string, searchLocation: string) => {
     setLoading(true);
     setError(false);
     try {
-      const result = await fetchAllJobs(searchTitle || "developer", searchLocation || "remote");
-      setJobs(result.length > 0 ? result : getSampleJobs());
-      if (result.length === 0) setError(true);
+      const res = await fetch(`/api/jobs?title=${encodeURIComponent(searchTitle || "developer")}&location=${encodeURIComponent(searchLocation || "remote")}`);
+      const data = await res.json();
+      if (data.jobs && data.jobs.length > 0) {
+        setJobs(data.jobs);
+      } else {
+        setJobs([]);
+        setError(true);
+      }
     } catch {
-      setJobs(getSampleJobs());
       setError(true);
     } finally {
       setLoading(false);
     }
   };
 
-  // داده‌های نمونه
-  const getSampleJobs = () => [
-    {
-      id: "1",
-      title: "Senior React Developer",
-      company: "Tech Corp",
-      location: "Remote",
-      salary: "$120k/year",
-      description: "We are looking for a Senior React Developer with 5+ years of experience.",
-      url: "https://example.com",
-      source: "remoteok" as const,
-      postedAt: new Date(),
-    },
-    {
-      id: "2",
-      title: "Full Stack Engineer",
-      company: "Startup Inc",
-      location: "Berlin, Germany",
-      salary: "$90k/year",
-      description: "Join our team as a Full Stack Engineer. Work with React, Node.js, and AWS.",
-      url: "https://example.com",
-      source: "arbeitnow" as const,
-      postedAt: new Date(),
-    },
-    {
-      id: "3",
-      title: "DevOps Engineer",
-      company: "Cloud Solutions",
-      location: "Remote",
-      salary: "$110k/year",
-      description: "Looking for a DevOps Engineer with Kubernetes and Docker experience.",
-      url: "https://example.com",
-      source: "jooble" as const,
-      postedAt: new Date(),
-    },
-  ];
-
-  // بارگذاری اولیه
   useEffect(() => {
     loadJobs(title, location);
   }, []);
 
-  // جستجو
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     router.push(`/jobs?title=${encodeURIComponent(title)}&location=${encodeURIComponent(location)}`);
     loadJobs(title, location);
   };
 
-  // ایجاد match ساختگی
+  // ساخت match مصنوعی برای نمایش
   const matches = jobs.map((job) => ({
     job,
     score: Math.floor(Math.random() * 40) + 60,
@@ -93,7 +67,6 @@ export default function JobsPage() {
 
   return (
     <div>
-      {/* هدر با جستجو */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 mb-8 text-white">
         <h1 className="text-3xl font-bold mb-2">Find Your Dream Job</h1>
         <p className="text-blue-100 mb-6">Discover opportunities tailored to your skills</p>
@@ -126,7 +99,6 @@ export default function JobsPage() {
         </form>
       </div>
 
-      {/* نتایج */}
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
