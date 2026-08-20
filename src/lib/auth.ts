@@ -1,12 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-export const {
-  handlers: { GET, POST },
-  auth,
-  signIn,
-  signOut,
-} = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       name: "credentials",
@@ -29,7 +24,7 @@ export const {
     }),
   ],
   session: { strategy: "jwt" },
-  secret: "secret",
+  secret: process.env.AUTH_SECRET || "secret",
   pages: {
     signIn: "/login",
   },
