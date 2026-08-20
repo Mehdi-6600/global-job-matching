@@ -3,8 +3,9 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { auth } from "@/lib/auth";
 import { SessionProvider } from "@/components/session-provider";
-import { Navbar } from "@/components/navbar";  // ← این خط اصلاح شد (حروف کوچک)
+import { Navbar } from "@/components/Navbar";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
   title: "Global Job Matching - v2",
@@ -19,13 +20,15 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${GeistSans.className} min-h-screen bg-background text-foreground antialiased`}>
-        <SessionProvider session={session}>
-          <Navbar />
-          <main className="container mx-auto px-4 py-6">{children}</main>
-          <Toaster />
-        </SessionProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <SessionProvider session={session}>
+            <Navbar />
+            <main className="container mx-auto px-4 py-6">{children}</main>
+            <Toaster />
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
