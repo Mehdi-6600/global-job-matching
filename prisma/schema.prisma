@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // url = env("DATABASE_URL")  // ← حذف شد
 }
 
 model Account {
@@ -84,7 +84,7 @@ model User {
   auditLogs     AuditLog[]
   notifications Notification[]
   emailConsents EmailConsent[]
-  transactions  Transaction[] // ← این خط اضافه شد
+  transactions  Transaction[]
 
   @@map("users")
 }
