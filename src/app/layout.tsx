@@ -3,7 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { auth } from "@/lib/auth";
 import { SessionProvider } from "@/components/session-provider";
-import { Navbar } from "@/components/Navbar";
+import { Navbar } from "@/components/navbar";  // ← اصلاح شد (n کوچک)
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 
