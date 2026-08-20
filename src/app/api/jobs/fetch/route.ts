@@ -1,69 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchAllJobs } from "@/lib/jobs/fetcher";
-import { matchJobs, type UserProfile } from "@/lib/jobs/matcher";
 
-export async function POST(req: NextRequest) {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const title = searchParams.get("title") || undefined;
+  const location = searchParams.get("location") || undefined;
+
   try {
-    const body = await req.json();
-    const { title, location, skills, salaryMin, radius } = body;
+    // Fetch jobs from Arbeitnow (broad search, filter client-side if needed)
+    const { jobs } = await fetchAllJobs({ page: 1, perPage: 100 });
 
-    // Validate input
-    if (!title || !location || !skills || !Array.isArray(skills)) {
-      return NextResponse.json(
-        { error: "Missing required fields: title, location, skills" },
-        { status: 400 }
-      );
+    // Optional: client-side filtering by title/location
+    let filtered = jobs;
+    if (title) {
+      const t = title.toLowerCase();
+      filtered = filtered.filter((j) => j.title.toLowerCase().includes(t));
+    }
+    if (location) {
+      const l = location.toLowerCase();
+      filtered = filtered.filter((j) => j.location.toLowerCase().includes(l));
     }
 
-    // Fetch jobs from all sources
-    const allJobs = await fetchAllJobs(title, location);
-
-    if (allJobs.length === 0) {
-      return NextResponse.json(
-        { jobs: [], total: 0, message: "No jobs found for your criteria" },
-        { status: 200 }
-      );
-    }
-
-    // Create user profile
-    const userProfile: UserProfile = {
-      title,
-      skills: skills.map((s: string) => s.toLowerCase()),
-      location,
-      radius: radius || 50,
-      salaryMin: salaryMin || undefined,
-    };
-
-    // Match jobs
-    const matchedJobs = matchJobs(userProfile, allJobs);
-
-    // Group by source for analytics
-    const bySource = {
-      arbeitnow: matchedJobs.filter((m) => m.job.source === "arbeitnow")
-        .length,
-      jooble: matchedJobs.filter((m) => m.job.source === "jooble").length,
-      remoteok: matchedJobs.filter((m) => m.job.source === "remoteok").length,
-    };
-
+    return NextResponse.json({
+      jobs: filtered,
+      total: filtered.length,
+    });
+  } catch (error: any) {
+    console.error("Fetch jobs error:", error);
     return NextResponse.json(
-      {
-        jobs: matchedJobs,
-        total: matchedJobs.length,
-        stats: {
-          fetched: allJobs.length,
-          matched: matchedJobs.length,
-          matchPercentage: Math.round(
-            (matchedJobs.length / allJobs.length) * 100
-          ),
-          bySource,
-        },
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Job fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch jobs" },
+      { error: error.message || "Failed to fetch jobs" },
       { status: 500 }
     );
   }
