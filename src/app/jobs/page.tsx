@@ -1,13 +1,14 @@
 import { fetchAllJobs } from "@/lib/jobs/fetcher";
 import { JobCard } from "@/components/job-card";
-import { matchJobs, type UserProfile } from "@/lib/jobs/matcher";
+import type { JobMatch } from "@/lib/jobs/matcher";
+import type { JobListing } from "@/lib/jobs/fetcher";
 
 export default async function JobsPage() {
   // دریافت مشاغل از APIهای خارجی
   const jobs = await fetchAllJobs("developer", "remote");
 
-  // داده‌های نمونه برای تست
-  const sampleJobs = [
+  // داده‌های نمونه با تایپ درست
+  const sampleJobs: JobListing[] = [
     {
       id: "1",
       title: "Senior React Developer",
@@ -16,7 +17,7 @@ export default async function JobsPage() {
       salary: "$120k/year",
       description: "We are looking for a Senior React Developer with 5+ years of experience.",
       url: "https://example.com",
-      source: "sample" as const,
+      source: "remoteok", // ← از مقادیر مجاز استفاده کنید
       postedAt: new Date(),
     },
     {
@@ -27,7 +28,7 @@ export default async function JobsPage() {
       salary: "$90k/year",
       description: "Join our team as a Full Stack Engineer. Work with React, Node.js, and AWS.",
       url: "https://example.com",
-      source: "sample" as const,
+      source: "arbeitnow",
       postedAt: new Date(),
     },
     {
@@ -38,17 +39,17 @@ export default async function JobsPage() {
       salary: "$110k/year",
       description: "Looking for a DevOps Engineer with Kubernetes and Docker experience.",
       url: "https://example.com",
-      source: "sample" as const,
+      source: "jooble",
       postedAt: new Date(),
     },
   ];
 
   const displayJobs = jobs.length > 0 ? jobs : sampleJobs;
 
-  // ایجاد match ساختگی برای هر شغل (برای تست)
-  const matches = displayJobs.map((job) => ({
+  // ایجاد match ساختگی برای هر شغل
+  const matches: JobMatch[] = displayJobs.map((job) => ({
     job,
-    score: Math.floor(Math.random() * 40) + 60, // امتیاز بین ۶۰ تا ۱۰۰
+    score: Math.floor(Math.random() * 40) + 60,
     matchReasons: ["Skills match", "Location match", "Salary meets expectations"],
   }));
 
