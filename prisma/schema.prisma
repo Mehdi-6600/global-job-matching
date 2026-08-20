@@ -84,6 +84,7 @@ model User {
   auditLogs     AuditLog[]
   notifications Notification[]
   emailConsents EmailConsent[]
+  transactions  Transaction[] // ← این خط اضافه شد
 
   @@map("users")
 }
