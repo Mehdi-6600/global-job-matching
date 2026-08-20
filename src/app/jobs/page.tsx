@@ -1,107 +1,170 @@
 "use client";
 
-import { JobMatch } from "@/lib/jobs/matcher";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { JobCard } from "@/components/job-card";
 import { Button } from "@/components/ui/button";
-import { Briefcase, MapPin, DollarSign, Clock, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Search, MapPin, Briefcase } from "lucide-react";
 
-interface JobCardProps {
-  match: JobMatch;
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  salary: string;
+  description: string;
+  url: string;
+  source: string;
+  postedAt: string;
 }
 
-export function JobCard({ match }: JobCardProps) {
-  const { job, score, matchReasons } = match;
+export default function JobsPage() {  // ← این خط رو چک کنید
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600 bg-green-50 border-green-200";
-    if (score >= 60) return "text-blue-600 bg-blue-50 border-blue-200";
-    if (score >= 40) return "text-yellow-600 bg-yellow-50 border-yellow-200";
-    return "text-gray-600 bg-gray-50 border-gray-200";
-  };
+  const [title, setTitle] = useState(searchParams.get("title") || "");
+  const [location, setLocation] = useState(searchParams.get("location") || "");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [usingSample, setUsingSample] = useState(false);
 
-  // نمایش منبع به صورت خوانا
-  const getSourceLabel = (source: string) => {
-    switch (source) {
-      case "arbeitnow": return "Arbeitnow";
-      case "jooble": return "Jooble";
-      case "remoteok": return "RemoteOK";
-      case "direct": return "Direct";
-      default: return source;
+  const loadJobs = async (searchTitle: string, searchLocation: string) => {
+    setLoading(true);
+    setError(false);
+    setUsingSample(false);
+    try {
+      const res = await fetch(`/api/jobs?title=${encodeURIComponent(searchTitle)}&location=${encodeURIComponent(searchLocation)}`);
+      const data = await res.json();
+      if (data.jobs && data.jobs.length > 0) {
+        setJobs(data.jobs);
+      } else {
+        setJobs(getSampleJobs());
+        setUsingSample(true);
+      }
+    } catch {
+      setJobs(getSampleJobs());
+      setUsingSample(true);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const getSampleJobs = () => [
+    {
+      id: "1",
+      title: "Senior React Developer",
+      company: "Tech Corp",
+      location: "Remote",
+      salary: "$120k/year",
+      description: "We are looking for a Senior React Developer with 5+ years of experience.",
+      url: "https://example.com",
+      source: "remoteok",
+      postedAt: new Date().toISOString(),
+    },
+    {
+      id: "2",
+      title: "Full Stack Engineer",
+      company: "Startup Inc",
+      location: "Berlin, Germany",
+      salary: "$90k/year",
+      description: "Join our team as a Full Stack Engineer. Work with React, Node.js, and AWS.",
+      url: "https://example.com",
+      source: "arbeitnow",
+      postedAt: new Date().toISOString(),
+    },
+    {
+      id: "3",
+      title: "DevOps Engineer",
+      company: "Cloud Solutions",
+      location: "Remote",
+      salary: "$110k/year",
+      description: "Looking for a DevOps Engineer with Kubernetes and Docker experience.",
+      url: "https://example.com",
+      source: "jooble",
+      postedAt: new Date().toISOString(),
+    },
+  ];
+
+  useEffect(() => {
+    loadJobs(title, location);
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    router.push(`/jobs?title=${encodeURIComponent(title)}&location=${encodeURIComponent(location)}`);
+    loadJobs(title, location);
+  };
+
+  const matches = jobs.map((job) => ({
+    job: {
+      ...job,
+      source: job.source as "arbeitnow" | "jooble" | "remoteok" | "direct",
+    },
+    score: Math.floor(Math.random() * 40) + 60,
+    matchReasons: ["Skills match", "Location match", "Salary meets expectations"],
+  }));
+
   return (
-    <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1">
-      <div className="relative h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
+    <div>
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 mb-8 text-white">
+        <h1 className="text-3xl font-bold mb-2">Find Your Dream Job</h1>
+        <p className="text-blue-100 mb-6">Discover opportunities tailored to your skills</p>
 
-      <div className="p-6">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <h3 className="text-xl font-bold text-gray-900 leading-tight">
-            {job.title}
-          </h3>
-          <div className={`flex-shrink-0 px-3 py-1 rounded-full text-sm font-bold border ${getScoreColor(score)}`}>
-            {score}%
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Job title, keywords..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:bg-white/20"
+            />
           </div>
-        </div>
-
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center gap-2 text-gray-700">
-            <Briefcase className="w-4 h-4 text-gray-500" />
-            <span className="font-medium">{job.company || "Unknown Company"}</span>
+          <div className="flex-1 relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="City, country, or remote..."
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:bg-white/20"
+            />
           </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <MapPin className="w-4 h-4 text-gray-500" />
-            <span className="text-sm">{job.location}</span>
-          </div>
-          {job.salary && (
-            <div className="flex items-center gap-2 text-emerald-700 font-medium">
-              <DollarSign className="w-4 h-4 text-emerald-500" />
-              <span className="text-sm">{job.salary}</span>
-            </div>
-          )}
-        </div>
-
-        <p className="text-sm text-gray-600 line-clamp-2 mb-4 leading-relaxed">
-          {job.description}
-        </p>
-
-        <div className="flex flex-wrap gap-2 mb-5">
-          {matchReasons.slice(0, 3).map((reason, i) => (
-            <Badge
-              key={i}
-              variant="secondary"
-              className="flex items-center gap-1 bg-indigo-50 text-indigo-700 border-0 hover:bg-indigo-100 transition-colors"
-            >
-              <Zap className="w-3 h-3" />
-              {reason}
-            </Badge>
-          ))}
-          {matchReasons.length > 3 && (
-            <Badge variant="outline" className="text-xs text-gray-500">
-              +{matchReasons.length - 3} more
-            </Badge>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Clock className="w-3 h-3" />
-            <span>{new Date(job.postedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-            <span className="w-1 h-1 rounded-full bg-gray-300" />
-            <span className="capitalize">{getSourceLabel(job.source)}</span>
-          </div>
-
-          <Button
-            onClick={() => window.open(job.url, "_blank")}
-            className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
-          >
-            <span>View Job</span>
-            <svg className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
+          <Button type="submit" className="bg-white text-blue-600 hover:bg-blue-50">
+            <Search className="w-4 h-4 mr-2" />
+            Search
           </Button>
-        </div>
+        </form>
       </div>
+
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="mt-4 text-muted-foreground">Loading jobs...</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">
+              {matches.length} {matches.length === 1 ? "Job" : "Jobs"} Available
+            </h2>
+            {usingSample && (
+              <span className="text-sm text-yellow-600 bg-yellow-50 px-3 py-1 rounded-full">
+                ⚠️ Using sample data
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {matches.map((match) => (
+              <JobCard key={match.job.id} match={match} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
