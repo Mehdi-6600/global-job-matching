@@ -7,7 +7,7 @@ import { Navbar } from "@/components/navbar";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "Global Job Matching",
+  title: "Global Job Matching - v2",
   description: "Find jobs worldwide",
 };
 
