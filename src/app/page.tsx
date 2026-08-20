@@ -55,17 +55,17 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* آمار با کارت‌های شیشه‌ای */}
+            {/* آمار با کارت‌های شیشه‌ای و مرکزچین */}
             <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto">
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5">
+              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5">
                 <div className="text-4xl md:text-5xl font-bold text-white">500+</div>
                 <div className="text-sm text-white/50">Projects</div>
               </div>
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5">
+              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5">
                 <div className="text-4xl md:text-5xl font-bold text-white">98%</div>
                 <div className="text-sm text-white/50">Satisfaction</div>
               </div>
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5">
+              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5">
                 <div className="text-4xl md:text-5xl font-bold text-white">24/7</div>
                 <div className="text-sm text-white/50">Support</div>
               </div>
