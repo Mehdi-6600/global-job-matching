@@ -15,7 +15,7 @@ interface Job {
   salary: string;
   description: string;
   url: string;
-  source: string;
+  source: string; // ← اینجا string هست
   postedAt: Date;
 }
 
@@ -58,12 +58,22 @@ export default function JobsPage() {
     loadJobs(title, location);
   };
 
-  // ساخت match مصنوعی برای نمایش
-  const matches = jobs.map((job) => ({
-    job,
-    score: Math.floor(Math.random() * 40) + 60,
-    matchReasons: ["Skills match", "Location match", "Salary meets expectations"],
-  }));
+  // ساخت match با تطابق تایپ
+  const matches = jobs.map((job) => {
+    // تبدیل source به یکی از مقادیر مجاز
+    const validSource = job.source === "arbeitnow" || job.source === "jooble" || job.source === "remoteok" 
+      ? job.source as "arbeitnow" | "jooble" | "remoteok"
+      : "remoteok"; // مقدار پیش‌فرض
+
+    return {
+      job: {
+        ...job,
+        source: validSource,
+      },
+      score: Math.floor(Math.random() * 40) + 60,
+      matchReasons: ["Skills match", "Location match", "Salary meets expectations"],
+    };
+  });
 
   return (
     <div>
