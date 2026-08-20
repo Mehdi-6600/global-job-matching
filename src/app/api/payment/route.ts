@@ -1,47 +1,22 @@
-// src/app/api/payment/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  console.log("🔵 Payment API called");
+  
   try {
     const body = await req.json();
-    const { planId, currency, walletAddress, txHash, amount } = body;
+    console.log("🔵 Body:", body);
 
-    if (!planId || !currency || !txHash) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    // ذخیره تراکنش در دیتابیس
-    const transaction = await db.transaction.create({
-      data: {
-        userId: session.user.id,
-        planId,
-        amount,
-        currency,
-        walletAddress,
-        txHash,
-        status: "pending",
-      },
-    });
-
+    // فقط یک پاسخ ساده برگردون
     return NextResponse.json({
       success: true,
-      message: "Transaction recorded. Waiting for confirmation.",
-      transaction,
+      message: "Payment API is working!",
+      received: body,
     });
   } catch (error) {
-    console.error("Payment error:", error);
+    console.error("🔴 Error:", error);
     return NextResponse.json(
-      { error: "Failed to process payment" },
+      { error: "Failed to process" },
       { status: 500 }
     );
   }
