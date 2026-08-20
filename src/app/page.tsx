@@ -26,7 +26,7 @@ export default function HomePage() {
             </div>
 
             {/* عنوان با گرادیانت و درخشش */}
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight mb-8">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8">
               <span className="text-white">Find Your</span>
               <br />
               <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-purple-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(59,130,246,0.3)]">
@@ -36,38 +36,38 @@ export default function HomePage() {
               <span className="text-white/80">Anywhere</span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-white/70 max-w-2xl mx-auto mb-12 leading-relaxed">
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-12 leading-relaxed">
               Global job matching powered by AI. Discover opportunities tailored to your skills and preferences — completely free to start.
             </p>
 
             {/* دکمه‌ها با افکت شیشه‌ای */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20">
               <Link href="/register">
-                <Button className="group relative px-10 py-7 text-lg rounded-2xl overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-500">
+                <Button className="group relative px-8 py-6 text-lg rounded-2xl overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-500">
                   <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></span>
                   Get Started
                   <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 px-10 py-7 text-lg rounded-2xl backdrop-blur-lg bg-white/5 shadow-lg shadow-white/5 hover:shadow-white/20 transition-all duration-300">
+              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 px-8 py-6 text-lg rounded-2xl backdrop-blur-lg bg-white/5 shadow-lg shadow-white/5 hover:shadow-white/20 transition-all duration-300">
                 <Play className="w-5 h-5 mr-2" />
                 Watch Video
               </Button>
             </div>
 
-            {/* آمار با کارت‌های شیشه‌ای و مرکزچین کامل */}
+            {/* آمار با کارت‌های شیشه‌ای و اعداد کوچکتر */}
             <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto">
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5 flex flex-col items-center justify-center">
-                <div className="text-4xl md:text-5xl font-bold text-white">500+</div>
-                <div className="text-sm text-white/50">Projects</div>
+              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5 flex flex-col items-center justify-center">
+                <div className="text-2xl md:text-3xl font-bold text-white">500+</div>
+                <div className="text-xs text-white/50">Projects</div>
               </div>
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5 flex flex-col items-center justify-center">
-                <div className="text-4xl md:text-5xl font-bold text-white">98%</div>
-                <div className="text-sm text-white/50">Satisfaction</div>
+              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5 flex flex-col items-center justify-center">
+                <div className="text-2xl md:text-3xl font-bold text-white">98%</div>
+                <div className="text-xs text-white/50">Satisfaction</div>
               </div>
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5 flex flex-col items-center justify-center">
-                <div className="text-4xl md:text-5xl font-bold text-white">24/7</div>
-                <div className="text-sm text-white/50">Support</div>
+              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-all duration-300 shadow-lg shadow-white/5 flex flex-col items-center justify-center">
+                <div className="text-2xl md:text-3xl font-bold text-white">24/7</div>
+                <div className="text-xs text-white/50">Support</div>
               </div>
             </div>
           </div>
