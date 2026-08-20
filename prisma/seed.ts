@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, JobType, ListingStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -28,14 +28,14 @@ async function main() {
     console.log("✅ Owner already exists");
   }
 
-  // مشاغل واقعی
+  // مشاغل واقعی با تایپ درست
   const jobs = [
     {
       title: "Senior React Developer",
       description: "We're looking for a Senior React Developer to join our remote team. You'll be building modern web applications using React, TypeScript, and Next.js.",
       requirements: "5+ years of React experience, TypeScript, Next.js, Tailwind CSS, and experience with REST APIs.",
       skillsRequired: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-      jobType: "FULL_TIME",
+      jobType: "FULL_TIME" as JobType,
       country: "Germany",
       city: "Berlin",
       isRemote: true,
@@ -45,7 +45,7 @@ async function main() {
       salaryPeriod: "yearly",
       contactName: "Sarah Johnson",
       contactEmail: "sarah@techcorp.io",
-      status: "ACTIVE",
+      status: "ACTIVE" as ListingStatus,
       source: "direct",
     },
     {
@@ -53,7 +53,7 @@ async function main() {
       description: "Join our fast-growing startup as a Full Stack Engineer. You'll work on both frontend and backend, building features that impact thousands of users.",
       requirements: "3+ years of experience, Node.js, React, PostgreSQL, and AWS.",
       skillsRequired: ["Node.js", "React", "PostgreSQL", "AWS"],
-      jobType: "FULL_TIME",
+      jobType: "FULL_TIME" as JobType,
       country: "Germany",
       city: "Remote",
       isRemote: true,
@@ -63,7 +63,7 @@ async function main() {
       salaryPeriod: "yearly",
       contactName: "Michael Chen",
       contactEmail: "michael@startup.io",
-      status: "ACTIVE",
+      status: "ACTIVE" as ListingStatus,
       source: "direct",
     },
     {
@@ -71,7 +71,7 @@ async function main() {
       description: "We need a DevOps Engineer to manage our cloud infrastructure, CI/CD pipelines, and ensure high availability of our services.",
       requirements: "4+ years of DevOps experience, Kubernetes, Docker, AWS, and Terraform.",
       skillsRequired: ["Kubernetes", "Docker", "AWS", "Terraform"],
-      jobType: "FULL_TIME",
+      jobType: "FULL_TIME" as JobType,
       country: "United Kingdom",
       city: "London",
       isRemote: false,
@@ -81,7 +81,7 @@ async function main() {
       salaryPeriod: "yearly",
       contactName: "Emma Wilson",
       contactEmail: "emma@cloudsolutions.co.uk",
-      status: "ACTIVE",
+      status: "ACTIVE" as ListingStatus,
       source: "direct",
     },
     {
@@ -89,7 +89,7 @@ async function main() {
       description: "Looking for a talented UI/UX Designer to create beautiful and intuitive interfaces. You'll work closely with product and engineering teams.",
       requirements: "3+ years of experience, Figma, Adobe Creative Suite, and a strong portfolio.",
       skillsRequired: ["Figma", "Adobe XD", "UI Design", "UX Research"],
-      jobType: "FULL_TIME",
+      jobType: "FULL_TIME" as JobType,
       country: "United States",
       city: "New York",
       isRemote: true,
@@ -99,7 +99,7 @@ async function main() {
       salaryPeriod: "yearly",
       contactName: "David Park",
       contactEmail: "david@designstudio.com",
-      status: "ACTIVE",
+      status: "ACTIVE" as ListingStatus,
       source: "direct",
     },
     {
@@ -107,7 +107,7 @@ async function main() {
       description: "We're seeking a Data Analyst to help us make data-driven decisions. You'll analyze large datasets and create meaningful reports.",
       requirements: "2+ years of experience, SQL, Python, and data visualization tools (Tableau, Power BI).",
       skillsRequired: ["SQL", "Python", "Tableau", "Power BI"],
-      jobType: "FULL_TIME",
+      jobType: "FULL_TIME" as JobType,
       country: "Germany",
       city: "Munich",
       isRemote: false,
@@ -117,7 +117,7 @@ async function main() {
       salaryPeriod: "yearly",
       contactName: "Anna Schmidt",
       contactEmail: "anna@datatech.de",
-      status: "ACTIVE",
+      status: "ACTIVE" as ListingStatus,
       source: "direct",
     },
   ];
