@@ -53,12 +53,12 @@ export default function JobsPage() {
     {
       id: "1",
       title: "Senior React Developer",
-      company: "Tech Corp",
+      company: "Tech Corp",  // ← اینجا company هست، ولی تو دیتابیس نیست
       location: "Remote",
       salary: "$120k/year",
       description: "We are looking for a Senior React Developer with 5+ years of experience.",
       url: "https://example.com",
-      source: "remoteok",
+      source: "remoteok" as const,
       postedAt: new Date().toISOString(),
     },
     {
@@ -69,7 +69,7 @@ export default function JobsPage() {
       salary: "$90k/year",
       description: "Join our team as a Full Stack Engineer.",
       url: "https://example.com",
-      source: "arbeitnow",
+      source: "arbeitnow" as const,
       postedAt: new Date().toISOString(),
     },
     {
@@ -80,7 +80,7 @@ export default function JobsPage() {
       salary: "$110k/year",
       description: "Looking for a DevOps Engineer.",
       url: "https://example.com",
-      source: "jooble",
+      source: "jooble" as const,
       postedAt: new Date().toISOString(),
     },
   ];
@@ -106,7 +106,7 @@ export default function JobsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black">
-      {/* هدر با افکت شیشه‌ای */}
+      {/* هدر */}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-pink-600/20 border-b border-white/10">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-10"></div>
         <div className="container mx-auto px-4 py-12 relative z-10">
