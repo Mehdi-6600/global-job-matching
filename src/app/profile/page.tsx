@@ -9,8 +9,8 @@ import { toast } from "@/hooks/use-toast";
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const [form, setForm] = useState({
     headline: "",
     skills: "",
@@ -53,6 +53,7 @@ export default function ProfilePage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+
     const payload = {
       headline: form.headline,
       skills: form.skills.split(",").map((s) => s.trim()).filter(Boolean),
@@ -86,26 +87,31 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-lg py-8">
-      <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
+      <h1 className="text-2xl font-bold mb-2">Your Profile</h1>
+      <p className="text-sm text-muted-foreground mb-6">
+        Complete your profile to get better job matches on Global Job Matching.
+      </p>
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1">Professional Title</label>
           <input
             value={form.headline}
             onChange={(e) => setForm({ ...form, headline: e.target.value })}
-            placeholder="e.g. Senior Software Engineer"
-            className="w-full rounded-md border px-3 py-2"
+            placeholder="e.g. Senior React Developer"
+            className="w-full rounded-md border px-3 py-2 bg-background"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Skills (comma separated)</label>
           <input
             value={form.skills}
             onChange={(e) => setForm({ ...form, skills: e.target.value })}
             placeholder="React, Node.js, TypeScript"
-            className="w-full rounded-md border px-3 py-2"
+            className="w-full rounded-md border px-3 py-2 bg-background"
           />
         </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Country</label>
@@ -113,7 +119,7 @@ export default function ProfilePage() {
               value={form.country}
               onChange={(e) => setForm({ ...form, country: e.target.value })}
               placeholder="Germany"
-              className="w-full rounded-md border px-3 py-2"
+              className="w-full rounded-md border px-3 py-2 bg-background"
             />
           </div>
           <div>
@@ -122,10 +128,11 @@ export default function ProfilePage() {
               value={form.city}
               onChange={(e) => setForm({ ...form, city: e.target.value })}
               placeholder="Berlin"
-              className="w-full rounded-md border px-3 py-2"
+              className="w-full rounded-md border px-3 py-2 bg-background"
             />
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Desired Salary (USD)</label>
@@ -134,7 +141,7 @@ export default function ProfilePage() {
               value={form.desiredSalary}
               onChange={(e) => setForm({ ...form, desiredSalary: e.target.value })}
               placeholder="80000"
-              className="w-full rounded-md border px-3 py-2"
+              className="w-full rounded-md border px-3 py-2 bg-background"
             />
           </div>
           <div>
@@ -144,10 +151,11 @@ export default function ProfilePage() {
               value={form.searchRadiusKm}
               onChange={(e) => setForm({ ...form, searchRadiusKm: e.target.value })}
               placeholder="50"
-              className="w-full rounded-md border px-3 py-2"
+              className="w-full rounded-md border px-3 py-2 bg-background"
             />
           </div>
         </div>
+
         <Button type="submit" className="w-full" disabled={saving}>
           {saving ? "Saving..." : "Save & Find Jobs"}
         </Button>
