@@ -14,12 +14,13 @@ import {
 } from "lucide-react";
 import { useNotifications } from "@/components/notification-provider";
 import { notificationColors } from "@/lib/notifications";
+import type { NotificationType } from "@/lib/notifications";
 
-const iconMap = {
-  briefcase: Briefcase,
-  "check-circle": CheckCircle2,
-  "message-square": MessageSquare,
-  bell: Info,
+const iconMap: Record<NotificationType, React.ComponentType<{ className?: string }>> = {
+  job_match: Briefcase,
+  application_status: CheckCircle2,
+  message: MessageSquare,
+  system: Info,
 };
 
 function timeAgo(dateStr: string) {
@@ -58,6 +59,7 @@ export function NotificationBell() {
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2.5 rounded-xl glass hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        aria-label="Toggle notifications"
       >
         <Bell className="w-5 h-5 text-slate-600 dark:text-white/70" />
         {unreadCount > 0 && (
@@ -98,7 +100,7 @@ export function NotificationBell() {
               </div>
             ) : (
               notifications.slice(0, 20).map((notif) => {
-                const Icon = iconMap[notif.type as keyof typeof iconMap] || Info;
+                const Icon = iconMap[notif.type] || Info;
                 return (
                   <div
                     key={notif.id}
@@ -142,7 +144,7 @@ export function NotificationBell() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="px-5 py-3 border-t border-black/5 dark:border-white/10">
+            <div className="px-5 py-3 border-t border-black/5 dark:border-white/10 flex justify-between items-center">
               <button
                 onClick={() => {
                   notifications.forEach((n) => dismiss(n.id));
@@ -152,6 +154,13 @@ export function NotificationBell() {
                 <Trash2 className="w-3 h-3" />
                 Clear all
               </button>
+              <Link
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="text-xs text-blue-500 hover:text-blue-600 transition-colors"
+              >
+                View all
+              </Link>
             </div>
           )}
         </div>
