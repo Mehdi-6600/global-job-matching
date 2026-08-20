@@ -1,18 +1,30 @@
 "use client";
 
-import { JobMatch } from "@/lib/jobs/matcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Briefcase, MapPin, DollarSign, Clock, Zap } from "lucide-react";
 
 interface JobCardProps {
-  match: JobMatch;
+  match: {
+    job: {
+      id: string;
+      title: string;
+      company: string;
+      location: string;
+      salary?: string;
+      description: string;
+      url: string;
+      source: string;
+      postedAt: string | Date;
+    };
+    score: number;
+    matchReasons: string[];
+  };
 }
 
 export function JobCard({ match }: JobCardProps) {
   const { job, score, matchReasons } = match;
 
-  // رنگ‌بندی امتیاز
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600 bg-green-50 border-green-200";
     if (score >= 60) return "text-blue-600 bg-blue-50 border-blue-200";
@@ -20,13 +32,21 @@ export function JobCard({ match }: JobCardProps) {
     return "text-gray-600 bg-gray-50 border-gray-200";
   };
 
+  const getSourceLabel = (source: string) => {
+    switch (source) {
+      case "arbeitnow": return "Arbeitnow";
+      case "jooble": return "Jooble";
+      case "remoteok": return "RemoteOK";
+      case "direct": return "Direct";
+      default: return source;
+    }
+  };
+
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1">
-      {/* هدر با گرادیانت */}
       <div className="relative h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
 
       <div className="p-6">
-        {/* ردیف اول: عنوان و امتیاز */}
         <div className="flex items-start justify-between gap-4 mb-3">
           <h3 className="text-xl font-bold text-gray-900 leading-tight">
             {job.title}
@@ -36,7 +56,6 @@ export function JobCard({ match }: JobCardProps) {
           </div>
         </div>
 
-        {/* شرکت و موقعیت */}
         <div className="space-y-2 mb-4">
           <div className="flex items-center gap-2 text-gray-700">
             <Briefcase className="w-4 h-4 text-gray-500" />
@@ -54,12 +73,10 @@ export function JobCard({ match }: JobCardProps) {
           )}
         </div>
 
-        {/* توضیحات */}
         <p className="text-sm text-gray-600 line-clamp-2 mb-4 leading-relaxed">
           {job.description}
         </p>
 
-        {/* دلایل تطابق (با آیکون) */}
         <div className="flex flex-wrap gap-2 mb-5">
           {matchReasons.slice(0, 3).map((reason, i) => (
             <Badge
@@ -78,13 +95,12 @@ export function JobCard({ match }: JobCardProps) {
           )}
         </div>
 
-        {/* دکمه‌های اقدام */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Clock className="w-3 h-3" />
             <span>{new Date(job.postedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             <span className="w-1 h-1 rounded-full bg-gray-300" />
-            <span className="capitalize">{job.source}</span>
+            <span className="capitalize">{getSourceLabel(job.source)}</span>
           </div>
 
           <Button
