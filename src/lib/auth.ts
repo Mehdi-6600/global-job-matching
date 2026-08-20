@@ -13,7 +13,7 @@ const credentialsSchema = z.object({
 });
 
 export const {
-  handlers: { GET, POST },
+  handlers,
   auth,
   signIn,
   signOut,
