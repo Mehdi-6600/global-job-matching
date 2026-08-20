@@ -9,9 +9,12 @@ interface JobCardProps {
     job: {
       id: string;
       title: string;
-      company: string;
-      location: string;
-      salary?: string;
+      contactName: string;        // ← اصلاح: company → contactName
+      city: string;               // ← اصلاح: location → city
+      country: string;            // ← اضافه شد
+      salaryMin?: number | null;  // ← اصلاح: salary → salaryMin
+      salaryMax?: number | null;  // ← اضافه شد
+      salaryCurrency?: string;    // ← اضافه شد
       description: string;
       url: string;
       source: string;
@@ -42,6 +45,18 @@ export function JobCard({ match }: JobCardProps) {
     }
   };
 
+  // ساخت متن موقعیت مکانی
+  const locationText = job.city && job.country 
+    ? `${job.city}, ${job.country}` 
+    : job.city || job.country || "Remote";
+
+  // ساخت متن حقوق
+  const salaryText = job.salaryMin && job.salaryMax
+    ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()} ${job.salaryCurrency || 'USD'}`
+    : job.salaryMin
+    ? `$${job.salaryMin.toLocaleString()} ${job.salaryCurrency || 'USD'}`
+    : null;
+
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1">
       <div className="relative h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
@@ -59,16 +74,16 @@ export function JobCard({ match }: JobCardProps) {
         <div className="space-y-2 mb-4">
           <div className="flex items-center gap-2 text-gray-700">
             <Briefcase className="w-4 h-4 text-gray-500" />
-            <span className="font-medium">{job.company}</span>
+            <span className="font-medium">{job.contactName || "Unknown Company"}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <MapPin className="w-4 h-4 text-gray-500" />
-            <span className="text-sm">{job.location}</span>
+            <span className="text-sm">{locationText}</span>
           </div>
-          {job.salary && (
+          {salaryText && (
             <div className="flex items-center gap-2 text-emerald-700 font-medium">
               <DollarSign className="w-4 h-4 text-emerald-500" />
-              <span className="text-sm">{job.salary}</span>
+              <span className="text-sm">{salaryText}</span>
             </div>
           )}
         </div>
