@@ -3,7 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { auth } from "@/lib/auth";
 import { SessionProvider } from "@/components/session-provider";
-import { Navbar } from "@/components/navbar";
+import { Navbar } from "@/components/Navbar";  // ← این خط رو اصلاح کن
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
