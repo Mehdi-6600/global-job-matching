@@ -15,8 +15,8 @@ interface Job {
   salary: string;
   description: string;
   url: string;
-  source: string; // ← اینجا string هست
-  postedAt: Date;
+  source: string;
+  postedAt: string;
 }
 
 export default function JobsPage() {
@@ -28,25 +28,65 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [usingSample, setUsingSample] = useState(false);
 
   const loadJobs = async (searchTitle: string, searchLocation: string) => {
     setLoading(true);
     setError(false);
+    setUsingSample(false);
     try {
-      const res = await fetch(`/api/jobs?title=${encodeURIComponent(searchTitle || "developer")}&location=${encodeURIComponent(searchLocation || "remote")}`);
+      const res = await fetch(`/api/jobs?title=${encodeURIComponent(searchTitle)}&location=${encodeURIComponent(searchLocation)}`);
       const data = await res.json();
       if (data.jobs && data.jobs.length > 0) {
         setJobs(data.jobs);
       } else {
-        setJobs([]);
-        setError(true);
+        // اگه API خالی بود، از داده‌های نمونه استفاده کن
+        setJobs(getSampleJobs());
+        setUsingSample(true);
       }
     } catch {
-      setError(true);
+      setJobs(getSampleJobs());
+      setUsingSample(true);
     } finally {
       setLoading(false);
     }
   };
+
+  const getSampleJobs = () => [
+    {
+      id: "1",
+      title: "Senior React Developer",
+      company: "Tech Corp",
+      location: "Remote",
+      salary: "$120k/year",
+      description: "We are looking for a Senior React Developer with 5+ years of experience.",
+      url: "https://example.com",
+      source: "remoteok",
+      postedAt: new Date().toISOString(),
+    },
+    {
+      id: "2",
+      title: "Full Stack Engineer",
+      company: "Startup Inc",
+      location: "Berlin, Germany",
+      salary: "$90k/year",
+      description: "Join our team as a Full Stack Engineer. Work with React, Node.js, and AWS.",
+      url: "https://example.com",
+      source: "arbeitnow",
+      postedAt: new Date().toISOString(),
+    },
+    {
+      id: "3",
+      title: "DevOps Engineer",
+      company: "Cloud Solutions",
+      location: "Remote",
+      salary: "$110k/year",
+      description: "Looking for a DevOps Engineer with Kubernetes and Docker experience.",
+      url: "https://example.com",
+      source: "jooble",
+      postedAt: new Date().toISOString(),
+    },
+  ];
 
   useEffect(() => {
     loadJobs(title, location);
@@ -58,22 +98,15 @@ export default function JobsPage() {
     loadJobs(title, location);
   };
 
-  // ساخت match با تطابق تایپ
-  const matches = jobs.map((job) => {
-    // تبدیل source به یکی از مقادیر مجاز
-    const validSource = job.source === "arbeitnow" || job.source === "jooble" || job.source === "remoteok" 
-      ? job.source as "arbeitnow" | "jooble" | "remoteok"
-      : "remoteok"; // مقدار پیش‌فرض
-
-    return {
-      job: {
-        ...job,
-        source: validSource,
-      },
-      score: Math.floor(Math.random() * 40) + 60,
-      matchReasons: ["Skills match", "Location match", "Salary meets expectations"],
-    };
-  });
+  // ساخت match برای نمایش
+  const matches = jobs.map((job) => ({
+    job: {
+      ...job,
+      source: job.source as "arbeitnow" | "jooble" | "remoteok" | "direct",
+    },
+    score: Math.floor(Math.random() * 40) + 60,
+    matchReasons: ["Skills match", "Location match", "Salary meets expectations"],
+  }));
 
   return (
     <div>
@@ -120,7 +153,7 @@ export default function JobsPage() {
             <h2 className="text-xl font-semibold">
               {matches.length} {matches.length === 1 ? "Job" : "Jobs"} Available
             </h2>
-            {error && (
+            {usingSample && (
               <span className="text-sm text-yellow-600 bg-yellow-50 px-3 py-1 rounded-full">
                 ⚠️ Using sample data
               </span>
