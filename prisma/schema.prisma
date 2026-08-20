@@ -93,7 +93,6 @@ model Profile {
   userId          String   @unique @map("user_id")
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Common fields
   phone           String?
   country         String?
   city            String?
@@ -102,28 +101,25 @@ model Profile {
   latitude        Float?
   longitude       Float?
 
-  // Job seeker fields
   headline        String?
   summary         String?  @db.Text
-  skills          String[] // e.g. ["React", "Node.js", "Project Management"]
-  expertiseLevel  String?  @map("expertise_level") // Entry, Mid, Senior, Executive
+  skills          String[]
+  expertiseLevel  String?  @map("expertise_level")
   desiredSalary   Decimal? @map("desired_salary") @db.Decimal(12, 2)
-  desiredCurrency String?  @map("desired_currency") // USD, EUR, etc.
+  desiredCurrency String?  @map("desired_currency")
   yearsExperience Int?     @map("years_experience")
-  education       Json?    // [{ institution, degree, field, year }]
-  workHistory     Json?    @map("work_history") // [{ company, title, dates, description }]
+  education       Json?
+  workHistory     Json?    @map("work_history")
   languages       String[]
   isPublic        Boolean  @default(false) @map("is_public")
 
-  // Employer fields
   companyName     String?  @map("company_name")
   companyWebsite  String?  @map("company_website")
   companySize     String?  @map("company_size")
   industry        String?
   isVerified      Boolean  @default(false) @map("is_verified")
-  verificationMethod String? @map("verification_method") // email_domain, phone, manual
+  verificationMethod String? @map("verification_method")
 
-  // Search settings
   searchRadiusKm  Int?     @map("search_radius_km") @default(50)
 
   createdAt       DateTime @default(now()) @map("created_at")
@@ -162,7 +158,6 @@ model JobListing {
   jobType         JobType       @map("job_type")
   status          ListingStatus @default(PENDING_MODERATION)
 
-  // Location
   country         String
   city            String
   address         String?
@@ -171,28 +166,23 @@ model JobListing {
   longitude       Float?
   isRemote        Boolean       @default(false) @map("is_remote")
 
-  // Salary
   salaryMin       Decimal?      @map("salary_min") @db.Decimal(12, 2)
   salaryMax       Decimal?      @map("salary_max") @db.Decimal(12, 2)
   salaryCurrency  String        @map("salary_currency") @default("USD")
-  salaryPeriod    String        @map("salary_period") @default("yearly") // hourly, monthly, yearly
+  salaryPeriod    String        @map("salary_period") @default("yearly")
 
-  // Contact
   contactName     String?       @map("contact_name")
   contactEmail    String        @map("contact_email")
   contactPhone    String?       @map("contact_phone")
 
-  // Source
-  source          String        @default("direct") // direct, arbeitnow, jooble, remoteok, usajobs
+  source          String        @default("direct")
   externalId      String?       @map("external_id")
   externalUrl     String?       @map("external_url")
 
-  // Moderation
   moderationNotes String?       @map("moderation_notes") @db.Text
   moderatedById   String?       @map("moderated_by_id")
   moderatedAt     DateTime?     @map("moderated_at")
 
-  // Analytics
   viewCount       Int           @default(0) @map("view_count")
   applicationCount Int          @default(0) @map("application_count")
 
@@ -222,12 +212,11 @@ model JobRequest {
   desiredSalary   Decimal? @map("desired_salary") @db.Decimal(12, 2)
   desiredCurrency String   @map("desired_currency") @default("USD")
 
-  // Location preference
   preferredCountry String? @map("preferred_country")
   preferredCity    String? @map("preferred_city")
   isRemoteOk       Boolean @default(true) @map("is_remote_ok")
 
-  status          String   @default("active") // active, filled, closed
+  status          String   @default("active")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -242,7 +231,7 @@ model Resume {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   title       String
-  content     String   @db.Text // The generated resume text
+  content     String   @db.Text
   htmlContent String?  @map("html_content") @db.Text
   targetJobId String?  @map("target_job_id")
   language    String   @default("en")
@@ -268,7 +257,7 @@ model Application {
   emailSentAt     DateTime? @map("email_sent_at")
   emailMessageId  String?  @map("email_message_id")
 
-  status          String   @default("pending") // pending, sent, viewed, rejected, hired
+  status          String   @default("pending")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -386,10 +375,10 @@ model AuditLog {
   userId      String?  @map("user_id")
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  action      String   // e.g. "EMAIL_SENT", "PAYMENT_APPROVED", "LISTING_MODERATED"
-  entityType  String   @map("entity_type") // e.g. "Application", "Payment", "JobListing"
+  action      String
+  entityType  String   @map("entity_type")
   entityId    String?  @map("entity_id")
-  details     Json?    // Flexible JSON for context
+  details     Json?
   ipAddress   String?  @map("ip_address")
 
   createdAt   DateTime @default(now()) @map("created_at")
@@ -416,10 +405,10 @@ model Notification {
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type        String   // e.g. "NEW_MATCH", "APPLICATION_RESPONSE", "PAYMENT_CONFIRMED"
+  type        String
   title       String
   message     String   @db.Text
-  data        Json?    // Related IDs, URLs, etc.
+  data        Json?
   read        Boolean  @default(false)
   emailed     Boolean  @default(false)
 
@@ -431,7 +420,7 @@ model Notification {
 
 model RateLimit {
   id          String   @id @default(cuid())
-  key         String   @unique // e.g. "email:userId:2024-01-15"
+  key         String   @unique
   count       Int      @default(0)
   windowStart DateTime @map("window_start")
   expiresAt   DateTime @map("expires_at")
@@ -439,4 +428,46 @@ model RateLimit {
   @@index([key])
   @@index([expiresAt])
   @@map("rate_limits")
+}
+
+// ============================================
+// ✅ مدل‌های جدید برای سیستم اشتراک و پرداخت
+// ============================================
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String   // free, pro, employer
+  displayName String   @map("display_name")
+  price       Int
+  features    String[]
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  transactions Transaction[]
+
+  @@map("subscription_plans")
+}
+
+model Transaction {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId         String   @map("plan_id")
+  plan           SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  amount         Int
+  currency       String
+  walletAddress  String   @map("wallet_address")
+  txHash         String?  @map("tx_hash")
+  status         String   @default("pending") // pending, confirmed, rejected
+  confirmedAt    DateTime? @map("confirmed_at")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("transactions")
 }
