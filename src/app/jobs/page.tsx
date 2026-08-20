@@ -1,10 +1,12 @@
 import { fetchAllJobs } from "@/lib/jobs/fetcher";
+import { JobCard } from "@/components/job-card";
+import { matchJobs, type UserProfile } from "@/lib/jobs/matcher";
 
 export default async function JobsPage() {
   // دریافت مشاغل از APIهای خارجی
   const jobs = await fetchAllJobs("developer", "remote");
 
-  // اگر هیچ شغلی دریافت نشد، داده‌های نمونه رو نشون بده
+  // داده‌های نمونه برای تست
   const sampleJobs = [
     {
       id: "1",
@@ -12,9 +14,9 @@ export default async function JobsPage() {
       company: "Tech Corp",
       location: "Remote",
       salary: "$120k/year",
-      description: "We are looking for a Senior React Developer...",
+      description: "We are looking for a Senior React Developer with 5+ years of experience.",
       url: "https://example.com",
-      source: "sample",
+      source: "sample" as const,
       postedAt: new Date(),
     },
     {
@@ -23,38 +25,44 @@ export default async function JobsPage() {
       company: "Startup Inc",
       location: "Berlin, Germany",
       salary: "$90k/year",
-      description: "Join our team as a Full Stack Engineer...",
+      description: "Join our team as a Full Stack Engineer. Work with React, Node.js, and AWS.",
       url: "https://example.com",
-      source: "sample",
+      source: "sample" as const,
+      postedAt: new Date(),
+    },
+    {
+      id: "3",
+      title: "DevOps Engineer",
+      company: "Cloud Solutions",
+      location: "Remote",
+      salary: "$110k/year",
+      description: "Looking for a DevOps Engineer with Kubernetes and Docker experience.",
+      url: "https://example.com",
+      source: "sample" as const,
       postedAt: new Date(),
     },
   ];
 
   const displayJobs = jobs.length > 0 ? jobs : sampleJobs;
 
+  // ایجاد match ساختگی برای هر شغل (برای تست)
+  const matches = displayJobs.map((job) => ({
+    job,
+    score: Math.floor(Math.random() * 40) + 60, // امتیاز بین ۶۰ تا ۱۰۰
+    matchReasons: ["Skills match", "Location match", "Salary meets expectations"],
+  }));
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Available Jobs</h1>
-      {displayJobs.length === 0 ? (
+      {matches.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No active listings yet. Check back soon!</p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {displayJobs.map((job) => (
-            <div key={job.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="font-semibold text-lg">{job.title}</h2>
-                  <p className="text-sm text-muted-foreground">{job.location}</p>
-                </div>
-                <span className="text-xs bg-secondary px-2 py-1 rounded">{job.source}</span>
-              </div>
-              <p className="mt-2 text-sm line-clamp-2">{job.description}</p>
-              {job.salary && (
-                <p className="mt-2 text-sm font-medium">{job.salary}</p>
-              )}
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {matches.map((match) => (
+            <JobCard key={match.job.id} match={match} />
           ))}
         </div>
       )}
