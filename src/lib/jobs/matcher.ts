@@ -3,7 +3,8 @@ import type { JobListing } from "@prisma/client";
 export interface UserProfile {
   title: string;
   skills: string[];
-  location: string;
+  city?: string;        // ← اضافه شد
+  country?: string;     // ← اضافه شد
   radius: number; // miles
   salaryMin?: number;
   languages?: string[];
@@ -67,16 +68,24 @@ function skillMatching(userSkills: string[], jobDescription: string): number {
 }
 
 // Salary matching
-function salaryMatching(userMinSalary: number | undefined, jobSalary: string | undefined): number {
-  if (!userMinSalary || !jobSalary) return 50; // neutral if unknown
-
-  const jobSalaryNum = parseInt(jobSalary.replace(/\D/g, ""));
-  if (!jobSalaryNum) return 50;
+function salaryMatching(userMinSalary: number | undefined, jobSalaryMin: number | null | undefined, jobSalaryMax: number | null | undefined): number {
+  if (!userMinSalary) return 50; // neutral if user didn't specify
+  
+  // استفاده از میانگین حقوق یا حداقل حقوق
+  let jobSalaryNum = 0;
+  if (jobSalaryMin && jobSalaryMax) {
+    jobSalaryNum = (jobSalaryMin + jobSalaryMax) / 2;
+  } else if (jobSalaryMin) {
+    jobSalaryNum = jobSalaryMin;
+  } else if (jobSalaryMax) {
+    jobSalaryNum = jobSalaryMax;
+  } else {
+    return 50; // neutral if job salary unknown
+  }
 
   if (jobSalaryNum >= userMinSalary) return 100;
   if (jobSalaryNum >= userMinSalary * 0.8) return 75;
   if (jobSalaryNum >= userMinSalary * 0.6) return 50;
-
   return 25;
 }
 
@@ -93,12 +102,22 @@ export function matchJobs(
   profile: UserProfile,
   jobs: JobListing[]
 ): JobMatch[] {
+  // ساخت موقعیت مکانی کاربر
+  const profileLocation = [profile.city, profile.country]
+    .filter(Boolean)
+    .join(", ") || profile.city || profile.country || "";
+
   return jobs
     .map((job) => {
       const matchReasons: string[] = [];
 
+      // ساخت موقعیت مکانی شغل
+      const jobLocation = [job.city, job.country]
+        .filter(Boolean)
+        .join(", ") || job.city || job.country || "";
+
       // Location score (40% weight)
-      const locationScore = locationSimilarity(profile.location, job.location);
+      const locationScore = locationSimilarity(profileLocation, jobLocation);
       if (locationScore > 50) matchReasons.push("Location match");
 
       // Skills score (30% weight)
@@ -106,7 +125,7 @@ export function matchJobs(
       if (skillScore > 60) matchReasons.push("Skills match");
 
       // Salary score (20% weight)
-      const salaryScore = salaryMatching(profile.salaryMin, job.salary);
+      const salaryScore = salaryMatching(profile.salaryMin, job.salaryMin, job.salaryMax);
       if (salaryScore === 100) matchReasons.push("Salary meets expectations");
       if (salaryScore >= 75) matchReasons.push("Salary is acceptable");
 
