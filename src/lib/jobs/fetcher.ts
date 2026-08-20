@@ -8,7 +8,7 @@ export interface ArbeitnowJob {
   tags: string[];
   job_types: string[];
   location: string;
-  created_at: number; // Unix timestamp
+  created_at: number;
 }
 
 export interface FetchJobsResult {
@@ -25,7 +25,6 @@ export async function fetchAllJobs(
   } = {}
 ): Promise<FetchJobsResult> {
   const { page = 1, perPage = 100 } = options;
-
   const url = new URL(ARBEITNOW_API);
   url.searchParams.set("page", String(page));
   url.searchParams.set("limit", String(perPage));
@@ -40,8 +39,6 @@ export async function fetchAllJobs(
   }
 
   const data = await res.json();
-
-  // The API returns { data: ArbeitnowJob[], meta: {...} } or just an array
   const jobs: ArbeitnowJob[] = Array.isArray(data) ? data : data.data ?? [];
 
   return {
