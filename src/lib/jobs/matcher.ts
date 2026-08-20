@@ -1,4 +1,4 @@
-import { JobListing } from "./fetcher";
+import type { JobListing } from "@prisma/client";
 
 export interface UserProfile {
   title: string;
