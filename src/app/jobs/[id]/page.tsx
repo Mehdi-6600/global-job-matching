@@ -15,9 +15,8 @@ import {
   Sparkles,
   Send,
 } from "lucide-react";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 const job = {
   id: 1,
   title: "Senior Frontend Engineer",
