@@ -1,86 +1,88 @@
-"use client";
-
 import Link from "next/link";
-import { Briefcase, Github, Twitter, Linkedin, Mail } from "lucide-react";
 
-const footerLinks = {
-  Product: [
-    { label: "Jobs", href: "/jobs" },
-    { label: "Pricing", href: "/pricing" },
-    { label: "Dashboard", href: "/dashboard" },
-  ],
-  Company: [
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
-  ],
-  Legal: [
-    { label: "Terms", href: "/terms" },
-    { label: "Privacy", href: "/privacy" },
-  ],
-};
-
-export function Footer() {
+export default function Footer() {
   return (
-    <footer className="glass-strip mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer className="bg-white border-t border-gray-200">
+      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-bold text-[var(--text-primary)]">
-                Global<span className="gradient-text">Job</span>
-              </span>
+          <div className="col-span-1 md:col-span-1">
+            <Link href="/" className="text-xl font-bold text-indigo-600">
+              Global Job Matching
             </Link>
-            <p className="text-sm text-[var(--text-muted)] mb-4">
-              Connecting talent with opportunity across the globe.
+            <p className="mt-4 text-sm text-gray-500">
+              AI-powered job matching for the modern workforce.
             </p>
-            <div className="flex items-center gap-3">
-              <a href="#" className="w-9 h-9 rounded-xl glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3B82F6] hover:glow-primary transition-all">
-                <Twitter className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-9 h-9 rounded-xl glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3B82F6] hover:glow-primary transition-all">
-                <Linkedin className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-9 h-9 rounded-xl glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3B82F6] hover:glow-primary transition-all">
-                <Github className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-9 h-9 rounded-xl glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3B82F6] hover:glow-primary transition-all">
-                <Mail className="w-4 h-4" />
-              </a>
-            </div>
           </div>
-
-          {/* Links */}
-          {Object.entries(footerLinks).map(([category, links]) => (
-            <div key={category}>
-              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                {category}
-              </h4>
-              <ul className="space-y-2">
-                {links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-[var(--text-muted)] hover:text-[#3B82F6] transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
+              Platform
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/jobs" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Browse Jobs
+                </Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  About Us
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
+              Support
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/contact" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Privacy Policy
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
+              Account
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/login" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Sign In
+                </Link>
+              </li>
+              <li>
+                <Link href="/register" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Create Account
+                </Link>
+              </li>
+              <li>
+                <Link href="/dashboard" className="text-sm text-gray-500 hover:text-indigo-600 transition">
+                  Dashboard
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
-
-        <div className="mt-10 pt-6 border-t border-[var(--glass-border)] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-[var(--text-muted)]">
-            &copy; {new Date().getFullYear()} GlobalJob. All rights reserved.
-          </p>
-          <p className="text-xs text-[var(--text-muted)]">
-            Built with Next.js & Tailwind CSS
+        <div className="mt-8 pt-8 border-t border-gray-200">
+          <p className="text-sm text-gray-400 text-center">
+            &copy; {new Date().getFullYear()} Global Job Matching. All rights reserved.
           </p>
         </div>
       </div>
