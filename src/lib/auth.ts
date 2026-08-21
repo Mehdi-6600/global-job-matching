@@ -1,39 +1,89 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
+import Credentials from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { db } from "./db";
+import { env } from "./env";
+import { ROLES } from "./roles";
 
-const prisma = new PrismaClient();
+const credentialsSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+const authResult = NextAuth({
+  adapter: PrismaAdapter(db) as any,
+  session: { strategy: "jwt" },
+  secret: env.AUTH_SECRET,
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
   providers: [
+    Credentials({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const parsed = credentialsSchema.safeParse(credentials);
+        if (!parsed.success) return null;
+
+        const { email, password } = parsed.data;
+        const user = await db.user.findUnique({ where: { email } });
+        if (!user || !user.password) return null;
+
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) return null;
+
+        if (user.status === "SUSPENDED") return null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          role: user.role,
+        };
+      },
+    }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
   callbacks: {
-    async session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub;
-      }
-      return session;
-    },
     async jwt({ token, user }) {
       if (user) {
-        token.sub = user.id;
+        (token as any).id = user.id;
+        (token as any).role = (user as any).role;
       }
       return token;
     },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = (token as any).id as string;
+        session.user.role = (token as any).role as string;
+      }
+      return session;
+    },
   },
-};
+  events: {
+    async signIn({ user, isNewUser }) {
+      if (isNewUser && user.email === env.OWNER_EMAIL) {
+        await db.user.update({
+          where: { id: user.id },
+          data: { role: ROLES.OWNER },
+        });
+      }
+    },
+  },
+});
 
-export default NextAuth(authOptions);
+export const handlers = authResult.handlers;
+export const auth = authResult.auth;
+export const signIn = authResult.signIn;
+export const signOut = authResult.signOut;
