@@ -38,10 +38,12 @@ export async function GET(req: NextRequest) {
         title: job.title,
         company: job.contactName || "Unknown Company",
         location: job.isRemote ? "Remote" : `${job.city}, ${job.country}`,
+        type: job.jobType || "Full-time",        // ✅ اضافه شد
+        tags: job.skillsRequired || [],          // ✅ اضافه شد
         salary: job.salaryMin && job.salaryMax
           ? `$${job.salaryMin} - $${job.salaryMax} ${job.salaryCurrency}`
-          : undefined,
-        description: job.description,
+          : "Not disclosed",
+        description: job.description || "",
         url: "#",
         source: job.source || "direct",
         postedAt: job.createdAt,
@@ -90,10 +92,12 @@ export async function GET(req: NextRequest) {
       title: job.title,
       company: job.contactName || "Unknown Company",
       location: job.isRemote ? "Remote" : `${job.city}, ${job.country}`,
+      type: job.jobType || "Full-time",        // ✅ اضافه شد
+      tags: job.skillsRequired || [],          // ✅ اضافه شد
       salary: job.salaryMin && job.salaryMax
         ? `$${job.salaryMin} - $${job.salaryMax} ${job.salaryCurrency}`
-        : undefined,
-      description: job.description,
+        : "Not disclosed",
+      description: job.description || "",
       url: "#",
       source: job.source || "direct",
       postedAt: job.createdAt,
