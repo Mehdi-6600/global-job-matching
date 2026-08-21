@@ -70,7 +70,7 @@ export default function PricingPage() {
     if (planId === "free") {
       router.push("/dashboard");
     } else if (planId === "pro") {
-      router.push("/payment?plan=pro");
+      router.push("/payment?plan=pro");  // ← مسیر درست به صفحه پرداخت
     } else {
       router.push("/contact");
     }
@@ -80,7 +80,6 @@ export default function PricingPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
       <Navbar />
 
-      {/* Hero */}
       <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl" />
@@ -99,7 +98,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Pricing Cards */}
       <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
@@ -170,7 +168,6 @@ export default function PricingPage() {
             ))}
           </div>
 
-          {/* Trust Badges */}
           <div className="mt-16 text-center">
             <p className="text-white/30 text-sm mb-6">
               Trusted by 10,000+ professionals worldwide
