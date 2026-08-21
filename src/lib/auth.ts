@@ -1,59 +1,39 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
+import NextAuth, { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { PrismaClient } from "@prisma/client";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const prisma = new PrismaClient();
+
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
-    Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        // فقط برای تست
-        if (credentials?.email === "test@test.com" && credentials?.password === "123456") {
-          return {
-            id: "1",
-            name: "Test User",
-            email: "test@test.com",
-            role: "JOB_SEEKER",
-          };
-        }
-        return null;
-      },
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
   ],
-  session: { strategy: "jwt" },
-  secret: process.env.AUTH_SECRET || "secret",
+  session: {
+    strategy: "jwt",
+  },
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-      }
-      return token;
-    },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.role = token.role as string;
+      if (token.sub && session.user) {
+        session.user.id = token.sub;
       }
       return session;
     },
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id;
+      }
+      return token;
+    },
   },
-});
+};
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      role: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-    };
-  }
-  interface User {
-    role: string;
-  }
-}
+export default NextAuth(authOptions);
