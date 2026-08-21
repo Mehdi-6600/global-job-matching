@@ -10,7 +10,6 @@ export async function sendContactMessage(formData: FormData) {
     return { success: false, error: "All fields are required" };
   }
 
-  // TODO: بعداً ایمیل واقعی بفرست (مثلاً با Resend یا SendGrid)
   console.log("Contact form submission:", { name, email, subject, message });
 
   return { success: true };
