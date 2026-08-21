@@ -66,17 +66,20 @@ export default function JobsPage() {
 
   const { jobs, loading, error, refetch } = useJobs(debouncedQuery);
 
+  // ✅ اصلاح شده: دسترسی امن به فیلدها
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       const matchesType =
         selectedType === "All" ||
-        job.type.toLowerCase().includes(selectedType.toLowerCase()) ||
-        (selectedType === "Remote" && job.location.toLowerCase().includes("remote"));
+        (job.type || "").toLowerCase().includes(selectedType.toLowerCase()) ||
+        (selectedType === "Remote" && (job.location || "").toLowerCase().includes("remote"));
+
       const matchesCategory =
         selectedCategory === "All" ||
-        job.tags.some((t) =>
-          t.toLowerCase().includes(selectedCategory.toLowerCase())
+        (job.tags || []).some((t) =>
+          (t || "").toLowerCase().includes(selectedCategory.toLowerCase())
         );
+
       return matchesType && matchesCategory;
     });
   }, [jobs, selectedType, selectedCategory]);
@@ -211,7 +214,7 @@ export default function JobsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     {/* Logo */}
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-black/5 dark:border-white/10 flex items-center justify-center text-lg font-bold text-slate-700 dark:text-white/80">
-                      {job.company.slice(0, 2).toUpperCase()}
+                      {(job.company || "").slice(0, 2).toUpperCase()}
                     </div>
 
                     {/* Info */}
@@ -239,11 +242,11 @@ export default function JobsPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Briefcase className="w-3.5 h-3.5" />
-                          {job.type}
+                          {job.type || "Full-time"}
                         </span>
                         <span className="flex items-center gap-1">
                           <DollarSign className="w-3.5 h-3.5" />
-                          {job.salary}
+                          {job.salary || "Not disclosed"}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
@@ -252,7 +255,7 @@ export default function JobsPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2 mt-3">
-                        {job.tags.slice(0, 5).map((tag) => (
+                        {(job.tags || []).slice(0, 5).map((tag) => (
                           <span
                             key={tag}
                             className="px-3 py-1 rounded-full text-xs font-medium bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/70 border border-black/5 dark:border-white/10"
