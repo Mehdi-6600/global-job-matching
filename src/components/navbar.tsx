@@ -1,32 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Briefcase, Menu, X } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { useState } from "react";
 
 const navLinks = [
-  { href: "/", label: "Home" },
   { href: "/jobs", label: "Jobs" },
-  { href: "/pricing", label: "Pricing" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
-export function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+export default function Navbar() {
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass-strip">
+    <nav className="glass-strip sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
-              <Briefcase className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-[var(--text-primary)]">
-              Global<span className="gradient-text">Job</span>
-            </span>
+          <Link href="/" className="flex items-center gap-2 text-xl font-bold text-[var(--ios-blue)]">
+            <Briefcase className="w-6 h-6" />
+            Global Job Matching
           </Link>
 
           {/* Desktop Nav */}
@@ -35,70 +30,54 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  pathname === link.href
+                    ? "bg-[var(--ios-blue)]/10 text-[var(--ios-blue)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5"
+                }`}
               >
                 {link.label}
               </Link>
             ))}
-          </div>
-
-          {/* Right side */}
-          <div className="hidden md:flex items-center gap-3">
-            <ThemeToggle />
-            <Link
-              href="/login"
-              className="btn-ghost text-sm"
-            >
+            <Link href="/login" className="btn-primary text-sm ml-2">
               Sign In
             </Link>
-            <Link
-              href="/register"
-              className="btn-primary text-sm py-2 px-5"
-            >
-              Get Started
-            </Link>
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile Toggle */}
           <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-xl text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden p-2 rounded-lg hover:bg-white/5"
           >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {menuOpen ? (
+              <X className="w-5 h-5 text-[var(--text-primary)]" />
+            ) : (
+              <Menu className="w-5 h-5 text-[var(--text-primary)]" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="md:hidden glass-section mx-4 mb-4 p-4 space-y-2">
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-[var(--glass-border)] px-4 py-4 space-y-2">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className="block px-4 py-3 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10 transition-all"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-2.5 rounded-lg text-sm font-medium ${
+                pathname === link.href
+                  ? "bg-[var(--ios-blue)]/10 text-[var(--ios-blue)]"
+                  : "text-[var(--text-secondary)]"
+              }`}
             >
               {link.label}
             </Link>
           ))}
-          <div className="pt-2 border-t border-[var(--glass-border)] flex items-center gap-3 px-4">
-            <ThemeToggle />
-            <Link
-              href="/login"
-              onClick={() => setMobileOpen(false)}
-              className="btn-ghost text-sm flex-1 text-center"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              onClick={() => setMobileOpen(false)}
-              className="btn-primary text-sm py-2 px-4 flex-1 text-center"
-            >
-              Get Started
-            </Link>
-          </div>
+          <Link href="/login" onClick={() => setMenuOpen(false)} className="btn-primary w-full text-sm mt-2">
+            Sign In
+          </Link>
         </div>
       )}
     </nav>
