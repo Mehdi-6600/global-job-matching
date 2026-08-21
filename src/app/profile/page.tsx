@@ -1,113 +1,115 @@
-"use client";
+import { Metadata } from "next";
+import Link from "next/link";
 
-import { useState } from "react";
-import {
-  User,
-  Mail,
-  MapPin,
-  Briefcase,
-  GraduationCap,
-  Link as LinkIcon,
-  Save,
-  Camera,
-  Pencil,
-} from "lucide-react";
-import { Navbar } from "@/components/navbar";
+export const metadata: Metadata = {
+  title: "Your Profile | Global Job Matching",
+  description: "Manage your Global Job Matching profile.",
+};
 
 export default function ProfilePage() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "John Doe",
-    email: "john@example.com",
-    location: "San Francisco, CA",
-    title: "Senior Frontend Developer",
-    bio: "Passionate developer with 5+ years of experience building modern web applications.",
-    website: "https://johndoe.dev",
-    skills: "React, TypeScript, Next.js, Node.js, Tailwind CSS",
-    experience: "5+ years",
-    education: "B.S. Computer Science",
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSave = () => {
-    setIsEditing(false);
-  };
-
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
-      <Navbar />
-
-      <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="glass-section p-8 mb-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-2xl ios-blue-bg flex items-center justify-center text-3xl font-bold text-white shadow-glow">
-                  {formData.name.split(" ").map((n) => n[0]).join("")}
-                </div>
-                <button className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3478F5] transition-colors">
-                  <Camera className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex-1 text-center sm:text-left">
-                <h1 className="text-2xl font-bold">{formData.name}</h1>
-                <p className="text-[var(--text-secondary)]">{formData.title}</p>
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-2 text-sm text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{formData.location}</span>
-                  <span className="flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5" />{formData.website}</span>
-                </div>
-              </div>
-              <button onClick={() => (isEditing ? handleSave() : setIsEditing(true))} className="btn-primary flex items-center gap-2">
-                {isEditing ? <><Save className="w-4 h-4" />Save Changes</> : <><Pencil className="w-4 h-4" />Edit Profile</>}
-              </button>
-            </div>
+    <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        {/* NAVBAR FIX: Branding updated from "GlobalJob" to "Global Job Matching" */}
+        <nav className="flex items-center justify-between mb-8">
+          <Link href="/" className="text-xl font-bold text-indigo-600">
+            Global Job Matching
+          </Link>
+          <div className="flex gap-4">
+            <Link href="/jobs" className="text-sm text-gray-600 hover:text-indigo-600">
+              Jobs
+            </Link>
+            <Link href="/pricing" className="text-sm text-gray-600 hover:text-indigo-600">
+              Pricing
+            </Link>
+            <Link href="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600">
+              Dashboard
+            </Link>
           </div>
+        </nav>
 
-          <div className="glass-section p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                { label: "Full Name", name: "name", icon: User, type: "text" },
-                { label: "Email", name: "email", icon: Mail, type: "email" },
-                { label: "Job Title", name: "title", icon: Briefcase, type: "text" },
-                { label: "Location", name: "location", icon: MapPin, type: "text" },
-                { label: "Website", name: "website", icon: LinkIcon, type: "url" },
-                { label: "Experience", name: "experience", icon: Briefcase, type: "text" },
-                { label: "Education", name: "education", icon: GraduationCap, type: "text" },
-                { label: "Skills", name: "skills", icon: null, type: "text" },
-              ].map((field) => (
-                <div key={field.name} className={field.name === "bio" ? "md:col-span-2" : ""}>
-                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">{field.label}</label>
-                  <div className="relative">
-                    {field.icon && <field.icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />}
-                    <input
-                      type={field.type}
-                      name={field.name}
-                      value={(formData as any)[field.name]}
-                      onChange={handleChange}
-                      disabled={!isEditing}
-                      className={`glass-input w-full ${field.icon ? "pl-11" : ""}`}
-                    />
-                  </div>
-                </div>
-              ))}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Bio</label>
-                <textarea
-                  name="bio"
-                  value={formData.bio}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                  rows={4}
-                  className="glass-input w-full resize-none"
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Profile</h1>
+          <form className="space-y-5">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                Professional Title
+              </label>
+              <input
+                id="title"
+                type="text"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                placeholder="e.g. Senior React Developer"
+              />
+            </div>
+            <div>
+              <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-1">
+                Skills (comma separated)
+              </label>
+              <input
+                id="skills"
+                type="text"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                placeholder="React, TypeScript, Node.js"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+                  Country
+                </label>
+                <input
+                  id="country"
+                  type="text"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  placeholder="United States"
+                />
+              </div>
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                  City
+                </label>
+                <input
+                  id="city"
+                  type="text"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  placeholder="New York"
                 />
               </div>
             </div>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label htmlFor="salary" className="block text-sm font-medium text-gray-700 mb-1">
+                  Desired Salary (USD)
+                </label>
+                <input
+                  id="salary"
+                  type="number"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  placeholder="100000"
+                />
+              </div>
+              <div>
+                <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-1">
+                  Search Radius (km)
+                </label>
+                <input
+                  id="radius"
+                  type="number"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  placeholder="50"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="w-full sm:w-auto px-6 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition"
+            >
+              Save Profile
+            </button>
+          </form>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
