@@ -1,125 +1,176 @@
+"use client";
+
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Globe, Zap, Shield } from "lucide-react";
+import {
+  Search,
+  Globe,
+  Zap,
+  Shield,
+  TrendingUp,
+  Users,
+  ArrowRight,
+  Briefcase,
+} from "lucide-react";
+import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/footer";
+
+const features = [
+  {
+    icon: Globe,
+    title: "Global Reach",
+    desc: "Access job listings from top platforms worldwide — Arbeitnow, RemoteOK, and Jooble.",
+  },
+  {
+    icon: Zap,
+    title: "Smart Matching",
+    desc: "AI-powered recommendations that learn your preferences and surface the best fits.",
+  },
+  {
+    icon: Shield,
+    title: "Verified Listings",
+    desc: "Every job is vetted for authenticity. No scams, no duplicates, just real opportunities.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Career Growth",
+    desc: "Track applications, save favorites, and get insights to accelerate your career.",
+  },
+];
+
+const stats = [
+  { value: "50K+", label: "Active Jobs" },
+  { value: "120+", label: "Countries" },
+  { value: "10K+", label: "Companies" },
+  { value: "1M+", label: "Users" },
+];
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col">
-      {/* Hero */}
-      <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
-        <div className="container mx-auto max-w-4xl text-center relative">
-          <div className="inline-flex items-center gap-2 glass px-4 py-1.5 rounded-full text-sm text-cyan-400 mb-8 animate-fade-in-up">
-            <Zap className="h-4 w-4" />
-            <span>AI-Powered Global Job Matching</span>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 animate-fade-in-up delay-100">
-            Find Your Next Job
-            <span className="block neon-text">Anywhere on Earth</span>
-          </h1>
-          <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10 animate-fade-in-up delay-200">
-            We aggregate listings from top job boards worldwide, verify employers,
-            and use AI to match you with the perfect opportunity.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up delay-300">
-            <Link href="/jobs">
-              <Button size="lg" className="btn-primary px-8 py-6 text-lg hover-lift">
-                Browse Jobs <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button size="lg" variant="outline" className="btn-outline px-8 py-6 text-lg hover-lift">
-                Get Started Free
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
+      <Navbar />
 
-      {/* Stats */}
-      <section className="py-12 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { value: "50K+", label: "Active Jobs" },
-              { value: "120+", label: "Countries" },
-              { value: "10K+", label: "Employers" },
-              { value: "98%", label: "Match Rate" },
-            ].map((stat, index) => (
-              <div
-                key={stat.label}
-                className="glass glass-hover p-6 text-center animate-fade-in-up"
-                style={{ animationDelay: `${(index + 1) * 100}ms` }}
-              >
-                <div className="text-2xl md:text-3xl font-bold neon-text">{stat.value}</div>
-                <div className="text-sm text-white/50 mt-1">{stat.label}</div>
+      {/* Hero Section — Full Width Glass */}
+      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Background glow orbs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-[#3B82F6]/10 dark:bg-[#3B82F6]/15 rounded-full blur-[100px]" />
+          <div className="absolute top-40 -left-40 w-[400px] h-[400px] bg-[#8B5CF6]/10 dark:bg-[#8B5CF6]/15 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto">
+          <div className="glass-section p-8 sm:p-12 lg:p-16 text-center">
+            <div className="inline-flex items-center gap-2 glass-pill mb-8">
+              <Zap className="w-3.5 h-3.5 text-[#3B82F6]" />
+              <span>Now with AI-powered matching</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 leading-tight">
+              Find Your{" "}
+              <span className="gradient-text">Dream Job</span>
+              <br />
+              Anywhere in the World
+            </h1>
+
+            <p className="text-lg sm:text-xl text-[var(--text-secondary)] max-w-2xl mx-auto mb-10">
+              Connect with top opportunities from around the globe.
+              One platform, thousands of real listings, zero hassle.
+            </p>
+
+            {/* Search Bar — Glass */}
+            <div className="max-w-2xl mx-auto">
+              <div className="glass rounded-2xl p-2 flex flex-col sm:flex-row gap-2 shadow-glow">
+                <div className="flex-1 flex items-center px-4 h-14">
+                  <Search className="w-5 h-5 text-[var(--text-muted)] mr-3" />
+                  <input
+                    type="text"
+                    placeholder="Job title, company, or keywords..."
+                    className="w-full bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none"
+                  />
+                </div>
+                <Link
+                  href="/jobs"
+                  className="h-14 px-8 btn-primary flex items-center justify-center gap-2 rounded-xl"
+                >
+                  <Search className="w-4 h-4" />
+                  Search Jobs
+                </Link>
               </div>
-            ))}
+            </div>
+
+            {/* Quick stats row */}
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-6">
+              {stats.map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <div className="text-2xl font-bold gradient-text">{stat.value}</div>
+                  <div className="text-xs text-[var(--text-muted)]">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-5xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 animate-fade-in-up">
-              Why Global Job Matching?
+      {/* Features Section — Edge to Edge Glass Strip */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Why Choose <span className="gradient-text">GlobalJob</span>?
             </h2>
-            <p className="text-white/50 max-w-xl mx-auto animate-fade-in-up delay-100">
-              Everything you need to find your dream job or hire top talent, powered by cutting-edge AI.
+            <p className="text-[var(--text-secondary)] max-w-xl mx-auto">
+              Everything you need to land your next role, all in one beautifully designed platform.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Globe,
-                title: "Global Reach",
-                desc: "Access job listings from 120+ countries and top platforms like Arbeitnow, RemoteOK, and USAJobs.",
-              },
-              {
-                icon: Zap,
-                title: "AI Matching",
-                desc: "Our intelligent algorithm matches your skills and preferences with the most relevant opportunities.",
-              },
-              {
-                icon: Shield,
-                title: "Verified Employers",
-                desc: "Every employer is verified. No scams, no fake listings — just real opportunities.",
-              },
-            ].map((feature, index) => (
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature) => (
               <div
                 key={feature.title}
-                className="glass glass-hover p-8 animate-fade-in-up hover-glow"
-                style={{ animationDelay: `${(index + 1) * 150}ms` }}
+                className="glass-card group cursor-default"
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 flex items-center justify-center mb-5 animate-float">
-                  <feature.icon className="h-6 w-6 text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mb-5 shadow-glow group-hover:shadow-glow-accent transition-shadow">
+                  <feature.icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-white/50 text-sm leading-relaxed">{feature.desc}</p>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                  {feature.desc}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-3xl">
-          <div className="glass-strong neon-border p-10 md:p-14 text-center animate-fade-in-scale hover-glow">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to find your next job?</h2>
-            <p className="text-white/50 mb-8 max-w-lg mx-auto">
-              Join thousands of professionals who found their dream roles through Global Job Matching.
-            </p>
-            <Link href="/register">
-              <Button size="lg" className="btn-primary px-8 py-6 text-lg hover-lift">
-                Create Free Account <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+      {/* CTA Section — Full Width Glass */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="glass-section p-10 sm:p-16 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-glow pointer-events-none" />
+            <div className="relative">
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                Ready to Find Your Next Opportunity?
+              </h2>
+              <p className="text-[var(--text-secondary)] max-w-xl mx-auto mb-8">
+                Join thousands of professionals who found their dream job through GlobalJob.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link href="/jobs" className="btn-primary flex items-center gap-2">
+                  <Briefcase className="w-4 h-4" />
+                  Browse Jobs
+                </Link>
+                <Link href="/register" className="btn-secondary flex items-center gap-2">
+                  Create Account
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
