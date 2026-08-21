@@ -1,217 +1,160 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Check, Sparkles, Zap, Building2, Award } from "lucide-react";
+import Link from "next/link";
+import { Check, Zap, Crown, Rocket } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 
 const plans = [
   {
-    id: "free",
     name: "Free",
-    description: "Perfect for getting started",
-    price: "$0",
-    period: "forever",
     icon: Zap,
+    price: "$0",
+    period: "/month",
+    description: "Perfect for getting started",
     features: [
       "Browse all job listings",
-      "Create a profile",
-      "Apply to 5 jobs/month",
-      "Basic resume builder",
+      "Basic search & filters",
+      "Save up to 10 jobs",
       "Email notifications",
     ],
     cta: "Get Started",
+    href: "/register",
     popular: false,
-    border: "border-gray-200/60 dark:border-white/10",
   },
   {
-    id: "basic",
-    name: "Basic",
-    description: "For active job seekers",
-    price: "$9.99",
-    period: "per month",
-    icon: Award,
+    name: "Pro",
+    icon: Crown,
+    price: "$9",
+    period: "/month",
+    description: "For serious job seekers",
     features: [
       "Everything in Free",
-      "50 job applications/month",
-      "Salary insights & reports",
-      "Priority email support",
-      "Job match alerts",
+      "AI-powered job matching",
+      "Unlimited saved jobs",
+      "Priority application alerts",
+      "Resume builder access",
+      "Salary insights",
     ],
-    cta: "Start Basic Trial",
-    popular: false,
-    border: "border-gray-300/80 dark:border-gray-400/40 shadow-[0_0_15px_rgba(150,150,150,0.15)] dark:shadow-[0_0_20px_rgba(200,200,200,0.1)]",
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    description: "For serious job seekers",
-    price: "$19",
-    period: "per month",
-    icon: Sparkles,
-    features: [
-      "Everything in Free & Basic",
-      "Unlimited job applications",
-      "AI-powered resume optimizer",
-      "Priority application status",
-      "Direct messaging with recruiters",
-      "Interview preparation tools",
-      "3-day free trial",
-    ],
-    cta: "Start Pro Trial",
+    cta: "Upgrade to Pro",
+    href: "/payment?plan=pro",
     popular: true,
-    border: "border-amber-400/70 dark:border-amber-400/50 shadow-[0_0_25px_rgba(251,191,36,0.25)] dark:shadow-[0_0_30px_rgba(251,191,36,0.15)]",
   },
   {
-    id: "enterprise",
     name: "Enterprise",
-    description: "For teams and organizations",
-    price: "Custom",
-    period: "contact us",
-    icon: Building2,
+    icon: Rocket,
+    price: "$29",
+    period: "/month",
+    description: "For teams & recruiters",
     features: [
       "Everything in Pro",
-      "Team collaboration tools",
-      "Advanced analytics dashboard",
+      "Team collaboration",
+      "Advanced analytics",
+      "API access",
+      "Dedicated support",
       "Custom integrations",
-      "Dedicated account manager",
-      "SSO & advanced security",
-      "Custom branding",
     ],
     cta: "Contact Sales",
+    href: "/contact",
     popular: false,
-    border: "border-gray-200/60 dark:border-white/10",
   },
 ];
 
 export default function PricingPage() {
-  const router = useRouter();
-
-  const handleSelectPlan = (planId: string) => {
-    if (planId === "free") {
-      router.push("/dashboard");
-    } else if (planId === "basic") {
-      router.push("/payment?plan=basic");
-    } else if (planId === "pro") {
-      router.push("/payment?plan=pro");
-    } else if (planId === "enterprise") {
-      router.push("/contact");
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-blue-50/50 to-gray-50 dark:from-slate-950 dark:via-indigo-950/80 dark:to-slate-900 text-slate-800 dark:text-white">
+    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
       <Navbar />
 
+      {/* Hero */}
       <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-20 -left-40 w-96 h-96 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-20 -right-40 w-96 h-96 bg-pink-500/5 dark:bg-pink-500/10 rounded-full blur-3xl" />
+          <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#3B82F6]/10 dark:bg-[#3B82F6]/15 rounded-full blur-[100px]" />
         </div>
 
-        <div className="relative max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-purple-700 dark:from-white dark:via-blue-100 dark:to-purple-200 bg-clip-text text-transparent mb-6">
-            Simple, Transparent Pricing
-          </h1>
-          <p className="text-lg text-slate-600 dark:text-white/60 max-w-2xl mx-auto">
-            Choose the plan that fits your needs. All plans include a free trial.
-          </p>
+        <div className="relative max-w-7xl mx-auto text-center">
+          <div className="glass-section p-10 sm:p-14">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
+              Simple, <span className="gradient-text">Transparent</span> Pricing
+            </h1>
+            <p className="text-[var(--text-secondary)] max-w-xl mx-auto">
+              Choose the plan that fits your career goals. No hidden fees, cancel anytime.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
+      {/* Pricing Cards */}
+      <section className="px-4 sm:px-6 lg:px-8 pb-24">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((plan) => (
               <div
-                key={plan.id}
-                className={`relative rounded-3xl p-8 transition-all duration-300 border-2 ${plan.border} ${
-                  plan.popular
-                    ? "bg-gradient-to-b from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 scale-105"
-                    : "glass bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/[0.15]"
+                key={plan.name}
+                className={`glass-card relative ${
+                  plan.popular ? "ring-2 ring-[#3B82F6] glow-primary" : ""
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-sm font-semibold shadow-lg text-white">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="px-4 py-1 rounded-full text-xs font-bold bg-[#3B82F6] text-white shadow-glow">
                       Most Popular
                     </span>
                   </div>
                 )}
 
-                <div className="mb-6">
+                <div className="text-center mb-6">
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
+                    className={`w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4 ${
                       plan.popular
-                        ? "bg-blue-500/20 text-blue-600 dark:text-blue-300"
-                        : "bg-gray-200/50 dark:bg-white/5 text-slate-600 dark:text-white/60"
+                        ? "gradient-primary shadow-glow"
+                        : "glass"
                     }`}
                   >
-                    <plan.icon className="w-6 h-6" />
+                    <plan.icon
+                      className={`w-7 h-7 ${
+                        plan.popular ? "text-white" : "text-[#3B82F6]"
+                      }`}
+                    />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+                  <h3 className="text-xl font-bold text-[var(--text-primary)]">
                     {plan.name}
                   </h3>
-                  <p className="text-slate-500 dark:text-white/50 text-sm">
+                  <p className="text-sm text-[var(--text-muted)] mt-1">
                     {plan.description}
                   </p>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold gradient-text">
+                      {plan.price}
+                    </span>
+                    <span className="text-[var(--text-muted)]">{plan.period}</span>
+                  </div>
                 </div>
 
-                <div className="mb-8">
-                  <span className="text-4xl font-bold text-slate-800 dark:text-white">
-                    {plan.price}
-                  </span>
-                  <span className="text-slate-400 dark:text-white/40 ml-2">
-                    {plan.period}
-                  </span>
-                </div>
-
-                <ul className="space-y-4 mb-8">
+                <ul className="space-y-3 mb-8">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
-                      <Check
-                        className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                          plan.popular ? "text-blue-500 dark:text-blue-400" : "text-slate-500 dark:text-white/40"
-                        }`}
-                      />
-                      <span className="text-sm text-slate-700 dark:text-white/70">
+                      <div className="w-5 h-5 rounded-full bg-[#3B82F6]/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-[#3B82F6]" />
+                      </div>
+                      <span className="text-sm text-[var(--text-secondary)]">
                         {feature}
                       </span>
                     </li>
                   ))}
                 </ul>
 
-                <button
-                  onClick={() => handleSelectPlan(plan.id)}
-                  className={`w-full py-3.5 rounded-xl font-semibold transition-all duration-300 ${
+                <Link
+                  href={plan.href}
+                  className={`block w-full text-center py-3 rounded-xl font-semibold transition-all duration-300 ${
                     plan.popular
-                      ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg shadow-blue-500/25 text-white"
-                      : "glass bg-white/80 dark:bg-white/5 hover:bg-white/90 dark:hover:bg-white/20 text-slate-700 dark:text-white border border-gray-200/50 dark:border-white/10"
+                      ? "btn-primary"
+                      : "btn-secondary"
                   }`}
                 >
                   {plan.cta}
-                </button>
+                </Link>
               </div>
             ))}
-          </div>
-
-          <div className="mt-16 text-center">
-            <p className="text-slate-500 dark:text-white/30 text-sm mb-6">
-              Trusted by 10,000+ professionals worldwide
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-8 opacity-60 dark:opacity-30">
-              {["Google", "Microsoft", "Amazon", "Meta", "Apple"].map(
-                (company) => (
-                  <span
-                    key={company}
-                    className="text-lg font-semibold text-slate-500 dark:text-white/60"
-                  >
-                    {company}
-                  </span>
-                )
-              )}
-            </div>
           </div>
         </div>
       </section>
