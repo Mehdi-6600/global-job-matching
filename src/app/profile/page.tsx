@@ -34,7 +34,6 @@ export default function ProfilePage() {
 
   const handleSave = () => {
     setIsEditing(false);
-    // TODO: API call to save profile
   };
 
   return (
@@ -43,14 +42,13 @@ export default function ProfilePage() {
 
       <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          {/* Profile Header */}
           <div className="glass-section p-8 mb-6">
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <div className="relative">
-                <div className="w-24 h-24 rounded-2xl gradient-primary flex items-center justify-center text-3xl font-bold text-white shadow-glow">
+                <div className="w-24 h-24 rounded-2xl ios-blue-bg flex items-center justify-center text-3xl font-bold text-white shadow-glow">
                   {formData.name.split(" ").map((n) => n[0]).join("")}
                 </div>
-                <button className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3B82F6] transition-colors">
+                <button className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3478F5] transition-colors">
                   <Camera className="w-4 h-4" />
                 </button>
               </div>
@@ -58,175 +56,45 @@ export default function ProfilePage() {
                 <h1 className="text-2xl font-bold">{formData.name}</h1>
                 <p className="text-[var(--text-secondary)]">{formData.title}</p>
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-2 text-sm text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {formData.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <LinkIcon className="w-3.5 h-3.5" />
-                    {formData.website}
-                  </span>
+                  <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{formData.location}</span>
+                  <span className="flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5" />{formData.website}</span>
                 </div>
               </div>
-              <button
-                onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-                className="btn-primary flex items-center gap-2"
-              >
-                {isEditing ? (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Save Changes
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="w-4 h-4" />
-                    Edit Profile
-                  </>
-                )}
+              <button onClick={() => (isEditing ? handleSave() : setIsEditing(true))} className="btn-primary flex items-center gap-2">
+                {isEditing ? <><Save className="w-4 h-4" />Save Changes</> : <><Pencil className="w-4 h-4" />Edit Profile</>}
               </button>
             </div>
           </div>
 
-          {/* Profile Form */}
           <div className="glass-section p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className="glass-input w-full pl-11"
-                  />
+              {[
+                { label: "Full Name", name: "name", icon: User, type: "text" },
+                { label: "Email", name: "email", icon: Mail, type: "email" },
+                { label: "Job Title", name: "title", icon: Briefcase, type: "text" },
+                { label: "Location", name: "location", icon: MapPin, type: "text" },
+                { label: "Website", name: "website", icon: LinkIcon, type: "url" },
+                { label: "Experience", name: "experience", icon: Briefcase, type: "text" },
+                { label: "Education", name: "education", icon: GraduationCap, type: "text" },
+                { label: "Skills", name: "skills", icon: null, type: "text" },
+              ].map((field) => (
+                <div key={field.name} className={field.name === "bio" ? "md:col-span-2" : ""}>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">{field.label}</label>
+                  <div className="relative">
+                    {field.icon && <field.icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />}
+                    <input
+                      type={field.type}
+                      name={field.name}
+                      value={(formData as any)[field.name]}
+                      onChange={handleChange}
+                      disabled={!isEditing}
+                      className={`glass-input w-full ${field.icon ? "pl-11" : ""}`}
+                    />
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className="glass-input w-full pl-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Job Title
-                </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className="glass-input w-full pl-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Location
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className="glass-input w-full pl-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Website
-                </label>
-                <div className="relative">
-                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                  <input
-                    type="url"
-                    name="website"
-                    value={formData.website}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className="glass-input w-full pl-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Experience
-                </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    name="experience"
-                    value={formData.experience}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className="glass-input w-full pl-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Education
-                </label>
-                <div className="relative">
-                  <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    name="education"
-                    value={formData.education}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className="glass-input w-full pl-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Skills
-                </label>
-                <input
-                  type="text"
-                  name="skills"
-                  value={formData.skills}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                  className="glass-input w-full"
-                />
-              </div>
-
+              ))}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Bio
-                </label>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Bio</label>
                 <textarea
                   name="bio"
                   value={formData.bio}
