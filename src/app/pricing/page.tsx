@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, Sparkles, Zap, Building2 } from "lucide-react";
+import { Check, Sparkles, Zap, Building2, Award } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 
@@ -9,7 +9,7 @@ const plans = [
   {
     id: "free",
     name: "Free",
-    description: "Perfect for job seekers getting started",
+    description: "Perfect for getting started",
     price: "$0",
     period: "forever",
     icon: Zap,
@@ -24,6 +24,23 @@ const plans = [
     popular: false,
   },
   {
+    id: "basic",
+    name: "Basic",
+    description: "For active job seekers",
+    price: "$9.99",
+    period: "per month",
+    icon: Award,
+    features: [
+      "Everything in Free",
+      "50 job applications/month",
+      "Salary insights & reports",
+      "Priority email support",
+      "Job match alerts",
+    ],
+    cta: "Start Basic Trial",
+    popular: false,
+  },
+  {
     id: "pro",
     name: "Pro",
     description: "For serious job seekers",
@@ -31,13 +48,13 @@ const plans = [
     period: "per month",
     icon: Sparkles,
     features: [
-      "Everything in Free",
+      "Everything in Free & Basic",
       "Unlimited job applications",
       "AI-powered resume optimizer",
       "Priority application status",
-      "Salary insights & reports",
       "Direct messaging with recruiters",
       "Interview preparation tools",
+      "3-day free trial",
     ],
     cta: "Start Pro Trial",
     popular: true,
@@ -69,9 +86,11 @@ export default function PricingPage() {
   const handleSelectPlan = (planId: string) => {
     if (planId === "free") {
       router.push("/dashboard");
+    } else if (planId === "basic") {
+      router.push("/payment?plan=basic");
     } else if (planId === "pro") {
-      router.push("/payment?plan=pro");  // ← مسیر درست به صفحه پرداخت
-    } else {
+      router.push("/payment?plan=pro");
+    } else if (planId === "enterprise") {
       router.push("/contact");
     }
   };
@@ -92,15 +111,14 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-lg text-white/60 max-w-2xl mx-auto">
-            Choose the plan that fits your needs. Upgrade or downgrade at any
-            time. No hidden fees.
+            Choose the plan that fits your needs. All plans include a free trial.
           </p>
         </div>
       </section>
 
       <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid md:grid-cols-4 gap-6 lg:gap-8">
             {plans.map((plan) => (
               <div
                 key={plan.id}
