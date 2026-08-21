@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Check, Sparkles, Zap, Building2 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 
 const plans = [
   {
+    id: "free",
     name: "Free",
     description: "Perfect for job seekers getting started",
     price: "$0",
@@ -22,6 +24,7 @@ const plans = [
     popular: false,
   },
   {
+    id: "pro",
     name: "Pro",
     description: "For serious job seekers",
     price: "$19",
@@ -40,6 +43,7 @@ const plans = [
     popular: true,
   },
   {
+    id: "enterprise",
     name: "Enterprise",
     description: "For teams and organizations",
     price: "Custom",
@@ -60,6 +64,18 @@ const plans = [
 ];
 
 export default function PricingPage() {
+  const router = useRouter();
+
+  const handleSelectPlan = (planId: string) => {
+    if (planId === "free") {
+      router.push("/dashboard");
+    } else if (planId === "pro") {
+      router.push("/payment?plan=pro");
+    } else {
+      router.push("/contact");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
       <Navbar />
@@ -89,7 +105,7 @@ export default function PricingPage() {
           <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
             {plans.map((plan) => (
               <div
-                key={plan.name}
+                key={plan.id}
                 className={`relative rounded-3xl p-8 transition-all duration-300 ${
                   plan.popular
                     ? "bg-gradient-to-b from-blue-500/20 to-purple-500/20 border-2 border-blue-400/30 shadow-2xl shadow-blue-500/10 scale-105"
@@ -141,6 +157,7 @@ export default function PricingPage() {
                 </ul>
 
                 <button
+                  onClick={() => handleSelectPlan(plan.id)}
                   className={`w-full py-3.5 rounded-xl font-semibold transition-all duration-300 ${
                     plan.popular
                       ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg shadow-blue-500/25 text-white"
