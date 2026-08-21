@@ -20,6 +20,7 @@ export function PaymentContent() {
 
   const plans: Record<string, { name: string; price: string; period: string }> = {
     free: { name: "Free", price: "$0", period: "forever" },
+    basic: { name: "Basic", price: "$9.99", period: "per month" },
     pro: { name: "Pro", price: "$19", period: "per month" },
     enterprise: { name: "Enterprise", price: "Custom", period: "contact us" },
   };
