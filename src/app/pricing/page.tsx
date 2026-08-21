@@ -96,21 +96,21 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 dark:from-slate-950 dark:via-indigo-950 dark:to-slate-900 text-slate-900 dark:text-white">
       <Navbar />
 
       <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-20 -left-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-20 -right-40 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+          <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/10 dark:bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-20 -left-40 w-96 h-96 bg-blue-500/10 dark:bg-blue-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-20 -right-40 w-96 h-96 bg-pink-500/10 dark:bg-pink-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-100 dark:to-purple-200 bg-clip-text text-transparent mb-6">
             Simple, Transparent Pricing
           </h1>
-          <p className="text-lg text-white/60 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-500 dark:text-white/60 max-w-2xl mx-auto">
             Choose the plan that fits your needs. All plans include a free trial.
           </p>
         </div>
@@ -122,15 +122,15 @@ export default function PricingPage() {
             {plans.map((plan) => (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-8 transition-all duration-300 ${
+                className={`relative rounded-3xl p-8 transition-all duration-300 border ${
                   plan.popular
                     ? "bg-gradient-to-b from-blue-500/20 to-purple-500/20 border-2 border-blue-400/30 shadow-2xl shadow-blue-500/10 scale-105"
-                    : "glass hover:bg-white/[0.15]"
+                    : "glass border-white/10 dark:border-white/10 hover:bg-white/[0.15] dark:hover:bg-white/[0.15]"
                 }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-sm font-semibold shadow-lg">
+                    <span className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-sm font-semibold shadow-lg text-white">
                       Most Popular
                     </span>
                   </div>
@@ -141,22 +141,26 @@ export default function PricingPage() {
                     className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
                       plan.popular
                         ? "bg-blue-500/20 text-blue-300"
-                        : "bg-white/5 text-white/60"
+                        : "bg-white/5 text-white/60 dark:bg-white/5"
                     }`}
                   >
                     <plan.icon className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                     {plan.name}
                   </h3>
-                  <p className="text-white/50 text-sm">{plan.description}</p>
+                  <p className="text-slate-500 dark:text-white/50 text-sm">
+                    {plan.description}
+                  </p>
                 </div>
 
                 <div className="mb-8">
-                  <span className="text-4xl font-bold text-white">
+                  <span className="text-4xl font-bold text-slate-900 dark:text-white">
                     {plan.price}
                   </span>
-                  <span className="text-white/40 ml-2">{plan.period}</span>
+                  <span className="text-slate-400 dark:text-white/40 ml-2">
+                    {plan.period}
+                  </span>
                 </div>
 
                 <ul className="space-y-4 mb-8">
@@ -164,10 +168,12 @@ export default function PricingPage() {
                     <li key={feature} className="flex items-start gap-3">
                       <Check
                         className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                          plan.popular ? "text-blue-400" : "text-white/40"
+                          plan.popular ? "text-blue-400" : "text-slate-400 dark:text-white/40"
                         }`}
                       />
-                      <span className="text-sm text-white/70">{feature}</span>
+                      <span className="text-sm text-slate-600 dark:text-white/70">
+                        {feature}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -177,7 +183,7 @@ export default function PricingPage() {
                   className={`w-full py-3.5 rounded-xl font-semibold transition-all duration-300 ${
                     plan.popular
                       ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg shadow-blue-500/25 text-white"
-                      : "glass hover:bg-white/20 text-white"
+                      : "glass hover:bg-white/20 dark:hover:bg-white/20 text-slate-700 dark:text-white"
                   }`}
                 >
                   {plan.cta}
@@ -187,15 +193,15 @@ export default function PricingPage() {
           </div>
 
           <div className="mt-16 text-center">
-            <p className="text-white/30 text-sm mb-6">
+            <p className="text-slate-400 dark:text-white/30 text-sm mb-6">
               Trusted by 10,000+ professionals worldwide
             </p>
-            <div className="flex flex-wrap justify-center items-center gap-8 opacity-30">
+            <div className="flex flex-wrap justify-center items-center gap-8 opacity-50 dark:opacity-30">
               {["Google", "Microsoft", "Amazon", "Meta", "Apple"].map(
                 (company) => (
                   <span
                     key={company}
-                    className="text-lg font-semibold text-white/60"
+                    className="text-lg font-semibold text-slate-500 dark:text-white/60"
                   >
                     {company}
                   </span>
