@@ -16,8 +16,13 @@ const config: Config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#3B82F6",
+          glow: "#60A5FA",
+          foreground: "#FFFFFF",
+        },
+        accent: {
+          DEFAULT: "#8B5CF6",
+          foreground: "#FFFFFF",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -31,10 +36,6 @@ const config: Config = {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -43,11 +44,39 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        page: {
+          light: "#F8FAFC",
+          dark: "#0F172A",
+        },
+        glass: {
+          light: "rgba(255,255,255,0.6)",
+          dark: "rgba(255,255,255,0.08)",
+        },
+        text: {
+          light: "#1E293B",
+          dark: "#F1F5F9",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      backdropBlur: {
+        glass: "24px",
+      },
+      boxShadow: {
+        glass: "0 8px 32px rgba(0, 0, 0, 0.08)",
+        "glass-dark": "0 8px 32px rgba(0, 0, 0, 0.3)",
+        glow: "0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1)",
+        "glow-dark": "0 0 30px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.15)",
+        "glow-accent": "0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.1)",
+      },
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+        "gradient-primary": "linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)",
+        "gradient-glow": "radial-gradient(circle at center, rgba(59,130,246,0.15) 0%, transparent 70%)",
       },
     },
   },
