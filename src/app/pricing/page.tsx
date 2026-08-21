@@ -22,6 +22,7 @@ const plans = [
     ],
     cta: "Get Started",
     popular: false,
+    border: "border-white/20 dark:border-white/10",
   },
   {
     id: "basic",
@@ -39,6 +40,7 @@ const plans = [
     ],
     cta: "Start Basic Trial",
     popular: false,
+    border: "border-gray-300/60 dark:border-gray-400/40 shadow-[0_0_15px_rgba(200,200,200,0.15)] dark:shadow-[0_0_20px_rgba(200,200,200,0.1)]",
   },
   {
     id: "pro",
@@ -58,6 +60,7 @@ const plans = [
     ],
     cta: "Start Pro Trial",
     popular: true,
+    border: "border-amber-400/60 dark:border-amber-400/50 shadow-[0_0_25px_rgba(251,191,36,0.2)] dark:shadow-[0_0_30px_rgba(251,191,36,0.15)]",
   },
   {
     id: "enterprise",
@@ -77,6 +80,7 @@ const plans = [
     ],
     cta: "Contact Sales",
     popular: false,
+    border: "border-white/20 dark:border-white/10",
   },
 ];
 
@@ -122,10 +126,10 @@ export default function PricingPage() {
             {plans.map((plan) => (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-8 transition-all duration-300 border ${
+                className={`relative rounded-3xl p-8 transition-all duration-300 border-2 ${plan.border} ${
                   plan.popular
-                    ? "bg-gradient-to-b from-blue-500/20 to-purple-500/20 border-2 border-blue-400/30 shadow-2xl shadow-blue-500/10 scale-105"
-                    : "glass border-white/10 dark:border-white/10 hover:bg-white/[0.15] dark:hover:bg-white/[0.15]"
+                    ? "bg-gradient-to-b from-blue-500/20 to-purple-500/20 scale-105"
+                    : "glass hover:bg-white/[0.15] dark:hover:bg-white/[0.15]"
                 }`}
               >
                 {plan.popular && (
