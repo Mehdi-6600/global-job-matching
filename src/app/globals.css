@@ -1,31 +1,267 @@
-.dark {
-  --background: 222 47% 4%;         /* ← تیره‌تر */
-  --foreground: 210 40% 96%;
-  --card: 222 47% 6%;
-  --card-foreground: 210 40% 96%;
-  --popover: 222 47% 6%;
-  --popover-foreground: 210 40% 96%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 263 70% 50%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 263 70% 50%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 63% 31%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 217 33% 17%;
-  --input: 217 33% 17%;
-  --ring: 217 91% 60%;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  --glass-bg: rgba(255, 255, 255, 0.06);   /* ← شیشه‌ای‌تر */
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --glow-primary: 0 0 40px rgba(59, 130, 246, 0.3), 0 0 80px rgba(59, 130, 246, 0.1);
-  --glow-accent: 0 0 40px rgba(139, 92, 246, 0.3), 0 0 80px rgba(139, 92, 246, 0.1);
-  --page-bg: #05050A;   /* ← تقریباً مشکی خالص */
-  --text-primary: #F1F5F9;
-  --text-secondary: #CBD5E1;
-  --text-muted: #94A3B8;
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 215 25% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 17%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 263 70% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 263 70% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+
+    /* Custom Glass Palette - Light Mode */
+    --glass-bg: rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    --glow-primary: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+    --glow-accent: 0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.1);
+    --page-bg: #F8FAFC;
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --text-muted: #94A3B8;
+  }
+
+  .dark {
+    --background: 222 47% 4%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 6%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 6%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 263 70% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 263 70% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
+
+    /* Custom Glass Palette - Dark Mode (Pure Black Background) */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --glow-primary: 0 0 40px rgba(59, 130, 246, 0.3), 0 0 80px rgba(59, 130, 246, 0.1);
+    --glow-accent: 0 0 40px rgba(139, 92, 246, 0.3), 0 0 80px rgba(139, 92, 246, 0.1);
+    --page-bg: #000000;   /* ← Pure Black */
+    --text-primary: #F1F5F9;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[var(--page-bg)] text-[var(--text-primary)] antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@layer components {
+  /* Core Glass Panel */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Glass Panel — no border variant */
+  .glass-flat {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  /* Inner glow variant for cards */
+  .glass-glow {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* Primary glow on active/hover */
+  .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+
+  .glow-accent {
+    box-shadow: var(--glow-accent);
+  }
+
+  /* Hover glow transition */
+  .hover-glow {
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .hover-glow:hover {
+    box-shadow: var(--glow-primary);
+    transform: translateY(-2px);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6] bg-clip-text text-transparent;
+  }
+
+  /* Gradient background for buttons/accents */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6];
+  }
+
+  /* Section container — full width glass */
+  .glass-section {
+    @apply glass rounded-2xl;
+  }
+
+  /* Full-width edge-to-edge glass strip */
+  .glass-strip {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  /* Input field glass style */
+  .glass-input {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    @apply rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200;
+  }
+  .glass-input:focus {
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply gradient-primary text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+  }
+  .btn-primary:hover {
+    box-shadow: var(--glow-primary), 0 6px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Secondary / outline button */
+  .btn-secondary {
+    @apply glass text-[var(--text-primary)] font-semibold px-6 py-3 rounded-xl transition-all duration-300;
+  }
+  .btn-secondary:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: var(--glow-primary);
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply text-[var(--text-secondary)] font-medium px-4 py-2 rounded-xl transition-all duration-200;
+  }
+  .btn-ghost:hover {
+    @apply bg-black/5 dark:bg-white/10 text-[var(--text-primary)];
+  }
+
+  /* Badge / pill */
+  .glass-pill {
+    @apply glass px-3 py-1 rounded-full text-xs font-medium text-[var(--text-secondary)];
+  }
+
+  /* Card hover effect */
+  .glass-card {
+    @apply glass rounded-2xl p-6 transition-all duration-300;
+  }
+  .glass-card:hover {
+    @apply hover-glow;
+    background: rgba(255, 255, 255, 0.7);
+  }
+  .dark .glass-card:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  /* Step indicator (like reference image) */
+  .step-circle {
+    @apply w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+  }
+  .step-circle.active {
+    @apply bg-[#3B82F6] text-white;
+    box-shadow: var(--glow-primary);
+    border-color: rgba(96, 165, 250, 0.5);
+  }
+  .step-circle.completed {
+    @apply bg-[#3B82F6]/20 text-[#3B82F6];
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  /* Step connector line */
+  .step-line {
+    @apply h-0.5 flex-1 mx-2;
+    background: var(--glass-border);
+  }
+  .step-line.completed {
+    @apply bg-gradient-to-r from-[#3B82F6] to-[#60A5FA];
+  }
+
+  /* Toggle switch */
+  .glass-toggle {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+  }
+  .glass-toggle.checked {
+    @apply bg-[#3B82F6];
+    box-shadow: var(--glow-primary);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background: rgba(148, 163, 184, 0.3);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
