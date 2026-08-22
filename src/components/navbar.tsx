@@ -11,7 +11,7 @@ const navLinks = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-export default function Navbar() {
+export function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
