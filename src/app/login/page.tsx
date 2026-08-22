@@ -39,14 +39,16 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--page-bg)] flex items-center justify-center py-12 px-4">
+    <main className="min-h-screen bg-[var(--page-bg)] flex items-center justify-center py-10 px-4">
       <div className="w-full max-w-md">
-        <div className="neo-card p-8 sm:p-10">
-          {/* Logo */}
+        {/* کارت اصلی */}
+        <div className="rounded-3xl p-8 sm:p-10 border border-[var(--border-color)] bg-[var(--card-bg)] shadow-[0_8px_30px_var(--shadow-color)]">
+          
+          {/* لوگو */}
           <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-full bg-black flex items-center justify-center border-4 border-[var(--page-bg)] shadow-lg">
               <div className="text-center leading-tight">
-                <div className="text-[#00d4ff] font-bold text-sm">Global</div>
+                <div className="text-[#00d4ff] font-bold text-[13px]">Global</div>
                 <div className="text-gray-400 text-[10px]">Job Match</div>
               </div>
             </div>
@@ -66,6 +68,7 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5 ml-1">
                 Email
@@ -77,10 +80,11 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="neo-input"
+                className="w-full py-3.5 px-5 rounded-full bg-[var(--page-bg)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--ios-blue)] focus:ring-2 focus:ring-[var(--ios-blue)]/20 transition-all"
               />
             </div>
 
+            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5 ml-1">
                 Password
@@ -92,10 +96,11 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="neo-input"
+                className="w-full py-3.5 px-5 rounded-full bg-[var(--page-bg)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--ios-blue)] focus:ring-2 focus:ring-[var(--ios-blue)]/20 transition-all"
               />
             </div>
 
+            {/* Remember + Forgot */}
             <div className="flex items-center justify-between text-sm px-1">
               <label className="flex items-center gap-2 text-[var(--text-secondary)] cursor-pointer select-none">
                 <input
@@ -106,18 +111,16 @@ export default function LoginPage() {
                 />
                 Remember me
               </label>
-              <Link
-                href="/forgot-password"
-                className="text-[var(--ios-blue)] hover:underline font-medium"
-              >
+              <Link href="/forgot-password" className="text-[var(--ios-blue)] hover:underline font-medium">
                 Forgot password?
               </Link>
             </div>
 
+            {/* دکمه */}
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full text-[16px]"
+              className="w-full py-3.5 rounded-full bg-[var(--ios-blue)] text-white font-semibold text-[16px] shadow-lg shadow-blue-500/25 hover:bg-[var(--ios-blue-light)] active:scale-[0.98] transition-all disabled:opacity-60"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
@@ -125,10 +128,7 @@ export default function LoginPage() {
 
           <p className="mt-7 text-center text-sm text-[var(--text-muted)]">
             Don&apos;t have an account?{" "}
-            <Link
-              href="/register"
-              className="font-medium text-[var(--ios-blue)] hover:underline"
-            >
+            <Link href="/register" className="font-medium text-[var(--ios-blue)] hover:underline">
               Create Account
             </Link>
           </p>
