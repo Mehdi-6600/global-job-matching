@@ -39,105 +39,158 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--page-bg)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full glass-card p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Sign In</h1>
-          <p className="mt-2 text-sm text-[var(--text-muted)]">
+    <main className="min-h-screen bg-[#e8eef5] flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-md">
+        {/* کارت نئومورفیک */}
+        <div
+          className="rounded-[30px] p-10"
+          style={{
+            background: "#e8eef5",
+            boxShadow: "12px 12px 24px #c5d0e0, -12px -12px 24px #ffffff",
+          }}
+        >
+          {/* لوگو */}
+          <div className="flex justify-center mb-7">
+            <div
+              className="w-[84px] h-[84px] rounded-full bg-black flex items-center justify-center border-[5px] border-[#e8eef5]"
+              style={{
+                boxShadow: "6px 6px 12px #c5d0e0, -6px -6px 12px #ffffff",
+              }}
+            >
+              <div className="text-center leading-tight">
+                <div className="text-[#00d4ff] font-bold text-[13px]">Global</div>
+                <div className="text-gray-400 text-[10px] font-medium">Job Match</div>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-bold text-center text-gray-900 mb-1">
+            Sign In
+          </h1>
+          <p className="text-center text-gray-500 text-sm mb-8">
             Welcome back to Global Job Matching
           </p>
-        </div>
 
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-5 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">
+              {error}
+            </div>
+          )}
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-[var(--text-primary)] mb-1"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="glass-input w-full"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-[var(--text-primary)] mb-1"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className="glass-input w-full"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email - فرو رفته */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">
+                Email
+              </label>
               <input
-                id="remember"
-                name="remember"
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="h-4 w-4 rounded border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--ios-blue)] focus:ring-[var(--ios-blue)]"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full py-4 px-5 rounded-full bg-[#e8eef5] text-gray-800 outline-none text-[15px]
+                  placeholder:text-gray-400 transition-all"
+                style={{
+                  boxShadow: "inset 6px 6px 12px #c5d0e0, inset -6px -6px 12px #ffffff",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    "inset 4px 4px 8px #c5d0e0, inset -4px -4px 8px #ffffff";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    "inset 6px 6px 12px #c5d0e0, inset -6px -6px 12px #ffffff";
+                }}
               />
-              <label
-                htmlFor="remember"
-                className="ml-2 block text-sm text-[var(--text-secondary)]"
-              >
+            </div>
+
+            {/* Password - فرو رفته */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full py-4 px-5 rounded-full bg-[#e8eef5] text-gray-800 outline-none text-[15px]
+                  placeholder:text-gray-400 transition-all"
+                style={{
+                  boxShadow: "inset 6px 6px 12px #c5d0e0, inset -6px -6px 12px #ffffff",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    "inset 4px 4px 8px #c5d0e0, inset -4px -4px 8px #ffffff";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    "inset 6px 6px 12px #c5d0e0, inset -6px -6px 12px #ffffff";
+                }}
+              />
+            </div>
+
+            {/* Remember + Forgot */}
+            <div className="flex items-center justify-between text-sm px-1">
+              <label className="flex items-center gap-2 text-gray-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="w-4 h-4 accent-[#3478F5] rounded"
+                />
                 Remember me
               </label>
+              <Link
+                href="/forgot-password"
+                className="text-[#3478F5] hover:underline font-medium"
+              >
+                Forgot password?
+              </Link>
             </div>
-            <Link
-              href="/forgot-password"
-              className="text-sm font-medium text-[var(--ios-blue)] hover:underline"
+
+            {/* دکمه Sign In - برجسته */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 rounded-full bg-[#3478F5] text-white font-semibold text-[17px]
+                transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+              style={{
+                boxShadow: "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff",
+              }}
+              onMouseDown={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.boxShadow =
+                    "inset 4px 4px 8px #1a5fd9, inset -4px -4px 8px #5B9BF7";
+                }
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "6px 6px 14px #c5d0e0, -6px -6px 14px #ffffff";
+              }}
             >
-              Forgot password?
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+
+          <p className="mt-7 text-center text-sm text-gray-500">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/register"
+              className="font-medium text-[#3478F5] hover:underline"
+            >
+              Create Account
             </Link>
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary w-full"
-            disabled={loading}
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-[var(--ios-blue)] hover:underline"
-          >
-            Create Account
-          </Link>
-        </p>
+          </p>
+        </div>
       </div>
     </main>
   );
