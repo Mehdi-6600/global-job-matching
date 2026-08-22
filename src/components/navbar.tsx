@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { Briefcase, Menu, X, Sun, Moon } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const navLinks = [
   { href: "/jobs", label: "Jobs" },
@@ -14,6 +14,23 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  // On mount, read saved theme preference (or system preference) and apply it
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const shouldBeDark = saved ? saved === "dark" : prefersDark;
+    setIsDark(shouldBeDark);
+    document.documentElement.classList.toggle("dark", shouldBeDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  };
 
   return (
     <nav className="glass-strip sticky top-0 z-40">
@@ -38,19 +55,45 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition ml-1"
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                <Sun className="w-5 h-5 text-[var(--text-secondary)]" />
+              ) : (
+                <Moon className="w-5 h-5 text-[var(--text-secondary)]" />
+              )}
+            </button>
+
             <Link href="/login" className="btn-primary text-sm ml-2">Sign In</Link>
           </div>
 
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-white/5"
-          >
-            {menuOpen ? (
-              <X className="w-5 h-5 text-[var(--text-primary)]" />
-            ) : (
-              <Menu className="w-5 h-5 text-[var(--text-primary)]" />
-            )}
-          </button>
+          <div className="md:hidden flex items-center gap-1">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                <Sun className="w-5 h-5 text-[var(--text-secondary)]" />
+              ) : (
+                <Moon className="w-5 h-5 text-[var(--text-secondary)]" />
+              )}
+            </button>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-2 rounded-lg hover:bg-white/5"
+            >
+              {menuOpen ? (
+                <X className="w-5 h-5 text-[var(--text-primary)]" />
+              ) : (
+                <Menu className="w-5 h-5 text-[var(--text-primary)]" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
