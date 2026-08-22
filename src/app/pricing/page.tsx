@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { Check } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -25,10 +26,10 @@ export default function PricingPage() {
             <li className="flex items-center gap-2 text-[var(--text-secondary)]"><Check className="w-4 h-4 text-[var(--ios-blue)]" /> Save 2 jobs</li>
             <li className="flex items-center gap-2 text-[var(--text-secondary)]"><Check className="w-4 h-4 text-[var(--ios-blue)]" /> Basic support</li>
           </ul>
-          <button className="btn-secondary w-full">Get Started</button>
+          <Link href="/register?plan=free" className="btn-secondary w-full text-center block">Get Started</Link>
         </div>
 
-        {/* Pro — جدید */}
+        {/* Pro */}
         <div className="glass-card border-[var(--ios-blue)]/30 relative">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
             <span className="bg-[var(--ios-blue)] text-white text-xs font-semibold px-3 py-1 rounded-full">Most Popular</span>
@@ -42,10 +43,10 @@ export default function PricingPage() {
             <li className="flex items-center gap-2 text-[var(--text-secondary)]"><Check className="w-4 h-4 text-[var(--ios-blue)]" /> AI resume generator</li>
             <li className="flex items-center gap-2 text-[var(--text-secondary)]"><Check className="w-4 h-4 text-[var(--ios-blue)]" /> Priority support</li>
           </ul>
-          <button className="btn-primary w-full">Upgrade Now</button>
+          <Link href="/register?plan=pro" className="btn-primary w-full text-center block">Upgrade Now</Link>
         </div>
 
-        {/* Enterprise — جدید */}
+        {/* Enterprise */}
         <div className="glass-card">
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Enterprise</h2>
           <div className="text-3xl font-bold text-[var(--ios-blue)] mb-6">$29.99<span className="text-base font-normal text-[var(--text-muted)]">/month</span></div>
@@ -57,7 +58,7 @@ export default function PricingPage() {
             <li className="flex items-center gap-2 text-[var(--text-secondary)]"><Check className="w-4 h-4 text-[var(--ios-blue)]" /> 24/7 dedicated support</li>
             <li className="flex items-center gap-2 text-[var(--text-secondary)]"><Check className="w-4 h-4 text-[var(--ios-blue)]" /> API access</li>
           </ul>
-          <button className="btn-secondary w-full">Contact Sales</button>
+          <Link href="/contact" className="btn-secondary w-full text-center block">Contact Sales</Link>
         </div>
       </div>
 
