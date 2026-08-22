@@ -4,11 +4,8 @@ import Link from "next/link";
 import {
   MapPin,
   DollarSign,
-  Briefcase,
   Clock,
   ChevronLeft,
-  Globe,
-  Check,
 } from "lucide-react";
 
 const prisma = new PrismaClient();
@@ -16,10 +13,12 @@ const prisma = new PrismaClient();
 export default async function JobDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+
   const job = await prisma.jobListing.findUnique({
-    where: { id: params.id, status: "ACTIVE" },
+    where: { id: id, status: "ACTIVE" },
     include: {
       employer: {
         select: {
