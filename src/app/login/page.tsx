@@ -41,10 +41,10 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[var(--page-bg)] flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
-        <div className="neo-card p-10">
-          {/* لوگو */}
-          <div className="flex justify-center mb-7">
-            <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center border-4 border-[var(--page-bg)] shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)]">
+        <div className="neo-card p-8 sm:p-10">
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center shadow-lg">
               <div className="text-center leading-tight">
                 <div className="text-[#00d4ff] font-bold text-sm">Global</div>
                 <div className="text-gray-400 text-[10px]">Job Match</div>
@@ -60,7 +60,7 @@ export default function LoginPage() {
           </p>
 
           {error && (
-            <div className="mb-5 p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
+            <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
               {error}
             </div>
           )}
@@ -77,7 +77,7 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="neo-input w-full"
+                className="neo-input"
               />
             </div>
 
@@ -92,12 +92,12 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="neo-input w-full"
+                className="neo-input"
               />
             </div>
 
             <div className="flex items-center justify-between text-sm px-1">
-              <label className="flex items-center gap-2 text-[var(--text-secondary)] cursor-pointer">
+              <label className="flex items-center gap-2 text-[var(--text-secondary)] cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={remember}
@@ -106,19 +106,29 @@ export default function LoginPage() {
                 />
                 Remember me
               </label>
-              <Link href="/forgot-password" className="text-[var(--ios-blue)] hover:underline font-medium">
+              <Link
+                href="/forgot-password"
+                className="text-[var(--ios-blue)] hover:underline font-medium"
+              >
                 Forgot password?
               </Link>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full text-[17px]">
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full text-[16px]"
+            >
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
           <p className="mt-7 text-center text-sm text-[var(--text-muted)]">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-medium text-[var(--ios-blue)] hover:underline">
+            <Link
+              href="/register"
+              className="font-medium text-[var(--ios-blue)] hover:underline"
+            >
               Create Account
             </Link>
           </p>
