@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import AuthProvider from "@/components/session-provider";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,13 +19,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} antialiased flex flex-col min-h-screen`}>
-        <AuthProvider>
-          <Navbar />
-          <div className="flex-grow">{children}</div>
-          <Footer />
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} antialiased flex flex-col min-h-screen bg-[var(--page-bg)]`}>
+        <Providers>
+          <AuthProvider>
+            <Navbar />
+            <div className="flex-grow">{children}</div>
+            <Footer />
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );
