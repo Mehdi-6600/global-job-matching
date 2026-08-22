@@ -8,66 +8,53 @@
     --foreground: 215 25% 17%;
     --card: 0 0% 100%;
     --card-foreground: 215 25% 17%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 17%;
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 91% 60%;
-    --secondary-foreground: 0 0% 100%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 217 91% 60%;
-    --radius: 0.75rem;
+    --radius: 1.25rem;
 
-    /* iOS Blue Palette */
+    /* iOS Blue */
     --ios-blue: #3478F5;
     --ios-blue-light: #5B9BF7;
     --ios-blue-dark: #1a5fd9;
-    --glass-bg: rgba(255, 255, 255, 0.25);
-    --glass-border: rgba(0, 0, 0, 0.06);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-    --glow-blue: 0 0 20px rgba(52, 120, 245, 0.25), 0 0 40px rgba(52, 120, 245, 0.08);
-    --page-bg: #eef2f6;
+
+    /* Light Mode Neumorphism */
+    --page-bg: #f0f2f5;
+    --card-bg: #f0f2f5;
     --text-primary: #1E293B;
     --text-secondary: #64748B;
     --text-muted: #94A3B8;
+
+    --shadow-light: #ffffff;
+    --shadow-dark: #d1d5db;
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 222 47% 7%;
     --foreground: 210 40% 96%;
-    --card: 222 47% 11%;
+    --card: 222 47% 9%;
     --card-foreground: 210 40% 96%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 96%;
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 91% 60%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 217 33% 17%;
+    --muted: 217 33% 14%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 100%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 217 91% 60%;
 
-    --glass-bg: rgba(255, 255, 255, 0.06);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --glow-blue: 0 0 30px rgba(52, 120, 245, 0.4), 0 0 60px rgba(52, 120, 245, 0.15);
-    --page-bg: #0a0a0a;
+    /* Dark Mode Neumorphism */
+    --page-bg: #0c0e12;
+    --card-bg: #0c0e12;
     --text-primary: #F1F5F9;
     --text-secondary: #CBD5E1;
     --text-muted: #94A3B8;
+
+    --shadow-light: #1a1d24;
+    --shadow-dark: #050608;
   }
 
   * {
@@ -81,283 +68,126 @@
 }
 
 @layer components {
-  /* Core Glass Panel */
-  .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
+  /* ========== Neumorphic Card ========== */
+  .neo-card {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    box-shadow: 
+      8px 8px 16px var(--shadow-dark),
+      -8px -8px 16px var(--shadow-light);
+    transition: all 0.25s ease;
   }
 
-  .glass-flat {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  .neo-card:active {
+    box-shadow: 
+      inset 4px 4px 8px var(--shadow-dark),
+      inset -4px -4px 8px var(--shadow-light);
   }
 
-  .glass-glow {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  /* کارت بدون اثر press (برای موارد ثابت) */
+  .neo-card-static {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    box-shadow: 
+      8px 8px 16px var(--shadow-dark),
+      -8px -8px 16px var(--shadow-light);
   }
 
-  /* Blue glow */
-  .glow-blue {
-    box-shadow: var(--glow-blue);
-  }
-
-  .hover-glow {
-    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
-  }
-  .hover-glow:hover {
-    box-shadow: var(--glow-blue);
-    transform: translateY(-2px);
-    border-color: rgba(52, 120, 245, 0.3);
-  }
-
-  /* iOS Blue text */
-  .ios-blue-text {
-    color: var(--ios-blue);
-  }
-
-  /* iOS Blue background */
-  .ios-blue-bg {
-    background-color: var(--ios-blue);
-  }
-
-  /* Gradient primary */
-  .gradient-primary {
-    background: linear-gradient(135deg, var(--ios-blue) 0%, var(--ios-blue-light) 100%);
-  }
-
-  /* Section container */
-  .glass-section {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    border-radius: 1.25rem;
-  }
-
-  /* Full-width glass strip */
-  .glass-strip {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 1px solid var(--glass-border);
-  }
-
-  /* Input field */
-  .glass-input {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    border-radius: 0.75rem;
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
+  /* ========== Neumorphic Input ========== */
+  .neo-input {
+    background: var(--card-bg);
+    border-radius: 9999px;
+    padding: 0.9rem 1.25rem;
     outline: none;
-    transition: all 0.2s ease;
     color: var(--text-primary);
+    box-shadow: 
+      inset 5px 5px 10px var(--shadow-dark),
+      inset -5px -5px 10px var(--shadow-light);
+    transition: all 0.2s ease;
   }
-  .glass-input::placeholder {
+
+  .neo-input:focus {
+    box-shadow: 
+      inset 3px 3px 6px var(--shadow-dark),
+      inset -3px -3px 6px var(--shadow-light);
+  }
+
+  .neo-input::placeholder {
     color: var(--text-muted);
   }
-  .glass-input:focus {
-    border-color: rgba(52, 120, 245, 0.5);
-    box-shadow: 0 0 0 3px rgba(52, 120, 245, 0.15);
-  }
 
-  /* Primary button */
+  /* ========== Primary Button (iOS Blue + Press) ========== */
   .btn-primary {
     background-color: var(--ios-blue);
     color: white;
     font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.75rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 14px rgba(52, 120, 245, 0.35);
+    padding: 0.85rem 1.5rem;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 
+      6px 6px 12px var(--shadow-dark),
+      -6px -6px 12px var(--shadow-light);
   }
+
   .btn-primary:hover {
-    box-shadow: var(--glow-blue), 0 6px 20px rgba(52, 120, 245, 0.4);
-    transform: translateY(-1px);
     background-color: var(--ios-blue-light);
   }
+
   .btn-primary:active {
-    transform: translateY(0);
     background-color: var(--ios-blue-dark);
+    box-shadow: 
+      inset 4px 4px 8px rgba(0, 0, 0, 0.25),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.1);
+    transform: scale(0.98);
   }
 
-  /* Secondary / outline button */
+  .btn-primary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  /* ========== Secondary / Soft Button ========== */
   .btn-secondary {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
+    background: var(--card-bg);
     color: var(--text-primary);
     font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.75rem;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    text-decoration: none;
-  }
-  .btn-secondary:hover {
-    border-color: rgba(52, 120, 245, 0.3);
-    box-shadow: var(--glow-blue);
-  }
-
-  /* Ghost button */
-  .btn-ghost {
-    color: var(--text-secondary);
-    font-weight: 500;
-    padding: 0.5rem 1rem;
-    border-radius: 0.75rem;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    text-decoration: none;
-    background: transparent;
+    padding: 0.85rem 1.5rem;
+    border-radius: 9999px;
     border: none;
-  }
-  .btn-ghost:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: var(--text-primary);
-  }
-  .dark .btn-ghost:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  /* Badge / pill */
-  .glass-pill {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-
-  /* Card hover effect */
-  .glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    border-radius: 1.25rem;
-    padding: 1.5rem;
-    transition: all 0.3s ease;
-  }
-  .glass-card:hover {
-    box-shadow: var(--glow-blue);
-    transform: translateY(-2px);
-    border-color: rgba(52, 120, 245, 0.2);
-  }
-
-  /* Step indicator */
-  .step-circle {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 9999px;
-    display: flex;
+    cursor: pointer;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.875rem;
-    font-weight: 700;
-    transition: all 0.3s ease;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-  }
-  .step-circle.active {
-    background-color: var(--ios-blue);
-    color: white;
-    box-shadow: var(--glow-blue);
-    border-color: rgba(52, 120, 245, 0.5);
-  }
-  .step-circle.completed {
-    background-color: rgba(52, 120, 245, 0.2);
-    color: var(--ios-blue);
-    border-color: rgba(52, 120, 245, 0.3);
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    box-shadow: 
+      6px 6px 12px var(--shadow-dark),
+      -6px -6px 12px var(--shadow-light);
   }
 
-  /* Step connector */
-  .step-line {
-    height: 0.125rem;
-    flex: 1;
-    margin-left: 0.5rem;
-    margin-right: 0.5rem;
-    background: var(--glass-border);
-  }
-  .step-line.completed {
-    background-color: var(--ios-blue);
+  .btn-secondary:active {
+    box-shadow: 
+      inset 4px 4px 8px var(--shadow-dark),
+      inset -4px -4px 8px var(--shadow-light);
+    transform: scale(0.98);
   }
 
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
+  /* ========== Small Pill / Badge ========== */
+  .neo-pill {
+    background: var(--card-bg);
     border-radius: 9999px;
-    background: rgba(148, 163, 184, 0.3);
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.5);
-  }
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-/* Fallback for Firefox & browsers without backdrop-filter support */
-@supports not (backdrop-filter: blur(20px)) {
-  .glass,
-  .glass-flat,
-  .glass-glow,
-  .glass-section,
-  .glass-strip,
-  .glass-card,
-  .glass-input,
-  .glass-pill {
-    background: rgba(255, 255, 255, 0.9) !important;
-  }
-  .dark .glass,
-  .dark .glass-flat,
-  .dark .glass-glow,
-  .dark .glass-section,
-  .dark .glass-strip,
-  .dark .glass-card,
-  .dark .glass-input,
-  .dark .glass-pill {
-    background: rgba(15, 23, 42, 0.9) !important;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    box-shadow: 
+      4px 4px 8px var(--shadow-dark),
+      -4px -4px 8px var(--shadow-light);
   }
 }
