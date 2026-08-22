@@ -19,7 +19,7 @@ import {
   Filter,
   Loader2,
 } from "lucide-react";
-import { Navbar } from "@/components/navbar";
+import Navbar from "@/components/navbar";  // ✅ اینجا رو درست کردم
 
 // Mock data for demo — replace with real data hooks
 const stats = [
