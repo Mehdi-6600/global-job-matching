@@ -34,35 +34,31 @@ export default async function JobDetailPage({
     },
   });
 
-  if (!job) return notFound();
+  if (!job) {
+    notFound();
+  }
 
   const companyName =
     job.employer.profile?.companyName || job.employer.name || "Company";
 
-  function formatSalary() {
-    if (!job.salaryMin && !job.salaryMax) return "Negotiable";
-    const min = job.salaryMin
-      ? `$${Number(job.salaryMin).toLocaleString()}`
-      : "";
-    const max = job.salaryMax
-      ? `$${Number(job.salaryMax).toLocaleString()}`
-      : "";
-    if (min && max)
-      return `${min} - ${max} ${job.salaryCurrency}/${job.salaryPeriod}`;
-    return `${min || max} ${job.salaryCurrency}/${job.salaryPeriod}`;
-  }
+  const salaryText =
+    !job.salaryMin && !job.salaryMax
+      ? "Negotiable"
+      : job.salaryMin && job.salaryMax
+      ? `$${Number(job.salaryMin).toLocaleString()} - $${Number(job.salaryMax).toLocaleString()} ${job.salaryCurrency}/${job.salaryPeriod}`
+      : job.salaryMin
+      ? `$${Number(job.salaryMin).toLocaleString()} ${job.salaryCurrency}/${job.salaryPeriod}`
+      : `$${Number(job.salaryMax).toLocaleString()} ${job.salaryCurrency}/${job.salaryPeriod}`;
 
-  function timeAgo() {
+  const timeText = (() => {
     const diff = Date.now() - new Date(job.createdAt).getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     if (days === 0) return "Posted today";
     if (days === 1) return "Posted 1 day ago";
     return `Posted ${days} days ago`;
-  }
+  })();
 
-  function jobTypeLabel() {
-    return job.jobType.replace("_", "-");
-  }
+  const typeText = job.jobType.replace("_", "-");
 
   return (
     <main className="min-h-screen bg-[var(--page-bg)] py-12 px-4 sm:px-6 lg:px-8">
@@ -91,9 +87,7 @@ export default async function JobDetailPage({
           </div>
 
           <div className="flex flex-wrap gap-3 mb-4">
-            <span className="glass-pill text-xs uppercase">
-              {jobTypeLabel()}
-            </span>
+            <span className="glass-pill text-xs uppercase">{typeText}</span>
             {job.isRemote && (
               <span className="glass-pill text-xs bg-[var(--ios-blue)]/10 text-[var(--ios-blue)] border-[var(--ios-blue)]/20">
                 Remote
@@ -105,11 +99,11 @@ export default async function JobDetailPage({
             </span>
             <span className="glass-pill text-xs flex items-center gap-1">
               <DollarSign className="w-3 h-3" />
-              {formatSalary()}
+              {salaryText}
             </span>
             <span className="glass-pill text-xs flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {timeAgo()}
+              {timeText}
             </span>
           </div>
 
