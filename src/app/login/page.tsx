@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Metadata } from "next";
 import Link from "next/link";
-
-export const metadata: Metadata = {
-  title: "Sign In | Global Job Matching",
-  description: "Sign in to your Global Job Matching account.",
-};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,13 +10,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // ✅ جلوگیری از reload صفحه
+    e.preventDefault();
     setLoading(true);
-
-    // اینجا بعداً NextAuth یا API call می‌زنی
     console.log({ email, password, remember });
-
-    // شبیه‌سازی ۱ ثانیه‌ای لودینگ
     setTimeout(() => {
       setLoading(false);
     }, 1000);
