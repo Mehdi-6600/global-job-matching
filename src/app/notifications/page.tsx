@@ -76,6 +76,23 @@ const typeConfig: Record<NotifType, { icon: typeof Bell; color: string; bg: stri
   system: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
 };
 
+function NotifContent({ notif }: { notif: Notification }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h3 className={`text-sm font-semibold ${!notif.read ? "text-white" : "text-slate-300"}`}>
+          {notif.title}
+          {!notif.read && (
+            <span className="inline-block w-2 h-2 rounded-full bg-cyan-500 ml-2" />
+          )}
+        </h3>
+        <p className="text-slate-400 text-sm mt-1 leading-relaxed">{notif.body}</p>
+        <p className="text-slate-500 text-xs mt-2">{notif.time}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function NotificationsPage() {
   const [notifs, setNotifs] = useState<Notification[]>(initialNotifs);
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -141,8 +158,6 @@ export default function NotificationsPage() {
           {filtered.map((notif) => {
             const config = typeConfig[notif.type];
             const Icon = config.icon;
-            const Wrapper = notif.link ? Link : "div";
-            const wrapperProps = notif.link ? { href: notif.link } : {};
 
             return (
               <div
@@ -156,20 +171,13 @@ export default function NotificationsPage() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <Wrapper {...wrapperProps} className="block">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className={`text-sm font-semibold ${!notif.read ? "text-white" : "text-slate-300"}`}>
-                          {notif.title}
-                          {!notif.read && (
-                            <span className="inline-block w-2 h-2 rounded-full bg-cyan-500 ml-2" />
-                          )}
-                        </h3>
-                        <p className="text-slate-400 text-sm mt-1 leading-relaxed">{notif.body}</p>
-                        <p className="text-slate-500 text-xs mt-2">{notif.time}</p>
-                      </div>
-                    </div>
-                  </Wrapper>
+                  {notif.link ? (
+                    <Link href={notif.link} className="block">
+                      <NotifContent notif={notif} />
+                    </Link>
+                  ) : (
+                    <NotifContent notif={notif} />
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2 shrink-0">
