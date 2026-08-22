@@ -39,48 +39,35 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#e8eef5] dark:bg-[#1a1d23] flex items-center justify-center py-12 px-4 transition-colors duration-300">
+    <main className="min-h-screen bg-[var(--page-bg)] flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
-        {/* کارت نئومورفیک */}
-        <div
-          className="rounded-[30px] p-10 transition-all duration-300
-            bg-[#e8eef5] dark:bg-[#1a1d23]
-            shadow-[12px_12px_24px_#c5d0e0,-12px_-12px_24px_#ffffff]
-            dark:shadow-[12px_12px_24px_#0f1115,-12px_-12px_24px_#252a33]"
-        >
+        <div className="neo-card p-10">
           {/* لوگو */}
           <div className="flex justify-center mb-7">
-            <div
-              className="w-[84px] h-[84px] rounded-full bg-black flex items-center justify-center 
-                border-[5px] border-[#e8eef5] dark:border-[#1a1d23]
-                shadow-[6px_6px_12px_#c5d0e0,-6px_-6px_12px_#ffffff]
-                dark:shadow-[6px_6px_12px_#0f1115,-6px_-6px_12px_#252a33]
-                transition-all duration-300"
-            >
+            <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center border-4 border-[var(--page-bg)] shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)]">
               <div className="text-center leading-tight">
-                <div className="text-[#00d4ff] font-bold text-[13px]">Global</div>
-                <div className="text-gray-400 text-[10px] font-medium">Job Match</div>
+                <div className="text-[#00d4ff] font-bold text-sm">Global</div>
+                <div className="text-gray-400 text-[10px]">Job Match</div>
               </div>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-1">
+          <h1 className="text-2xl font-bold text-center text-[var(--text-primary)] mb-1">
             Sign In
           </h1>
-          <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-8">
+          <p className="text-center text-[var(--text-muted)] text-sm mb-8">
             Welcome back to Global Job Matching
           </p>
 
           {error && (
-            <div className="mb-5 p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm text-center">
+            <div className="mb-5 p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email - فرو رفته */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5 ml-1">
                 Email
               </label>
               <input
@@ -90,20 +77,12 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full py-4 px-5 rounded-full outline-none text-[15px] transition-all
-                  bg-[#e8eef5] dark:bg-[#1a1d23]
-                  text-gray-800 dark:text-gray-100
-                  placeholder:text-gray-400 dark:placeholder:text-gray-500
-                  shadow-[inset_6px_6px_12px_#c5d0e0,inset_-6px_-6px_12px_#ffffff]
-                  dark:shadow-[inset_6px_6px_12px_#0f1115,inset_-6px_-6px_12px_#252a33]
-                  focus:shadow-[inset_4px_4px_8px_#c5d0e0,inset_-4px_-4px_8px_#ffffff]
-                  dark:focus:shadow-[inset_4px_4px_8px_#0f1115,inset_-4px_-4px_8px_#252a33]"
+                className="neo-input w-full"
               />
             </div>
 
-            {/* Password - فرو رفته */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5 ml-1">
                 Password
               </label>
               <input
@@ -113,58 +92,33 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full py-4 px-5 rounded-full outline-none text-[15px] transition-all
-                  bg-[#e8eef5] dark:bg-[#1a1d23]
-                  text-gray-800 dark:text-gray-100
-                  placeholder:text-gray-400 dark:placeholder:text-gray-500
-                  shadow-[inset_6px_6px_12px_#c5d0e0,inset_-6px_-6px_12px_#ffffff]
-                  dark:shadow-[inset_6px_6px_12px_#0f1115,inset_-6px_-6px_12px_#252a33]
-                  focus:shadow-[inset_4px_4px_8px_#c5d0e0,inset_-4px_-4px_8px_#ffffff]
-                  dark:focus:shadow-[inset_4px_4px_8px_#0f1115,inset_-4px_-4px_8px_#252a33]"
+                className="neo-input w-full"
               />
             </div>
 
-            {/* Remember + Forgot */}
             <div className="flex items-center justify-between text-sm px-1">
-              <label className="flex items-center gap-2 text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-[var(--text-secondary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
-                  className="w-4 h-4 accent-[#3478F5] rounded"
+                  className="w-4 h-4 accent-[var(--ios-blue)] rounded"
                 />
                 Remember me
               </label>
-              <Link
-                href="/forgot-password"
-                className="text-[#3478F5] hover:underline font-medium"
-              >
+              <Link href="/forgot-password" className="text-[var(--ios-blue)] hover:underline font-medium">
                 Forgot password?
               </Link>
             </div>
 
-            {/* دکمه Sign In */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 rounded-full bg-[#3478F5] text-white font-semibold text-[17px]
-                transition-all disabled:opacity-70 disabled:cursor-not-allowed
-                shadow-[6px_6px_14px_#c5d0e0,-6px_-6px_14px_#ffffff]
-                dark:shadow-[6px_6px_14px_#0f1115,-6px_-6px_14px_#252a33]
-                hover:bg-[#2a6ae0]
-                active:shadow-[inset_4px_4px_8px_#1a5fd9,inset_-4px_-4px_8px_#5B9BF7]
-                dark:active:shadow-[inset_4px_4px_8px_#0d47a1,inset_-4px_-4px_8px_#42a5f5]"
-            >
+            <button type="submit" disabled={loading} className="btn-primary w-full text-[17px]">
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          <p className="mt-7 text-center text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-7 text-center text-sm text-[var(--text-muted)]">
             Don&apos;t have an account?{" "}
-            <Link
-              href="/register"
-              className="font-medium text-[#3478F5] hover:underline"
-            >
+            <Link href="/register" className="font-medium text-[var(--ios-blue)] hover:underline">
               Create Account
             </Link>
           </p>
