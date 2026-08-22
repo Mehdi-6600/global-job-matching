@@ -1,152 +1,229 @@
-import { Metadata } from "next";
-import Link from "next/link";
-import { Check, Bitcoin, CreditCard } from "lucide-react";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Pricing | Global Job Matching",
-  description: "Simple, transparent pricing for Global Job Matching. Pay with cryptocurrency.",
-};
+import { useState } from "react";
+import { 
+  Check, 
+  Zap, 
+  Crown, 
+  Rocket, 
+  Shield, 
+  CreditCard,
+  ArrowRight
+} from "lucide-react";
 
-const plans = [
+interface PricingPlan {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  description: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  features: string[];
+  highlighted?: boolean;
+  badge?: string;
+}
+
+const plans: PricingPlan[] = [
   {
+    id: "free",
     name: "Free",
-    price: "$0",
-    period: "",
-    description: "Get started with job searching",
+    icon: <Zap className="w-6 h-6" />,
+    description: "Perfect for getting started",
+    monthlyPrice: 0,
+    yearlyPrice: 0,
     features: [
-      "View 5 jobs per day",
-      "Save 2 jobs",
-      "Basic support",
+      "Browse all job listings",
+      "Create basic profile",
+      "Apply to 3 jobs per month",
+      "Email support",
+      "Basic job alerts",
     ],
-    cta: "Get Started",
-    href: "/register?plan=free",
-    popular: false,
   },
   {
-    name: "Pro",
-    price: "$9.99",
-    period: "/month",
-    description: "Unlock unlimited access",
+    id: "pro",
+    name: "Professional",
+    icon: <Crown className="w-6 h-6" />,
+    description: "Best for active job seekers",
+    monthlyPrice: 19,
+    yearlyPrice: 190,
+    highlighted: true,
+    badge: "MOST POPULAR",
     features: [
-      "Unlimited job viewing",
-      "Unlimited job saves",
-      "AI resume generator",
-      "Priority support",
+      "Everything in Free",
+      "Unlimited job applications",
+      "Priority profile visibility",
+      "Advanced search filters",
+      "Resume builder tool",
+      "Salary insights & analytics",
+      "Priority email support",
     ],
-    cta: "Upgrade with Crypto",
-    href: "/payment?plan=pro",
-    popular: true,
   },
   {
+    id: "enterprise",
     name: "Enterprise",
-    price: "$29.99",
-    period: "/month",
-    description: "For power users & teams",
+    icon: <Rocket className="w-6 h-6" />,
+    description: "For teams and recruiters",
+    monthlyPrice: 49,
+    yearlyPrice: 490,
     features: [
-      "Everything in Pro",
-      "AI job matching agent",
-      "Interview coach",
-      "24/7 dedicated support",
+      "Everything in Professional",
+      "Post unlimited jobs",
+      "Applicant tracking system",
+      "Team collaboration tools",
+      "Advanced analytics dashboard",
       "API access",
+      "Dedicated account manager",
+      "Custom integrations",
     ],
-    cta: "Contact Sales",
-    href: "/contact",
-    popular: false,
   },
 ];
 
 export default function PricingPage() {
-  return (
-    <main className="min-h-screen bg-[#f0f2f5] dark:bg-[#0b0d12] py-16 px-4 sm:px-6 transition-colors duration-300">
-      <div className="max-w-5xl mx-auto text-center mb-12">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-          Simple, Transparent Pricing
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Choose the plan that works for you. Upgrade or downgrade anytime.
-        </p>
-      </div>
+  const [isYearly, setIsYearly] = useState(false);
 
-      {/* Payment methods notice */}
-      <div className="max-w-2xl mx-auto mb-10">
-        <div className="rounded-2xl bg-white dark:bg-[#13151c] border border-gray-200 dark:border-[#1e2330] p-4 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-          <div className="flex items-center gap-2 text-gray-800 dark:text-gray-200">
-            <Bitcoin className="w-5 h-5 text-orange-500" />
-            <span className="font-medium">Crypto payments accepted</span>
-          </div>
-          <div className="hidden sm:block w-px h-5 bg-gray-300 dark:bg-gray-600" />
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-            <CreditCard className="w-5 h-5" />
-            <span>PayPal — Coming Soon</span>
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            Simple, <span className="text-cyan-400">Transparent</span> Pricing
+          </h1>
+          <p className="text-slate-300 text-lg max-w-2xl mx-auto mb-8">
+            Choose the plan that fits your needs. No hidden fees, cancel anytime.
+          </p>
+
+          {/* Billing Toggle */}
+          <div className="inline-flex items-center gap-4 glass rounded-2xl p-1.5">
+            <button
+              onClick={() => setIsYearly(false)}
+              className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                !isYearly
+                  ? "bg-cyan-500 text-white shadow-lg"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setIsYearly(true)}
+              className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                isYearly
+                  ? "bg-cyan-500 text-white shadow-lg"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Yearly
+              <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">
+                Save 20%
+              </span>
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Plans */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map((plan) => (
-          <div
-            key={plan.name}
-            className={`relative rounded-2xl p-6 sm:p-8 bg-white dark:bg-[#13151c] border transition-all
-              ${
-                plan.popular
-                  ? "border-[#3478F5]/50 shadow-[0_0_0_1px_rgba(52,120,245,0.3)] dark:shadow-[0_0_30px_rgba(52,120,245,0.15)]"
-                  : "border-gray-200 dark:border-[#1e2330]"
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative rounded-2xl p-8 transition-all duration-300 hover:scale-[1.02] ${
+                plan.highlighted
+                  ? "glass bg-gradient-to-b from-cyan-500/10 to-blue-500/10 border-2 border-cyan-500/50 shadow-2xl shadow-cyan-500/10"
+                  : "glass border border-white/10 hover:border-white/20"
               }`}
-          >
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-[#3478F5] text-white text-xs font-semibold px-3 py-1 rounded-full">
-                  Most Popular
-                </span>
-              </div>
-            )}
-
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-              {plan.name}
-            </h2>
-            <div className="mb-4">
-              <span className="text-3xl font-bold text-[#3478F5]">{plan.price}</span>
-              {plan.period && (
-                <span className="text-base font-normal text-gray-500 dark:text-gray-400">
-                  {plan.period}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              {plan.description}
-            </p>
-
-            <ul className="space-y-3 mb-8">
-              {plan.features.map((feature) => (
-                <li
-                  key={feature}
-                  className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
-                >
-                  <Check className="w-4 h-4 text-[#3478F5] mt-0.5 shrink-0" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              href={plan.href}
-              className={`block w-full text-center py-3 rounded-full font-semibold text-sm transition-all
-                ${
-                  plan.popular
-                    ? "bg-[#3478F5] text-white shadow-[0_6px_20px_rgba(52,120,245,0.35)] hover:bg-[#2f6de0] active:scale-[0.98]"
-                    : "bg-gray-100 dark:bg-[#1a1d24] text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#222733]"
-                }`}
             >
-              {plan.cta}
-            </Link>
-          </div>
-        ))}
-      </div>
+              {plan.badge && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
+                  {plan.badge}
+                </div>
+              )}
 
-      <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-10">
-        All paid plans are activated instantly after crypto payment confirmation. No hidden fees.
-      </p>
+              <div className="mb-6">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
+                    plan.highlighted
+                      ? "bg-gradient-to-br from-cyan-500 to-blue-500 text-white"
+                      : "bg-white/10 text-cyan-400"
+                  }`}
+                >
+                  {plan.icon}
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+                <p className="text-slate-400 text-sm">{plan.description}</p>
+              </div>
+
+              <div className="mb-8">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold text-white">
+                    ${isYearly ? plan.yearlyPrice : plan.monthlyPrice}
+                  </span>
+                  <span className="text-slate-400">/{isYearly ? "year" : "month"}</span>
+                </div>
+                {isYearly && plan.yearlyPrice > 0 && (
+                  <p className="text-sm text-emerald-400 mt-1">
+                    Save ${plan.monthlyPrice * 12 - plan.yearlyPrice} per year
+                  </p>
+                )}
+              </div>
+
+              <ul className="space-y-3 mb-8">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-slate-300 text-sm">
+                    <Check
+                      className={`w-5 h-5 shrink-0 ${
+                        plan.highlighted ? "text-cyan-400" : "text-emerald-400"
+                      }`}
+                    />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                className={`w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 group ${
+                  plan.highlighted
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white shadow-lg shadow-cyan-500/25"
+                    : "glass text-white hover:bg-white/10 border border-white/10"
+                }`}
+              >
+                {plan.monthlyPrice === 0 ? "Get Started Free" : "Choose Plan"}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Trust Badges */}
+        <div className="mt-16 glass rounded-2xl p-8 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <Shield className="w-8 h-8 text-emerald-400" />
+              <h4 className="text-white font-semibold">Secure Payment</h4>
+              <p className="text-slate-400 text-sm">256-bit SSL encryption</p>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <CreditCard className="w-8 h-8 text-cyan-400" />
+              <h4 className="text-white font-semibold">Flexible Billing</h4>
+              <p className="text-slate-400 text-sm">Monthly or yearly options</p>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <Zap className="w-8 h-8 text-amber-400" />
+              <h4 className="text-white font-semibold">Instant Access</h4>
+              <p className="text-slate-400 text-sm">Start immediately after payment</p>
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ Teaser */}
+        <div className="mt-12 text-center">
+          <p className="text-slate-400">
+            Have questions?{" "}
+            <a href="/contact" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+              Contact our support team
+            </a>
+          </p>
+        </div>
+      </div>
     </main>
   );
 }
