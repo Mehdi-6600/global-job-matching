@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased flex flex-col min-h-screen bg-[var(--page-bg)]`}>
+      <body className={`${inter.className} antialiased flex flex-col min-h-screen`}>
         <Providers>
           <AuthProvider>
             <Navbar />
