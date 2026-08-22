@@ -44,8 +44,8 @@ export default function LoginPage() {
         {/* کارت */}
         <div className="rounded-3xl p-8 sm:p-10 
           bg-white dark:bg-[#13151c] 
-          border border-gray-200 dark:border-[#1e2330]
-          shadow-lg dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)]
+          border border-gray-200/60 dark:border-[#1e2330]
+          shadow-[0_10px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]
           transition-all duration-300">
           
           {/* لوگو */}
@@ -72,7 +72,7 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
+            {/* Email - فرو رفته */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
                 Email
@@ -84,17 +84,18 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full py-3.5 px-5 rounded-full 
+                className="w-full py-3.5 px-5 rounded-full outline-none transition-all
                   bg-[#f0f2f5] dark:bg-[#0b0d12]
-                  border border-gray-200 dark:border-[#1e2330]
                   text-gray-900 dark:text-gray-100
                   placeholder:text-gray-400 dark:placeholder:text-gray-500
-                  outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
-                  transition-all"
+                  shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
+                  dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
+                  focus:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff]
+                  dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]"
               />
             </div>
 
-            {/* Password */}
+            {/* Password - فرو رفته */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
                 Password
@@ -106,13 +107,14 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full py-3.5 px-5 rounded-full 
+                className="w-full py-3.5 px-5 rounded-full outline-none transition-all
                   bg-[#f0f2f5] dark:bg-[#0b0d12]
-                  border border-gray-200 dark:border-[#1e2330]
                   text-gray-900 dark:text-gray-100
                   placeholder:text-gray-400 dark:placeholder:text-gray-500
-                  outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
-                  transition-all"
+                  shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
+                  dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
+                  focus:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff]
+                  dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]"
               />
             </div>
 
@@ -137,8 +139,8 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full py-3.5 rounded-full bg-[#3478F5] text-white font-semibold text-[16px]
-                shadow-lg shadow-blue-500/25
-                hover:bg-[#5B9BF7] active:scale-[0.98]
+                shadow-[0_6px_20px_rgba(52,120,245,0.35)]
+                hover:bg-[#5B9BF7] active:scale-[0.98] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2)]
                 transition-all disabled:opacity-60"
             >
               {loading ? "Signing in..." : "Sign In"}
