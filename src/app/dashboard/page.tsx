@@ -1,314 +1,369 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
+  LayoutDashboard,
   Briefcase,
-  Bookmark,
-  Eye,
+  Heart,
+  MessageSquare,
+  Settings,
+  Bell,
   TrendingUp,
+  Users,
+  Eye,
+  CheckCircle2,
   Clock,
-  MapPin,
-  DollarSign,
-  ExternalLink,
-  BarChart3,
-  PieChart,
-  Activity,
+  XCircle,
   ChevronRight,
   Search,
   Filter,
-  Loader2,
+  MoreHorizontal,
 } from "lucide-react";
-import Navbar from "@/components/navbar";
 
-// Mock data for demo — replace with real data hooks
-const stats = [
+interface StatCard {
+  title: string;
+  value: string;
+  change: string;
+  trend: "up" | "down" | "neutral";
+  icon: React.ReactNode;
+}
+
+interface Application {
+  id: string;
+  jobTitle: string;
+  company: string;
+  status: "pending" | "interview" | "accepted" | "rejected";
+  appliedDate: string;
+  logo: string;
+}
+
+interface SavedJob {
+  id: string;
+  title: string;
+  company: string;
+  salary: string;
+  postedAt: string;
+}
+
+const stats: StatCard[] = [
   {
-    label: "Total Applications",
+    title: "Total Applications",
     value: "24",
     change: "+12%",
-    icon: Briefcase,
-    color: "from-[#3B82F6] to-[#60A5FA]",
+    trend: "up",
+    icon: <Briefcase className="w-5 h-5 text-cyan-400" />,
   },
   {
-    label: "Saved Jobs",
+    title: "Profile Views",
+    value: "1,284",
+    change: "+28%",
+    trend: "up",
+    icon: <Eye className="w-5 h-5 text-purple-400" />,
+  },
+  {
+    title: "Saved Jobs",
     value: "18",
     change: "+5",
-    icon: Bookmark,
-    color: "from-[#8B5CF6] to-[#A78BFA]",
+    trend: "up",
+    icon: <Heart className="w-5 h-5 text-pink-400" />,
   },
   {
-    label: "Profile Views",
-    value: "142",
-    change: "+28%",
-    icon: Eye,
-    color: "from-[#10B981] to-[#34D399]",
-  },
-  {
-    label: "Match Score",
-    value: "87%",
-    change: "+3%",
-    icon: TrendingUp,
-    color: "from-[#F59E0B] to-[#FBBF24]",
+    title: "Response Rate",
+    value: "68%",
+    change: "+4%",
+    trend: "up",
+    icon: <TrendingUp className="w-5 h-5 text-emerald-400" />,
   },
 ];
 
-const recentJobs = [
+const applications: Application[] = [
   {
     id: "1",
-    title: "Senior Frontend Developer",
-    company: "TechCorp",
-    location: "Remote",
-    salary: "$120K - $160K",
-    type: "Full-time",
-    postedAt: "2h ago",
-    source: "remoteok",
-    tags: ["React", "TypeScript", "Next.js"],
+    jobTitle: "Senior Frontend Developer",
+    company: "TechCorp Global",
+    status: "interview",
+    appliedDate: "2 days ago",
+    logo: "TC",
   },
   {
     id: "2",
-    title: "Product Designer",
-    company: "DesignStudio",
-    location: "Berlin, Germany",
-    salary: "€70K - €90K",
-    type: "Full-time",
-    postedAt: "5h ago",
-    source: "arbeitnow",
-    tags: ["Figma", "UI/UX", "Design Systems"],
+    jobTitle: "Full Stack Engineer",
+    company: "StartupHub",
+    status: "pending",
+    appliedDate: "5 days ago",
+    logo: "SH",
   },
   {
     id: "3",
-    title: "Data Engineer",
+    jobTitle: "React Developer",
     company: "DataFlow",
-    location: "London, UK",
-    salary: "£80K - £110K",
-    type: "Contract",
-    postedAt: "1d ago",
-    source: "jooble",
-    tags: ["Python", "SQL", "AWS"],
+    status: "accepted",
+    appliedDate: "1 week ago",
+    logo: "DF",
+  },
+  {
+    id: "4",
+    jobTitle: "UI Engineer",
+    company: "Creative Studio",
+    status: "rejected",
+    appliedDate: "2 weeks ago",
+    logo: "CS",
   },
 ];
 
-const activities = [
-  { action: "Applied to", target: "Senior Frontend Developer at TechCorp", time: "2h ago" },
-  { action: "Saved", target: "Product Designer at DesignStudio", time: "5h ago" },
-  { action: "Profile viewed by", target: "DataFlow recruiter", time: "1d ago" },
-  { action: "Match found", target: "Data Engineer at DataFlow", time: "2d ago" },
+const savedJobs: SavedJob[] = [
+  {
+    id: "1",
+    title: "Backend Engineer",
+    company: "CloudScale Inc",
+    salary: "$130k - $170k",
+    postedAt: "1 day ago",
+  },
+  {
+    id: "2",
+    title: "DevOps Specialist",
+    company: "Tech Giants",
+    salary: "$120k - $160k",
+    postedAt: "3 days ago",
+  },
 ];
 
-function sourceBadge(source: string) {
-  const map: Record<string, string> = {
-    arbeitnow: "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20",
-    remoteok: "bg-sky-500/10 text-sky-500 dark:text-sky-400 border-sky-500/20",
-    jooble: "bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20",
-  };
-  return map[source] || "bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]/20";
-}
+const statusConfig = {
+  pending: {
+    label: "Pending",
+    icon: <Clock className="w-4 h-4" />,
+    color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  },
+  interview: {
+    label: "Interview",
+    icon: <Users className="w-4 h-4" />,
+    color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  },
+  accepted: {
+    label: "Accepted",
+    icon: <CheckCircle2 className="w-4 h-4" />,
+    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  },
+  rejected: {
+    label: "Rejected",
+    icon: <XCircle className="w-4 h-4" />,
+    color: "text-red-400 bg-red-500/10 border-red-500/20",
+  },
+};
+
+const sidebarItems = [
+  { icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard", active: true },
+  { icon: <Briefcase className="w-5 h-5" />, label: "My Applications", active: false },
+  { icon: <Heart className="w-5 h-5" />, label: "Saved Jobs", active: false },
+  { icon: <MessageSquare className="w-5 h-5" />, label: "Messages", active: false },
+  { icon: <Bell className="w-5 h-5" />, label: "Notifications", active: false },
+  { icon: <Settings className="w-5 h-5" />, label: "Settings", active: false },
+];
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
-      <Navbar />
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar - Mobile Toggle */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden glass rounded-xl p-3 text-white mb-4 flex items-center gap-2"
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            <span>Menu</span>
+          </button>
 
-      <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="glass-section p-6 mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">
-                  Dashboard
-                </h1>
-                <p className="text-[var(--text-muted)] mt-1">
-                  Welcome back! Here&apos;s what&apos;s happening with your job search.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/jobs"
-                  className="btn-primary text-sm py-2.5 px-5 flex items-center gap-2"
-                >
-                  <Search className="w-4 h-4" />
-                  Find Jobs
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="glass-card group"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div
-                    className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-glow`}
-                  >
-                    <stat.icon className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full">
-                    {stat.change}
-                  </span>
+          {/* Sidebar */}
+          <aside
+            className={`lg:w-64 shrink-0 ${sidebarOpen ? "block" : "hidden lg:block"}`}
+          >
+            <div className="glass rounded-2xl p-4 sticky top-24">
+              {/* User Profile Summary */}
+              <div className="flex items-center gap-3 p-3 mb-4 border-b border-white/10 pb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                  JD
                 </div>
-                <div className="text-2xl font-bold text-[var(--text-primary)]">
-                  {stat.value}
+                <div>
+                  <h3 className="text-white font-semibold">John Doe</h3>
+                  <p className="text-slate-400 text-sm">Frontend Developer</p>
                 </div>
-                <div className="text-sm text-[var(--text-muted)]">{stat.label}</div>
               </div>
-            ))}
-          </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column — 2/3 */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Tabs */}
-              <div className="glass-section p-2 flex items-center gap-1">
-                {["overview", "saved", "applications"].map((tab) => (
+              <nav className="space-y-1">
+                {sidebarItems.map((item) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-all capitalize ${
-                      activeTab === tab
-                        ? "bg-[#3B82F6] text-white shadow-glow"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5"
+                    key={item.label}
+                    onClick={() => {
+                      setActiveTab(item.label.toLowerCase().replace(" ", "-"));
+                      setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      item.active
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/20"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
                     }`}
                   >
-                    {tab}
+                    {item.icon}
+                    {item.label}
                   </button>
                 ))}
-              </div>
+              </nav>
 
-              {/* Recent Jobs */}
-              <div className="glass-section p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Briefcase className="w-5 h-5 text-[#3B82F6]" />
-                    Recommended Jobs
-                  </h2>
-                  <Link
-                    href="/jobs"
-                    className="text-sm text-[#3B82F6] hover:text-[#60A5FA] flex items-center gap-1 transition-colors"
-                  >
-                    View all
-                    <ChevronRight className="w-4 h-4" />
-                  </Link>
+              {/* Profile Completion */}
+              <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-slate-300">Profile</span>
+                  <span className="text-sm text-cyan-400 font-semibold">85%</span>
                 </div>
+                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full w-[85%] bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" />
+                </div>
+                <p className="text-xs text-slate-400 mt-2">Add portfolio to reach 100%</p>
+              </div>
+            </div>
+          </aside>
 
-                <div className="space-y-4">
-                  {recentJobs.map((job) => (
-                    <div
-                      key={job.id}
-                      className="glass p-4 rounded-xl hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-all group cursor-pointer"
+          {/* Main Content */}
+          <div className="flex-1 space-y-8">
+            {/* Welcome Header */}
+            <div className="glass rounded-2xl p-6 md:p-8 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                Welcome back, John! 👋
+              </h1>
+              <p className="text-slate-300">
+                You have <span className="text-cyan-400 font-semibold">3 new notifications</span> and{" "}
+                <span className="text-emerald-400 font-semibold">2 interview invites</span> this week.
+              </p>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {stats.map((stat) => (
+                <div
+                  key={stat.title}
+                  className="glass rounded-2xl p-5 hover:bg-white/10 transition-all"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-2.5 rounded-xl bg-white/5">{stat.icon}</div>
+                    <span
+                      className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                        stat.trend === "up"
+                          ? "text-emerald-400 bg-emerald-500/10"
+                          : "text-red-400 bg-red-500/10"
+                      }`}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center text-white font-bold text-sm shadow-glow shrink-0">
-                          {job.company.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-[var(--text-primary)] group-hover:text-[#3B82F6] transition-colors">
-                              {job.title}
-                            </h3>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${sourceBadge(
-                                job.source
-                              )}`}
-                            >
-                              {job.source}
-                            </span>
-                          </div>
-                          <p className="text-sm text-[var(--text-muted)]">
-                            {job.company}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-[var(--text-muted)]">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {job.location}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Briefcase className="w-3 h-3" />
-                              {job.type}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="w-3 h-3" />
-                              {job.salary}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {job.postedAt}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {job.tags.map((tag) => (
-                              <span key={tag} className="glass-pill text-[10px]">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <Link
-                          href="#"
-                          className="shrink-0 w-9 h-9 rounded-lg glass flex items-center justify-center text-[var(--text-muted)] hover:text-[#3B82F6] hover:glow-primary transition-all"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
+                      {stat.change}
+                    </span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-1">{stat.value}</h3>
+                  <p className="text-slate-400 text-sm">{stat.title}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Applications Table */}
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-white">Recent Applications</h2>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      className="bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-cyan-500/50 w-full sm:w-48"
+                    />
+                  </div>
+                  <button className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white transition-colors">
+                    <Filter className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Analytics Placeholder */}
-              <div className="glass-section p-6">
-                <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
-                  <BarChart3 className="w-5 h-5 text-[#8B5CF6]" />
-                  Application Analytics
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="glass p-5 rounded-xl text-center">
-                    <PieChart className="w-8 h-8 text-[#3B82F6] mx-auto mb-3" />
-                    <div className="text-2xl font-bold text-[var(--text-primary)]">8</div>
-                    <div className="text-xs text-[var(--text-muted)]">Pending</div>
-                  </div>
-                  <div className="glass p-5 rounded-xl text-center">
-                    <Activity className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-                    <div className="text-2xl font-bold text-[var(--text-primary)]">12</div>
-                    <div className="text-xs text-[var(--text-muted)]">Interviewing</div>
-                  </div>
-                  <div className="glass p-5 rounded-xl text-center">
-                    <TrendingUp className="w-8 h-8 text-[#8B5CF6] mx-auto mb-3" />
-                    <div className="text-2xl font-bold text-[var(--text-primary)]">4</div>
-                    <div className="text-xs text-[var(--text-muted)]">Offers</div>
-                  </div>
-                </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/10 text-left text-xs text-slate-400 uppercase tracking-wider">
+                      <th className="px-6 py-4 font-medium">Job</th>
+                      <th className="px-6 py-4 font-medium">Status</th>
+                      <th className="px-6 py-4 font-medium">Applied</th>
+                      <th className="px-6 py-4 font-medium text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {applications.map((app) => {
+                      const status = statusConfig[app.status];
+                      return (
+                        <tr
+                          key={app.id}
+                          className="hover:bg-white/5 transition-colors group"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center text-cyan-300 text-sm font-bold">
+                                {app.logo}
+                              </div>
+                              <div>
+                                <h4 className="text-white font-medium text-sm">{app.jobTitle}</h4>
+                                <p className="text-slate-400 text-xs">{app.company}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${status.color}`}
+                            >
+                              {status.icon}
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-400 text-sm">{app.appliedDate}</td>
+                          <td className="px-6 py-4 text-right">
+                            <button className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100">
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="p-4 border-t border-white/10 text-center">
+                <button className="text-cyan-400 text-sm font-medium hover:text-cyan-300 transition-colors">
+                  View All Applications →
+                </button>
               </div>
             </div>
 
-            {/* Right Column — 1/3 */}
-            <div className="space-y-6">
-              {/* Activity Feed */}
-              <div className="glass-section p-6">
-                <h2 className="text-lg font-semibold mb-5">Recent Activity</h2>
+            {/* Saved Jobs & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Saved Jobs */}
+              <div className="glass rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">Saved Jobs</h2>
+                  <button className="text-cyan-400 text-sm hover:text-cyan-300">View All</button>
+                </div>
                 <div className="space-y-4">
-                  {activities.map((activity, i) => (
-                    <div key={i} className="flex gap-3">
-                      <div className="w-2 h-2 rounded-full bg-[#3B82F6] mt-2 shrink-0 shadow-glow" />
+                  {savedJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-500/30 transition-all group"
+                    >
                       <div>
-                        <p className="text-sm text-[var(--text-primary)]">
-                          <span className="font-medium">{activity.action}</span>{" "}
-                          <span className="text-[var(--text-secondary)]">
-                            {activity.target}
-                          </span>
-                        </p>
-                        <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                          {activity.time}
-                        </p>
+                        <h4 className="text-white font-medium text-sm mb-1 group-hover:text-cyan-300 transition-colors">
+                          {job.title}
+                        </h4>
+                        <p className="text-slate-400 text-xs">{job.company}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-emerald-400 text-sm font-medium">{job.salary}</p>
+                        <p className="text-slate-500 text-xs">{job.postedAt}</p>
                       </div>
                     </div>
                   ))}
@@ -316,85 +371,33 @@ export default function DashboardPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="glass-section p-6">
-                <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-                <div className="space-y-2">
-                  <Link
-                    href="/jobs"
-                    className="flex items-center gap-3 p-3 rounded-xl glass hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-all group"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/10 flex items-center justify-center">
-                      <Search className="w-4 h-4 text-[#3B82F6]" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-[var(--text-primary)]">
-                        Search Jobs
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-xl font-bold text-white mb-6">Quick Actions</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { icon: <Briefcase className="w-5 h-5" />, label: "Find Jobs", color: "from-cyan-500 to-blue-500" },
+                    { icon: <Users className="w-5 h-5" />, label: "Network", color: "from-purple-500 to-pink-500" },
+                    { icon: <TrendingUp className="w-5 h-5" />, label: "Analytics", color: "from-emerald-500 to-teal-500" },
+                    { icon: <MessageSquare className="w-5 h-5" />, label: "Messages", color: "from-amber-500 to-orange-500" },
+                  ].map((action) => (
+                    <button
+                      key={action.label}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all group"
+                    >
+                      <div className={`p-2.5 rounded-lg bg-gradient-to-br ${action.color} text-white`}>
+                        {action.icon}
                       </div>
-                      <div className="text-xs text-[var(--text-muted)]">
-                        Find new opportunities
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[#3B82F6] transition-colors" />
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-3 p-3 rounded-xl glass hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-all group"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-[#8B5CF6]/10 flex items-center justify-center">
-                      <Briefcase className="w-4 h-4 text-[#8B5CF6]" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-[var(--text-primary)]">
-                        Update Profile
-                      </div>
-                      <div className="text-xs text-[var(--text-muted)]">
-                        Improve your match score
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[#8B5CF6] transition-colors" />
-                  </Link>
-                  <Link
-                    href="/pricing"
-                    className="flex items-center gap-3 p-3 rounded-xl glass hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-all group"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-[var(--text-primary)]">
-                        Upgrade Plan
-                      </div>
-                      <div className="text-xs text-[var(--text-muted)]">
-                        Unlock premium features
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-emerald-500 transition-colors" />
-                  </Link>
+                      <span className="text-slate-300 text-sm font-medium group-hover:text-white">
+                        {action.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </div>
-
-              {/* Match Score Card */}
-              <div className="glass-section p-6 text-center">
-                <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center mx-auto mb-4 shadow-glow">
-                  <span className="text-2xl font-bold text-white">87%</span>
-                </div>
-                <h3 className="font-semibold text-[var(--text-primary)] mb-1">
-                  Profile Match Score
-                </h3>
-                <p className="text-xs text-[var(--text-muted)] mb-4">
-                  Your profile is 87% complete. Add more skills to improve matching.
-                </p>
-                <Link
-                  href="/profile"
-                  className="btn-secondary text-sm py-2.5 w-full block"
-                >
-                  Complete Profile
-                </Link>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
