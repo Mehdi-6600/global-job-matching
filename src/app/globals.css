@@ -127,6 +127,11 @@
     background-color: var(--ios-blue);
   }
 
+  /* Gradient primary — used in dashboard */
+  .gradient-primary {
+    background: linear-gradient(135deg, var(--ios-blue) 0%, var(--ios-blue-light) 100%);
+  }
+
   /* Section container */
   .glass-section {
     background: var(--glass-bg);
@@ -333,5 +338,29 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* Fallback for Firefox & browsers without backdrop-filter support */
+@supports not (backdrop-filter: blur(24px)) {
+  .glass,
+  .glass-flat,
+  .glass-glow,
+  .glass-section,
+  .glass-strip,
+  .glass-card,
+  .glass-input,
+  .glass-pill {
+    background: rgba(255, 255, 255, 0.95) !important;
+  }
+  .dark .glass,
+  .dark .glass-flat,
+  .dark .glass-glow,
+  .dark .glass-section,
+  .dark .glass-strip,
+  .dark .glass-card,
+  .dark .glass-input,
+  .dark .glass-pill {
+    background: rgba(15, 23, 42, 0.95) !important;
   }
 }
