@@ -15,10 +15,34 @@ import {
   CheckCircle2,
   ChevronRight,
   Globe,
+  ChevronDown,
 } from "lucide-react";
 
 type JobType = "full-time" | "part-time" | "contract" | "freelance" | "internship";
 type Experience = "entry" | "mid" | "senior" | "lead" | "executive";
+
+function SelectWrapper({
+  value,
+  onChange,
+  children,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={onChange}
+        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
+      >
+        {children}
+      </select>
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+    </div>
+  );
+}
 
 export default function PostJobPage() {
   const [step, setStep] = useState(1);
@@ -202,10 +226,9 @@ export default function PostJobPage() {
 
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">Category *</label>
-                <select
+                <SelectWrapper
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                 >
                   <option value="" className="bg-slate-800">Select category</option>
                   <option value="technology" className="bg-slate-800">Technology</option>
@@ -215,37 +238,35 @@ export default function PostJobPage() {
                   <option value="healthcare" className="bg-slate-800">Healthcare</option>
                   <option value="sales" className="bg-slate-800">Sales</option>
                   <option value="hr" className="bg-slate-800">HR</option>
-                </select>
+                </SelectWrapper>
               </div>
 
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">Job Type *</label>
-                <select
+                <SelectWrapper
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value as JobType })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                 >
                   <option value="full-time" className="bg-slate-800">Full-time</option>
                   <option value="part-time" className="bg-slate-800">Part-time</option>
                   <option value="contract" className="bg-slate-800">Contract</option>
                   <option value="freelance" className="bg-slate-800">Freelance</option>
                   <option value="internship" className="bg-slate-800">Internship</option>
-                </select>
+                </SelectWrapper>
               </div>
 
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">Experience Level *</label>
-                <select
+                <SelectWrapper
                   value={form.experience}
                   onChange={(e) => setForm({ ...form, experience: e.target.value as Experience })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                 >
                   <option value="entry" className="bg-slate-800">Entry Level</option>
                   <option value="mid" className="bg-slate-800">Mid Level</option>
                   <option value="senior" className="bg-slate-800">Senior Level</option>
                   <option value="lead" className="bg-slate-800">Lead</option>
                   <option value="executive" className="bg-slate-800">Executive</option>
-                </select>
+                </SelectWrapper>
               </div>
 
               <div>
@@ -336,15 +357,14 @@ export default function PostJobPage() {
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1.5">Currency</label>
-                  <select
+                  <SelectWrapper
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                   >
                     <option value="USD" className="bg-slate-800">USD ($)</option>
                     <option value="EUR" className="bg-slate-800">EUR (€)</option>
                     <option value="GBP" className="bg-slate-800">GBP (£)</option>
-                  </select>
+                  </SelectWrapper>
                 </div>
               </div>
 
