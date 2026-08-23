@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { fetchAllJobs } from "@/lib/jobs/fetcher";
+import { prisma } from "@/lib/prisma";
+import { fetchFromArbeitnow } from "@/lib/jobs/fetcher";
 import { env } from "@/lib/env";
 
 function parseLocation(location: string): { city: string; country: string } {
@@ -14,31 +14,37 @@ function parseLocation(location: string): { city: string; country: string } {
 
 function mapJobType(apiType: string): string {
   const t = apiType.toLowerCase();
-  if (t.includes("full")) return "FULL_TIME";
-  if (t.includes("part")) return "PART_TIME";
-  if (t.includes("contract")) return "CONTRACT";
-  if (t.includes("freelance")) return "FREELANCE";
-  if (t.includes("intern")) return "INTERNSHIP";
-  return "FULL_TIME";
+  if (t.includes("full")) return "full-time";
+  if (t.includes("part")) return "part-time";
+  if (t.includes("contract")) return "contract";
+  if (t.includes("freelance")) return "freelance";
+  if (t.includes("intern")) return "internship";
+  return "full-time";
+}
+
+function stripHtml(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 export async function GET(request: NextRequest) {
-  // Simple secret-based auth for manual triggering from phone
   const secret = request.nextUrl.searchParams.get("secret");
   if (secret !== env.SYNC_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // Find owner user to act as the employer for API-sourced jobs
-    const owner = await db.user.findFirst({
-      where: { email: env.OWNER_EMAIL },
-      select: { id: true },
-    });
-
-    const employerId = owner?.id || "system";
-
-    const { jobs } = await fetchAllJobs({ page: 1, perPage: 100 });
+    const jobs = await fetchFromArbeitnow({ page: 1, perPage: 100 });
     let created = 0;
     let skipped = 0;
 
@@ -46,9 +52,33 @@ export async function GET(request: NextRequest) {
       const { city, country } = parseLocation(job.location);
       const jobType = mapJobType(job.job_types?.[0] || "full_time");
 
-      // Avoid duplicates by externalUrl
-      const existing = await db.jobListing.findFirst({
-        where: { externalUrl: job.url },
+      // Find or create company
+      let company = await prisma.company.findFirst({
+        where: { name: job.company_name },
+      });
+
+      if (!company) {
+        const slug = generateSlug(job.company_name) || `company-${Date.now()}`;
+
+        company = await prisma.company.create({
+          data: {
+            name: job.company_name,
+            slug,
+            email: env.OWNER_EMAIL,
+            location: job.location || "Remote",
+            status: "verified",
+          },
+        });
+      }
+
+      // Avoid duplicates by URL in tags
+      const existing = await prisma.job.findFirst({
+        where: {
+          OR: [
+            { title: job.title, companyId: company.id },
+            { tags: { has: job.url } },
+          ],
+        },
       });
 
       if (existing) {
@@ -56,24 +86,19 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      await db.jobListing.create({
+      await prisma.job.create({
         data: {
-          employerId,
           title: job.title,
-          description: job.description || job.title,
-          skillsRequired: job.tags || [],
-          jobType: jobType as any,
-          status: "ACTIVE",
-          country,
-          city,
-          isRemote: job.remote ?? false,
-          salaryCurrency: "USD",
-          salaryPeriod: "yearly",
-          contactName: job.company_name || "Unknown",
-          contactEmail: env.OWNER_EMAIL,
-          source: "arbeitnow",
-          externalId: job.slug || null,
-          externalUrl: job.url,
+          description: stripHtml(job.description) || job.title,
+          location: `${city}, ${country}`,
+          remote: job.remote ?? false,
+          type: jobType,
+          experience: "mid",
+          currency: "USD",
+          requirements: job.tags || [],
+          tags: [...(job.tags || []), job.url],
+          status: "active",
+          companyId: company.id,
         },
       });
 
