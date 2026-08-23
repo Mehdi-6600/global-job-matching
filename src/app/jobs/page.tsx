@@ -473,14 +473,17 @@ export default function JobsPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-1.5 mb-5">
-                      {job.tags.slice(0, 5).map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/5"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                      {job.tags
+                        .filter((tag) => !tag.startsWith("http"))
+                        .slice(0, 5)
+                        .map((tag) => (
+                          <span
+                            key={tag}
+                            className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/5 break-all max-w-[120px] truncate"
+                          >
+                            {tag}
+                          </span>
+                        ))}
                     </div>
 
                     <div className="flex items-center justify-between">
