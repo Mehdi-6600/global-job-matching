@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Send,
   Search,
@@ -13,8 +13,10 @@ import {
   MessageSquare,
   XCircle,
   UserCheck,
-  Filter,
+  RotateCcw,
 } from "lucide-react";
+import EmptyState from "../components/empty-state";
+import Skeleton from "../components/skeleton";
 
 type ApplicationStatus = "applied" | "viewed" | "interview" | "rejected" | "hired";
 
@@ -32,59 +34,29 @@ interface Application {
 
 const initialApplications: Application[] = [
   {
-    id: "a1",
-    jobTitle: "Senior Frontend Developer",
-    company: "TechCorp",
-    location: "Remote",
-    salary: "$120k - $150k",
-    appliedAt: "Aug 18, 2026",
-    status: "interview",
-    logo: "TC",
-    lastUpdate: "2 days ago",
+    id: "a1", jobTitle: "Senior Frontend Developer", company: "TechCorp",
+    location: "Remote", salary: "$120k - $150k", appliedAt: "Aug 18, 2026",
+    status: "interview", logo: "TC", lastUpdate: "2 days ago",
   },
   {
-    id: "a2",
-    jobTitle: "Backend Engineer",
-    company: "CloudScale",
-    location: "London, UK",
-    salary: "£80k - £100k",
-    appliedAt: "Aug 15, 2026",
-    status: "viewed",
-    logo: "CS",
-    lastUpdate: "1 day ago",
+    id: "a2", jobTitle: "Backend Engineer", company: "CloudScale",
+    location: "London, UK", salary: "£80k - £100k", appliedAt: "Aug 15, 2026",
+    status: "viewed", logo: "CS", lastUpdate: "1 day ago",
   },
   {
-    id: "a3",
-    jobTitle: "Product Designer",
-    company: "Creative Studio",
-    location: "Paris, France",
-    salary: "€60k - €80k",
-    appliedAt: "Aug 10, 2026",
-    status: "applied",
-    logo: "CR",
-    lastUpdate: "Just now",
+    id: "a3", jobTitle: "Product Designer", company: "Creative Studio",
+    location: "Paris, France", salary: "€60k - €80k", appliedAt: "Aug 10, 2026",
+    status: "applied", logo: "CR", lastUpdate: "Just now",
   },
   {
-    id: "a4",
-    jobTitle: "DevOps Engineer",
-    company: "DataFlow",
-    location: "Berlin, Germany",
-    salary: "€90k - €110k",
-    appliedAt: "Aug 05, 2026",
-    status: "rejected",
-    logo: "DF",
-    lastUpdate: "3 days ago",
+    id: "a4", jobTitle: "DevOps Engineer", company: "DataFlow",
+    location: "Berlin, Germany", salary: "€90k - €110k", appliedAt: "Aug 05, 2026",
+    status: "rejected", logo: "DF", lastUpdate: "3 days ago",
   },
   {
-    id: "a5",
-    jobTitle: "Mobile Developer",
-    company: "NextGen Labs",
-    location: "Toronto, Canada",
-    salary: "$100k - $130k",
-    appliedAt: "Jul 28, 2026",
-    status: "hired",
-    logo: "NG",
-    lastUpdate: "Yesterday",
+    id: "a5", jobTitle: "Mobile Developer", company: "NextGen Labs",
+    location: "Toronto, Canada", salary: "$100k - $130k", appliedAt: "Jul 28, 2026",
+    status: "hired", logo: "NG", lastUpdate: "Yesterday",
   },
 ];
 
@@ -108,9 +80,18 @@ const statusConfig: Record<
 };
 
 export default function MyApplicationsPage() {
-  const [applications, setApplications] = useState<Application[]>(initialApplications);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | ApplicationStatus>("all");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setApplications(initialApplications);
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const filtered = applications.filter((app) => {
     const matchesSearch =
@@ -129,10 +110,41 @@ export default function MyApplicationsPage() {
     hired: applications.filter((a) => a.status === "hired").length,
   };
 
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-8">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 rounded-2xl" />
+            ))}
+          </div>
+          <Skeleton className="h-12 rounded-2xl mb-6" />
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="glass rounded-2xl p-5 flex items-center gap-4">
+                <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-56" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">My Applications</h1>
@@ -140,7 +152,6 @@ export default function MyApplicationsPage() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-8">
           {([
             { key: "all", label: "All", color: "text-white" },
@@ -152,6 +163,7 @@ export default function MyApplicationsPage() {
           ] as const).map((s) => (
             <button
               key={s.key}
+              type="button"
               onClick={() => setFilterStatus(s.key as any)}
               className={`glass rounded-2xl p-3 text-center transition-all border ${
                 filterStatus === s.key
@@ -165,7 +177,6 @@ export default function MyApplicationsPage() {
           ))}
         </div>
 
-        {/* Search */}
         <div className="glass rounded-2xl p-4 mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -179,63 +190,71 @@ export default function MyApplicationsPage() {
           </div>
         </div>
 
-        {/* Applications List */}
-        <div className="space-y-3">
-          {filtered.map((app) => {
-            const config = statusConfig[app.status];
-            const StatusIcon = config.icon;
-            return (
-              <div
-                key={app.id}
-                className="glass rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-transparent hover:border-white/10 transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                    <span className="text-cyan-400 font-bold text-sm">{app.logo}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold text-sm">{app.jobTitle}</h3>
-                    <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
-                      <Building2 className="w-3 h-3" />
-                      {app.company}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1.5">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {app.location}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        {app.salary}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Applied {app.appliedAt}
-                      </span>
+        {filtered.length > 0 ? (
+          <div className="space-y-3">
+            {filtered.map((app) => {
+              const config = statusConfig[app.status];
+              const StatusIcon = config.icon;
+              return (
+                <div
+                  key={app.id}
+                  className="glass rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-transparent hover:border-white/10 transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                      <span className="text-cyan-400 font-bold text-sm">{app.logo}</span>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-sm">{app.jobTitle}</h3>
+                      <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
+                        <Building2 className="w-3 h-3" />
+                        {app.company}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1.5">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {app.location}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3" />
+                          {app.salary}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Applied {app.appliedAt}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-                  <span
-                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${config.color}`}
-                  >
-                    <StatusIcon className="w-3.5 h-3.5" />
-                    {config.label}
-                  </span>
-                  <span className="text-[10px] text-slate-500">Updated {app.lastUpdate}</span>
+                  <div className="flex items-center gap-3 sm:flex-col sm:items-end">
+                    <span
+                      className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${config.color}`}
+                    >
+                      <StatusIcon className="w-3.5 h-3.5" />
+                      {config.label}
+                    </span>
+                    <span className="text-[10px] text-slate-500">Updated {app.lastUpdate}</span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="text-center py-16">
-            <Send className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 font-medium mb-1">No applications found</p>
-            <p className="text-slate-500 text-sm">Start applying to jobs to track them here.</p>
+              );
+            })}
           </div>
+        ) : (
+          <EmptyState
+            icon={Send}
+            title={search ? "No matching applications" : "No applications yet"}
+            description={
+              search
+                ? "Try different search terms"
+                : "Start applying to jobs to track them here."
+            }
+            action={
+              search
+                ? { label: "Clear Search", onClick: () => setSearch("") }
+                : undefined
+            }
+          />
         )}
       </div>
     </main>
