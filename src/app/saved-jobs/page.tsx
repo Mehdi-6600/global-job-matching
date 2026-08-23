@@ -12,7 +12,10 @@ import {
   Trash2,
   ExternalLink,
   BookmarkX,
+  RotateCcw,
 } from "lucide-react";
+import EmptyState from "../components/empty-state";
+import SkeletonJobCard from "../components/skeleton-job-card";
 
 interface SavedJob {
   id: string;
@@ -87,35 +90,32 @@ const defaultJobs: SavedJob[] = [
 export default function SavedJobsPage() {
   const [jobs, setJobs] = useState<SavedJob[]>([]);
   const [search, setSearch] = useState("");
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load from localStorage on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("savedJobs");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setJobs(parsed);
+    const timer = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem("savedJobs");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setJobs(Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultJobs);
         } else {
           setJobs(defaultJobs);
         }
-      } else {
+      } catch {
         setJobs(defaultJobs);
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      setJobs(defaultJobs);
-    } finally {
-      setIsLoaded(true);
-    }
+    }, 600);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Save to localStorage whenever jobs change
   useEffect(() => {
-    if (isLoaded) {
+    if (!isLoading) {
       localStorage.setItem("savedJobs", JSON.stringify(jobs));
     }
-  }, [jobs, isLoaded]);
+  }, [jobs, isLoading]);
 
   const filtered = jobs.filter(
     (j) =>
@@ -128,10 +128,23 @@ export default function SavedJobsPage() {
     setJobs((prev) => prev.filter((j) => j.id !== id));
   };
 
-  if (!isLoaded) {
+  if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-8">
+            <div className="h-8 w-48 bg-white/5 rounded-lg animate-pulse mb-2" />
+            <div className="h-4 w-24 bg-white/5 rounded-lg animate-pulse" />
+          </div>
+          <div className="glass rounded-2xl p-4 mb-8">
+            <div className="h-10 bg-white/5 rounded-xl animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonJobCard key={i} />
+            ))}
+          </div>
+        </div>
       </main>
     );
   }
@@ -237,11 +250,23 @@ export default function SavedJobsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <Bookmark className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 font-medium mb-1">No saved jobs</p>
-            <p className="text-slate-500 text-sm">Browse jobs and save the ones you like.</p>
-          </div>
+          <EmptyState
+            icon={Bookmark}
+            title={search ? "No matching jobs" : "No saved jobs"}
+            description={
+              search
+                ? "Try different search terms"
+                : "Browse jobs and save the ones you like."
+            }
+            action={
+              search
+                ? {
+                    label: "Clear Search",
+                    onClick: () => setSearch(""),
+                  }
+                : undefined
+            }
+          />
         )}
       </div>
     </main>
