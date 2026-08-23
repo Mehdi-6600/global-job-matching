@@ -4,471 +4,132 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")  // ← برگردونده شد
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String  @map("user_id")
-  type              String
-  provider          String
-  providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verificationtokens")
-}
-
-enum UserRole {
-  OWNER
-  ADMIN
-  EMPLOYER
-  JOB_SEEKER
-}
-
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-  PENDING_VERIFICATION
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id            String    @id @default(cuid())
-  name          String?
   email         String    @unique
-  emailVerified DateTime? @map("email_verified")
-  image         String?
-  password      String?   @db.Text
-  role          UserRole  @default(JOB_SEEKER)
-  status        UserStatus @default(ACTIVE)
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  password      String?
+  name          String?
+  title         String?
+  phone         String?
+  location      String?
+  bio           String?
+  avatar        String?
+  role          String    @default("jobseeker") // jobseeker | employer | admin
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  profile       Profile?
-  jobListings   JobListing[]
-  jobRequests   JobRequest[]
-  resumes       Resume[]
   applications  Application[]
-  payments      Payment[]
-  reportsMade   Report[]  @relation("Reporter")
-  reportsReceived Report[] @relation("Reported")
-  auditLogs     AuditLog[]
+  savedJobs     SavedJob[]
+  messagesSent  Message[] @relation("SentMessages")
+  messagesRecv  Message[] @relation("ReceivedMessages")
   notifications Notification[]
-  emailConsents EmailConsent[]
-  transactions  Transaction[]
-
-  @@map("users")
 }
 
-model Profile {
-  id              String   @id @default(cuid())
-  userId          String   @unique @map("user_id")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  phone           String?
-  country         String?
-  city            String?
-  address         String?
-  postalCode      String?  @map("postal_code")
-  latitude        Float?
-  longitude       Float?
-
-  headline        String?
-  summary         String?  @db.Text
-  skills          String[]
-  expertiseLevel  String?  @map("expertise_level")
-  desiredSalary   Decimal? @map("desired_salary") @db.Decimal(12, 2)
-  desiredCurrency String?  @map("desired_currency")
-  yearsExperience Int?     @map("years_experience")
-  education       Json?
-  workHistory     Json?    @map("work_history")
-  languages       String[]
-  isPublic        Boolean  @default(false) @map("is_public")
-
-  companyName     String?  @map("company_name")
-  companyWebsite  String?  @map("company_website")
-  companySize     String?  @map("company_size")
-  industry        String?
-  isVerified      Boolean  @default(false) @map("is_verified")
-  verificationMethod String? @map("verification_method")
-
-  searchRadiusKm  Int?     @map("search_radius_km") @default(50)
-
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  @@map("profiles")
-}
-
-enum JobType {
-  FULL_TIME
-  PART_TIME
-  CONTRACT
-  FREELANCE
-  INTERNSHIP
-  REMOTE
-}
-
-enum ListingStatus {
-  DRAFT
-  PENDING_MODERATION
-  ACTIVE
-  REJECTED
-  EXPIRED
-  CLOSED
-}
-
-model JobListing {
-  id              String        @id @default(cuid())
-  employerId      String        @map("employer_id")
-  employer        User          @relation(fields: [employerId], references: [id], onDelete: Cascade)
-
-  title           String
-  description     String        @db.Text
-  requirements    String?       @db.Text
-  skillsRequired  String[]      @map("skills_required")
-  jobType         JobType       @map("job_type")
-  status          ListingStatus @default(PENDING_MODERATION)
-
-  country         String
-  city            String
-  address         String?
-  postalCode      String?       @map("postal_code")
-  latitude        Float?
-  longitude       Float?
-  isRemote        Boolean       @default(false) @map("is_remote")
-
-  salaryMin       Decimal?      @map("salary_min") @db.Decimal(12, 2)
-  salaryMax       Decimal?      @map("salary_max") @db.Decimal(12, 2)
-  salaryCurrency  String        @map("salary_currency") @default("USD")
-  salaryPeriod    String        @map("salary_period") @default("yearly")
-
-  contactName     String?       @map("contact_name")
-  contactEmail    String        @map("contact_email")
-  contactPhone    String?       @map("contact_phone")
-
-  source          String        @default("direct")
-  externalId      String?       @map("external_id")
-  externalUrl     String?       @map("external_url")
-
-  moderationNotes String?       @map("moderation_notes") @db.Text
-  moderatedById   String?       @map("moderated_by_id")
-  moderatedAt     DateTime?     @map("moderated_at")
-
-  viewCount       Int           @default(0) @map("view_count")
-  applicationCount Int          @default(0) @map("application_count")
-
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  expiresAt       DateTime?     @map("expires_at")
-
-  applications    Application[]
-  reports         Report[]
-
-  @@index([status, createdAt])
-  @@index([latitude, longitude])
-  @@index([country, city])
-  @@index([employerId])
-  @@map("job_listings")
-}
-
-model JobRequest {
-  id              String   @id @default(cuid())
-  seekerId        String   @map("seeker_id")
-  seeker          User     @relation(fields: [seekerId], references: [id], onDelete: Cascade)
-
-  title           String
-  summary         String   @db.Text
-  skills          String[]
-  expertiseLevel  String   @map("expertise_level")
-  desiredSalary   Decimal? @map("desired_salary") @db.Decimal(12, 2)
-  desiredCurrency String   @map("desired_currency") @default("USD")
-
-  preferredCountry String? @map("preferred_country")
-  preferredCity    String? @map("preferred_city")
-  isRemoteOk       Boolean @default(true) @map("is_remote_ok")
-
-  status          String   @default("active")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  @@index([seekerId])
-  @@index([status])
-  @@map("job_requests")
-}
-
-model Resume {
+model Company {
   id          String   @id @default(cuid())
-  userId      String   @map("user_id")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String   @unique
+  email       String
+  website     String?
+  location    String?
+  size        String?
+  description String?  @db.Text
+  logo        String?
+  status      String   @default("pending") // pending | verified | blocked
+  createdAt   DateTime @default(now())
 
-  title       String
-  content     String   @db.Text
-  htmlContent String?  @map("html_content") @db.Text
-  targetJobId String?  @map("target_job_id")
-  language    String   @default("en")
+  jobs        Job[]
+}
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+model Category {
+  id       String @id @default(cuid())
+  name     String
+  slug     String @unique
+  color    String @default("bg-cyan-500")
+  jobCount Int    @default(0)
 
-  @@index([userId])
-  @@map("resumes")
+  jobs Job[]
+}
+
+model Job {
+  id              String   @id @default(cuid())
+  title           String
+  description     String   @db.Text
+  location        String
+  remote          Boolean  @default(false)
+  type            String   // full-time | part-time | contract | freelance | internship
+  experience      String   // entry | mid | senior | lead | executive
+  salaryMin       Int?
+  salaryMax       Int?
+  currency        String   @default("USD")
+  requirements    String[]
+  responsibilities String[]
+  benefits        String[]
+  tags            String[]
+  status          String   @default("active") // active | paused | closed
+  deadline        DateTime?
+  viewCount       Int      @default(0)
+  applicantCount  Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  categoryId  String?
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  applications Application[]
+  savedJobs    SavedJob[]
 }
 
 model Application {
-  id              String   @id @default(cuid())
-  jobListingId    String   @map("job_listing_id")
-  jobListing      JobListing @relation(fields: [jobListingId], references: [id], onDelete: Cascade)
-  seekerId        String   @map("seeker_id")
-  seeker          User     @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  status    String   @default("applied") // applied | viewed | interview | rejected | hired
+  coverLetter String? @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  resumeId        String?  @map("resume_id")
-  coverLetter     String?  @map("cover_letter") @db.Text
-  emailContent    String?  @map("email_content") @db.Text
-  emailSent       Boolean  @default(false) @map("email_sent")
-  emailSentAt     DateTime? @map("email_sent_at")
-  emailMessageId  String?  @map("email_message_id")
-
-  status          String   @default("pending")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  @@unique([jobListingId, seekerId])
-  @@index([seekerId])
-  @@index([jobListingId])
-  @@map("applications")
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  jobId  String
+  job    Job    @relation(fields: [jobId], references: [id])
 }
 
-enum PaymentStatus {
-  PENDING
-  CONFIRMED
-  REJECTED
+model SavedJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  jobId  String
+  job    Job    @relation(fields: [jobId], references: [id])
+
+  @@unique([userId, jobId])
 }
 
-enum PaymentMethod {
-  BTC
-  ETH
-  USDT_ERC20
-  USDT_TRC20
-  DOGE
-  TON
-}
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-model Payment {
-  id            String        @id @default(cuid())
-  userId        String        @map("user_id")
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  amountUsd     Decimal       @map("amount_usd") @db.Decimal(12, 2)
-  method        PaymentMethod
-  txHash        String        @unique @map("tx_hash")
-  walletAddress String        @map("wallet_address")
-  status        PaymentStatus @default(PENDING)
-
-  reviewedById  String?       @map("reviewed_by_id")
-  reviewedAt    DateTime?     @map("reviewed_at")
-  notes         String?       @db.Text
-
-  membershipMonths Int       @map("membership_months") @default(1)
-  membershipActivatedAt DateTime? @map("membership_activated_at")
-  membershipExpiresAt DateTime? @map("membership_expires_at")
-
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-
-  @@index([userId])
-  @@index([status])
-  @@index([txHash])
-  @@map("payments")
-}
-
-enum ReportStatus {
-  OPEN
-  UNDER_REVIEW
-  RESOLVED
-  DISMISSED
-}
-
-enum ReportReason {
-  FRAUD
-  DISCRIMINATION
-  ILLEGAL_CONTENT
-  SPAM
-  MISLEADING
-  OTHER
-}
-
-model Report {
-  id          String       @id @default(cuid())
-  reporterId  String       @map("reporter_id")
-  reporter    User         @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  reportedId  String?      @map("reported_id")
-  reported    User?        @relation("Reported", fields: [reportedId], references: [id], onDelete: SetNull)
-
-  jobListingId String?     @map("job_listing_id")
-  jobListing   JobListing? @relation(fields: [jobListingId], references: [id], onDelete: Cascade)
-
-  reason      ReportReason
-  description String       @db.Text
-  status      ReportStatus @default(OPEN)
-
-  resolvedById String?    @map("resolved_by_id")
-  resolvedAt   DateTime?  @map("resolved_at")
-  resolution   String?    @db.Text
-
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-
-  @@index([status])
-  @@index([reporterId])
-  @@map("reports")
-}
-
-model EmailConsent {
-  id          String   @id @default(cuid())
-  userId      String   @unique @map("user_id")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  consented   Boolean  @default(false)
-  consentText String   @map("consent_text") @db.Text
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
-  consentedAt DateTime? @map("consented_at")
-  revokedAt   DateTime? @map("revoked_at")
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("email_consents")
-}
-
-model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String?  @map("user_id")
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  action      String
-  entityType  String   @map("entity_type")
-  entityId    String?  @map("entity_id")
-  details     Json?
-  ipAddress   String?  @map("ip_address")
-
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("audit_logs")
-}
-
-model AdminSetting {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       Json
-  description String?
-  updatedById String?  @map("updated_by_id")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("admin_settings")
+  senderId   String
+  sender     User   @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User   @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
 model Notification {
   id          String   @id @default(cuid())
-  userId      String   @map("user_id")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  type        String
+  type        String   // application | message | interview | job_alert | system
   title       String
-  message     String   @db.Text
-  data        Json?
+  description String
   read        Boolean  @default(false)
-  emailed     Boolean  @default(false)
+  actionUrl   String?
+  createdAt   DateTime @default(now())
 
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@index([userId, read])
-  @@map("notifications")
-}
-
-model RateLimit {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  count       Int      @default(0)
-  windowStart DateTime @map("window_start")
-  expiresAt   DateTime @map("expires_at")
-
-  @@index([key])
-  @@index([expiresAt])
-  @@map("rate_limits")
-}
-
-// ============================================
-// ✅ مدل‌های جدید برای سیستم اشتراک و پرداخت
-// ============================================
-
-model SubscriptionPlan {
-  id          String   @id @default(cuid())
-  name        String   // free, pro, employer
-  displayName String   @map("display_name")
-  price       Int
-  features    String[]
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  transactions Transaction[]
-
-  @@map("subscription_plans")
-}
-
-model Transaction {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id")
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  planId         String   @map("plan_id")
-  plan           SubscriptionPlan @relation(fields: [planId], references: [id])
-
-  amount         Int
-  currency       String
-  walletAddress  String   @map("wallet_address")
-  txHash         String?  @map("tx_hash")
-  status         String   @default("pending") // pending, confirmed, rejected
-  confirmedAt    DateTime? @map("confirmed_at")
-
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  @@index([userId])
-  @@index([status])
-  @@map("transactions")
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }
