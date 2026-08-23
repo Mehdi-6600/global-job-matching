@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 // GET /api/profile - fetch current user's profile
 export async function GET() {
@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await db.profile.findUnique({
+  const profile = await prisma.profile.findUnique({
     where: { userId: session.user.id },
   });
 
@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest) {
       searchRadiusKm: body.searchRadiusKm ?? 50,
     };
 
-    const profile = await db.profile.upsert({
+    const profile = await prisma.profile.upsert({
       where: { userId: session.user.id },
       update: data,
       create: {
