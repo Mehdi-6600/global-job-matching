@@ -52,14 +52,12 @@ export async function GET(request: NextRequest) {
       const { city, country } = parseLocation(job.location);
       const jobType = mapJobType(job.job_types?.[0] || "full_time");
 
-      // Find or create company
       let company = await prisma.company.findFirst({
         where: { name: job.company_name },
       });
 
       if (!company) {
         const slug = generateSlug(job.company_name) || `company-${Date.now()}`;
-
         company = await prisma.company.create({
           data: {
             name: job.company_name,
@@ -71,7 +69,6 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // Avoid duplicates by URL in tags
       const existing = await prisma.job.findFirst({
         where: {
           OR: [
@@ -96,6 +93,8 @@ export async function GET(request: NextRequest) {
           experience: "mid",
           currency: "USD",
           requirements: job.tags || [],
+          responsibilities: [],
+          benefits: [],
           tags: [...(job.tags || []), job.url],
           status: "active",
           companyId: company.id,
