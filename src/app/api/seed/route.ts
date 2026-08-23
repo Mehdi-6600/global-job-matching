@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { PrismaClient, JobType, ListingStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    // 1. ایجاد کاربر ادمین
     const ownerEmail = process.env.OWNER_EMAIL || "admin@example.com";
     let existingUser = await prisma.user.findUnique({
       where: { email: ownerEmail },
@@ -19,8 +16,7 @@ export async function GET() {
           name: "Owner",
           email: ownerEmail,
           password: await bcrypt.hash("ChangeMe123!", 12),
-          role: "OWNER",
-          emailVerified: new Date(),
+          role: "admin",
         },
       });
       ownerId = user.id;
@@ -28,71 +24,76 @@ export async function GET() {
       ownerId = existingUser.id;
     }
 
-    // 2. مشاغل واقعی
+    const company = await prisma.company.upsert({
+      where: { slug: "techcorp" },
+      update: {},
+      create: {
+        name: "TechCorp",
+        slug: "techcorp",
+        email: "hello@techcorp.io",
+        location: "Berlin, Germany",
+        status: "verified",
+      },
+    });
+
     const jobs = [
       {
         title: "Senior React Developer",
         description: "We're looking for a Senior React Developer to join our remote team.",
-        requirements: "5+ years of React experience, TypeScript, Next.js, Tailwind CSS.",
-        skillsRequired: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-        jobType: "FULL_TIME" as JobType,
-        country: "Germany",
-        city: "Berlin",
-        isRemote: true,
+        requirements: ["5+ years of React experience", "TypeScript", "Next.js", "Tailwind CSS"],
+        responsibilities: ["Develop frontend features", "Code review", "Mentor juniors"],
+        benefits: ["Remote work", "Flexible hours", "Stock options"],
+        tags: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
+        type: "full-time",
+        experience: "senior",
+        location: "Berlin, Germany",
+        remote: true,
         salaryMin: 85000,
         salaryMax: 115000,
-        salaryCurrency: "EUR",
-        salaryPeriod: "yearly",
-        contactName: "Sarah Johnson",
-        contactEmail: "sarah@techcorp.io",
-        status: "ACTIVE" as ListingStatus,
-        source: "direct",
-        employerId: ownerId,
+        currency: "EUR",
+        status: "active",
+        companyId: company.id,
       },
       {
         title: "Full Stack Engineer",
         description: "Join our fast-growing startup as a Full Stack Engineer.",
-        requirements: "3+ years of experience, Node.js, React, PostgreSQL, and AWS.",
-        skillsRequired: ["Node.js", "React", "PostgreSQL", "AWS"],
-        jobType: "FULL_TIME" as JobType,
-        country: "Germany",
-        city: "Remote",
-        isRemote: true,
+        requirements: ["3+ years of experience", "Node.js", "React", "PostgreSQL", "AWS"],
+        responsibilities: ["Full stack development", "Database design", "API development"],
+        benefits: ["Health insurance", "Remote work", "Learning budget"],
+        tags: ["Node.js", "React", "PostgreSQL", "AWS"],
+        type: "full-time",
+        experience: "mid",
+        location: "Remote",
+        remote: true,
         salaryMin: 70000,
         salaryMax: 95000,
-        salaryCurrency: "EUR",
-        salaryPeriod: "yearly",
-        contactName: "Michael Chen",
-        contactEmail: "michael@startup.io",
-        status: "ACTIVE" as ListingStatus,
-        source: "direct",
-        employerId: ownerId,
+        currency: "EUR",
+        status: "active",
+        companyId: company.id,
       },
       {
         title: "DevOps Engineer",
         description: "We need a DevOps Engineer to manage our cloud infrastructure.",
-        requirements: "4+ years of DevOps experience, Kubernetes, Docker, AWS.",
-        skillsRequired: ["Kubernetes", "Docker", "AWS", "Terraform"],
-        jobType: "FULL_TIME" as JobType,
-        country: "United Kingdom",
-        city: "London",
-        isRemote: false,
+        requirements: ["4+ years of DevOps experience", "Kubernetes", "Docker", "AWS"],
+        responsibilities: ["CI/CD pipelines", "Infrastructure management", "Monitoring"],
+        benefits: ["Remote work", "Conference budget", "Team events"],
+        tags: ["Kubernetes", "Docker", "AWS", "Terraform"],
+        type: "full-time",
+        experience: "senior",
+        location: "London, UK",
+        remote: false,
         salaryMin: 90000,
         salaryMax: 120000,
-        salaryCurrency: "GBP",
-        salaryPeriod: "yearly",
-        contactName: "Emma Wilson",
-        contactEmail: "emma@cloudsolutions.co.uk",
-        status: "ACTIVE" as ListingStatus,
-        source: "direct",
-        employerId: ownerId,
+        currency: "GBP",
+        status: "active",
+        companyId: company.id,
       },
     ];
 
     let createdCount = 0;
     for (const job of jobs) {
-      await prisma.jobListing.create({
-        data: job,
+      await prisma.job.create({
+        data: job as any,
       });
       createdCount++;
     }
