@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -17,87 +17,37 @@ import {
   Wifi,
   WifiOff,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
 
-interface Job {
+interface ApiJob {
   id: string;
   title: string;
-  company: string;
+  description: string;
   location: string;
-  type: string;
-  salary: number;
-  salaryMax: number;
-  currency: string;
-  experience: string;
-  postedAt: string;
-  tags: string[];
-  logo: string;
-  category: string;
   remote: boolean;
+  type: string;
+  experience: string;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  currency: string;
+  requirements: string[];
+  tags: string[];
+  status: string;
+  createdAt: string;
+  company: {
+    id: string;
+    name: string;
+    logo: string | null;
+    location: string | null;
+  };
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+    color: string;
+  } | null;
 }
-
-const allJobs: Job[] = [
-  {
-    id: "1", title: "Senior Frontend Developer", company: "TechCorp",
-    location: "Remote", type: "Full-time", salary: 120000, salaryMax: 150000,
-    currency: "$", experience: "Senior", postedAt: "2 days ago",
-    tags: ["React", "TypeScript", "Next.js"], logo: "TC", category: "Technology", remote: true,
-  },
-  {
-    id: "2", title: "Backend Engineer", company: "CloudScale",
-    location: "London, UK", type: "Full-time", salary: 80000, salaryMax: 100000,
-    currency: "£", experience: "Mid", postedAt: "5 days ago",
-    tags: ["Node.js", "PostgreSQL", "AWS"], logo: "CS", category: "Technology", remote: false,
-  },
-  {
-    id: "3", title: "Product Designer", company: "Creative Studio",
-    location: "Paris, France", type: "Contract", salary: 60000, salaryMax: 80000,
-    currency: "€", experience: "Mid", postedAt: "1 week ago",
-    tags: ["Figma", "UI/UX"], logo: "CR", category: "Design", remote: true,
-  },
-  {
-    id: "4", title: "DevOps Engineer", company: "DataFlow",
-    location: "Berlin, Germany", type: "Full-time", salary: 90000, salaryMax: 110000,
-    currency: "€", experience: "Senior", postedAt: "3 days ago",
-    tags: ["Docker", "Kubernetes"], logo: "DF", category: "Technology", remote: false,
-  },
-  {
-    id: "5", title: "Marketing Manager", company: "GrowthLabs",
-    location: "Remote", type: "Full-time", salary: 70000, salaryMax: 90000,
-    currency: "$", experience: "Lead", postedAt: "4 days ago",
-    tags: ["SEO", "Content", "Analytics"], logo: "GL", category: "Marketing", remote: true,
-  },
-  {
-    id: "6", title: "HR Specialist", company: "PeopleFirst",
-    location: "New York, USA", type: "Part-time", salary: 40000, salaryMax: 55000,
-    currency: "$", experience: "Entry", postedAt: "1 day ago",
-    tags: ["Recruiting", "HRIS"], logo: "PF", category: "HR", remote: false,
-  },
-  {
-    id: "7", title: "Data Scientist", company: "AI Solutions",
-    location: "Remote", type: "Full-time", salary: 130000, salaryMax: 160000,
-    currency: "$", experience: "Senior", postedAt: "6 days ago",
-    tags: ["Python", "ML", "TensorFlow"], logo: "AI", category: "Technology", remote: true,
-  },
-  {
-    id: "8", title: "Sales Representative", company: "CloudScale",
-    location: "London, UK", type: "Full-time", salary: 50000, salaryMax: 70000,
-    currency: "£", experience: "Entry", postedAt: "3 days ago",
-    tags: ["B2B", "CRM"], logo: "CS", category: "Sales", remote: false,
-  },
-  {
-    id: "9", title: "Healthcare Analyst", company: "MediData",
-    location: "Toronto, Canada", type: "Contract", salary: 75000, salaryMax: 95000,
-    currency: "$", experience: "Mid", postedAt: "2 weeks ago",
-    tags: ["SQL", "Tableau"], logo: "MD", category: "Healthcare", remote: true,
-  },
-  {
-    id: "10", title: "Finance Manager", company: "FinCorp",
-    location: "Singapore", type: "Full-time", salary: 100000, salaryMax: 130000,
-    currency: "$", experience: "Lead", postedAt: "1 week ago",
-    tags: ["Excel", "Forecasting"], logo: "FC", category: "Finance", remote: false,
-  },
-];
 
 const categories = ["All", "Technology", "Design", "Marketing", "Finance", "Healthcare", "Sales", "HR"];
 const types = ["Full-time", "Part-time", "Contract", "Freelance", "Internship"];
@@ -108,7 +58,35 @@ const sortOptions = [
   { value: "salary-low", label: "Salary: Low to High" },
 ];
 
+function timeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 30) return `${Math.floor(days / 30)} months ago`;
+  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
+  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+  if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+  return "Just now";
+}
+
+function getLogo(name: string): string {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export default function JobsPage() {
+  const [jobs, setJobs] = useState<ApiJob[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
@@ -119,6 +97,24 @@ export default function JobsPage() {
   const [sortBy, setSortBy] = useState("newest");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/jobs")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.jobs) {
+          setJobs(data.jobs);
+        } else {
+          setError("Failed to load jobs");
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to load jobs");
+        setLoading(false);
+      });
+  }, []);
 
   const toggleType = (t: string) => {
     setSelectedTypes((prev) =>
@@ -150,39 +146,44 @@ export default function JobsPage() {
   };
 
   const filtered = useMemo(() => {
-    let result = allJobs.filter((job) => {
+    let result = jobs.filter((job) => {
       const matchesSearch =
         !search ||
         job.title.toLowerCase().includes(search.toLowerCase()) ||
-        job.company.toLowerCase().includes(search.toLowerCase()) ||
+        job.company.name.toLowerCase().includes(search.toLowerCase()) ||
         job.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
 
       const matchesCategory =
-        selectedCategory === "All" || job.category === selectedCategory;
+        selectedCategory === "All" ||
+        (job.category?.name || "Other") === selectedCategory;
 
       const matchesType =
-        selectedTypes.length === 0 || selectedTypes.includes(job.type);
+        selectedTypes.length === 0 ||
+        selectedTypes.some((t) => job.type.toLowerCase().includes(t.toLowerCase()));
 
       const matchesExp =
-        selectedExperiences.length === 0 || selectedExperiences.includes(job.experience);
+        selectedExperiences.length === 0 ||
+        selectedExperiences.some((e) => job.experience.toLowerCase().includes(e.toLowerCase()));
 
       const matchesRemote = !remoteOnly || job.remote;
 
       const matchesSalary =
-        (!minSalary || job.salary >= Number(minSalary)) &&
-        (!maxSalary || job.salaryMax <= Number(maxSalary));
+        (!minSalary || (job.salaryMin ?? 0) >= Number(minSalary)) &&
+        (!maxSalary || (job.salaryMax ?? Infinity) <= Number(maxSalary));
 
       return matchesSearch && matchesCategory && matchesType && matchesExp && matchesRemote && matchesSalary;
     });
 
     if (sortBy === "salary-high") {
-      result = [...result].sort((a, b) => b.salaryMax - a.salaryMax);
+      result = [...result].sort((a, b) => (b.salaryMax ?? 0) - (a.salaryMax ?? 0));
     } else if (sortBy === "salary-low") {
-      result = [...result].sort((a, b) => a.salary - b.salary);
+      result = [...result].sort((a, b) => (a.salaryMin ?? 0) - (b.salaryMin ?? 0));
+    } else {
+      result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
     return result;
-  }, [search, selectedCategory, selectedTypes, selectedExperiences, remoteOnly, minSalary, maxSalary, sortBy]);
+  }, [jobs, search, selectedCategory, selectedTypes, selectedExperiences, remoteOnly, minSalary, maxSalary, sortBy]);
 
   const activeFiltersCount =
     (selectedCategory !== "All" ? 1 : 0) +
@@ -192,16 +193,41 @@ export default function JobsPage() {
     (minSalary ? 1 : 0) +
     (maxSalary ? 1 : 0);
 
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading jobs...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-cyan-500 text-white px-5 py-2 rounded-xl text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Find Your Dream Job</h1>
           <p className="text-slate-400 text-sm">{filtered.length} open positions available</p>
         </div>
 
-        {/* Search Bar */}
         <div className="glass rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -245,13 +271,11 @@ export default function JobsPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Filters Sidebar */}
           <div
             className={`lg:w-64 shrink-0 space-y-6 ${
               mobileFiltersOpen ? "block" : "hidden lg:block"
             }`}
           >
-            {/* Categories */}
             <div className="glass rounded-2xl p-5">
               <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-cyan-400" />
@@ -275,7 +299,6 @@ export default function JobsPage() {
               </div>
             </div>
 
-            {/* Job Type */}
             <div className="glass rounded-2xl p-5">
               <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-purple-400" />
@@ -301,7 +324,6 @@ export default function JobsPage() {
               </div>
             </div>
 
-            {/* Experience */}
             <div className="glass rounded-2xl p-5">
               <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-400" />
@@ -327,7 +349,6 @@ export default function JobsPage() {
               </div>
             </div>
 
-            {/* Remote */}
             <div className="glass rounded-2xl p-5">
               <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
                 <Wifi className="w-4 h-4 text-blue-400" />
@@ -347,7 +368,6 @@ export default function JobsPage() {
               </button>
             </div>
 
-            {/* Salary Range */}
             <div className="glass rounded-2xl p-5">
               <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-amber-400" />
@@ -372,7 +392,6 @@ export default function JobsPage() {
               </div>
             </div>
 
-            {/* Clear */}
             {activeFiltersCount > 0 && (
               <button
                 type="button"
@@ -385,7 +404,6 @@ export default function JobsPage() {
             )}
           </div>
 
-          {/* Results */}
           <div className="flex-1 min-w-0">
             {mobileFiltersOpen && (
               <div className="lg:hidden flex items-center justify-between mb-4">
@@ -410,13 +428,15 @@ export default function JobsPage() {
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center">
-                          <span className="text-cyan-400 font-bold text-xs">{job.logo}</span>
+                          <span className="text-cyan-400 font-bold text-xs">
+                            {getLogo(job.company.name)}
+                          </span>
                         </div>
                         <div>
                           <h3 className="text-white font-semibold text-sm">{job.title}</h3>
                           <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
                             <Building2 className="w-3 h-3" />
-                            {job.company}
+                            {job.company.name}
                           </p>
                         </div>
                       </div>
@@ -444,7 +464,7 @@ export default function JobsPage() {
                       <span className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
                         {job.currency}
-                        {job.salary.toLocaleString()} - {job.salaryMax.toLocaleString()}
+                        {(job.salaryMin ?? 0).toLocaleString()} - {(job.salaryMax ?? 0).toLocaleString()}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -453,7 +473,7 @@ export default function JobsPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-1.5 mb-5">
-                      {job.tags.map((tag) => (
+                      {job.tags.slice(0, 5).map((tag) => (
                         <span
                           key={tag}
                           className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/5"
@@ -464,7 +484,7 @@ export default function JobsPage() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-500">{job.postedAt}</span>
+                      <span className="text-[10px] text-slate-500">{timeAgo(job.createdAt)}</span>
                       <Link
                         href={`/jobs/${job.id}`}
                         className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-medium transition-all"
