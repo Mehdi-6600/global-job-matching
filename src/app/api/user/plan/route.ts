@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await auth();
@@ -9,8 +9,7 @@ export async function GET() {
   }
 
   try {
-    // پیدا کردن آخرین تراکنش تأییدشده کاربر
-    const transaction = await db.transaction.findFirst({
+    const transaction = await prisma.transaction.findFirst({
       where: {
         userId: session.user.id,
         status: "confirmed",
