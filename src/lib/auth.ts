@@ -39,13 +39,11 @@ const authResult = NextAuth({
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return null;
 
-        if (user.status === "SUSPENDED") return null;
-
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image,
+          image: user.avatar,
           role: user.role,
         };
       },
