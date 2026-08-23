@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Building2,
   MapPin,
@@ -18,6 +19,7 @@ import {
   Coffee,
   Laptop,
   Plane,
+  ChevronDown,
 } from "lucide-react";
 
 interface OpenJob {
@@ -234,6 +236,7 @@ export default function CompanyProfilePage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
+                        type="button"
                         onClick={() => toggleSave(job.id)}
                         className={`p-2 rounded-xl transition-all ${
                           savedJobs.includes(job.id)
@@ -241,15 +244,18 @@ export default function CompanyProfilePage() {
                             : "bg-white/5 text-slate-400 hover:text-red-400 border border-transparent"
                         }`}
                       >
-                        <Heart className={`w-4 h-4 ${savedJobs.includes(job.id) ? "fill-current" : ""}`} />
+                        <Heart
+                          className="w-4 h-4"
+                          fill={savedJobs.includes(job.id) ? "currentColor" : "none"}
+                        />
                       </button>
-                      <a
+                      <Link
                         href={`/jobs/${job.id}`}
                         className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-medium transition-all"
                       >
                         Apply
                         <ChevronRight className="w-3 h-3" />
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -286,12 +292,12 @@ export default function CompanyProfilePage() {
               <p className="text-slate-400 text-xs leading-relaxed mb-4">
                 Create a profile and apply to jobs at {company.name} and thousands of other companies.
               </p>
-              <a
+              <Link
                 href="/signup"
                 className="block text-center bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-2.5 rounded-xl text-sm font-medium transition-all"
               >
                 Create Profile
-              </a>
+              </Link>
             </div>
           </div>
         </div>
