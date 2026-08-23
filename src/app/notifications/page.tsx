@@ -3,129 +3,186 @@
 import { useState } from "react";
 import {
   Bell,
+  Check,
+  CheckCheck,
+  Trash2,
   Briefcase,
   MessageSquare,
-  CheckCircle2,
-  Trash2,
-  CheckCheck,
+  Eye,
+  Calendar,
+  AlertCircle,
+  X,
+  Filter,
 } from "lucide-react";
-import Link from "next/link";
 
-type NotifType = "job" | "message" | "system";
+type NotificationType = "application" | "message" | "interview" | "job_alert" | "system";
 
 interface Notification {
   id: string;
-  type: NotifType;
+  type: NotificationType;
   title: string;
-  body: string;
+  description: string;
   time: string;
   read: boolean;
-  link?: string;
+  actionUrl?: string;
 }
 
-const initialNotifs: Notification[] = [
+const initialNotifications: Notification[] = [
   {
     id: "n1",
-    type: "job",
-    title: "Application Update",
-    body: "Your application for Senior Frontend Developer at TechCorp is now under review.",
-    time: "5 min ago",
+    type: "interview",
+    title: "Interview Scheduled",
+    description: "TechCorp invited you for an interview for Senior Frontend Developer role.",
+    time: "10 min ago",
     read: false,
-    link: "/applications",
+    actionUrl: "/my-applications",
   },
   {
     id: "n2",
-    type: "message",
-    title: "New Message",
-    body: "TechCorp recruiter sent you a message about your application.",
-    time: "1 hour ago",
+    type: "application",
+    title: "Application Viewed",
+    description: "CloudScale viewed your application for Backend Engineer position.",
+    time: "2 hours ago",
     read: false,
-    link: "/messages",
+    actionUrl: "/my-applications",
   },
   {
     id: "n3",
-    type: "job",
-    title: "New Job Match",
-    body: "We found a new job that matches your profile: Backend Engineer at DataFlow.",
-    time: "3 hours ago",
-    read: true,
-    link: "/jobs/2",
+    type: "message",
+    title: "New Message",
+    description: "Sarah from Creative Studio sent you a message regarding your application.",
+    time: "5 hours ago",
+    read: false,
+    actionUrl: "/messages",
   },
   {
     id: "n4",
-    type: "system",
-    title: "Profile Complete",
-    body: "Great job! Your profile is 100% complete. Employers can now find you easily.",
+    type: "job_alert",
+    title: "New Job Match",
+    description: "A new DevOps Engineer position in Berlin matches your profile.",
     time: "1 day ago",
     read: true,
+    actionUrl: "/jobs",
   },
   {
     id: "n5",
-    type: "job",
-    title: "Application Rejected",
-    body: "Unfortunately, DevOps Engineer at CloudScale has been filled. Keep applying!",
+    type: "system",
+    title: "Profile Updated",
+    description: "Your profile information was successfully updated.",
     time: "2 days ago",
     read: true,
-    link: "/jobs",
+  },
+  {
+    id: "n6",
+    type: "application",
+    title: "Application Rejected",
+    description: "Unfortunately, DataFlow decided not to move forward with your application.",
+    time: "3 days ago",
+    read: true,
+    actionUrl: "/my-applications",
+  },
+  {
+    id: "n7",
+    type: "interview",
+    title: "Interview Reminder",
+    description: "Your interview with NextGen Labs is tomorrow at 2:00 PM UTC.",
+    time: "3 days ago",
+    read: true,
+    actionUrl: "/my-applications",
+  },
+  {
+    id: "n8",
+    type: "message",
+    title: "New Message",
+    description: "You have a new message from TechCorp HR team.",
+    time: "4 days ago",
+    read: true,
+    actionUrl: "/messages",
   },
 ];
 
-const typeConfig: Record<NotifType, { icon: typeof Bell; color: string; bg: string }> = {
-  job: { icon: Briefcase, color: "text-cyan-400", bg: "bg-cyan-500/10" },
-  message: { icon: MessageSquare, color: "text-purple-400", bg: "bg-purple-500/10" },
-  system: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+const typeConfig: Record<
+  NotificationType,
+  { icon: React.ElementType; color: string; bg: string }
+> = {
+  application: {
+    icon: Eye,
+    color: "text-blue-400",
+    bg: "bg-blue-500/10 border-blue-500/20",
+  },
+  message: {
+    icon: MessageSquare,
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/10 border-cyan-500/20",
+  },
+  interview: {
+    icon: Calendar,
+    color: "text-purple-400",
+    bg: "bg-purple-500/10 border-purple-500/20",
+  },
+  job_alert: {
+    icon: Briefcase,
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/10 border-emerald-500/20",
+  },
+  system: {
+    icon: AlertCircle,
+    color: "text-amber-400",
+    bg: "bg-amber-500/10 border-amber-500/20",
+  },
 };
 
-function NotifContent({ notif }: { notif: Notification }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <h3 className={`text-sm font-semibold ${!notif.read ? "text-white" : "text-slate-300"}`}>
-          {notif.title}
-          {!notif.read && (
-            <span className="inline-block w-2 h-2 rounded-full bg-cyan-500 ml-2" />
-          )}
-        </h3>
-        <p className="text-slate-400 text-sm mt-1 leading-relaxed">{notif.body}</p>
-        <p className="text-slate-500 text-xs mt-2">{notif.time}</p>
-      </div>
-    </div>
-  );
-}
-
 export default function NotificationsPage() {
-  const [notifs, setNotifs] = useState<Notification[]>(initialNotifs);
-  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [filter, setFilter] = useState<"all" | NotificationType>("all");
 
-  const filtered = filter === "all" ? notifs : notifs.filter((n) => !n.read);
-  const unreadCount = notifs.filter((n) => !n.read).length;
+  const filtered = filter === "all"
+    ? notifications
+    : notifications.filter((n) => n.type === filter);
 
-  const markRead = (id: string) => {
-    setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
   };
 
-  const markAllRead = () => {
-    setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const removeNotif = (id: string) => {
-    setNotifs((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Notifications</h1>
-            <p className="text-slate-400 text-sm">
-              {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}` : "All caught up!"}
-            </p>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Bell className="w-6 h-6 text-cyan-400" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Notifications</h1>
+              <p className="text-slate-400 text-sm">
+                {unreadCount > 0
+                  ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
+                  : "All caught up!"}
+              </p>
+            </div>
           </div>
           {unreadCount > 0 && (
             <button
-              onClick={markAllRead}
-              className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 text-sm font-medium transition-colors"
+              onClick={markAllAsRead}
+              className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm transition-all"
             >
               <CheckCheck className="w-4 h-4" />
               Mark all read
@@ -133,69 +190,82 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        {/* Filter */}
-        <div className="flex gap-2 mb-6">
-          {(["all", "unread"] as const).map((f) => (
+        {/* Filters */}
+        <div className="glass rounded-2xl p-3 mb-6 flex flex-wrap gap-2">
+          {([
+            { key: "all", label: "All" },
+            { key: "application", label: "Applications" },
+            { key: "message", label: "Messages" },
+            { key: "interview", label: "Interviews" },
+            { key: "job_alert", label: "Job Alerts" },
+            { key: "system", label: "System" },
+          ] as const).map((f) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                filter === f
-                  ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/20"
-                  : "bg-white/5 text-slate-400 hover:text-white border border-white/10"
+              key={f.key}
+              onClick={() => setFilter(f.key as any)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                filter === f.key
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                  : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
               }`}
             >
-              {f === "all" ? "All" : "Unread"}
-              {f === "unread" && unreadCount > 0 && (
-                <span className="ml-1.5 text-xs opacity-70">({unreadCount})</span>
-              )}
+              {f.label}
             </button>
           ))}
         </div>
 
         {/* List */}
-        <div className="space-y-3">
-          {filtered.map((notif) => {
-            const config = typeConfig[notif.type];
+        <div className="space-y-2">
+          {filtered.map((n) => {
+            const config = typeConfig[n.type];
             const Icon = config.icon;
-
             return (
               <div
-                key={notif.id}
-                className={`glass rounded-2xl p-4 md:p-5 flex items-start gap-4 transition-all ${
-                  !notif.read ? "border-l-2 border-l-cyan-500 bg-white/[0.02]" : ""
+                key={n.id}
+                className={`glass rounded-2xl p-4 flex items-start gap-4 transition-all border ${
+                  n.read
+                    ? "border-transparent opacity-70"
+                    : "border-cyan-500/10 bg-cyan-500/[0.02]"
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center shrink-0`}>
-                  <Icon className={`w-5 h-5 ${config.color}`} />
+                <div
+                  className={`w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center shrink-0 mt-0.5`}
+                >
+                  <Icon className={`w-4 h-4 ${config.color}`} />
                 </div>
-
                 <div className="flex-1 min-w-0">
-                  {notif.link ? (
-                    <Link href={notif.link} className="block">
-                      <NotifContent notif={notif} />
-                    </Link>
-                  ) : (
-                    <NotifContent notif={notif} />
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className={`text-sm font-medium ${n.read ? "text-slate-300" : "text-white"}`}>
+                      {n.title}
+                    </h3>
+                    <span className="text-[10px] text-slate-500 shrink-0">{n.time}</span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1 leading-relaxed">{n.description}</p>
+                  {n.actionUrl && (
+                    <a
+                      href={n.actionUrl}
+                      className="inline-flex items-center gap-1 text-cyan-400 text-xs mt-2 hover:underline"
+                    >
+                      View details
+                    </a>
                   )}
                 </div>
-
-                <div className="flex flex-col gap-2 shrink-0">
-                  {!notif.read && (
+                <div className="flex flex-col gap-1 shrink-0">
+                  {!n.read && (
                     <button
-                      onClick={() => markRead(notif.id)}
-                      className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                      onClick={() => markAsRead(n.id)}
+                      className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-cyan-400 transition-colors"
                       title="Mark as read"
                     >
-                      <CheckCheck className="w-4 h-4" />
+                      <Check className="w-3.5 h-3.5" />
                     </button>
                   )}
                   <button
-                    onClick={() => removeNotif(notif.id)}
-                    className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    title="Remove"
+                    onClick={() => deleteNotification(n.id)}
+                    className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 transition-colors"
+                    title="Delete"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -205,8 +275,9 @@ export default function NotificationsPage() {
 
         {filtered.length === 0 && (
           <div className="text-center py-16">
-            <Bell className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-400">No notifications here.</p>
+            <Bell className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 font-medium mb-1">No notifications</p>
+            <p className="text-slate-500 text-sm">You are all caught up!</p>
           </div>
         )}
       </div>
