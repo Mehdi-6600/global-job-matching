@@ -1,106 +1,92 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
 import {
-  MapPin,
   Briefcase,
+  MapPin,
   DollarSign,
   Clock,
-  Globe,
+  Building2,
   Heart,
   Share2,
-  ArrowLeft,
-  Building2,
-  Calendar,
+  Send,
   CheckCircle2,
+  Globe,
   Users,
+  Calendar,
+  ChevronLeft,
+  Layers,
+  AlignLeft,
+  Award,
 } from "lucide-react";
-import Link from "next/link";
 
 interface JobDetail {
   id: string;
   title: string;
   company: string;
-  companyDescription: string;
+  companyId: string;
   location: string;
   type: string;
   salary: string;
+  experience: string;
   postedAt: string;
+  deadline: string;
   description: string;
   requirements: string[];
+  responsibilities: string[];
   benefits: string[];
   tags: string[];
-  isRemote: boolean;
+  logo: string;
+  companySize: string;
+  companyWebsite: string;
   applicants: number;
 }
 
-const jobDetails: Record<string, JobDetail> = {
-  "1": {
-    id: "1",
-    title: "Senior Frontend Developer",
-    company: "TechCorp Global",
-    companyDescription:
-      "TechCorp Global is a leading technology company specializing in building scalable web applications for enterprise clients. With over 500 employees worldwide, we are committed to innovation and excellence.",
-    location: "San Francisco, CA",
-    type: "Full-time",
-    salary: "$120k - $160k",
-    postedAt: "2 days ago",
-    description:
-      "We are seeking an experienced Senior Frontend Developer to join our dynamic engineering team. You will be responsible for building and maintaining complex web applications using modern technologies.",
-    requirements: [
-      "5+ years of experience with React and modern JavaScript",
-      "Strong proficiency in TypeScript and Next.js",
-      "Experience with state management (Redux, Zustand, or Context API)",
-      "Deep understanding of CSS, Tailwind CSS, and responsive design",
-      "Experience with testing frameworks (Jest, React Testing Library)",
-      "Bachelor's degree in Computer Science or equivalent experience",
-    ],
-    benefits: [
-      "Competitive salary and equity package",
-      "Health, dental, and vision insurance",
-      "Unlimited PTO policy",
-      "Remote-first work environment",
-      "Annual learning budget ($2,000)",
-      "Home office stipend",
-    ],
-    tags: ["React", "Next.js", "TypeScript", "Tailwind"],
-    isRemote: true,
-    applicants: 42,
-  },
-  "2": {
-    id: "2",
-    title: "Backend Engineer",
-    company: "DataFlow Systems",
-    companyDescription:
-      "DataFlow Systems builds real-time data processing platforms for Fortune 500 companies.",
-    location: "New York, NY",
-    type: "Full-time",
-    salary: "$130k - $170k",
-    postedAt: "1 day ago",
-    description:
-      "Join our backend team to design and implement high-performance APIs and microservices.",
-    requirements: [
-      "4+ years of experience with Node.js or Python",
-      "Strong understanding of PostgreSQL and database optimization",
-      "Experience with AWS services (EC2, S3, Lambda, RDS)",
-      "Knowledge of Docker and Kubernetes",
-    ],
-    benefits: [
-      "Competitive compensation",
-      "401(k) matching",
-      "Flexible working hours",
-      "Team retreats twice a year",
-    ],
-    tags: ["Node.js", "PostgreSQL", "AWS", "Docker"],
-    isRemote: true,
-    applicants: 28,
-  },
+const jobData: JobDetail = {
+  id: "1",
+  title: "Senior Frontend Developer",
+  company: "TechCorp",
+  companyId: "techcorp",
+  location: "Remote",
+  type: "Full-time",
+  salary: "$120k - $150k / year",
+  experience: "3-5 years",
+  postedAt: "2 days ago",
+  deadline: "Sep 15, 2026",
+  description:
+    "We are looking for an experienced Frontend Developer to join our growing team. You will be responsible for building and maintaining user interfaces for our web applications, collaborating with designers and backend engineers, and ensuring the best possible user experience.",
+  requirements: [
+    "3+ years of experience with React and modern JavaScript",
+    "Strong understanding of TypeScript and state management",
+    "Experience with Next.js and server-side rendering",
+    "Familiarity with Tailwind CSS and responsive design",
+    "Good communication skills and ability to work in a team",
+  ],
+  responsibilities: [
+    "Develop and maintain frontend features using React and Next.js",
+    "Collaborate with UX/UI designers to implement responsive designs",
+    "Optimize applications for maximum speed and scalability",
+    "Write clean, maintainable, and well-documented code",
+    "Participate in code reviews and mentor junior developers",
+  ],
+  benefits: [
+    "Competitive salary and stock options",
+    "Flexible working hours and remote-first culture",
+    "Health, dental, and vision insurance",
+    "Annual learning budget of $2,000",
+    "25 days paid time off + public holidays",
+  ],
+  tags: ["React", "TypeScript", "Next.js", "Tailwind CSS", "GraphQL"],
+  logo: "TC",
+  companySize: "50-200 employees",
+  companyWebsite: "techcorp.com",
+  applicants: 42,
 };
 
 export default function JobDetailPage() {
-  const params = useParams();
-  const jobId = params.id as string;
-  const job = jobDetails[jobId] || jobDetails["1"];
+  const [saved, setSaved] = useState(false);
+  const [applied, setApplied] = useState(false);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -108,169 +94,231 @@ export default function JobDetailPage() {
         {/* Back Link */}
         <Link
           href="/jobs"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 text-sm"
+          className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ChevronLeft className="w-4 h-4" />
           Back to jobs
         </Link>
 
         {/* Header Card */}
-        <div className="glass rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
-          <div className="relative flex flex-col md:flex-row md:items-start justify-between gap-6">
+        <div className="glass rounded-3xl p-6 md:p-8 mb-6 border border-white/5">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
             <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center shrink-0">
-                <Briefcase className="w-8 h-8 text-cyan-400" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                <span className="text-cyan-400 font-bold text-xl">{jobData.logo}</span>
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{job.title}</h1>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                  <span className="flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4" />
-                    {job.company}
+                <h1 className="text-xl md:text-2xl font-bold text-white mb-1">{jobData.title}</h1>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-4 h-4 text-cyan-400" />
+                    {jobData.company}
                   </span>
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
-                    {job.location}
+                    {jobData.location}
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    {job.isRemote ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-                    {job.isRemote ? "Remote" : "On-site"}
-                  </span>
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {job.postedAt}
+                    {jobData.type}
                   </span>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {jobData.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-white/5 text-cyan-300 border border-cyan-500/10"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button className="p-3 rounded-xl glass hover:bg-white/10 transition-colors text-slate-300 hover:text-white">
-                <Heart className="w-5 h-5" />
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setSaved(!saved)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border ${
+                  saved
+                    ? "bg-red-500/10 border-red-500/20 text-red-400"
+                    : "bg-white/5 border-white/10 text-slate-300 hover:text-white"
+                }`}
+              >
+                <Heart
+                  className="w-4 h-4"
+                  fill={saved ? "currentColor" : "none"}
+                />
+                {saved ? "Saved" : "Save"}
               </button>
-              <button className="p-3 rounded-xl glass hover:bg-white/10 transition-colors text-slate-300 hover:text-white">
-                <Share2 className="w-5 h-5" />
-              </button>
-              <button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-lg shadow-cyan-500/20">
-                Apply Now
+              <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white transition-all">
+                <Share2 className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-white/10">
-            {job.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-slate-300 border border-white/10"
-              >
-                {tag}
-              </span>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/5">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-400" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Salary</p>
+                <p className="text-white text-sm font-medium">{jobData.salary}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-purple-400" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Experience</p>
+                <p className="text-white text-sm font-medium">{jobData.experience}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-amber-400" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Deadline</p>
+                <p className="text-white text-sm font-medium">{jobData.deadline}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-400" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Applicants</p>
+                <p className="text-white text-sm font-medium">{jobData.applicants}</p>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Description */}
             <div className="glass rounded-2xl p-6 md:p-8">
-              <h2 className="text-xl font-bold text-white mb-4">About the Role</h2>
-              <p className="text-slate-300 leading-relaxed mb-6">{job.description}</p>
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <AlignLeft className="w-5 h-5 text-cyan-400" />
+                Description
+              </h2>
+              <p className="text-slate-300 text-sm leading-relaxed">{jobData.description}</p>
+            </div>
 
-              <h3 className="text-lg font-semibold text-white mb-3">Requirements</h3>
+            {/* Responsibilities */}
+            <div className="glass rounded-2xl p-6 md:p-8">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-purple-400" />
+                Responsibilities
+              </h2>
               <ul className="space-y-3">
-                {job.requirements.map((req, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-slate-300">
-                    <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-                    <span>{req}</span>
+                {jobData.responsibilities.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-slate-300 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
+                    {item}
                   </li>
                 ))}
               </ul>
             </div>
 
+            {/* Requirements */}
             <div className="glass rounded-2xl p-6 md:p-8">
-              <h2 className="text-xl font-bold text-white mb-4">Benefits</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {job.benefits.map((benefit, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    <span className="text-slate-300 text-sm">{benefit}</span>
-                  </div>
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                Requirements
+              </h2>
+              <ul className="space-y-3">
+                {jobData.requirements.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-slate-300 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                    {item}
+                  </li>
                 ))}
-              </div>
+              </ul>
+            </div>
+
+            {/* Benefits */}
+            <div className="glass rounded-2xl p-6 md:p-8">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                Benefits
+              </h2>
+              <ul className="space-y-3">
+                {jobData.benefits.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-slate-300 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Job Overview</h3>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-emerald-400" />
+            {/* Apply Card */}
+            <div className="glass rounded-2xl p-6 sticky top-24">
+              {!applied ? (
+                <>
+                  <button
+                    onClick={() => setApplied(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl text-sm font-medium transition-all mb-3"
+                  >
+                    <Send className="w-4 h-4" />
+                    Apply Now
+                  </button>
+                  <p className="text-center text-xs text-slate-500">
+                    Easy 1-click application with your profile
+                  </p>
+                </>
+              ) : (
+                <div className="text-center py-2">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                   </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Salary</p>
-                    <p className="text-white font-medium text-sm">{job.salary}</p>
-                  </div>
+                  <p className="text-white font-medium text-sm mb-1">Application Sent!</p>
+                  <p className="text-slate-400 text-xs">Good luck with your application.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                    <Briefcase className="w-5 h-5 text-cyan-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Job Type</p>
-                    <p className="text-white font-medium text-sm">{job.type}</p>
-                  </div>
+              )}
+
+              <div className="h-px bg-white/5 my-5" />
+
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Posted</span>
+                  <span className="text-white">{jobData.postedAt}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Posted</p>
-                    <p className="text-white font-medium text-sm">{job.postedAt}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-amber-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Applicants</p>
-                    <p className="text-white font-medium text-sm">{job.applicants} applied</p>
-                  </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Job ID</span>
+                  <span className="text-white font-mono text-xs">{jobData.id}</span>
                 </div>
               </div>
-
-              <button className="w-full mt-6 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white py-3 rounded-xl font-medium transition-all shadow-lg shadow-cyan-500/20">
-                Apply for this Position
-              </button>
             </div>
 
+            {/* Company Card */}
             <div className="glass rounded-2xl p-6">
+              <h3 className="text-white font-semibold text-sm mb-4">About {jobData.company}</h3>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center">
+                  <span className="text-cyan-400 font-bold text-sm">{jobData.logo}</span>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">{job.company}</h3>
-                  <p className="text-xs text-slate-400">Technology</p>
+                  <p className="text-white font-medium text-sm">{jobData.company}</p>
+                  <p className="text-slate-500 text-xs">{jobData.companySize}</p>
                 </div>
               </div>
-              <p className="text-slate-300 text-sm leading-relaxed mb-4">
-                {job.companyDescription}
-              </p>
-              <button className="w-full py-2.5 rounded-xl glass border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all text-sm font-medium">
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <Globe className="w-3.5 h-3.5" />
+                  {jobData.companyWebsite}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {jobData.location}
+                </div>
+              </div>
+              <Link
+                href={`/company/${jobData.companyId}`}
+                className="block text-center text-cyan-400 text-xs hover:underline"
+              >
                 View Company Profile
-              </button>
+              </Link>
             </div>
           </div>
         </div>
