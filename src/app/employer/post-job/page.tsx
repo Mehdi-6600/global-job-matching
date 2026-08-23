@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Briefcase,
   Plus,
@@ -76,7 +77,25 @@ export default function PostJobPage() {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
   };
 
+  const canGoStep2 = form.title.trim().length > 2 && form.category !== "";
+  const canGoStep3 = form.description.trim().length > 10;
+  const canSubmit =
+    canGoStep2 &&
+    canGoStep3 &&
+    form.requirements.some((r) => r.trim() !== "") &&
+    form.responsibilities.some((r) => r.trim() !== "");
+
+  const cleanArray = (arr: string[]) => arr.map((s) => s.trim()).filter((s) => s !== "");
+
   const handleSubmit = () => {
+    if (!canSubmit) return;
+    const payload = {
+      ...form,
+      requirements: cleanArray(form.requirements),
+      responsibilities: cleanArray(form.responsibilities),
+      benefits: cleanArray(form.benefits),
+    };
+    console.log("Submitting job:", payload);
     setSubmitted(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -93,13 +112,14 @@ export default function PostJobPage() {
             Your job listing has been published successfully. You can manage it from your employer dashboard.
           </p>
           <div className="flex flex-col gap-2">
-            <a
+            <Link
               href="/employer/dashboard"
               className="flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-2.5 rounded-xl text-sm font-medium transition-all"
             >
               Go to Dashboard
-            </a>
+            </Link>
             <button
+              type="button"
               onClick={() => {
                 setSubmitted(false);
                 setStep(1);
@@ -135,7 +155,6 @@ export default function PostJobPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Post a Job</h1>
           <p className="text-slate-400 text-sm">Create a new job listing in minutes</p>
@@ -166,7 +185,7 @@ export default function PostJobPage() {
           ))}
         </div>
 
-        {/* Step 1: Basic Info */}
+        {/* Step 1 */}
         {step === 1 && (
           <div className="glass rounded-2xl p-6 md:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -245,6 +264,7 @@ export default function PostJobPage() {
 
               <div className="flex items-center gap-3 md:col-span-2">
                 <button
+                  type="button"
                   onClick={() => setForm((prev) => ({ ...prev, remote: !prev.remote }))}
                   className={`w-5 h-5 rounded-md border transition-all flex items-center justify-center ${
                     form.remote
@@ -260,8 +280,9 @@ export default function PostJobPage() {
 
             <div className="flex justify-end">
               <button
+                type="button"
                 onClick={() => setStep(2)}
-                disabled={!form.title || !form.category}
+                disabled={!canGoStep2}
                 className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 Next Step
@@ -271,7 +292,7 @@ export default function PostJobPage() {
           </div>
         )}
 
-        {/* Step 2: Details */}
+        {/* Step 2 */}
         {step === 2 && (
           <div className="space-y-6">
             <div className="glass rounded-2xl p-6 md:p-8 space-y-6">
@@ -346,6 +367,7 @@ export default function PostJobPage() {
                   Requirements
                 </label>
                 <button
+                  type="button"
                   onClick={() => addField("requirements")}
                   className="flex items-center gap-1 text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
                 >
@@ -364,6 +386,7 @@ export default function PostJobPage() {
                   />
                   {form.requirements.length > 1 && (
                     <button
+                      type="button"
                       onClick={() => removeField("requirements", idx)}
                       className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 transition-colors"
                     >
@@ -382,6 +405,7 @@ export default function PostJobPage() {
                   Responsibilities
                 </label>
                 <button
+                  type="button"
                   onClick={() => addField("responsibilities")}
                   className="flex items-center gap-1 text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
                 >
@@ -400,6 +424,7 @@ export default function PostJobPage() {
                   />
                   {form.responsibilities.length > 1 && (
                     <button
+                      type="button"
                       onClick={() => removeField("responsibilities", idx)}
                       className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 transition-colors"
                     >
@@ -418,6 +443,7 @@ export default function PostJobPage() {
                   Benefits
                 </label>
                 <button
+                  type="button"
                   onClick={() => addField("benefits")}
                   className="flex items-center gap-1 text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
                 >
@@ -436,6 +462,7 @@ export default function PostJobPage() {
                   />
                   {form.benefits.length > 1 && (
                     <button
+                      type="button"
                       onClick={() => removeField("benefits", idx)}
                       className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 transition-colors"
                     >
@@ -457,11 +484,17 @@ export default function PostJobPage() {
                   type="text"
                   value={form.tagInput}
                   onChange={(e) => setForm({ ...form, tagInput: e.target.value })}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
                   placeholder="e.g. React, TypeScript... (press Enter)"
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
                 />
                 <button
+                  type="button"
                   onClick={addTag}
                   className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all"
                 >
@@ -477,6 +510,7 @@ export default function PostJobPage() {
                     >
                       {tag}
                       <button
+                        type="button"
                         onClick={() => removeTag(tag)}
                         className="hover:text-red-400 transition-colors"
                       >
@@ -490,14 +524,16 @@ export default function PostJobPage() {
 
             <div className="flex justify-between">
               <button
+                type="button"
                 onClick={() => setStep(1)}
                 className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-6 py-2.5 rounded-xl text-sm transition-all"
               >
                 Back
               </button>
               <button
+                type="button"
                 onClick={() => setStep(3)}
-                disabled={!form.description}
+                disabled={!canGoStep3}
                 className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 Review
@@ -507,7 +543,7 @@ export default function PostJobPage() {
           </div>
         )}
 
-        {/* Step 3: Review */}
+        {/* Step 3 */}
         {step === 3 && (
           <div className="space-y-6">
             <div className="glass rounded-2xl p-6 md:p-8 space-y-6">
@@ -568,14 +604,17 @@ export default function PostJobPage() {
 
             <div className="flex justify-between">
               <button
+                type="button"
                 onClick={() => setStep(2)}
                 className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-6 py-2.5 rounded-xl text-sm transition-all"
               >
                 Back
               </button>
               <button
+                type="button"
                 onClick={handleSubmit}
-                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all"
+                disabled={!canSubmit}
+                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 <Globe className="w-4 h-4" />
                 Publish Job
