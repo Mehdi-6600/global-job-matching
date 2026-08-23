@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Ghost, Home, Search, ArrowLeft } from "lucide-react";
 
