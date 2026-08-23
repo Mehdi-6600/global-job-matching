@@ -137,8 +137,8 @@ export default function DashboardPage() {
 
   const recentJobs = jobs.slice(0, 6);
   const totalJobs = jobs.length;
-  const savedCount = 0; // TODO: connect to saved jobs API
-  const appCount = 0;   // TODO: connect to applications API
+  const savedCount = 0;
+  const appCount = 0;
 
   const stats = [
     {
@@ -189,7 +189,6 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Mobile Toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden glass rounded-xl p-3 text-white mb-4 flex items-center gap-2 w-fit"
@@ -198,7 +197,6 @@ export default function DashboardPage() {
             <span>Menu</span>
           </button>
 
-          {/* Sidebar */}
           <aside className={`lg:w-64 shrink-0 ${sidebarOpen ? "block" : "hidden lg:block"}`}>
             <div className="glass rounded-2xl p-4 sticky top-24">
               <div className="flex items-center gap-3 p-3 mb-4 border-b border-white/10 pb-4">
@@ -241,9 +239,7 @@ export default function DashboardPage() {
             </div>
           </aside>
 
-          {/* Main Content */}
           <div className="flex-1 space-y-8">
-            {/* Welcome */}
             <div className="glass rounded-2xl p-6 md:p-8 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
               <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
                 Welcome back, {userName.split(" ")[0]}! 👋
@@ -254,7 +250,6 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map((stat) => (
                 <div key={stat.title} className="glass rounded-2xl p-5 hover:bg-white/10 transition-all">
@@ -276,7 +271,6 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Recommended Jobs */}
             <div className="glass rounded-2xl overflow-hidden">
               <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
@@ -336,14 +330,17 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-1">
-                        {job.tags.slice(0, 4).map((tag) => (
-                          <span
-                            key={tag}
-                            className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-300 border border-white/5"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                        {job.tags
+                          .filter((tag) => !tag.startsWith("http"))
+                          .slice(0, 4)
+                          .map((tag) => (
+                            <span
+                              key={tag}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-300 border border-white/5 break-all max-w-[100px] truncate"
+                            >
+                              {tag}
+                            </span>
+                          ))}
                       </div>
                     </Link>
                   ))}
@@ -363,7 +360,6 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Quick Actions */}
             <div className="glass rounded-2xl p-6">
               <h2 className="text-xl font-bold text-white mb-6">Quick Actions</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
