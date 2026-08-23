@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Bookmark,
   Search,
@@ -25,7 +26,7 @@ interface SavedJob {
   logo: string;
 }
 
-const initialJobs: SavedJob[] = [
+const defaultJobs: SavedJob[] = [
   {
     id: "1",
     title: "Senior Frontend Developer",
@@ -84,8 +85,37 @@ const initialJobs: SavedJob[] = [
 ];
 
 export default function SavedJobsPage() {
-  const [jobs, setJobs] = useState<SavedJob[]>(initialJobs);
+  const [jobs, setJobs] = useState<SavedJob[]>([]);
   const [search, setSearch] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("savedJobs");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setJobs(parsed);
+        } else {
+          setJobs(defaultJobs);
+        }
+      } else {
+        setJobs(defaultJobs);
+      }
+    } catch {
+      setJobs(defaultJobs);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  // Save to localStorage whenever jobs change
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("savedJobs", JSON.stringify(jobs));
+    }
+  }, [jobs, isLoaded]);
 
   const filtered = jobs.filter(
     (j) =>
@@ -98,10 +128,17 @@ export default function SavedJobsPage() {
     setJobs((prev) => prev.filter((j) => j.id !== id));
   };
 
+  if (!isLoaded) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Saved Jobs</h1>
@@ -111,7 +148,6 @@ export default function SavedJobsPage() {
           </div>
         </div>
 
-        {/* Search */}
         <div className="glass rounded-2xl p-4 mb-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -125,7 +161,6 @@ export default function SavedJobsPage() {
           </div>
         </div>
 
-        {/* Jobs Grid */}
         {filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filtered.map((job) => (
@@ -147,6 +182,7 @@ export default function SavedJobsPage() {
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => removeJob(job.id)}
                     className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
                     title="Remove from saved"
@@ -182,14 +218,15 @@ export default function SavedJobsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <a
+                  <Link
                     href={`/jobs/${job.id}`}
                     className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-2 rounded-xl text-xs font-medium transition-all"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     View & Apply
-                  </a>
+                  </Link>
                   <button
+                    type="button"
                     onClick={() => removeJob(job.id)}
                     className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-400 hover:text-red-400 px-4 py-2 rounded-xl text-xs transition-all"
                   >
