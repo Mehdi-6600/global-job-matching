@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { isAdmin } from "@/lib/roles";
+import { ROLES } from "@/lib/roles";
 import { redirect } from "next/navigation";
 
 export default async function AdminLayout({
@@ -8,8 +8,16 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  if (!isAdmin(session?.user?.role)) {
-    redirect("/");
+
+  if (!session?.user) {
+    redirect("/login?callbackUrl=/admin");
   }
+
+  const role = (session.user.role as string) || "jobseeker";
+
+  if (role !== ROLES.ADMIN && role !== ROLES.OWNER) {
+    redirect("/dashboard");
+  }
+
   return <>{children}</>;
 }
