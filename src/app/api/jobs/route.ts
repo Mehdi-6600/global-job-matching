@@ -14,8 +14,13 @@ export async function GET(req: NextRequest) {
     const salaryMax = searchParams.get("salaryMax");
     const postedWithin = searchParams.get("postedWithin");
     const sortBy = searchParams.get("sortBy") || "newest";
+    const companyId = searchParams.get("company");
 
     const where: any = { status: "active" };
+
+    if (companyId) {
+      where.companyId = companyId;
+    }
 
     if (search) {
       where.OR = [
