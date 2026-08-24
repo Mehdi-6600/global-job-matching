@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ messages });
     }
 
-    // Get all conversations
+    // Get all conversations - sent
     const sentMessages = await prisma.message.findMany({
       where: { senderId: session.user.id },
       distinct: ["receiverId"],
@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Get all conversations - received
     const receivedMessages = await prisma.message.findMany({
       where: { receiverId: session.user.id },
       distinct: ["senderId"],
@@ -65,21 +66,44 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Combine and deduplicate
+    // Build conversations map
     const conversations = new Map();
 
-    [...sentMessages, ...receivedMessages].forEach((msg) => {
-      const otherUser = msg.senderId === session.user.id ? msg.receiver : msg.sender;
+    // Process sent messages
+    sentMessages.forEach((msg: any) => {
+      const otherUser = msg.receiver;
       if (!conversations.has(otherUser.id)) {
         conversations.set(otherUser.id, {
           user: otherUser,
           lastMessage: msg.content,
           lastMessageAt: msg.createdAt,
-          unread: msg.receiverId === session.user.id && !msg.read ? 1 : 0,
+          unread: 0,
         });
-      } else if (msg.receiverId === session.user.id && !msg.read) {
-        const conv = conversations.get(otherUser.id);
-        conv.unread += 1;
+      }
+    });
+
+    // Process received messages
+    receivedMessages.forEach((msg: any) => {
+      const otherUser = msg.sender;
+      const existing = conversations.get(otherUser.id);
+      const msgDate = new Date(msg.createdAt).getTime();
+
+      if (!existing) {
+        conversations.set(otherUser.id, {
+          user: otherUser,
+          lastMessage: msg.content,
+          lastMessageAt: msg.createdAt,
+          unread: !msg.read ? 1 : 0,
+        });
+      } else {
+        const existingDate = new Date(existing.lastMessageAt).getTime();
+        if (msgDate > existingDate) {
+          existing.lastMessage = msg.content;
+          existing.lastMessageAt = msg.createdAt;
+        }
+        if (!msg.read) {
+          existing.unread += 1;
+        }
       }
     });
 
