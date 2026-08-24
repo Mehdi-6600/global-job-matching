@@ -29,6 +29,7 @@ model User {
   notifications Notification[]
   profile       Profile?
   transactions  Transaction[]
+  companies     Company[]   // ✅ جدید
 }
 
 model Profile {
@@ -56,9 +57,13 @@ model Company {
   description String?  @db.Text
   logo        String?
   status      String   @default("pending")
+  ownerId     String?  // ✅ جدید
+  owner       User?    @relation(fields: [ownerId], references: [id]) // ✅ جدید
   createdAt   DateTime @default(now())
 
-  jobs Job[]
+  jobs        Job[]
+
+  @@index([ownerId]) // ✅ جدید
 }
 
 model Category {
@@ -86,7 +91,7 @@ model Job {
   responsibilities String[]
   benefits         String[]
   tags             String[]
-  status           String   @default("active")
+  status           String   @default("pending") // ✅ تغییر از active به pending
   deadline         DateTime?
   viewCount        Int      @default(0)
   applicantCount   Int      @default(0)
@@ -113,7 +118,6 @@ model Application {
   jobId  String
   job    Job    @relation(fields: [jobId], references: [id])
 
-  // ✅ جلوگیری از درخواست تکراری
   @@unique([userId, jobId])
 }
 
