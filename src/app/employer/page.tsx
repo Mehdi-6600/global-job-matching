@@ -201,6 +201,13 @@ export default function EmployerDashboardPage() {
                     >
                       <Eye className="w-4 h-4" />
                     </Link>
+                    <Link
+                      href={`/jobs/${job.id}/applicants`}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-500/10 text-cyan-400 text-xs font-medium hover:bg-cyan-500/20 transition-all"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      {job._count.applications}
+                    </Link>
                     <button
                       className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-cyan-400 transition-all"
                       title="Edit"
