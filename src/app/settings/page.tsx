@@ -1,466 +1,434 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
+  Settings,
   User,
   Lock,
-  Bell,
-  Shield,
   Trash2,
   Save,
-  Camera,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  MapPin,
+  Phone,
   Mail,
-  Smartphone,
-  Eye,
-  EyeOff,
-  AlertTriangle,
-  Check,
+  Briefcase,
+  FileText,
+  ImageIcon,
 } from "lucide-react";
 
-type Tab = "profile" | "security" | "notifications" | "account";
+interface UserData {
+  id: string;
+  name: string | null;
+  email: string;
+  title: string | null;
+  phone: string | null;
+  location: string | null;
+  bio: string | null;
+  avatar: string | null;
+  role: string;
+  createdAt: string;
+}
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("profile");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  // Profile state
-  const [profile, setProfile] = useState({
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+1 234 567 890",
-    location: "San Francisco, USA",
-    bio: "Full-stack developer with 5 years of experience in React and Node.js.",
-    title: "Senior Frontend Developer",
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    title: "",
+    phone: "",
+    location: "",
+    bio: "",
+    avatar: "",
   });
 
-  // Security state
-  const [passwords, setPasswords] = useState({
-    current: "",
-    new: "",
-    confirm: "",
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
-  // Notification preferences
-  const [notifPrefs, setNotifPrefs] = useState({
-    emailApplications: true,
-    emailMessages: true,
-    emailInterviews: true,
-    emailJobAlerts: false,
-    pushApplications: true,
-    pushMessages: true,
-    pushInterviews: true,
-    pushJobAlerts: true,
-  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-  // Load from localStorage
+  const [activeTab, setActiveTab] = useState<"profile" | "password" | "danger">("profile");
+
   useEffect(() => {
-    try {
-      const savedProfile = localStorage.getItem("settings_profile");
-      const savedNotifs = localStorage.getItem("settings_notifications");
-      if (savedProfile) setProfile(JSON.parse(savedProfile));
-      if (savedNotifs) setNotifPrefs(JSON.parse(savedNotifs));
-    } catch {
-      // ignore parse errors
-    } finally {
-      setIsLoaded(true);
-    }
+    fetch("/api/user")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setUser(data.user);
+          setForm({
+            name: data.user.name || "",
+            email: data.user.email || "",
+            title: data.user.title || "",
+            phone: data.user.phone || "",
+            location: data.user.location || "",
+            bio: data.user.bio || "",
+            avatar: data.user.avatar || "",
+          });
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  // Save profile
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("settings_profile", JSON.stringify(profile));
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    setMessage("");
+    setError("");
+
+    try {
+      const res = await fetch("/api/user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage("Profile updated successfully!");
+        setUser(data.user);
+      } else {
+        setError(data.error || "Failed to update profile");
+      }
+    } catch (err) {
+      setError("Failed to update profile");
+    } finally {
+      setSaving(false);
     }
-  }, [profile, isLoaded]);
+  };
 
-  // Save notifications
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("settings_notifications", JSON.stringify(notifPrefs));
+  const handleChangePassword = async () => {
+    setPasswordLoading(true);
+    setPasswordMessage("");
+    setPasswordError("");
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("Passwords do not match");
+      setPasswordLoading(false);
+      return;
     }
-  }, [notifPrefs, isLoaded]);
 
-  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "security", label: "Security", icon: Lock },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "account", label: "Account", icon: Shield },
-  ];
+    try {
+      const res = await fetch("/api/user/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+      const data = await res.json();
 
-  if (!isLoaded) {
+      if (data.success) {
+        setPasswordMessage("Password changed successfully!");
+        setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      } else {
+        setPasswordError(data.error || "Failed to change password");
+      }
+    } catch (err) {
+      setPasswordError("Failed to change password");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading settings...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">Please sign in to access settings</p>
+        </div>
       </main>
     );
   }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Settings</h1>
-          <p className="text-slate-400 text-sm">Manage your account preferences</p>
+          <p className="text-slate-400 text-sm">Manage your account and preferences</p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar */}
-          <div className="lg:w-64 shrink-0">
-            <div className="glass rounded-2xl p-2 space-y-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === tab.id
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-                        : "text-slate-400 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {[
+            { id: "profile", label: "Profile", icon: <User className="w-4 h-4" /> },
+            { id: "password", label: "Password", icon: <Lock className="w-4 h-4" /> },
+            { id: "danger", label: "Danger Zone", icon: <AlertCircle className="w-4 h-4" /> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                  : "bg-white/5 text-slate-400 border border-transparent hover:bg-white/10"
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Profile Tab */}
+        {activeTab === "profile" && (
+          <div className="glass rounded-3xl p-6 md:p-8 space-y-6">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <User className="w-5 h-5 text-cyan-400" />
+              Profile Information
+            </h2>
+
+            {message && (
+              <div className="flex items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+                <CheckCircle2 className="w-4 h-4" />
+                {message}
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Job Title</label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                    placeholder="e.g. Software Engineer"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Phone</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                    placeholder="+1 234 567 890"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Location</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                    placeholder="e.g. Berlin, Germany"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Bio</label>
+                <div className="relative">
+                  <FileText className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                  <textarea
+                    value={form.bio}
+                    onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
+                    placeholder="Tell us about yourself..."
+                    rows={4}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600 resize-none"
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Avatar URL</label>
+                <div className="relative">
+                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="url"
+                    value={form.avatar}
+                    onChange={(e) => setForm((p) => ({ ...p, avatar: e.target.value }))}
+                    placeholder="https://example.com/avatar.jpg"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button
+                onClick={handleSaveProfile}
+                disabled={saving}
+                className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
+              </button>
             </div>
           </div>
+        )}
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {/* Profile Tab */}
-            {activeTab === "profile" && (
-              <div className="space-y-6">
-                <div className="glass rounded-2xl p-6 flex items-center gap-5">
-                  <div className="relative">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center">
-                      <User className="w-8 h-8 text-cyan-400" />
-                    </div>
-                    <button
-                      type="button"
-                      className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-cyan-500 text-white flex items-center justify-center hover:bg-cyan-600 transition-colors"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold">{profile.name}</h3>
-                    <p className="text-slate-400 text-sm">{profile.title}</p>
-                  </div>
-                </div>
+        {/* Password Tab */}
+        {activeTab === "password" && (
+          <div className="glass rounded-3xl p-6 md:p-8 space-y-6">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Lock className="w-5 h-5 text-purple-400" />
+              Change Password
+            </h2>
 
-                <div className="glass rounded-2xl p-6 space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">Full Name</label>
-                      <input
-                        type="text"
-                        value={profile.name}
-                        onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">Job Title</label>
-                      <input
-                        type="text"
-                        value={profile.title}
-                        onChange={(e) => setProfile({ ...profile, title: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">Email</label>
-                      <input
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">Phone</label>
-                      <input
-                        type="tel"
-                        value={profile.phone}
-                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-xs text-slate-400 mb-1.5">Location</label>
-                      <input
-                        type="text"
-                        value={profile.location}
-                        onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-xs text-slate-400 mb-1.5">Bio</label>
-                      <textarea
-                        value={profile.bio}
-                        onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                        rows={4}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all resize-none"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
-                    >
-                      <Save className="w-4 h-4" />
-                      Save Changes
-                    </button>
-                  </div>
-                </div>
+            {passwordMessage && (
+              <div className="flex items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+                <CheckCircle2 className="w-4 h-4" />
+                {passwordMessage}
+              </div>
+            )}
+            {passwordError && (
+              <div className="flex items-center gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                {passwordError}
               </div>
             )}
 
-            {/* Security Tab */}
-            {activeTab === "security" && (
-              <div className="space-y-6">
-                <div className="glass rounded-2xl p-6">
-                  <h3 className="text-white font-semibold mb-5">Change Password</h3>
-                  <div className="space-y-4 max-w-md">
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">Current Password</label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={passwords.current}
-                          onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">New Password</label>
-                      <input
-                        type="password"
-                        value={passwords.new}
-                        onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">Confirm New Password</label>
-                      <input
-                        type="password"
-                        value={passwords.confirm}
-                        onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
-                    >
-                      <Lock className="w-4 h-4" />
-                      Update Password
-                    </button>
-                  </div>
-                </div>
-
-                <div className="glass rounded-2xl p-6">
-                  <h3 className="text-white font-semibold mb-4">Two-Factor Authentication</h3>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-white text-sm font-medium">Enable 2FA</p>
-                      <p className="text-slate-400 text-xs mt-0.5">
-                        Add an extra layer of security to your account
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="relative w-12 h-6 rounded-full bg-slate-700 transition-colors"
-                    >
-                      <span className="absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform" />
-                    </button>
-                  </div>
-                </div>
+            <div className="space-y-4 max-w-md">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Current Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
+                />
               </div>
-            )}
-
-            {/* Notifications Tab */}
-            {activeTab === "notifications" && (
-              <div className="glass rounded-2xl p-6">
-                <h3 className="text-white font-semibold mb-5">Notification Preferences</h3>
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Mail className="w-4 h-4 text-cyan-400" />
-                      <h4 className="text-white text-sm font-medium">Email Notifications</h4>
-                    </div>
-                    <div className="space-y-3 pl-6">
-                      {[
-                        { key: "emailApplications", label: "Application updates" },
-                        { key: "emailMessages", label: "New messages" },
-                        { key: "emailInterviews", label: "Interview invitations" },
-                        { key: "emailJobAlerts", label: "Job alerts & recommendations" },
-                      ].map((item) => (
-                        <label
-                          key={item.key}
-                          className="flex items-center justify-between cursor-pointer"
-                        >
-                          <span className="text-slate-300 text-sm">{item.label}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setNotifPrefs((prev) => ({
-                                ...prev,
-                                [item.key]: !prev[item.key as keyof typeof prev],
-                              }))
-                            }
-                            className={`relative w-11 h-6 rounded-full transition-colors ${
-                              notifPrefs[item.key as keyof typeof notifPrefs]
-                                ? "bg-cyan-500"
-                                : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                                notifPrefs[item.key as keyof typeof notifPrefs]
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-white/5" />
-
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Smartphone className="w-4 h-4 text-purple-400" />
-                      <h4 className="text-white text-sm font-medium">Push Notifications</h4>
-                    </div>
-                    <div className="space-y-3 pl-6">
-                      {[
-                        { key: "pushApplications", label: "Application updates" },
-                        { key: "pushMessages", label: "New messages" },
-                        { key: "pushInterviews", label: "Interview invitations" },
-                        { key: "pushJobAlerts", label: "Job alerts & recommendations" },
-                      ].map((item) => (
-                        <label
-                          key={item.key}
-                          className="flex items-center justify-between cursor-pointer"
-                        >
-                          <span className="text-slate-300 text-sm">{item.label}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setNotifPrefs((prev) => ({
-                                ...prev,
-                                [item.key]: !prev[item.key as keyof typeof prev],
-                              }))
-                            }
-                            className={`relative w-11 h-6 rounded-full transition-colors ${
-                              notifPrefs[item.key as keyof typeof notifPrefs]
-                                ? "bg-purple-500"
-                                : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                                notifPrefs[item.key as keyof typeof notifPrefs]
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-6">
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Preferences
-                  </button>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">New Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
+                />
               </div>
-            )}
-
-            {/* Account Tab */}
-            {activeTab === "account" && (
-              <div className="space-y-6">
-                <div className="glass rounded-2xl p-6">
-                  <h3 className="text-white font-semibold mb-4">Account Status</h3>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-400 text-sm">Account is active</span>
-                  </div>
-                  <p className="text-slate-400 text-xs">Member since January 2024</p>
-                </div>
-
-                <div className="glass rounded-2xl p-6 border border-red-500/10">
-                  <h3 className="text-white font-semibold mb-4">Danger Zone</h3>
-                  <p className="text-slate-400 text-sm mb-5 leading-relaxed">
-                    Once you delete your account, there is no going back. All your data including
-                    applications, messages, and profile will be permanently removed.
-                  </p>
-
-                  {!showDeleteConfirm ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete Account
-                    </button>
-                  ) : (
-                    <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
-                      <div className="flex items-start gap-2 mb-3">
-                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                        <p className="text-red-300 text-sm">
-                          Are you sure? This action cannot be undone.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          className="bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-red-600 transition-colors"
-                        >
-                          Yes, Delete
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowDeleteConfirm(false)}
-                          className="bg-white/5 border border-white/10 text-slate-300 px-4 py-2 rounded-xl text-xs transition-all"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all"
+                />
               </div>
-            )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleChangePassword}
+                disabled={passwordLoading}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+              >
+                {passwordLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Changing...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    Change Password
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Danger Zone Tab */}
+        {activeTab === "danger" && (
+          <div className="glass rounded-3xl p-6 md:p-8 border border-red-500/10">
+            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2 mb-4">
+              <Trash2 className="w-5 h-5" />
+              Danger Zone
+            </h2>
+            <p className="text-slate-400 text-sm mb-6">
+              Once you delete your account, there is no going back. Please be certain.
+            </p>
+            <button
+              onClick={() => {
+                if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+                  alert("Account deletion is not implemented yet.");
+                }
+              }}
+              className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 px-6 py-3 rounded-xl text-sm font-medium transition-all"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Account
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );
