@@ -9,9 +9,56 @@ const applySchema = z.object({
   coverLetter: z.string().max(5000).optional(),
 });
 
+// ✅ GET — درخواست‌های کاربر لاگین‌شده را برمی‌گرداند
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { success } = await ratelimit.limit(
+      `applications_get_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
+    const applications = await prisma.application.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        job: {
+          include: {
+            company: {
+              select: { id: true, name: true, logo: true, location: true },
+            },
+            category: {
+              select: { id: true, name: true, slug: true, color: true },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ applications, count: applications.length });
+  } catch (error: any) {
+    console.error("Applications fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch applications" },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ POST — ثبت درخواست جدید
 export async function POST(req: NextRequest) {
   try {
-    // 1. بررسی لاگین
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -20,7 +67,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Rate limit: 10 درخواست در ساعت برای هر کاربر
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const { success } = await ratelimit.limit(
@@ -33,7 +79,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. اعتبارسنجی ورودی
     const body = await req.json();
     const result = applySchema.safeParse(body);
     if (!result.success) {
@@ -45,7 +90,6 @@ export async function POST(req: NextRequest) {
 
     const { jobId, coverLetter } = result.data;
 
-    // 4. بررسی وجود و فعال بودن شغل
     const job = await prisma.job.findUnique({
       where: { id: jobId, status: "active" },
     });
@@ -56,7 +100,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. ثبت درخواست (اگر تکراری باشد، Prisma خطای P2002 می‌دهد)
     const application = await prisma.application.create({
       data: {
         userId: session.user.id,
@@ -66,7 +109,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 6. افزایش شمارنده متقاضیان شغل
     await prisma.job.update({
       where: { id: jobId },
       data: { applicantCount: { increment: 1 } },
@@ -77,7 +119,6 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    // ❗ جلوگیری از درخواست تکراری — خطای Prisma P2002
     if (error.code === "P2002") {
       return NextResponse.json(
         { error: "You have already applied for this job." },
