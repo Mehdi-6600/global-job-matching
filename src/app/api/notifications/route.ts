@@ -1,47 +1,97 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Notification } from "@/lib/notifications";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-// In-memory store (replace with DB in production)
-let notifications: Notification[] = [];
-
+// GET /api/notifications
 export async function GET() {
-  return NextResponse.json({ notifications });
-}
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const notif: Notification = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      type: body.type,
-      title: body.title,
-      message: body.message,
-      read: false,
-      createdAt: new Date().toISOString(),
-      data: body.data,
-    };
-    notifications.unshift(notif);
-    notifications = notifications.slice(0, 100);
-    return NextResponse.json({ success: true, notification: notif });
-  } catch {
+    const notifications = await prisma.notification.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    const unreadCount = await prisma.notification.count({
+      where: { userId: session.user.id, read: false },
+    });
+
+    return NextResponse.json({ notifications, unreadCount });
+  } catch (error: any) {
+    console.error("Notifications error:", error);
     return NextResponse.json(
-      { success: false, error: "Invalid request" },
-      { status: 400 }
+      { error: error.message || "Failed to fetch notifications" },
+      { status: 500 }
     );
   }
 }
 
-export async function PATCH(req: NextRequest) {
+// PUT /api/notifications - Mark as read
+export async function PUT(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const { id, read } = await req.json();
-    notifications = notifications.map((n) =>
-      n.id === id ? { ...n, read } : n
-    );
-    return NextResponse.json({ success: true });
-  } catch {
+    const { id, readAll } = await req.json();
+
+    if (readAll) {
+      await prisma.notification.updateMany({
+        where: { userId: session.user.id, read: false },
+        data: { read: true },
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    if (id) {
+      await prisma.notification.updateMany({
+        where: { id, userId: session.user.id },
+        data: { read: true },
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  } catch (error: any) {
+    console.error("Update notification error:", error);
     return NextResponse.json(
-      { success: false, error: "Invalid request" },
-      { status: 400 }
+      { error: error.message || "Failed to update notification" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/notifications
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const id = req.nextUrl.searchParams.get("id");
+
+    if (id) {
+      await prisma.notification.deleteMany({
+        where: { id, userId: session.user.id },
+      });
+    } else {
+      await prisma.notification.deleteMany({
+        where: { userId: session.user.id },
+      });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Delete notification error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to delete notification" },
+      { status: 500 }
     );
   }
 }
