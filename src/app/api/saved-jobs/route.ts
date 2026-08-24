@@ -1,15 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ratelimit } from "@/lib/ratelimit";
 
-// GET /api/saved-jobs - Get my saved jobs
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { success } = await ratelimit.limit(
+      `savedjobs_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const savedJobs = await prisma.savedJob.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
@@ -19,84 +34,58 @@ export async function GET() {
             company: {
               select: { id: true, name: true, logo: true, location: true },
             },
+            category: {
+              select: { id: true, name: true, slug: true, color: true },
+            },
           },
         },
       },
     });
 
-    return NextResponse.json({ savedJobs });
+    const jobs = savedJobs.map((sj) => sj.job);
+
+    return NextResponse.json({ jobs, count: jobs.length });
   } catch (error: any) {
-    console.error("Fetch saved jobs error:", error);
+    console.error("Saved jobs fetch error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch saved jobs" },
+      { error: "Failed to fetch saved jobs" },
       { status: 500 }
     );
   }
 }
 
-// POST /api/saved-jobs - Save a job
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function DELETE(req: NextRequest) {
   try {
-    const { jobId } = await req.json();
-
-    if (!jobId) {
-      return NextResponse.json({ error: "Job ID required" }, { status: 400 });
-    }
-
-    const saved = await prisma.savedJob.create({
-      data: {
-        userId: session.user.id,
-        jobId,
-      },
-    });
-
-    return NextResponse.json({ success: true, saved });
-  } catch (error: any) {
-    if (error.code === "P2002") {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Job already saved" },
-        { status: 409 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
-    console.error("Save job error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to save job" },
-      { status: 500 }
-    );
-  }
-}
 
-// DELETE /api/saved-jobs?jobId=xxx - Unsave a job
-export async function DELETE(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const body = await req.json();
+    const { jobId } = body;
 
-  try {
-    const jobId = req.nextUrl.searchParams.get("jobId");
-
-    if (!jobId) {
-      return NextResponse.json({ error: "Job ID required" }, { status: 400 });
+    if (!jobId || typeof jobId !== "string") {
+      return NextResponse.json(
+        { error: "Invalid job ID" },
+        { status: 400 }
+      );
     }
 
     await prisma.savedJob.deleteMany({
       where: {
         userId: session.user.id,
-        jobId,
+        jobId: jobId,
       },
     });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("Unsave job error:", error);
+    console.error("Remove saved job error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to unsave job" },
+      { error: "Failed to remove saved job" },
       { status: 500 }
     );
   }
