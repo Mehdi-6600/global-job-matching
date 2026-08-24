@@ -1,93 +1,93 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { ratelimit } from "@/lib/ratelimit";
 
-// POST /api/applications - Apply to a job
+const applySchema = z.object({
+  jobId: z.string().min(1),
+  coverLetter: z.string().max(5000).optional(),
+});
+
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    const { jobId, coverLetter } = await req.json();
-
-    if (!jobId) {
-      return NextResponse.json({ error: "Job ID required" }, { status: 400 });
-    }
-
-    // Check if already applied
-    const existing = await prisma.application.findFirst({
-      where: {
-        userId: session.user.id,
-        jobId,
-      },
-    });
-
-    if (existing) {
+    // 1. بررسی لاگین
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "You have already applied to this job" },
-        { status: 409 }
+        { error: "Unauthorized. Please sign in." },
+        { status: 401 }
       );
     }
 
-    // Create application
+    // 2. Rate limit: 10 درخواست در ساعت برای هر کاربر
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { success } = await ratelimit.limit(
+      `apply_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many applications. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    // 3. اعتبارسنجی ورودی
+    const body = await req.json();
+    const result = applySchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: result.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { jobId, coverLetter } = result.data;
+
+    // 4. بررسی وجود و فعال بودن شغل
+    const job = await prisma.job.findUnique({
+      where: { id: jobId, status: "active" },
+    });
+    if (!job) {
+      return NextResponse.json(
+        { error: "Job not found or no longer active." },
+        { status: 404 }
+      );
+    }
+
+    // 5. ثبت درخواست (اگر تکراری باشد، Prisma خطای P2002 می‌دهد)
     const application = await prisma.application.create({
       data: {
         userId: session.user.id,
-        jobId,
+        jobId: jobId,
         coverLetter: coverLetter || null,
         status: "applied",
       },
     });
 
-    // Increment applicant count
+    // 6. افزایش شمارنده متقاضیان شغل
     await prisma.job.update({
       where: { id: jobId },
       data: { applicantCount: { increment: 1 } },
     });
 
-    return NextResponse.json({ success: true, application });
-  } catch (error: any) {
-    console.error("Apply error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to apply" },
-      { status: 500 }
+      { success: true, application },
+      { status: 201 }
     );
-  }
-}
-
-// GET /api/applications - Get my applications
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const applications = await prisma.application.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        job: {
-          select: {
-            id: true,
-            title: true,
-            location: true,
-            type: true,
-            company: {
-              select: { id: true, name: true, logo: true },
-            },
-          },
-        },
-      },
-    });
-
-    return NextResponse.json({ applications });
   } catch (error: any) {
-    console.error("Fetch applications error:", error);
+    // ❗ جلوگیری از درخواست تکراری — خطای Prisma P2002
+    if (error.code === "P2002") {
+      return NextResponse.json(
+        { error: "You have already applied for this job." },
+        { status: 409 }
+      );
+    }
+
+    console.error("Application error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch applications" },
+      { error: "Failed to submit application." },
       { status: 500 }
     );
   }
