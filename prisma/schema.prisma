@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -31,17 +32,17 @@ model User {
 }
 
 model Profile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  headline      String?
-  skills        String[] @default([])
-  country       String?
-  city          String?
-  desiredSalary Int?
-  searchRadiusKm Int     @default(50)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline       String?
+  skills         String[] @default([])
+  country        String?
+  city           String?
+  desiredSalary  Int?
+  searchRadiusKm Int      @default(50)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Company {
@@ -57,7 +58,7 @@ model Company {
   status      String   @default("pending")
   createdAt   DateTime @default(now())
 
-  jobs        Job[]
+  jobs Job[]
 }
 
 model Category {
@@ -71,46 +72,49 @@ model Category {
 }
 
 model Job {
-  id              String   @id @default(cuid())
-  title           String
-  description     String   @db.Text
-  location        String
-  remote          Boolean  @default(false)
-  type            String
-  experience      String
-  salaryMin       Int?
-  salaryMax       Int?
-  currency        String   @default("USD")
-  requirements    String[]
+  id               String   @id @default(cuid())
+  title            String
+  description      String   @db.Text
+  location         String
+  remote           Boolean  @default(false)
+  type             String
+  experience       String
+  salaryMin        Int?
+  salaryMax        Int?
+  currency         String   @default("USD")
+  requirements     String[]
   responsibilities String[]
-  benefits        String[]
-  tags            String[]
-  status          String   @default("active")
-  deadline        DateTime?
-  viewCount       Int      @default(0)
-  applicantCount  Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  benefits         String[]
+  tags             String[]
+  status           String   @default("active")
+  deadline         DateTime?
+  viewCount        Int      @default(0)
+  applicantCount   Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   companyId   String
-  company     Company    @relation(fields: [companyId], references: [id])
+  company     Company     @relation(fields: [companyId], references: [id])
   categoryId  String?
-  category    Category?  @relation(fields: [categoryId], references: [id])
+  category    Category?   @relation(fields: [categoryId], references: [id])
   applications Application[]
   savedJobs    SavedJob[]
 }
 
 model Application {
-  id        String   @id @default(cuid())
-  status    String   @default("applied")
-  coverLetter String? @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  status      String   @default("applied")
+  coverLetter String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
   jobId  String
   job    Job    @relation(fields: [jobId], references: [id])
+
+  // ✅ جلوگیری از درخواست تکراری
+  @@unique([userId, jobId])
 }
 
 model SavedJob {
