@@ -3,12 +3,14 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const job = await prisma.job.findUnique({
       where: {
-        id: params.id,
+        id: id,
         status: "active",
       },
       include: {
@@ -40,9 +42,8 @@ export async function GET(
       );
     }
 
-    // شمارنده بازدید +۱
     await prisma.job.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { viewCount: { increment: 1 } },
     });
 
