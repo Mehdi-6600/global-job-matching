@@ -1,23 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 
-export async function POST(req: NextRequest) {
-  console.log("🔵 Payment API called");
-  
+const paymentSchema = z.object({
+  planId: z.enum(["free", "pro", "business", "enterprise"]),
+});
+
+const PLAN_PRICES = {
+  free: 0,
+  pro: 9,
+  business: 29,
+  enterprise: 99,
+};
+
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    console.log("🔵 Body:", body);
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // فقط یک پاسخ ساده برگردون
+    const body = await req.json();
+    const result = paymentSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    }
+
+    const { planId } = result.data;
+    const amount = PLAN_PRICES[planId];
+
+    if (amount === 0) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { plan: planId },
+      });
+      return NextResponse.json({ success: true, message: "Free plan activated" });
+    }
+
     return NextResponse.json({
-      success: true,
-      message: "Payment API is working!",
-      received: body,
-    });
+      success: false,
+      message: "Online payment not configured. Use crypto payment or contact support.",
+      planId,
+      amount,
+    }, { status: 501 });
   } catch (error) {
-    console.error("🔴 Error:", error);
-    return NextResponse.json(
-      { error: "Failed to process" },
-      { status: 500 }
-    );
+    console.error("Payment error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
