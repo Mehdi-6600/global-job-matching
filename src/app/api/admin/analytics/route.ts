@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { ROLES } from "@/lib/roles";
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id || !["admin", "owner"].includes(session.user.role || "")) {
+  if (!session?.user?.id || (session.user.role !== ROLES.ADMIN && session.user.role !== ROLES.OWNER)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -18,22 +19,18 @@ export async function GET() {
     newUsers30d,
     totalJobs,
     newJobs7d,
-    totalApplications,
-    newApplications7d,
     totalCompanies,
-    totalSubscribers,
     totalTransactions,
+    pendingTransactions,
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { createdAt: { gte: last7Days } } }),
-    prisma.user.count({ where: { createdAt: { gte: last30Days } } }),
-    prisma.job.count(),
-    prisma.job.count({ where: { createdAt: { gte: last7Days } } }),
-    prisma.application.count(),
-    prisma.application.count({ where: { createdAt: { gte: last7Days } } }),
-    prisma.company.count(),
-    prisma.subscriber.count(),
-    prisma.transaction.count(),
+    db.user.count(),
+    db.user.count({ where: { createdAt: { gte: last7Days } } }),
+    db.user.count({ where: { createdAt: { gte: last30Days } } }),
+    db.job.count(),
+    db.job.count({ where: { createdAt: { gte: last7Days } } }),
+    db.company.count(),
+    db.transaction.count(),
+    db.transaction.count({ where: { status: "pending" } }),
   ]);
 
   return NextResponse.json({
@@ -43,11 +40,9 @@ export async function GET() {
       newUsers30d,
       totalJobs,
       newJobs7d,
-      totalApplications,
-      newApplications7d,
       totalCompanies,
-      totalSubscribers,
       totalTransactions,
+      pendingTransactions,
     },
   });
 }
