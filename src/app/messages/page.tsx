@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Send,
   ArrowLeft,
@@ -11,7 +10,6 @@ import {
   Loader2,
   Clock,
 } from "lucide-react";
-import Link from "next/link";
 
 interface Partner {
   id: string;
@@ -52,28 +50,34 @@ function formatTime(dateStr: string) {
 }
 
 export default function MessagesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loadingConv, setLoadingConv] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadingMsg, setLoadingMsg] = useState(false);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
+  // Check auth + load conversations
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, router]);
-
-  useEffect(() => {
-    fetchConversations();
-    const interval = setInterval(fetchConversations, 10000);
-    return () => clearInterval(interval);
+    fetch("/api/profile")
+      .then((res) => {
+        if (res.status === 401) {
+          window.location.href = "/login";
+          return null;
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.profile?.userId) {
+          setCurrentUserId(data.profile.userId);
+        }
+        return fetchConversations();
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -91,6 +95,10 @@ export default function MessagesPage() {
   async function fetchConversations() {
     try {
       const res = await fetch("/api/messages");
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setConversations(data.conversations || []);
@@ -98,7 +106,7 @@ export default function MessagesPage() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingConv(false);
+      setLoading(false);
     }
   }
 
@@ -158,7 +166,7 @@ export default function MessagesPage() {
     (c) => c.partner.id === selectedUserId
   )?.partner;
 
-  if (status === "loading" || loadingConv) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
@@ -246,7 +254,7 @@ export default function MessagesPage() {
                         </span>
                       </div>
                       <p className="text-sm text-slate-400 truncate mt-0.5">
-                        {conv.lastMessage.senderId === session?.user?.id
+                        {conv.lastMessage.senderId === currentUserId
                           ? "You: "
                           : ""}
                         {conv.lastMessage.content}
@@ -307,7 +315,7 @@ export default function MessagesPage() {
                     </div>
                   ) : (
                     messages.map((msg) => {
-                      const isMe = msg.senderId === session?.user?.id;
+                      const isMe = msg.senderId === currentUserId;
                       return (
                         <div
                           key={msg.id}
