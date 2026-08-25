@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Valid email required" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const user = await db.user.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
       return NextResponse.json({ success: true, message: "If email exists, reset link sent" });
     }
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-    await prisma.passwordResetToken.create({
+    await db.passwordResetToken.create({
       data: { email: user.email, tokenHash, expiresAt },
     });
 
@@ -45,7 +45,7 @@ export async function PATCH(req: Request) {
     }
 
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    const resetToken = await db.passwordResetToken.findUnique({ where: { tokenHash } });
 
     if (!resetToken) {
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
@@ -58,9 +58,9 @@ export async function PATCH(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    await prisma.$transaction([
-      prisma.user.update({ where: { email: resetToken.email }, data: { password: hashedPassword } }),
-      prisma.passwordResetToken.update({ where: { tokenHash }, data: { usedAt: new Date() } }),
+    await db.$transaction([
+      db.user.update({ where: { email: resetToken.email }, data: { password: hashedPassword } }),
+      db.passwordResetToken.update({ where: { tokenHash }, data: { usedAt: new Date() } }),
     ]);
 
     return NextResponse.json({ success: true, message: "Password reset successfully" });
