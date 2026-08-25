@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 
 export async function POST(req: Request) {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Valid company name required" }, { status: 400 });
     }
 
-    const company = await prisma.company.create({
+    const company = await db.company.create({
       data: {
         name: name.trim(),
         description: description || null,
@@ -45,13 +45,13 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     const [companies, total] = await Promise.all([
-      prisma.company.findMany({
+      db.company.findMany({
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
         include: { owner: { select: { id: true, name: true } } },
       }),
-      prisma.company.count(),
+      db.company.count(),
     ]);
 
     return NextResponse.json({
