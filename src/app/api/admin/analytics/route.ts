@@ -19,18 +19,22 @@ export async function GET() {
     newUsers30d,
     totalJobs,
     newJobs7d,
+    totalApplications,
+    newApplications7d,
     totalCompanies,
+    totalSubscribers,
     totalTransactions,
-    pendingTransactions,
   ] = await Promise.all([
     db.user.count(),
     db.user.count({ where: { createdAt: { gte: last7Days } } }),
     db.user.count({ where: { createdAt: { gte: last30Days } } }),
     db.job.count(),
     db.job.count({ where: { createdAt: { gte: last7Days } } }),
+    db.application.count(),
+    db.application.count({ where: { createdAt: { gte: last7Days } } }),
     db.company.count(),
+    db.subscriber.count(),
     db.transaction.count(),
-    db.transaction.count({ where: { status: "pending" } }),
   ]);
 
   return NextResponse.json({
@@ -40,9 +44,11 @@ export async function GET() {
       newUsers30d,
       totalJobs,
       newJobs7d,
+      totalApplications,
+      newApplications7d,
       totalCompanies,
+      totalSubscribers,
       totalTransactions,
-      pendingTransactions,
     },
   });
 }
