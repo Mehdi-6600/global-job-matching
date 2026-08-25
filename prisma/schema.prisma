@@ -47,7 +47,7 @@ model User {
   role          String    @default("JOB_SEEKER")
   plan          String    @default("free")
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  updatedAt     DateTime  @default(now()) @updatedAt
 
   accounts      Account[]
   sessions      Session[]
@@ -71,12 +71,12 @@ model Company {
   location    String?
   website     String?
   logo        String?
-  ownerId     String
+  ownerId     String?
   email       String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
-  owner User  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner User?  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   jobs  Job[]
 
   @@index([ownerId])
@@ -91,12 +91,12 @@ model Job {
   type        String
   viewCount   Int      @default(0)
   companyId   String?
-  postedById  String
+  postedById  String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   company  Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  postedBy User     @relation("PostedBy", fields: [postedById], references: [id], onDelete: Cascade)
+  postedBy User?    @relation("PostedBy", fields: [postedById], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@index([postedById])
@@ -114,7 +114,7 @@ model Transaction {
   status     String   @default("pending")
   type       String   @default("card")
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime @default(now()) @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
