@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
 
 export async function GET(req: NextRequest) {
@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, name, description, location, website } = body;
+    const { id, name, description, location, website, status } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -60,6 +60,7 @@ export async function PATCH(req: NextRequest) {
     if (description !== undefined) updateData.description = description;
     if (location !== undefined) updateData.location = location;
     if (website !== undefined) updateData.website = website;
+    if (status !== undefined) updateData.status = status;
 
     const company = await db.company.update({
       where: { id },
