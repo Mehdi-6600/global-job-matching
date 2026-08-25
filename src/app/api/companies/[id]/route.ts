@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
-    const company = await prisma.company.findUnique({
+    const company = await db.company.findUnique({
       where: { id },
       include: {
         owner: { select: { id: true, name: true } },
@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = params;
-    const company = await prisma.company.findUnique({ where: { id } });
+    const company = await db.company.findUnique({ where: { id } });
     if (!company) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const isOwner = company.ownerId === session.user.id;
@@ -36,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!isOwner && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
-    const updated = await prisma.company.update({
+    const updated = await db.company.update({
       where: { id },
       data: {
         ...(body.name && { name: body.name.trim() }),
@@ -59,14 +59,14 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = params;
-    const company = await prisma.company.findUnique({ where: { id } });
+    const company = await db.company.findUnique({ where: { id } });
     if (!company) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const isOwner = company.ownerId === session.user.id;
     const isAdmin = session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER;
     if (!isOwner && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    await prisma.company.delete({ where: { id } });
+    await db.company.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Company delete error:", error);
