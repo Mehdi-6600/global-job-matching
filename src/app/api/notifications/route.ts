@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
-// GET /api/notifications
+// GET - لیست اعلانات کاربر
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -16,22 +16,20 @@ export async function GET() {
       take: 50,
     });
 
-    const unreadCount = await prisma.notification.count({
-      where: { userId: session.user.id, read: false },
-    });
+    const unreadCount = notifications.filter((n) => !n.read).length;
 
     return NextResponse.json({ notifications, unreadCount });
-  } catch (error: any) {
-    console.error("Notifications error:", error);
+  } catch (error) {
+    console.error("Fetch notifications error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch notifications" },
+      { error: "Failed to fetch notifications" },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/notifications - Mark as read
-export async function PUT(req: NextRequest) {
+// PATCH - علامت‌گذاری خوانده‌شده
+export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,28 +43,29 @@ export async function PUT(req: NextRequest) {
         where: { userId: session.user.id, read: false },
         data: { read: true },
       });
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ message: "All marked as read" });
     }
 
-    if (id) {
-      await prisma.notification.updateMany({
-        where: { id, userId: session.user.id },
-        data: { read: true },
-      });
-      return NextResponse.json({ success: true });
+    if (!id) {
+      return NextResponse.json(
+        { error: "Notification ID required" },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  } catch (error: any) {
+    await prisma.notification.updateMany({
+      where: { id, userId: session.user.id },
+      data: { read: true },
+    });
+
+    return NextResponse.json({ message: "Marked as read" });
+  } catch (error) {
     console.error("Update notification error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update notification" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 }
 
-// DELETE /api/notifications
+// DELETE - حذف یک اعلان
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -74,24 +73,23 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const id = req.nextUrl.searchParams.get("id");
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
 
-    if (id) {
-      await prisma.notification.deleteMany({
-        where: { id, userId: session.user.id },
-      });
-    } else {
-      await prisma.notification.deleteMany({
-        where: { userId: session.user.id },
-      });
+    if (!id) {
+      return NextResponse.json(
+        { error: "Notification ID required" },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+    await prisma.notification.deleteMany({
+      where: { id, userId: session.user.id },
+    });
+
+    return NextResponse.json({ message: "Deleted" });
+  } catch (error) {
     console.error("Delete notification error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to delete notification" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
   }
 }
