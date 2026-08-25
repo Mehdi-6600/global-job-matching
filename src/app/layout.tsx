@@ -1,93 +1,39 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "./components/navbar";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  themeColor: "#0f172a",
-};
-
 export const metadata: Metadata = {
-  title: {
-    default: "Global Job Matching | Find Your Dream Job",
-    template: "%s | Global Job Matching",
-  },
-  description:
-    "Connect with top employers worldwide. Find remote and on-site jobs in technology, design, marketing, finance, healthcare, and more.",
-  keywords: [
-    "jobs",
-    "hiring",
-    "remote work",
-    "tech jobs",
-    "career",
-    "job board",
-    "global jobs",
-    "freelance",
-    "full-time",
-  ],
-  authors: [{ name: "Global Job Matching" }],
-  creator: "Global Job Matching",
-  metadataBase: new URL("https://global-job-matching.vercel.app"),
+  title: "Global Job Matching",
+  description: "Find your dream job worldwide with Global Job Matching.",
   openGraph: {
+    title: "Global Job Matching",
+    description: "Find your dream job worldwide with Global Job Matching.",
+    images: ["/og-image.png"], // ← این خط OG Image رو لینک می‌کنه
     type: "website",
-    locale: "en_US",
-    url: "/",
-    siteName: "Global Job Matching",
-    title: "Global Job Matching | Find Your Dream Job",
-    description:
-      "Connect with top employers worldwide. Find remote and on-site jobs in technology, design, marketing, finance, healthcare, and more.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Global Job Matching - Find Your Dream Job",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Global Job Matching | Find Your Dream Job",
-    description:
-      "Connect with top employers worldwide. Find remote and on-site jobs in technology, design, marketing, finance, healthcare, and more.",
-    images: ["/og-image.png"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-  other: {
-    "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
-    "apple-mobile-web-app-title": "GlobalJob",
+    title: "Global Job Matching",
+    description: "Find your dream job worldwide with Global Job Matching.",
+    images: ["/og-image.png"], // ← اینجا هم OG Image
   },
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={inter.className}>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-      </head>
-      <body className="bg-slate-900 text-white antialiased overflow-x-hidden min-h-dvh">
+    <html lang="en">
+      <body className={`${inter.className} antialiased`}>
         <Navbar />
         {children}
+        <Footer />
       </body>
     </html>
   );
