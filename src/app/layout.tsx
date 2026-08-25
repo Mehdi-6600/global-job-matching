@@ -82,6 +82,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.className}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className="bg-slate-900 text-white antialiased overflow-x-hidden min-h-dvh">
         <Navbar />
         {children}
