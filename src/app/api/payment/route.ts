@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { z } from "zod";
 
 const paymentSchema = z.object({
@@ -31,9 +31,9 @@ export async function POST(req: Request) {
     const amount = PLAN_PRICES[planId];
 
     if (amount === 0) {
-      await prisma.user.update({
+      await db.user.update({
         where: { id: session.user.id },
-        data: { plan: planId },
+n        data: { plan: planId },
       });
       return NextResponse.json({ success: true, message: "Free plan activated" });
     }
