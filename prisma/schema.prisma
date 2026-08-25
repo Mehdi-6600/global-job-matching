@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── NextAuth Models ──────────────────────────────────────────
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -37,6 +39,16 @@ model Session {
   @@index([userId])
 }
 
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core Models ──────────────────────────────────────────────
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -54,14 +66,19 @@ model User {
   companies     Company[]
   jobs          Job[]         @relation("PostedBy")
   transactions  Transaction[]
-}
+  applications  Application[]
+  notifications Notification[]
+  messages      Message[]     @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
+  interviews    Interview[]
+  savedJobs     SavedJob[]
+  jobAlerts     JobAlert[]
+  profile       Profile?
+  blogPosts     BlogPost[]
+  subscribers   Subscriber[]
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  @@index([email])
+  @@index([role])
 }
 
 model Company {
@@ -73,6 +90,7 @@ model Company {
   logo        String?
   ownerId     String?
   email       String?
+  status      String   @default("active")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
@@ -80,6 +98,7 @@ model Company {
   jobs  Job[]
 
   @@index([ownerId])
+  @@index([status])
 }
 
 model Job {
@@ -89,18 +108,24 @@ model Job {
   location    String
   salary      String?
   type        String
+  category    String?
+  status      String   @default("active")
   viewCount   Int      @default(0)
   companyId   String?
   postedById  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
-  company  Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  postedBy User?    @relation("PostedBy", fields: [postedById], references: [id], onDelete: Cascade)
+  company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  postedBy     User?         @relation("PostedBy", fields: [postedById], references: [id], onDelete: Cascade)
+  applications Application[]
+  savedJobs    SavedJob[]
 
   @@index([companyId])
   @@index([postedById])
   @@index([createdAt])
+  @@index([status])
+  @@index([category])
 }
 
 model Transaction {
@@ -133,4 +158,173 @@ model PasswordResetToken {
 
   @@index([email])
   @@index([tokenHash])
+}
+
+// ─── Application & Hiring ─────────────────────────────────────
+
+model Application {
+  id          String   @id @default(cuid())
+  userId      String
+  jobId       String
+  status      String   @default("pending")
+  coverLetter String?  @db.Text
+  resume      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@index([status])
+}
+
+model Interview {
+  id          String   @id @default(cuid())
+  userId      String
+  jobId       String
+  companyId   String
+  scheduledAt DateTime
+  status      String   @default("scheduled")
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── Communication ──────────────────────────────────────────
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String   @db.Text
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([read])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  type      String   @default("general")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+}
+
+// ─── User Features ────────────────────────────────────────────
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+}
+
+model JobAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  keywords  String?
+  location  String?
+  type      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Profile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  bio        String?  @db.Text
+  skills     String?
+  experience String?  @db.Text
+  education  String?  @db.Text
+  resumeUrl  String?
+  phone      String?
+  location   String?
+  linkedin   String?
+  github     String?
+  portfolio  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Content ──────────────────────────────────────────────────
+
+model BlogPost {
+  id         String   @id @default(cuid())
+  title      String
+  slug       String   @unique
+  content    String   @db.Text
+  excerpt    String?
+  coverImage String?
+  published  Boolean  @default(false)
+  authorId   String
+  category   String?
+  tags       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([published])
+  @@index([slug])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  active    Boolean  @default(true)
+  userId    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  createdAt DateTime @default(now())
+
+  @@index([slug])
 }
