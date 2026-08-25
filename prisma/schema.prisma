@@ -29,7 +29,8 @@ model User {
   notifications Notification[]
   profile       Profile?
   transactions  Transaction[]
-  companies     Company[]   // ✅ جدید
+  companies     Company[]
+  jobAlerts     JobAlert[]
 }
 
 model Profile {
@@ -57,13 +58,13 @@ model Company {
   description String?  @db.Text
   logo        String?
   status      String   @default("pending")
-  ownerId     String?  // ✅ جدید
-  owner       User?    @relation(fields: [ownerId], references: [id]) // ✅ جدید
+  ownerId     String?
+  owner       User?    @relation(fields: [ownerId], references: [id])
   createdAt   DateTime @default(now())
 
   jobs        Job[]
 
-  @@index([ownerId]) // ✅ جدید
+  @@index([ownerId])
 }
 
 model Category {
@@ -91,7 +92,7 @@ model Job {
   responsibilities String[]
   benefits         String[]
   tags             String[]
-  status           String   @default("pending") // ✅ تغییر از active به pending
+  status           String   @default("pending")
   deadline         DateTime?
   viewCount        Int      @default(0)
   applicantCount   Int      @default(0)
@@ -159,13 +160,30 @@ model Notification {
 }
 
 model Transaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  planId        String   @default("free")
+  status        String   @default("pending")
+  amount        Int?
+  currency      String   @default("USD")
+  txHash        String?
+  paymentMethod String   @default("stripe")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model JobAlert {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  planId    String   @default("free")
-  status    String   @default("pending")
-  amount    Int?
-  currency  String   @default("USD")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keywords  String?
+  location  String?
+  remote    Boolean?
+  type      String?
+  minSalary Int?
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
