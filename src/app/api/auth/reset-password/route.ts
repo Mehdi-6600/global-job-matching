@@ -1,65 +1,71 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createHmac } from "crypto";
-import { hash } from "bcryptjs";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
-function verifyResetToken(token: string): string | null {
+async function sendResetEmail(email: string, resetUrl: string) {
+  console.log(`[RESET EMAIL] To: ${email} | Link: ${resetUrl}`);
+}
+
+export async function POST(req: Request) {
   try {
-    const decoded = Buffer.from(token, "base64url").toString("utf-8");
-    const [userId, timestamp, hmac] = decoded.split(":");
-    if (!userId || !timestamp || !hmac) return null;
+    const { email } = await req.json();
+    if (!email || !email.includes("@")) {
+      return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+    }
 
-    // Check expiry (1 hour)
-    if (Date.now() - parseInt(timestamp) > 60 * 60 * 1000) return null;
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    if (!user) {
+      return NextResponse.json({ success: true, message: "If email exists, reset link sent" });
+    }
 
-    const data = `${userId}:${timestamp}`;
-    const expectedHmac = createHmac("sha256", process.env.AUTH_SECRET!)
-      .update(data)
-      .digest("hex");
-    if (hmac !== expectedHmac) return null;
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-    return userId;
-  } catch {
-    return null;
+    await prisma.passwordResetToken.create({
+      data: { email: user.email, tokenHash, expiresAt },
+    });
+
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://global-job-matching.vercel.app"}/reset-password?token=${token}`;
+    await sendResetEmail(user.email, resetUrl);
+
+    return NextResponse.json({ success: true, message: "If email exists, reset link sent" });
+  } catch (error) {
+    console.error("Reset password request error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function PATCH(req: Request) {
   try {
     const { token, password } = await req.json();
-
     if (!token || !password || password.length < 8) {
-      return NextResponse.json(
-        { error: "Token and password (min 8 chars) required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Token and password (min 8 chars) required" }, { status: 400 });
     }
 
-    const userId = verifyResetToken(token);
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Invalid or expired token" },
-        { status: 400 }
-      );
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+
+    if (!resetToken) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
+    }
+    if (resetToken.usedAt) {
+      return NextResponse.json({ error: "Token already used" }, { status: 400 });
+    }
+    if (new Date() > resetToken.expiresAt) {
+      return NextResponse.json({ error: "Token expired" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 400 });
-    }
+    const hashedPassword = await bcrypt.hash(password, 12);
+    await prisma.$transaction([
+      prisma.user.update({ where: { email: resetToken.email }, data: { password: hashedPassword } }),
+      prisma.passwordResetToken.update({ where: { tokenHash }, data: { usedAt: new Date() } }),
+    ]);
 
-    const hashedPassword = await hash(password, 12);
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
-    });
-
-    return NextResponse.json(
-      { message: "Password updated successfully" },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, message: "Password reset successfully" });
   } catch (error) {
-    console.error("Reset password error:", error);
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+    console.error("Reset password confirm error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
