@@ -1,8 +1,14 @@
 import { PrismaClient } from "@prisma/client";
-import { ROLES } from "@/lib/roles";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+const ROLES = {
+  OWNER: "OWNER",
+  ADMIN: "ADMIN",
+  EMPLOYER: "EMPLOYER",
+  JOB_SEEKER: "JOB_SEEKER",
+};
 
 async function main() {
   const adminPass = await bcrypt.hash("admin123", 12);
@@ -45,7 +51,7 @@ async function main() {
     },
   });
 
-  console.log("Seed completed with standardized roles");
+  console.log("Seed completed");
 }
 
 main()
