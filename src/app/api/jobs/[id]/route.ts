@@ -25,9 +25,12 @@ function canIncrementView(ip: string, jobId: string): boolean {
   return true;
 }
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = params;
+    const { id } = await params;
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
     const job = await db.job.findUnique({
@@ -53,12 +56,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { id } = params;
+    const { id } = await params;
     const job = await db.job.findUnique({ where: { id }, include: { company: true } });
     if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -75,12 +81,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { id } = params;
+    const { id } = await params;
     const job = await db.job.findUnique({ where: { id }, include: { company: true } });
     if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
