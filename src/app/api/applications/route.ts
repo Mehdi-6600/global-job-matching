@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { z } from "zod";
-import { ratelimit } from "@/lib/ratelimit";
+import { db } from "@/lib/db";
 
-const applySchema = z.object({
-  jobId: z.string().min(1),
-  coverLetter: z.string().max(5000).optional(),
-});
-
-// ✅ GET — درخواست‌های کاربر لاگین‌شده را برمی‌گرداند
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -17,118 +9,106 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const { success } = await ratelimit.limit(
-      `applications_get_${session.user.id}_${ip}`
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get("status");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "10")));
+    const skip = (page - 1) * limit;
+
+    const where: any = { userId: session.user.id };
+    if (status) where.status = status;
+
+    const [applications, total] = await Promise.all([
+      db.application.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              location: true,
+              salary: true,
+              type: true,
+              category: true,
+              company: {
+                select: { id: true, name: true, logo: true, location: true },
+              },
+            },
+          },
+        },
+      }),
+      db.application.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      applications,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (error: any) {
+    console.error("Fetch applications error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to fetch applications" },
+      { status: 500 }
     );
-    if (!success) {
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { jobId, coverLetter, resume } = await req.json();
+
+    if (!jobId) {
+      return NextResponse.json({ error: "Job ID is required" }, { status: 400 });
+    }
+
+    const existing = await db.application.findUnique({
+      where: { userId_jobId: { userId: session.user.id, jobId } },
+    });
+
+    if (existing) {
       return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
+        { error: "You have already applied for this job" },
+        { status: 409 }
       );
     }
 
-    const applications = await prisma.application.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" },
+    const application = await db.application.create({
+      data: {
+        userId: session.user.id,
+        jobId,
+        coverLetter: coverLetter || null,
+        resume: resume || null,
+      },
       include: {
         job: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            location: true,
+            salary: true,
+            type: true,
+            category: true,
             company: {
               select: { id: true, name: true, logo: true, location: true },
-            },
-            category: {
-              select: { id: true, name: true, slug: true, color: true },
             },
           },
         },
       },
     });
 
-    return NextResponse.json({ applications, count: applications.length });
+    return NextResponse.json({ success: true, application });
   } catch (error: any) {
-    console.error("Applications fetch error:", error);
+    console.error("Create application error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch applications" },
-      { status: 500 }
-    );
-  }
-}
-
-// ✅ POST — ثبت درخواست جدید
-export async function POST(req: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized. Please sign in." },
-        { status: 401 }
-      );
-    }
-
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const { success } = await ratelimit.limit(
-      `apply_${session.user.id}_${ip}`
-    );
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many applications. Please try again later." },
-        { status: 429 }
-      );
-    }
-
-    const body = await req.json();
-    const result = applySchema.safeParse(body);
-    if (!result.success) {
-      return NextResponse.json(
-        { error: "Invalid input", details: result.error.issues },
-        { status: 400 }
-      );
-    }
-
-    const { jobId, coverLetter } = result.data;
-
-    const job = await prisma.job.findUnique({
-      where: { id: jobId, status: "active" },
-    });
-    if (!job) {
-      return NextResponse.json(
-        { error: "Job not found or no longer active." },
-        { status: 404 }
-      );
-    }
-
-    const application = await prisma.application.create({
-      data: {
-        userId: session.user.id,
-        jobId: jobId,
-        coverLetter: coverLetter || null,
-        status: "applied",
-      },
-    });
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { applicantCount: { increment: 1 } },
-    });
-
-    return NextResponse.json(
-      { success: true, application },
-      { status: 201 }
-    );
-  } catch (error: any) {
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        { error: "You have already applied for this job." },
-        { status: 409 }
-      );
-    }
-
-    console.error("Application error:", error);
-    return NextResponse.json(
-      { error: "Failed to submit application." },
+      { error: error.message || "Failed to apply" },
       { status: 500 }
     );
   }
