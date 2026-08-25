@@ -1,67 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ratelimit } from "@/lib/ratelimit";
+import { z } from "zod";
 
-export async function GET(req: NextRequest) {
+const querySchema = z.object({
+  page: z.coerce.number().min(1).max(1000).default(1),
+  limit: z.coerce.number().min(1).max(100).default(10),
+  search: z.string().max(100).optional(),
+  location: z.string().max(100).optional(),
+  type: z.string().max(50).optional(),
+});
+
+export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const search = searchParams.get("search") || "";
-    const location = searchParams.get("location") || "";
-    const type = searchParams.get("type") || "";
-    const experience = searchParams.get("experience") || "";
-    const remote = searchParams.get("remote");
-    const minSalary = searchParams.get("minSalary");
-    const maxSalary = searchParams.get("maxSalary");
-    const tag = searchParams.get("tag") || "";
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "12");
+    const params = Object.fromEntries(searchParams.entries());
 
-    const ip = req.headers.get("x-forwarded-for") || "anonymous";
-    const { success } = await ratelimit.limit(`jobs:${ip}`);
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    const result = querySchema.safeParse(params);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Invalid query", details: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const where: any = { status: "active" };
+    const { page, limit, search, location, type } = result.data;
+    const skip = (page - 1) * limit;
 
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { tags: { has: search } },
-      ];
-    }
-
+    const where: any = {};
+    if (search) where.title = { contains: search, mode: "insensitive" };
     if (location) where.location = { contains: location, mode: "insensitive" };
     if (type) where.type = type;
-    if (experience) where.experience = experience;
-    if (remote === "true") where.remote = true;
-    if (minSalary) where.salaryMin = { gte: parseInt(minSalary) };
-    if (maxSalary) where.salaryMax = { lte: parseInt(maxSalary) };
-    if (tag) where.tags = { has: tag };
-
-    const skip = (page - 1) * limit;
 
     const [jobs, total] = await Promise.all([
       prisma.job.findMany({
         where,
-        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        include: {
-          company: { select: { id: true, name: true, logo: true, location: true } },
-          category: { select: { name: true, slug: true } },
-        },
+        orderBy: { createdAt: "desc" },
+        include: { company: { select: { id: true, name: true, logo: true } } },
       }),
       prisma.job.count({ where }),
     ]);
 
     return NextResponse.json({
       jobs,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
-    console.error("Fetch jobs error:", error);
-    return NextResponse.json({ error: "Failed to fetch jobs" }, { status: 500 });
+    console.error("Jobs fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
