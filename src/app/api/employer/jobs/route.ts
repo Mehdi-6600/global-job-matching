@@ -48,16 +48,32 @@ export async function POST(req: NextRequest) {
     const alerts = await prisma.jobAlert.findMany({
       where: {
         active: true,
-        OR: [
-          { keywords: null },
-          { keywords: { contains: body.title, mode: "insensitive" } },
+        AND: [
+          {
+            OR: [
+              { keywords: null },
+              { keywords: { contains: body.title, mode: "insensitive" } },
+            ],
+          },
+          {
+            OR: [
+              { location: null },
+              { location: { contains: body.location, mode: "insensitive" } },
+            ],
+          },
+          {
+            OR: [
+              { remote: null },
+              { remote: body.remote },
+            ],
+          },
+          {
+            OR: [
+              { type: null },
+              { type: body.type },
+            ],
+          },
         ],
-        OR: [
-          { location: null },
-          { location: { contains: body.location, mode: "insensitive" } },
-        ],
-        OR: [{ remote: null }, { remote: body.remote }],
-        OR: [{ type: null }, { type: body.type }],
       },
     });
 
