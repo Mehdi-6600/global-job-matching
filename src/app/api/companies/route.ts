@@ -1,54 +1,65 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { ratelimit } from "@/lib/ratelimit";
+import { ROLES } from "@/lib/roles";
 
-export async function GET(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const { success } = await ratelimit.limit(`companies_${ip}`);
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
-      );
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (![ROLES.EMPLOYER, ROLES.ADMIN, ROLES.OWNER].includes(session.user.role as any)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { searchParams } = req.nextUrl;
-    const search = searchParams.get("search") || "";
+    const body = await req.json();
+    const { name, description, location, website } = body;
 
-    const where: any = { status: { not: "blocked" } };
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { location: { contains: search, mode: "insensitive" } },
-      ];
+    if (!name || typeof name !== "string" || name.trim().length < 2) {
+      return NextResponse.json({ error: "Valid company name required" }, { status: 400 });
     }
 
-    const companies = await prisma.company.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        jobs: {
-          where: { status: "active" },
-          select: { id: true },
-        },
+    const company = await prisma.company.create({
+      data: {
+        name: name.trim(),
+        description: description || null,
+        location: location || null,
+        website: website || null,
+        ownerId: session.user.id,
+        email: session.user.email || null,
       },
     });
 
-    const result = companies.map((c) => ({
-      ...c,
-      activeJobs: c.jobs.length,
-    }));
+    return NextResponse.json({ success: true, company });
+  } catch (error) {
+    console.error("Company create error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
 
-    return NextResponse.json({ companies: result, count: result.length });
-  } catch (error: any) {
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10")));
+    const skip = (page - 1) * limit;
+
+    const [companies, total] = await Promise.all([
+      prisma.company.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: { owner: { select: { id: true, name: true } } },
+      }),
+      prisma.company.count(),
+    ]);
+
+    return NextResponse.json({
+      companies,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
     console.error("Companies fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch companies" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
