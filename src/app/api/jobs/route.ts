@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { z } from "zod";
 
 const querySchema = z.object({
@@ -32,14 +32,14 @@ export async function GET(req: Request) {
     if (type) where.type = type;
 
     const [jobs, total] = await Promise.all([
-      prisma.job.findMany({
+      db.job.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
         include: { company: { select: { id: true, name: true, logo: true } } },
       }),
-      prisma.job.count({ where }),
+      db.job.count({ where }),
     ]);
 
     return NextResponse.json({
