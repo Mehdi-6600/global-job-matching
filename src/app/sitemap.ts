@@ -6,7 +6,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const [jobs, companies] = await Promise.all([
     prisma.job.findMany({ where: { status: "active" }, select: { id: true, updatedAt: true } }),
-    prisma.company.findMany({ where: { status: "active" }, select: { id: true, updatedAt: true } }),
+    prisma.company.findMany({ where: { status: "active" }, select: { id: true, createdAt: true } }),
   ]);
 
   const staticRoutes = [
@@ -27,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const companyRoutes = companies.map((company) => ({
     url: `${baseUrl}/companies/${company.id}`,
-    lastModified: company.updatedAt,
+    lastModified: company.createdAt,
     changeFrequency: "weekly" as const,
     priority: 0.6,
   }));
