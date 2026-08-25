@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     if (amount === 0) {
       await db.user.update({
         where: { id: session.user.id },
-n        data: { plan: planId },
+        data: { plan: planId },
       });
       return NextResponse.json({ success: true, message: "Free plan activated" });
     }
