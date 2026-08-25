@@ -1,40 +1,75 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { ROLES } from "@/lib/roles";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
-
+    const { id } = params;
     const company = await prisma.company.findUnique({
       where: { id },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        email: true,
-        website: true,
-        location: true,
-        size: true,
-        description: true,
-        logo: true,
-        status: true,
-        createdAt: true,
+      include: {
+        owner: { select: { id: true, name: true } },
+        jobs: { take: 10, orderBy: { createdAt: "desc" } },
       },
     });
 
-    if (!company) {
-      return NextResponse.json({ error: "Company not found" }, { status: 404 });
-    }
-
+    if (!company) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ company });
-  } catch (error: any) {
-    console.error("Company fetch error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch company" },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error("Company get error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = params;
+    const company = await prisma.company.findUnique({ where: { id } });
+    if (!company) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const isOwner = company.ownerId === session.user.id;
+    const isAdmin = session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER;
+    if (!isOwner && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const body = await req.json();
+    const updated = await prisma.company.update({
+      where: { id },
+      data: {
+        ...(body.name && { name: body.name.trim() }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.location !== undefined && { location: body.location }),
+        ...(body.website !== undefined && { website: body.website }),
+      },
+    });
+
+    return NextResponse.json({ success: true, company: updated });
+  } catch (error) {
+    console.error("Company patch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = params;
+    const company = await prisma.company.findUnique({ where: { id } });
+    if (!company) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const isOwner = company.ownerId === session.user.id;
+    const isAdmin = session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER;
+    if (!isOwner && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    await prisma.company.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Company delete error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
