@@ -1,47 +1,34 @@
+import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { ROLES } from "@/lib/roles";
 
-const protectedPaths = [
-  "/admin",
-  "/employer",
-  "/dashboard",
-  "/settings",
-  "/messages",
-  "/my-applications",
-  "/saved-jobs",
-  "/my-interviews",
-  "/job-alerts",
-];
+const PUBLIC_ROUTES = ["/", "/jobs", "/pricing", "/about", "/contact", "/terms", "/privacy", "/companies"];
+const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export default auth((req) => {
+  const { nextUrl } = req;
+  const isLoggedIn = !!req.auth;
+  const userRole = req.auth?.user?.role as string | undefined;
+  const path = nextUrl.pathname;
 
-  const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
-  if (!isProtected) return NextResponse.next();
+  if (path.startsWith("/api/auth")) return NextResponse.next();
+  if (PUBLIC_ROUTES.includes(path)) return NextResponse.next();
+  if (path.startsWith("/_next") || path === "/favicon.ico") return NextResponse.next();
 
-  const token =
-    request.cookies.get("next-auth.session-token")?.value ||
-    request.cookies.get("__Secure-next-auth.session-token")?.value;
+  if (AUTH_ROUTES.includes(path)) {
+    if (isLoggedIn) return NextResponse.redirect(new URL("/dashboard", nextUrl));
+    return NextResponse.next();
+  }
 
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (!isLoggedIn) return NextResponse.redirect(new URL("/login", nextUrl));
+
+  if (path.startsWith("/dashboard/admin") && userRole !== ROLES.ADMIN && userRole !== ROLES.OWNER) {
+    return NextResponse.redirect(new URL("/dashboard", nextUrl));
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: [
-    "/admin/:path*",
-    "/employer/:path*",
-    "/dashboard/:path*",
-    "/settings",
-    "/messages/:path*",
-    "/my-applications",
-    "/saved-jobs",
-    "/my-interviews",
-    "/job-alerts",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\\\.).*)"],
 };
