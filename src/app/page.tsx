@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Globe, Zap, Bell, Headphones } from "lucide-react";
+import Newsletter from "./components/Newsletter";
 
 export default function HomePage() {
   return (
@@ -18,7 +19,6 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-3.5">
-            {/* دکمه اصلی - برجسته */}
             <Link
               href="/jobs"
               className="px-8 py-4 rounded-full bg-[#3478F5] text-white font-semibold text-[15px]
@@ -31,7 +31,6 @@ export default function HomePage() {
               Browse Jobs
             </Link>
 
-            {/* دکمه ثانویه - برجسته */}
             <Link
               href="/register"
               className="px-8 py-4 rounded-full font-semibold text-[15px]
@@ -51,7 +50,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats - کارت‌های برجسته */}
+      {/* Stats */}
       <section className="px-5 pb-14">
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
@@ -129,6 +128,13 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="px-5 pb-24">
+        <div className="max-w-4xl mx-auto">
+          <Newsletter />
         </div>
       </section>
     </main>
