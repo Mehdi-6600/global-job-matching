@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
 
 const viewTracker = new Map<string, { count: number; resetAt: number }>();
@@ -30,7 +30,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const { id } = params;
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-    const job = await prisma.job.findUnique({
+    const job = await db.job.findUnique({
       where: { id },
       include: {
         company: { select: { id: true, name: true, location: true, logo: true } },
@@ -42,7 +42,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     const ip = getClientIp(req);
     if (canIncrementView(ip, id)) {
-      await prisma.job.update({ where: { id }, data: { viewCount: { increment: 1 } } });
+      await db.job.update({ where: { id }, data: { viewCount: { increment: 1 } } });
       job.viewCount += 1;
     }
 
@@ -59,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = params;
-    const job = await prisma.job.findUnique({ where: { id }, include: { company: true } });
+    const job = await db.job.findUnique({ where: { id }, include: { company: true } });
     if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const isOwner = job.company?.ownerId === session.user.id;
@@ -67,7 +67,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!isOwner && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
-    const updated = await prisma.job.update({ where: { id }, data: body });
+    const updated = await db.job.update({ where: { id }, data: body });
     return NextResponse.json({ success: true, job: updated });
   } catch (error) {
     console.error("Job patch error:", error);
@@ -81,14 +81,14 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = params;
-    const job = await prisma.job.findUnique({ where: { id }, include: { company: true } });
+    const job = await db.job.findUnique({ where: { id }, include: { company: true } });
     if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const isOwner = job.company?.ownerId === session.user.id;
     const isAdmin = session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER;
     if (!isOwner && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    await prisma.job.delete({ where: { id } });
+    await db.job.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Job delete error:", error);
