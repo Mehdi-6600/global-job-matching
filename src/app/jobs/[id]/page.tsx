@@ -11,7 +11,6 @@ import {
   Briefcase,
   Building2,
   Heart,
-  Share2,
   Globe,
   Calendar,
   Users,
@@ -22,6 +21,7 @@ import {
   Wifi,
   AlertCircle,
 } from "lucide-react";
+import ShareButtons from "../../components/ShareButtons";
 
 interface JobDetail {
   id: string;
@@ -97,6 +97,13 @@ export default function JobDetailPage() {
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState("");
   const [applySuccess, setApplySuccess] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setShareUrl(window.location.href);
+    }
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -124,23 +131,6 @@ export default function JobDetailPage() {
 
   const handleSave = () => {
     setSaved(!saved);
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: job?.title || "Job on GlobalJob",
-          text: `Check out this job: ${job?.title} at ${job?.company.name}`,
-          url: window.location.href,
-        });
-      } catch {
-        // user cancelled
-      }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert("Link copied to clipboard!");
-    }
   };
 
   const handleApply = async (e: React.FormEvent) => {
@@ -214,7 +204,6 @@ export default function JobDetailPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* Back Link */}
         <Link
           href="/jobs"
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
@@ -224,9 +213,7 @@ export default function JobDetailPage() {
         </Link>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Main Content */}
           <div className="flex-1 min-w-0 space-y-6">
-            {/* Header Card */}
             <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                 <div className="flex items-start gap-4">
@@ -273,17 +260,9 @@ export default function JobDetailPage() {
                       fill={saved ? "currentColor" : "none"}
                     />
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleShare}
-                    className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
-                  >
-                    <Share2 className="w-5 h-5" />
-                  </button>
                 </div>
               </div>
 
-              {/* Meta Badges */}
               <div className="flex flex-wrap gap-2 mb-6">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs sm:text-sm">
                   <MapPin className="w-3.5 h-3.5 text-slate-400" />
@@ -309,22 +288,28 @@ export default function JobDetailPage() {
                 </span>
               </div>
 
-              {/* Apply Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setApplyOpen(true);
-                  setApplySuccess(false);
-                  setApplyError("");
-                }}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all active:scale-[0.98]"
-              >
-                <Send className="w-4 h-4" />
-                Apply Now
-              </button>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApplyOpen(true);
+                    setApplySuccess(false);
+                    setApplyError("");
+                  }}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all active:scale-[0.98]"
+                >
+                  <Send className="w-4 h-4" />
+                  Apply Now
+                </button>
+                {shareUrl && (
+                  <ShareButtons
+                    title={`${job.title} at ${job.company.name}`}
+                    url={shareUrl}
+                  />
+                )}
+              </div>
             </div>
 
-            {/* Description */}
             <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-cyan-400" />
@@ -335,7 +320,6 @@ export default function JobDetailPage() {
               </div>
             </div>
 
-            {/* Requirements */}
             {job.requirements.length > 0 && (
               <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
                 <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -355,7 +339,6 @@ export default function JobDetailPage() {
               </div>
             )}
 
-            {/* Responsibilities */}
             {job.responsibilities.length > 0 && (
               <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
                 <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -375,7 +358,6 @@ export default function JobDetailPage() {
               </div>
             )}
 
-            {/* Benefits */}
             {job.benefits.length > 0 && (
               <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
                 <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -396,7 +378,6 @@ export default function JobDetailPage() {
               </div>
             )}
 
-            {/* Tags */}
             {job.tags.length > 0 && (
               <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
                 <h2 className="text-lg font-bold text-white mb-4">Skills & Tags</h2>
@@ -416,9 +397,7 @@ export default function JobDetailPage() {
             )}
           </div>
 
-          {/* Sidebar */}
           <div className="lg:w-80 shrink-0 space-y-6">
-            {/* Company Card */}
             <div className="glass rounded-2xl p-6 border border-white/10 sticky top-24">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-cyan-400" />
@@ -465,7 +444,6 @@ export default function JobDetailPage() {
               </Link>
             </div>
 
-            {/* Job Meta Card */}
             <div className="glass rounded-2xl p-6 border border-white/10">
               <h3 className="text-white font-semibold mb-4 text-sm">Job Overview</h3>
               <div className="space-y-4">
@@ -507,7 +485,6 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* Apply Modal */}
       {applyOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
