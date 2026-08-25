@@ -10,7 +10,20 @@ export async function sendContactMessage(formData: FormData) {
     return { success: false, error: "All fields are required" };
   }
 
-  console.log("Contact form submission:", { name, email, subject, message });
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, subject, message }),
+    });
 
-  return { success: true };
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.error || "Failed to send" };
+    }
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "Network error" };
+  }
 }
