@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { z } from "zod";
 
 const cryptoSchema = z.object({
@@ -31,12 +31,12 @@ export async function POST(req: Request) {
     const { planId, txHash, cryptoType } = result.data;
     const expectedAmount = PLAN_PRICES[planId];
 
-    const existingTx = await prisma.transaction.findUnique({ where: { txHash } });
+    const existingTx = await db.transaction.findUnique({ where: { txHash } });
     if (existingTx) {
       return NextResponse.json({ error: "Transaction hash already used" }, { status: 409 });
     }
 
-    const transaction = await prisma.transaction.create({
+    const transaction = await db.transaction.create({
       data: {
         userId: session.user.id,
         planId,
