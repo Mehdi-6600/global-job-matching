@@ -7,374 +7,320 @@ import {
   Zap,
   Building2,
   Crown,
-  MessageCircle,
-  ArrowRight,
-  Sparkles,
-  Shield,
-  Globe,
-  Users,
-  Briefcase,
-  BarChart3,
-  Mail,
+  Bitcoin,
+  Loader2,
+  Copy,
+  CheckCircle2,
+  ArrowLeft,
 } from "lucide-react";
 
 const plans = [
   {
+    id: "free",
     name: "Free",
-    icon: <Zap className="w-6 h-6 text-slate-300" />,
-    price: "€0",
-    period: "/month",
-    description: "Perfect for job seekers getting started.",
-    href: "/register",
-    buttonText: "Get Started",
+    price: { monthly: 0, yearly: 0 },
+    description: "For job seekers getting started",
+    features: ["Apply to 5 jobs/month", "Basic profile", "Email alerts", "Standard support"],
+    icon: <Zap className="w-6 h-6" />,
+    color: "from-slate-500 to-slate-400",
     popular: false,
-    features: [
-      "Browse all jobs",
-      "Apply to 5 jobs/month",
-      "Create profile & upload CV",
-      "Save up to 10 jobs",
-      "Basic job alerts",
-      "Email support",
-    ],
-    disabled: [],
   },
   {
+    id: "pro",
     name: "Pro",
-    icon: <Sparkles className="w-6 h-6 text-cyan-400" />,
-    price: "€9",
-    period: "/month",
-    description: "For serious job seekers who want more.",
-    href: "/register?plan=pro",
-    buttonText: "Upgrade to Pro",
+    price: { monthly: 9, yearly: 90 },
+    description: "For active job seekers",
+    features: ["Unlimited applications", "Featured profile", "Priority alerts", "Resume review", "Chat support"],
+    icon: <Zap className="w-6 h-6" />,
+    color: "from-indigo-500 to-purple-500",
     popular: true,
-    features: [
-      "Unlimited job applications",
-      "Priority application badge",
-      "AI resume optimization",
-      "Save unlimited jobs",
-      "Advanced job alerts",
-      "Salary insights",
-      "Profile analytics",
-      "Priority email support",
-    ],
-    disabled: [],
   },
   {
+    id: "business",
     name: "Business",
-    icon: <Building2 className="w-6 h-6 text-purple-400" />,
-    price: "€29",
-    period: "/month",
-    description: "For employers & recruiters.",
-    href: "/register?plan=business",
-    buttonText: "Upgrade to Business",
+    price: { monthly: 29, yearly: 290 },
+    description: "For employers & recruiters",
+    features: ["Post 10 jobs/month", "Applicant tracking", "Company profile", "Analytics dashboard", "Priority support"],
+    icon: <Building2 className="w-6 h-6" />,
+    color: "from-cyan-500 to-blue-500",
     popular: false,
-    features: [
-      "Post up to 10 active jobs",
-      "Applicant tracking system",
-      "Company profile page",
-      "Candidate messaging",
-      "Job analytics dashboard",
-      "Featured job listings",
-      "Resume database access",
-      "Dedicated support",
-    ],
-    disabled: [],
   },
   {
+    id: "enterprise",
     name: "Enterprise",
-    icon: <Crown className="w-6 h-6 text-amber-400" />,
-    price: "Custom",
-    period: "",
-    description: "For large organizations with custom needs.",
-    href: "/contact",
-    buttonText: "Contact Sales",
+    price: { monthly: 99, yearly: 990 },
+    description: "For large organizations",
+    features: ["Unlimited job posts", "ATS integration", "API access", "Dedicated manager", "Custom branding"],
+    icon: <Crown className="w-6 h-6" />,
+    color: "from-amber-500 to-orange-500",
     popular: false,
-    features: [
-      "Unlimited job postings",
-      "Custom ATS integration",
-      "API access",
-      "White-label options",
-      "Advanced analytics",
-      "Dedicated account manager",
-      "SSO & team management",
-      "SLA guarantee",
-    ],
-    disabled: [],
   },
 ];
 
-const comparisonFeatures = [
-  { name: "Job Applications", free: "5/month", pro: "Unlimited", business: "Unlimited", enterprise: "Unlimited" },
-  { name: "Saved Jobs", free: "10", pro: "Unlimited", business: "Unlimited", enterprise: "Unlimited" },
-  { name: "Profile & CV", free: true, pro: true, business: true, enterprise: true },
-  { name: "Job Alerts", free: "Basic", pro: "Advanced", business: "Advanced", enterprise: "Custom" },
-  { name: "AI Resume Help", free: false, pro: true, business: true, enterprise: true },
-  { name: "Apply Badge", free: false, pro: "Priority", business: "Priority", enterprise: "Priority" },
-  { name: "Post Jobs", free: false, pro: false, business: "10 active", enterprise: "Unlimited" },
-  { name: "ATS / Pipeline", free: false, pro: false, business: true, enterprise: true },
-  { name: "Analytics", free: false, pro: "Basic", business: "Advanced", enterprise: "Full" },
-  { name: "Support", free: "Email", pro: "Priority", business: "Dedicated", enterprise: "Account Manager" },
-];
-
-const faqs = [
-  {
-    q: "Can I switch plans anytime?",
-    a: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.",
-  },
-  {
-    q: "Is there a free trial for paid plans?",
-    a: "We offer a 7-day free trial for Pro and Business plans. No credit card required.",
-  },
-  {
-    q: "What payment methods do you accept?",
-    a: "We accept credit cards, PayPal, and cryptocurrency. More options coming soon.",
-  },
-  {
-    q: "Can I cancel my subscription?",
-    a: "Absolutely. You can cancel anytime from your dashboard settings with no hidden fees.",
-  },
+const cryptoWallets = [
+  { type: "BTC", name: "Bitcoin", address: "bc1qxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" },
+  { type: "ETH", name: "Ethereum", address: "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
+  { type: "USDT", name: "USDT (TRC20)", address: "TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
 ];
 
 export default function PricingPage() {
-  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
+  const [yearly, setYearly] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [cryptoType, setCryptoType] = useState("USDT");
+  const [txHash, setTxHash] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const plan = plans.find((p) => p.id === selectedPlan);
+
+  async function submitCrypto(e: React.FormEvent) {
+    e.preventDefault();
+    if (!plan || !txHash.trim()) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/crypto-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: plan.id,
+          amount: yearly ? plan.price.yearly : plan.price.monthly,
+          currency: "USD",
+          txHash: txHash.trim(),
+          cryptoType,
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        setTxHash("");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function copyAddress() {
+    const wallet = cryptoWallets.find((w) => w.type === cryptoType);
+    if (wallet) {
+      navigator.clipboard.writeText(wallet.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium mb-6">
-            <Sparkles className="w-4 h-4" />
-            Simple, transparent pricing
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Choose Your Plan
-          </h1>
-          <p className="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">
-            Start free and scale as you grow. No hidden fees, cancel anytime.
+          <h1 className="text-4xl font-bold text-white mb-4">Simple, Transparent Pricing</h1>
+          <p className="text-slate-400 max-w-2xl mx-auto mb-8">
+            Choose the plan that fits your needs. Upgrade or downgrade anytime.
           </p>
 
-          {/* Billing Toggle */}
-          <div className="mt-8 inline-flex items-center gap-3 p-1.5 rounded-2xl bg-white/5 border border-white/10">
+          <div className="inline-flex items-center gap-2 p-1 rounded-xl bg-white/5 border border-white/10">
             <button
-              type="button"
-              onClick={() => setBilling("monthly")}
-              className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
-                billing === "monthly"
-                  ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/25"
-                  : "text-slate-400 hover:text-white"
+              onClick={() => setYearly(false)}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                !yearly ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"
               }`}
             >
               Monthly
             </button>
             <button
-              type="button"
-              onClick={() => setBilling("yearly")}
-              className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
-                billing === "yearly"
-                  ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/25"
-                  : "text-slate-400 hover:text-white"
+              onClick={() => setYearly(true)}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                yearly ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"
               }`}
             >
-              Yearly
-              <span className="ml-1.5 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
-                Save 20%
-              </span>
+              Yearly <span className="text-xs opacity-80">Save 20%</span>
             </button>
           </div>
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-20">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative glass rounded-2xl p-6 border transition-all hover:-translate-y-1 ${
-                plan.popular
-                  ? "border-cyan-500/30 shadow-lg shadow-cyan-500/10"
-                  : "border-white/10 hover:border-white/20"
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-[10px] font-bold uppercase tracking-wider">
-                  Most Popular
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 mb-4">
+        {!selectedPlan ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`glass rounded-2xl p-6 border transition-all relative ${
+                  plan.popular
+                    ? "border-indigo-500/30 hover:border-indigo-500/50"
+                    : "border-white/10 hover:border-white/20"
+                }`}
+              >
+                {plan.popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-medium">
+                    Most Popular
+                  </span>
+                )}
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    plan.popular
-                      ? "bg-cyan-500/10 border border-cyan-500/20"
-                      : "bg-white/5 border border-white/10"
-                  }`}
+                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-white mb-4`}
                 >
                   {plan.icon}
                 </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="flex items-baseline gap-1">
+                <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+                <p className="text-slate-400 text-sm mb-4">{plan.description}</p>
+                <div className="mb-6">
                   <span className="text-3xl font-bold text-white">
-                    {billing === "yearly" && plan.price !== "€0" && plan.price !== "Custom"
-                      ? plan.price.replace("€", "€") // در نسخه واقعی محاسبه 20% تخفیف
-                      : plan.price}
+                    €{yearly ? plan.price.yearly : plan.price.monthly}
                   </span>
-                  {plan.period && (
-                    <span className="text-slate-500 text-sm">
-                      {billing === "yearly" && plan.price !== "€0" && plan.price !== "Custom"
-                        ? "/year"
-                        : plan.period}
-                    </span>
-                  )}
+                  <span className="text-slate-500 text-sm">/{yearly ? "year" : "month"}</span>
                 </div>
-                <p className="text-slate-400 text-sm mt-1">{plan.description}</p>
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2 text-sm text-slate-300">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => setSelectedPlan(plan.id)}
+                  disabled={plan.id === "free"}
+                  className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all ${
+                    plan.id === "free"
+                      ? "bg-white/5 text-slate-500 cursor-not-allowed"
+                      : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                  }`}
+                >
+                  {plan.id === "free" ? "Current Plan" : "Choose Plan"}
+                </button>
               </div>
-
-              <Link
-                href={plan.href}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all mb-6 ${
-                  plan.popular
-                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40"
-                    : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                }`}
-              >
-                {plan.buttonText}
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-
-              <ul className="space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2.5 text-sm">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-300">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        {/* Comparison Table */}
-        <div className="glass rounded-2xl border border-white/10 overflow-hidden mb-20">
-          <div className="p-6 border-b border-white/10">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-cyan-400" />
-              Compare Plans
-            </h2>
+            ))}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10 bg-white/5">
-                  <th className="text-left text-slate-400 font-medium px-6 py-4">Feature</th>
-                  <th className="text-center text-slate-300 font-semibold px-4 py-4">Free</th>
-                  <th className="text-center text-cyan-400 font-semibold px-4 py-4">Pro</th>
-                  <th className="text-center text-purple-400 font-semibold px-4 py-4">Business</th>
-                  <th className="text-center text-amber-400 font-semibold px-4 py-4">Enterprise</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonFeatures.map((row, i) => (
-                  <tr
-                    key={row.name}
-                    className={`border-b border-white/5 ${
-                      i % 2 === 0 ? "bg-white/[0.02]" : ""
-                    }`}
+        ) : (
+          <div className="max-w-lg mx-auto">
+            <button
+              onClick={() => {
+                setSelectedPlan(null);
+                setSubmitted(false);
+              }}
+              className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to plans
+            </button>
+
+            <div className="glass rounded-2xl p-8 border border-white/10">
+              <h2 className="text-2xl font-bold text-white mb-2">Crypto Payment</h2>
+              <p className="text-slate-400 mb-6">
+                You selected <span className="text-indigo-400 font-medium">{plan?.name}</span> (
+                {yearly ? "Yearly" : "Monthly"})
+              </p>
+
+              {!submitted ? (
+                <>
+                  <div className="space-y-4 mb-6">
+                    <label className="block text-sm font-medium text-slate-300">Select Crypto</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {cryptoWallets.map((w) => (
+                        <button
+                          key={w.type}
+                          onClick={() => setCryptoType(w.type)}
+                          className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                            cryptoType === w.type
+                              ? "border-indigo-500/50 bg-indigo-500/10 text-indigo-300"
+                              : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"
+                          }`}
+                        >
+                          {w.type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-6">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Send {cryptoType} to:</p>
+                    <div className="flex items-center gap-3">
+                      <code className="flex-1 text-sm text-slate-300 break-all">
+                        {cryptoWallets.find((w) => w.type === cryptoType)?.address}
+                      </code>
+                      <button
+                        onClick={copyAddress}
+                        className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors shrink-0"
+                      >
+                        {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      Amount: €{yearly ? plan?.price.yearly : plan?.price.monthly} equivalent in {cryptoType}
+                    </p>
+                  </div>
+
+                  <form onSubmit={submitCrypto} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Transaction Hash (TXID)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={txHash}
+                        onChange={(e) => setTxHash(e.target.value)}
+                        placeholder="Paste transaction ID here..."
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium transition-all flex items-center justify-center gap-2"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Bitcoin className="w-4 h-4" /> Confirm Payment
+                        </>
+                      )}
+                    </button>
+                  </form>
+
+                  <p className="text-xs text-slate-500 mt-4 text-center">
+                    Your account will be upgraded after manual verification (usually within 24h)
+                  </p>
+                </>
+              ) : (
+                <div className="text-center space-y-4">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
+                  <h3 className="text-lg font-medium text-white">Payment Submitted!</h3>
+                  <p className="text-slate-400 text-sm">
+                    We will verify your transaction and upgrade your account soon.
+                  </p>
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-all"
                   >
-                    <td className="text-slate-300 px-6 py-3.5 font-medium">{row.name}</td>
-                    <td className="text-center text-slate-400 px-4 py-3.5">
-                      {typeof row.free === "boolean" ? (
-                        row.free ? (
-                          <Check className="w-4 h-4 text-emerald-400 mx-auto" />
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )
-                      ) : (
-                        row.free
-                      )}
-                    </td>
-                    <td className="text-center text-slate-300 px-4 py-3.5">
-                      {typeof row.pro === "boolean" ? (
-                        row.pro ? (
-                          <Check className="w-4 h-4 text-emerald-400 mx-auto" />
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )
-                      ) : (
-                        row.pro
-                      )}
-                    </td>
-                    <td className="text-center text-slate-300 px-4 py-3.5">
-                      {typeof row.business === "boolean" ? (
-                        row.business ? (
-                          <Check className="w-4 h-4 text-emerald-400 mx-auto" />
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )
-                      ) : (
-                        row.business
-                      )}
-                    </td>
-                    <td className="text-center text-slate-300 px-4 py-3.5">
-                      {typeof row.enterprise === "boolean" ? (
-                        row.enterprise ? (
-                          <Check className="w-4 h-4 text-emerald-400 mx-auto" />
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )
-                      ) : (
-                        row.enterprise
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    Go to Dashboard
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* FAQ */}
-        <div className="max-w-3xl mx-auto mb-20">
-          <h2 className="text-2xl font-bold text-white text-center mb-8">
-            Frequently Asked Questions
-          </h2>
-          <div className="space-y-4">
-            {faqs.map((faq) => (
-              <div
-                key={faq.q}
-                className="glass rounded-2xl p-5 border border-white/10"
-              >
-                <h3 className="text-white font-semibold text-sm mb-2 flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-cyan-400 shrink-0" />
-                  {faq.q}
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{faq.a}</p>
+        <div className="mt-16 glass rounded-2xl p-8 border border-white/10">
+          <h2 className="text-xl font-bold text-white mb-6 text-center">Frequently Asked Questions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { q: "Can I cancel anytime?", a: "Yes, you can cancel or change your plan at any time." },
+              { q: "Is crypto payment safe?", a: "Yes, we verify each transaction manually before activating your plan." },
+              { q: "What happens after I pay?", a: "Submit your TXID and we will verify it within 24 hours." },
+              { q: "Can I switch plans?", a: "Absolutely. You can upgrade or downgrade whenever you want." },
+            ].map((item) => (
+              <div key={item.q}>
+                <h3 className="font-medium text-white mb-1">{item.q}</h3>
+                <p className="text-slate-400 text-sm">{item.a}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* CTA */}
-        <div className="glass rounded-2xl p-8 sm:p-12 text-center border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-blue-500/10">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-            Still have questions?
-          </h2>
-          <p className="text-slate-400 mb-6 max-w-md mx-auto">
-            Our team is here to help you choose the right plan for your needs.
-          </p>
-          <Link
-            href="/contact"
-            className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl text-sm font-semibold hover:bg-slate-100 transition-all"
-          >
-            <Mail className="w-4 h-4" />
-            Contact Support
-          </Link>
-        </div>
       </div>
-    </main>
+    </div>
   );
 }
