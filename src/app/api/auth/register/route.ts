@@ -1,67 +1,42 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { ROLES } from "@/lib/roles";
 
-// اعتبارسنجی ورودی‌ها
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  name: z.string().min(1),
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    
-    // اعتبارسنجی داده‌ها
-    const result = registerSchema.safeParse(body);
-    if (!result.success) {
-      return NextResponse.json(
-        { error: "اطلاعات نامعتبر", details: result.error.issues },
-        { status: 400 }
-      );
+    const { name, email, password, role } = await req.json();
+
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const { email, password, name } = result.data;
-
-    // بررسی تکراری نبودن ایمیل
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "این ایمیل قبلاً ثبت شده است" },
-        { status: 409 }
-      );
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    // هش کردن رمز عبور
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    if (existing) {
+      return NextResponse.json({ error: "Email already exists" }, { status: 409 });
+    }
 
-    // ساخت کاربر جدید با نقش JOB_SEEKER (ثابت)
+    const hashed = await bcrypt.hash(password, 12);
+    const validRoles = [ROLES.EMPLOYER, ROLES.JOB_SEEKER];
+    const finalRole = validRoles.includes(role as any) ? role : ROLES.JOB_SEEKER;
+
     const user = await prisma.user.create({
       data: {
-        email,
-        password: hashedPassword,
         name,
-        role: "JOB_SEEKER", // ✅ نقش همیشه جوینده کار است
+        email: email.toLowerCase().trim(),
+        password: hashed,
+        role: finalRole,
       },
+      select: { id: true, email: true, name: true, role: true },
     });
 
-    // حذف رمز عبور از پاسخ
-    const { password: _, ...userWithoutPassword } = user;
-
-    return NextResponse.json(
-      { success: true, user: userWithoutPassword },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, user });
   } catch (error) {
-    console.error("Registration error:", error);
-    return NextResponse.json(
-      { error: "خطا در ثبت‌نام" },
-      { status: 500 }
-    );
+    console.error("Register error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
