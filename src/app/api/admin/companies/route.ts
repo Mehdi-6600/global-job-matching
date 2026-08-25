@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 
 export async function GET(req: NextRequest) {
@@ -10,12 +10,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const role = (session.user.role as string) || "jobseeker";
+    const role = (session.user.role as string) || "JOB_SEEKER";
     if (role !== ROLES.ADMIN && role !== ROLES.OWNER) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const companies = await prisma.company.findMany({
+    const companies = await db.company.findMany({
       orderBy: { createdAt: "desc" },
       include: {
         owner: { select: { id: true, name: true, email: true } },
@@ -40,24 +40,30 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const role = (session.user.role as string) || "jobseeker";
+    const role = (session.user.role as string) || "JOB_SEEKER";
     if (role !== ROLES.ADMIN && role !== ROLES.OWNER) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json();
-    const { id, status } = body;
+    const { id, name, description, location, website } = body;
 
-    if (!id || !status) {
+    if (!id) {
       return NextResponse.json(
-        { error: "Missing id or status" },
+        { error: "Missing company id" },
         { status: 400 }
       );
     }
 
-    const company = await prisma.company.update({
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (location !== undefined) updateData.location = location;
+    if (website !== undefined) updateData.website = website;
+
+    const company = await db.company.update({
       where: { id },
-      data: { status },
+      data: updateData,
     });
 
     return NextResponse.json({ success: true, company });
