@@ -194,11 +194,11 @@ model JobAlert {
 }
 
 model Interview {
-  id        String   @id @default(cuid())
-  jobId     String
-  job       Job      @relation(fields: [jobId], references: [id])
-  userId    String
-  user      User     @relation("CandidateInterviews", fields: [userId], references: [id])
+  id          String   @id @default(cuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id])
+  userId      String
+  user        User     @relation("CandidateInterviews", fields: [userId], references: [id])
   scheduledAt DateTime
   duration    Int      @default(30)
   type        String   @default("video")
@@ -218,4 +218,16 @@ model Subscriber {
   name      String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String   @db.Text
+  coverImage  String?
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
