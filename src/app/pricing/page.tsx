@@ -58,9 +58,12 @@ const plans = [
 ];
 
 const cryptoWallets = [
-  { type: "BTC", name: "Bitcoin", address: "bc1qxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" },
-  { type: "ETH", name: "Ethereum", address: "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
-  { type: "USDT", name: "USDT (TRC20)", address: "TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
+  { type: "BTC", name: "Bitcoin", address: "bc1qd8pz8kh8ghh5dzlz4y5t8fgzyhe6y8y67j33m3" },
+  { type: "ETH", name: "Ethereum", address: "0x0CAF488206AC367C37Cd6a56C71d9b1BC9D7Be5c" },
+  { type: "BNB", name: "BNB (BSC)", address: "bnb1da7gyaynhqwz3yf6aq5u2x4vy2k6c5futd84z5" },
+  { type: "USDT", name: "USDT (TRC20)", address: "TU3QBM4VnypRobQHh1w1n7QXdFQ8yPqRex" },
+  { type: "DOGE", name: "Dogecoin", address: "DJyuoTooAZYdC8NPpuAbUBKhjmeoWSBnFS" },
+  { type: "TON", name: "TON", address: "UQDol0GBbL3km5-9F4rEQO8UQnUo6XJbsG_LwBcG_6cPs1oh" },
 ];
 
 export default function PricingPage() {
