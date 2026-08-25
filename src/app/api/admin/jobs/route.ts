@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { id, title, description, location, salary, type } = body;
+    const { id, title, description, location, salary, type, status } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing job id" }, { status: 400 });
@@ -40,6 +40,7 @@ export async function PATCH(req: NextRequest) {
     if (location !== undefined) updateData.location = location;
     if (salary !== undefined) updateData.salary = salary;
     if (type !== undefined) updateData.type = type;
+    if (status !== undefined) updateData.status = status;
 
     const job = await db.job.update({
       where: { id },
