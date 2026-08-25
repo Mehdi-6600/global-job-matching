@@ -10,42 +10,50 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const now = new Date();
+    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
     const [
       totalUsers,
+      newUsers7d,
+      newUsers30d,
       totalJobs,
+      newJobs7d,
+      totalApplications,
+      newApplications7d,
       totalCompanies,
+      totalSubscribers,
       totalTransactions,
       pendingTransactions,
-      recentUsers,
-      recentJobs,
     ] = await Promise.all([
       db.user.count(),
+      db.user.count({ where: { createdAt: { gte: last7Days } } }),
+      db.user.count({ where: { createdAt: { gte: last30Days } } }),
       db.job.count(),
+      db.job.count({ where: { createdAt: { gte: last7Days } } }),
+      db.application.count(),
+      db.application.count({ where: { createdAt: { gte: last7Days } } }),
       db.company.count(),
+      db.subscriber.count(),
       db.transaction.count(),
       db.transaction.count({ where: { status: "pending" } }),
-      db.user.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: { id: true, name: true, email: true, role: true, createdAt: true },
-      }),
-      db.job.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        include: { company: { select: { name: true } } },
-      }),
     ]);
 
     return NextResponse.json({
       overview: {
         totalUsers,
+        newUsers7d,
+        newUsers30d,
         totalJobs,
+        newJobs7d,
+        totalApplications,
+        newApplications7d,
         totalCompanies,
+        totalSubscribers,
         totalTransactions,
         pendingTransactions,
       },
-      recentUsers,
-      recentJobs,
     });
   } catch (error) {
     console.error("Admin dashboard error:", error);
