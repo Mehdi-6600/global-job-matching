@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 
 export async function POST(req: Request) {
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const existing = await db.user.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (existing) {
       return NextResponse.json({ error: "Email already exists" }, { status: 409 });
     }
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const validRoles = [ROLES.EMPLOYER, ROLES.JOB_SEEKER];
     const finalRole = validRoles.includes(role as any) ? role : ROLES.JOB_SEEKER;
 
-    const user = await prisma.user.create({
+    const user = await db.user.create({
       data: {
         name,
         email: email.toLowerCase().trim(),
