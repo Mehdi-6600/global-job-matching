@@ -15,6 +15,8 @@ import {
   AlertCircle,
   ArrowLeft,
   Save,
+  Trash2,
+  Download,
 } from "lucide-react";
 
 interface Profile {
@@ -27,6 +29,8 @@ interface Profile {
   phone: string | null;
   avatar: string | null;
   role: string;
+  resumeUrl: string | null;
+  resumeData: string | null;
 }
 
 export default function SettingsPage() {
@@ -35,6 +39,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [resumeUploading, setResumeUploading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -105,6 +110,46 @@ export default function SettingsPage() {
     }
   };
 
+  async function handleResumeUpload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setResumeUploading(true);
+    setError("");
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      const res = await fetch("/api/profile/resume", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Upload failed");
+      } else {
+        setProfile((prev) => prev ? { ...prev, resumeUrl: data.filename, resumeData: "uploaded" } : prev);
+        setSuccess(true);
+      }
+    } catch {
+      setError("Upload failed");
+    } finally {
+      setResumeUploading(false);
+    }
+  }
+
+  async function handleResumeDelete() {
+    if (!confirm("Remove your resume?")) return;
+
+    try {
+      const res = await fetch("/api/profile/resume", { method: "DELETE" });
+      if (res.ok) {
+        setProfile((prev) => prev ? { ...prev, resumeUrl: null, resumeData: null } : prev);
+        setSuccess(true);
+      }
+    } catch {
+      setError("Failed to remove resume");
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
@@ -161,7 +206,7 @@ export default function SettingsPage() {
           {success && (
             <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
-              Profile saved successfully!
+              Saved successfully!
             </div>
           )}
 
@@ -282,6 +327,70 @@ export default function SettingsPage() {
               )}
             </button>
           </form>
+        </div>
+
+        {/* Resume Section */}
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10 mt-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-cyan-400" /> Resume / CV
+          </h2>
+
+          {profile?.resumeUrl ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+                <FileText className="w-8 h-8 text-cyan-400" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium text-sm truncate">{profile.resumeUrl}</p>
+                  <p className="text-slate-500 text-xs">PDF uploaded</p>
+                </div>
+                {profile.resumeData && (
+                  <a
+                    href={profile.resumeData}
+                    download={profile.resumeUrl}
+                    className="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 transition-all"
+                    title="Download"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
+                )}
+                <button
+                  onClick={handleResumeDelete}
+                  className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+                  title="Remove"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleResumeUpload} className="space-y-4">
+              <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-cyan-500/30 transition-all">
+                <input
+                  type="file"
+                  name="resume"
+                  accept=".pdf"
+                  required
+                  className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer"
+                />
+                <p className="text-slate-500 text-xs mt-3">PDF only, max 2MB</p>
+              </div>
+              <button
+                type="submit"
+                disabled={resumeUploading}
+                className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-sm font-medium transition-all flex items-center gap-2"
+              >
+                {resumeUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" /> Upload Resume
+                  </>
+                )}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </main>
