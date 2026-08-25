@@ -3,60 +3,54 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    -webkit-text-size-adjust: 100%;
-    scroll-behavior: smooth;
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 199 89% 48%;
+    --radius: 0.75rem;
   }
 
   body {
-    @apply bg-slate-900 text-white;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* Prevent horizontal scroll on iPhone */
-    overflow-x: hidden;
-    /* Fix Safari 100vh issue with bottom nav bar */
-    min-height: 100dvh;
-  }
-
-  /* Prevent iOS zoom on input focus */
-  input,
-  select,
-  textarea {
-    @apply text-base;
-  }
-
-  /* Remove default tap highlight on mobile */
-  button,
-  a {
-    -webkit-tap-highlight-color: transparent;
+    @apply bg-slate-950 text-slate-50;
   }
 }
 
 @layer components {
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
-    /* Safari fallback for backdrop blur */
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+
+  .glass-strong {
+    @apply bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl;
+  }
+
+  .btn-primary {
+    @apply bg-sky-500 hover:bg-sky-400 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-sky-500/20;
+  }
+
+  .btn-secondary {
+    @apply bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 border border-white/10;
   }
 }
 
 @layer utilities {
-  /* Hide scrollbar but keep scroll */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  /* Safe area for iPhone notch / home indicator */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  /* iPhone-specific notch padding for fixed headers */
-  .pt-notch {
-    padding-top: env(safe-area-inset-top, 0px);
+  .text-gradient {
+    @apply bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent;
   }
 }
