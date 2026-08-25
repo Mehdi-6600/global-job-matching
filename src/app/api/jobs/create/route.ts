@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 
 export async function POST(req: Request) {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       if (!companyId) {
         return NextResponse.json({ error: "Company ID required for employers" }, { status: 400 });
       }
-      const company = await prisma.company.findUnique({ where: { id: companyId } });
+      const company = await db.company.findUnique({ where: { id: companyId } });
       if (!company) {
         return NextResponse.json({ error: "Company not found" }, { status: 404 });
       }
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       finalCompanyId = company.id;
     } else if (session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER) {
       if (companyId) {
-        const company = await prisma.company.findUnique({ where: { id: companyId } });
+        const company = await db.company.findUnique({ where: { id: companyId } });
         if (!company) {
           return NextResponse.json({ error: "Company not found" }, { status: 404 });
         }
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const job = await prisma.job.create({
+    const job = await db.job.create({
       data: {
         title,
         description,
