@@ -8,13 +8,12 @@ import {
   Building2,
   Briefcase,
   CheckCircle2,
-  Clock,
   XCircle,
   Loader2,
-  Shield,
-  ArrowLeft,
-  Search,
-  Eye,
+  ArrowRight,
+  BarChart3,
+  Mail,
+  Newspaper,
 } from "lucide-react";
 
 interface Stats {
@@ -26,125 +25,145 @@ interface Stats {
   pendingJobs: number;
 }
 
-interface AdminUser {
+interface UserItem {
   id: string;
-  email: string;
   name: string | null;
+  email: string;
   role: string;
   createdAt: string;
-  _count: { applications: number };
 }
 
-interface AdminCompany {
+interface CompanyItem {
   id: string;
   name: string;
   slug: string;
-  location: string | null;
   status: string;
-  createdAt: string;
-  owner: { id: string; name: string | null; email: string };
-  _count: { jobs: number };
+  owner: { name: string | null; email: string } | null;
 }
 
-const tabs = [
-  { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
-  { id: "companies", label: "Companies", icon: <Building2 className="w-4 h-4" /> },
-];
-
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "companies" | "jobs">("overview");
   const [stats, setStats] = useState<Stats | null>(null);
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [companies, setCompanies] = useState<AdminCompany[]>([]);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [companies, setCompanies] = useState<CompanyItem[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/stats")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.stats) setStats(data.stats);
-      })
-      .catch(console.error);
-
-    fetch("/api/admin/users")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.users) setUsers(data.users);
-      })
-      .catch(console.error);
-
-    fetch("/api/admin/companies")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.companies) setCompanies(data.companies);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetchStats();
+    fetchUsers();
+    fetchCompanies();
+    fetchJobs();
   }, []);
 
-  const handleCompanyStatus = async (id: string, status: string) => {
-    try {
-      const res = await fetch("/api/admin/companies", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
-      });
-      if (res.ok) {
-        setCompanies((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, status } : c))
-        );
-      }
-    } catch (err) {
-      console.error(err);
+  async function fetchStats() {
+    const res = await fetch("/api/admin/stats");
+    if (res.ok) {
+      const data = await res.json();
+      setStats(data);
     }
-  };
+  }
+
+  async function fetchUsers() {
+    const res = await fetch("/api/admin/users");
+    if (res.ok) {
+      const data = await res.json();
+      setUsers(data.users || []);
+    }
+  }
+
+  async function fetchCompanies() {
+    const res = await fetch("/api/admin/companies");
+    if (res.ok) {
+      const data = await res.json();
+      setCompanies(data.companies || []);
+    }
+  }
+
+  async function fetchJobs() {
+    const res = await fetch("/api/admin/jobs");
+    if (res.ok) {
+      const data = await res.json();
+      setJobs(data.jobs || []);
+    }
+    setLoading(false);
+  }
+
+  async function updateCompanyStatus(id: string, status: string) {
+    setActionLoading(id);
+    const res = await fetch("/api/admin/companies", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok) {
+      setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
+    }
+    setActionLoading(null);
+  }
+
+  async function updateJobStatus(id: string, status: string) {
+    setActionLoading(id);
+    const res = await fetch("/api/admin/jobs", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok) {
+      setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status } : j)));
+    }
+    setActionLoading(null);
+  }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading admin panel...</p>
-        </div>
-      </main>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+      </div>
     );
   }
 
+  const tabs = [
+    { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
+    { id: "companies", label: "Companies", icon: <Building2 className="w-4 h-4" /> },
+    { id: "jobs", label: "Jobs", icon: <Briefcase className="w-4 h-4" /> },
+  ];
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-purple-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-              <p className="text-slate-400 text-sm">Manage platform data</p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+            <p className="text-slate-400 text-sm">Manage platform settings</p>
           </div>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/analytics"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
+            >
+              <BarChart3 className="w-4 h-4" /> Analytics
+            </Link>
+            <Link
+              href="/admin/newsletter"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
+            >
+              <Mail className="w-4 h-4" /> Newsletter
+            </Link>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
-                  : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
               }`}
             >
               {tab.icon}
@@ -153,57 +172,50 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Overview Tab */}
         {activeTab === "overview" && stats && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { label: "Total Users", value: stats.totalUsers, icon: <Users className="w-5 h-5 text-cyan-400" /> },
-              { label: "Companies", value: stats.totalCompanies, icon: <Building2 className="w-5 h-5 text-purple-400" /> },
-              { label: "Jobs", value: stats.totalJobs, icon: <Briefcase className="w-5 h-5 text-emerald-400" /> },
-              { label: "Applications", value: stats.totalApplications, icon: <CheckCircle2 className="w-5 h-5 text-blue-400" /> },
-              { label: "Pending Companies", value: stats.pendingCompanies, icon: <Clock className="w-5 h-5 text-amber-400" /> },
-              { label: "Pending Jobs", value: stats.pendingJobs, icon: <Clock className="w-5 h-5 text-amber-400" /> },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className="glass rounded-2xl p-5 border border-white/10"
-              >
-                <div className="p-2 rounded-xl bg-white/5 w-fit mb-3">{s.icon}</div>
-                <h3 className="text-2xl font-bold text-white mb-1">{s.value}</h3>
-                <p className="text-slate-400 text-sm">{s.label}</p>
+              { label: "Total Users", value: stats.totalUsers, icon: <Users className="w-5 h-5 text-indigo-400" />, color: "from-indigo-500 to-purple-500" },
+              { label: "Total Companies", value: stats.totalCompanies, icon: <Building2 className="w-5 h-5 text-cyan-400" />, color: "from-cyan-500 to-blue-500" },
+              { label: "Total Jobs", value: stats.totalJobs, icon: <Briefcase className="w-5 h-5 text-emerald-400" />, color: "from-emerald-500 to-teal-500" },
+              { label: "Total Applications", value: stats.totalApplications, icon: <CheckCircle2 className="w-5 h-5 text-amber-400" />, color: "from-amber-500 to-orange-500" },
+              { label: "Pending Companies", value: stats.pendingCompanies, icon: <Building2 className="w-5 h-5 text-pink-400" />, color: "from-pink-500 to-rose-500" },
+              { label: "Pending Jobs", value: stats.pendingJobs, icon: <Briefcase className="w-5 h-5 text-violet-400" />, color: "from-violet-500 to-purple-500" },
+            ].map((card) => (
+              <div key={card.label} className="glass rounded-2xl p-5 border border-white/10">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} bg-opacity-10 flex items-center justify-center mb-3`}>
+                  {card.icon}
+                </div>
+                <p className="text-2xl font-bold text-white">{card.value}</p>
+                <p className="text-slate-400 text-sm">{card.label}</p>
               </div>
             ))}
           </div>
         )}
 
-        {/* Users Tab */}
         {activeTab === "users" && (
           <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h2 className="text-white font-semibold">Users</h2>
-              <span className="text-slate-400 text-sm">{users.length} total</span>
-            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/5 text-left">
-                    <th className="px-4 py-3 text-slate-400 font-medium">Name</th>
-                    <th className="px-4 py-3 text-slate-400 font-medium">Email</th>
-                    <th className="px-4 py-3 text-slate-400 font-medium">Role</th>
-                    <th className="px-4 py-3 text-slate-400 font-medium">Applications</th>
+                  <tr className="border-b border-white/10 text-slate-400 text-left">
+                    <th className="p-4 font-medium">Name</th>
+                    <th className="p-4 font-medium">Email</th>
+                    <th className="p-4 font-medium">Role</th>
+                    <th className="p-4 font-medium">Joined</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-white/[0.02]">
-                      <td className="px-4 py-3 text-white">{u.name || "—"}</td>
-                      <td className="px-4 py-3 text-slate-300">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10">
-                          {u.role}
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="p-4 text-white">{user.name || "—"}</td>
+                      <td className="p-4 text-slate-400">{user.email}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300 text-xs capitalize">
+                          {user.role}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-300">{u._count.applications}</td>
+                      <td className="p-4 text-slate-500">{new Date(user.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -212,67 +224,86 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Companies Tab */}
         {activeTab === "companies" && (
-          <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h2 className="text-white font-semibold">Companies</h2>
-              <span className="text-slate-400 text-sm">{companies.length} total</span>
-            </div>
-            <div className="divide-y divide-white/5">
-              {companies.map((c) => (
-                <div key={c.id} className="p-4 sm:p-5 hover:bg-white/[0.02]">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-white font-medium">{c.name}</h3>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                            c.status === "verified"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                              : c.status === "pending"
-                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                              : "bg-red-500/10 text-red-400 border-red-500/20"
-                          }`}
-                        >
-                          {c.status}
-                        </span>
-                      </div>
-                      <p className="text-slate-400 text-xs">
-                        {c.owner.name || c.owner.email} • {c._count.jobs} jobs • {c.location || "No location"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {c.status === "pending" && (
-                        <>
-                          <button
-                            onClick={() => handleCompanyStatus(c.id, "verified")}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-medium hover:bg-emerald-500/20 transition-all"
-                          >
-                            Verify
-                          </button>
-                          <button
-                            onClick={() => handleCompanyStatus(c.id, "rejected")}
-                            className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium hover:bg-red-500/20 transition-all"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      <Link
-                        href={`/companies/${c.id}`}
-                        className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-white transition-all"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
+          <div className="space-y-3">
+            {companies.map((company) => (
+              <div key={company.id} className="glass rounded-xl p-5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-medium text-white">{company.name}</h3>
+                  <p className="text-slate-500 text-sm">{company.owner?.email || "No owner"}</p>
+                  <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                    company.status === "active" ? "bg-emerald-500/10 text-emerald-400" :
+                    company.status === "pending" ? "bg-amber-500/10 text-amber-400" :
+                    "bg-red-500/10 text-red-400"
+                  }`}>
+                    {company.status}
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-2">
+                  {company.status === "pending" && (
+                    <>
+                      <button
+                        onClick={() => updateCompanyStatus(company.id, "active")}
+                        disabled={actionLoading === company.id}
+                        className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => updateCompanyStatus(company.id, "rejected")}
+                        disabled={actionLoading === company.id}
+                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "jobs" && (
+          <div className="space-y-3">
+            {jobs.map((job: any) => (
+              <div key={job.id} className="glass rounded-xl p-5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-medium text-white">{job.title}</h3>
+                  <p className="text-slate-500 text-sm">{job.company?.name || "Unknown"}</p>
+                  <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                    job.status === "active" ? "bg-emerald-500/10 text-emerald-400" :
+                    job.status === "pending" ? "bg-amber-500/10 text-amber-400" :
+                    "bg-red-500/10 text-red-400"
+                  }`}>
+                    {job.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {job.status === "pending" && (
+                    <>
+                      <button
+                        onClick={() => updateJobStatus(job.id, "active")}
+                        disabled={actionLoading === job.id}
+                        className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => updateJobStatus(job.id, "rejected")}
+                        disabled={actionLoading === job.id}
+                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }
