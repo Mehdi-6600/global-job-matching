@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createHmac } from "crypto";
 import { Resend } from "resend";
-import { ratelimit } from "@/lib/ratelimit";
+import { emailRatelimit } from "@/lib/ratelimit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -20,8 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
     }
 
-    // Rate limit: 2 requests per hour per email
-    const { success } = await ratelimit.email.limit(email.toLowerCase().trim());
+    const { success } = await emailRatelimit.limit(email.toLowerCase().trim());
     if (!success) {
       return NextResponse.json(
         { error: "Too many requests. Try again in an hour." },
@@ -33,7 +32,6 @@ export async function POST(req: NextRequest) {
       where: { email: email.toLowerCase().trim() },
     });
 
-    // Don't reveal if email exists (security)
     if (!user) {
       return NextResponse.json(
         { message: "If this email exists, a reset link has been sent." },
