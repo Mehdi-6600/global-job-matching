@@ -13,12 +13,19 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // ✅ ابتدا شرکت‌های متعلق به کاربر را پیدا می‌کنیم
+  const companies = await prisma.company.findMany({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+  });
+
+  const companyIds = companies.map((c) => c.id);
+
+  // ✅ سپس مصاحبه‌هایی که jobId آنها به این شرکت‌ها تعلق دارد را می‌یابیم
   const interviews = await prisma.interview.findMany({
     where: {
       job: {
-        company: {
-          ownerId: session.user.id,
-        },
+        companyId: { in: companyIds },
       },
     },
     orderBy: { scheduledAt: "asc" },
