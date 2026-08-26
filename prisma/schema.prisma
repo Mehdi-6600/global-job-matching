@@ -120,6 +120,7 @@ model Job {
   postedBy     User?         @relation("PostedBy", fields: [postedById], references: [id], onDelete: Cascade)
   applications Application[]
   savedJobs    SavedJob[]
+  interviews   Interview[]
 
   @@index([companyId])
   @@index([postedById])
@@ -185,16 +186,21 @@ model Interview {
   id          String   @id @default(cuid())
   userId      String
   jobId       String
-  companyId   String
+  companyId   String?
   scheduledAt DateTime
+  duration    Int      @default(30)
+  type        String   @default("video")
+  meetLink    String?
   status      String   @default("scheduled")
   notes       String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([jobId])
   @@index([status])
 }
 
