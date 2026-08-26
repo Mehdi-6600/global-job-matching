@@ -15,12 +15,33 @@ export async function GET() {
 
   const interviews = await prisma.interview.findMany({
     where: {
-      job: { company: { ownerId: session.user.id } },
+      job: {
+        company: {
+          ownerId: session.user.id,
+        },
+      },
     },
     orderBy: { scheduledAt: "asc" },
     include: {
-      user: { select: { id: true, name: true, email: true, title: true } },
-      job: { select: { id: true, title: true, company: { select: { name: true } } } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true, // ✅ اصلاح: title → image (چون title در User وجود ندارد)
+        },
+      },
+      job: {
+        select: {
+          id: true,
+          title: true,
+          company: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -46,7 +67,12 @@ export async function POST(req: NextRequest) {
     }
 
     const job = await prisma.job.findFirst({
-      where: { id: jobId, company: { ownerId: session.user.id } },
+      where: {
+        id: jobId,
+        company: {
+          ownerId: session.user.id,
+        },
+      },
     });
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
