@@ -23,8 +23,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    // اصلاح: استفاده از ?? undefined برای handle کردن null
     const company = await prisma.company.findFirst({
-      where: { id: interview.companyId, ownerId: session.user.id },
+      where: {
+        id: interview.companyId ?? undefined,
+        ownerId: session.user.id,
+      },
     });
 
     if (!company) {
