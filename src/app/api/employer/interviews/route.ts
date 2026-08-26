@@ -13,7 +13,6 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // ✅ ابتدا شرکت‌های متعلق به کاربر را پیدا می‌کنیم
   const companies = await prisma.company.findMany({
     where: { ownerId: session.user.id },
     select: { id: true },
@@ -21,35 +20,11 @@ export async function GET() {
 
   const companyIds = companies.map((c) => c.id);
 
-  // ✅ سپس مصاحبه‌هایی که jobId آنها به این شرکت‌ها تعلق دارد را می‌یابیم
   const interviews = await prisma.interview.findMany({
     where: {
-      job: {
-        companyId: { in: companyIds },
-      },
+      companyId: { in: companyIds },
     },
     orderBy: { scheduledAt: "asc" },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-        },
-      },
-      job: {
-        select: {
-          id: true,
-          title: true,
-          company: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-    },
   });
 
   return NextResponse.json({ interviews });
@@ -67,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { jobId, userId, scheduledAt, duration, type, notes, meetLink } = await req.json();
+    const { jobId, userId, scheduledAt, notes } = await req.json();
 
     if (!jobId || !userId || !scheduledAt) {
       return NextResponse.json({ error: "Job, user, and date required" }, { status: 400 });
@@ -76,24 +51,25 @@ export async function POST(req: NextRequest) {
     const job = await prisma.job.findFirst({
       where: {
         id: jobId,
-        company: {
-          ownerId: session.user.id,
-        },
+        company: { ownerId: session.user.id },
       },
     });
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
+    const company = await prisma.company.findFirst({
+      where: { ownerId: session.user.id },
+    });
+
     const interview = await prisma.interview.create({
       data: {
         jobId,
         userId,
+        companyId: company?.id || "",
         scheduledAt: new Date(scheduledAt),
-        duration: duration || 30,
-        type: type || "video",
         notes: notes || null,
-        meetLink: meetLink || null,
+        status: "scheduled",
       },
     });
 
@@ -102,8 +78,7 @@ export async function POST(req: NextRequest) {
         userId,
         type: "interview",
         title: "Interview Scheduled",
-        description: `You have an interview for ${job.title}`,
-        actionUrl: "/my-interviews",
+        message: `You have an interview for ${job.title}`,
       },
     });
 
