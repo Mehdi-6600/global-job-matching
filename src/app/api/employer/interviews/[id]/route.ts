@@ -15,14 +15,19 @@ export async function PATCH(
     const { id } = await params;
     const { status, meetLink, notes } = await req.json();
 
-    const interview = await prisma.interview.findFirst({
-      where: {
-        id,
-        job: { company: { ownerId: session.user.id } },
-      },
+    const interview = await prisma.interview.findUnique({
+      where: { id },
     });
 
     if (!interview) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const company = await prisma.company.findFirst({
+      where: { id: interview.companyId, ownerId: session.user.id },
+    });
+
+    if (!company) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -41,8 +46,7 @@ export async function PATCH(
           userId: interview.userId,
           type: "interview",
           title: "Interview Updated",
-          description: `Your interview status is now: ${status}`,
-          actionUrl: "/my-interviews",
+          message: `Your interview status is now: ${status}`,
         },
       });
     }
