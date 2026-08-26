@@ -37,7 +37,6 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         name: true,
-        slug: true,
         location: true,
         logo: true,
         status: true,
