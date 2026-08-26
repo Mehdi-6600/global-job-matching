@@ -28,7 +28,7 @@ export async function GET() {
           id: true,
           name: true,
           email: true,
-          image: true, // ✅ اصلاح: title → image (چون title در User وجود ندارد)
+          image: true,
         },
       },
       job: {
