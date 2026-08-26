@@ -46,8 +46,7 @@ export async function PATCH(
         userId: application.userId,
         type: "application",
         title: "Application Status Updated",
-        description: `Your application is now: ${status}`,
-        actionUrl: "/my-applications",
+        message: `Your application is now: ${status}`,
       },
     });
 
