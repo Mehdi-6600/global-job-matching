@@ -10,7 +10,7 @@ import { ROLES } from "./roles";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(8), // ✅ تغییر از 6 به 8
 });
 
 const authResult = NextAuth({
@@ -43,7 +43,7 @@ const authResult = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.avatar,
+          image: user.image, // ✅ تغییر از avatar به image
           role: user.role,
         };
       },
