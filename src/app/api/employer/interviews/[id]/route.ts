@@ -13,7 +13,7 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const { status, meetLink, notes } = await req.json();
+    const { status, notes } = await req.json();
 
     const interview = await prisma.interview.findUnique({
       where: { id },
@@ -35,7 +35,6 @@ export async function PATCH(
       where: { id },
       data: {
         status: status || undefined,
-        meetLink: meetLink !== undefined ? meetLink : undefined,
         notes: notes !== undefined ? notes : undefined,
       },
     });
