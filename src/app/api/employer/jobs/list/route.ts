@@ -31,7 +31,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // پیدا کردن شرکت‌های متعلق به کارفرما
     const companies = await prisma.company.findMany({
       where: { ownerId: session.user.id },
       select: { id: true },
@@ -49,9 +48,6 @@ export async function GET(req: NextRequest) {
       include: {
         company: {
           select: { id: true, name: true },
-        },
-        category: {
-          select: { id: true, name: true, color: true },
         },
         _count: {
           select: { applications: true },
