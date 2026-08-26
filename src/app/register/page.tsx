@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Briefcase, Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Briefcase, Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 
 const steps = [
   { label: "Account", number: 1 },
@@ -11,8 +12,11 @@ const steps = [
 ];
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,22 +29,96 @@ export default function RegisterPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(""); // Clear error when user starts typing
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateStep = (): boolean => {
+    setError("");
+    
+    if (currentStep === 1) {
+      if (!formData.name.trim()) {
+        setError("Full name is required");
+        return false;
+      }
+      if (!formData.email.trim()) {
+        setError("Email is required");
+        return false;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        setError("Please enter a valid email address");
+        return false;
+      }
+      if (!formData.password) {
+        setError("Password is required");
+        return false;
+      }
+      if (formData.password.length < 8) {
+        setError("Password must be at least 8 characters");
+        return false;
+      }
+    }
+
+    if (currentStep === 2) {
+      if (!formData.title.trim()) {
+        setError("Job title is required");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateStep()) {
+      return;
+    }
+
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
-    } else {
-      // اینجا منطق ثبت‌نام واقعی‌ت رو بذار
-      console.log("Register data:", formData);
+      return;
+    }
+
+    // Final step - submit registration
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.toLowerCase().trim(),
+          password: formData.password,
+          role: "JOB_SEEKER",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Registration failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Success - redirect to login
+      router.push("/login?registered=true");
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+      console.error("Registration error:", err);
+      setLoading(false);
     }
   };
 
   return (
     <main className="min-h-screen bg-[#f0f2f5] dark:bg-[#0b0d12] flex items-center justify-center py-10 px-4 transition-colors duration-300">
       <div className="w-full max-w-lg">
-        {/* لوگو بالای صفحه */}
+        {/* Logo */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-[#3478F5] flex items-center justify-center shadow-lg">
@@ -52,7 +130,7 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        {/* استپ‌ها */}
+        {/* Steps */}
         <div className="flex items-center justify-center mb-8">
           {steps.map((step, i) => (
             <div key={step.number} className="flex items-center">
@@ -85,7 +163,7 @@ export default function RegisterPage() {
           ))}
         </div>
 
-        {/* کارت اصلی */}
+        {/* Card */}
         <div className="rounded-3xl p-8 sm:p-10 
           bg-white dark:bg-[#13151c] 
           border border-gray-200/60 dark:border-[#1e2330]
@@ -103,8 +181,15 @@ export default function RegisterPage() {
             {currentStep === 3 && "Customize your job search experience"}
           </p>
 
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* مرحله ۱ */}
+            {/* Step 1 */}
             {currentStep === 1 && (
               <>
                 <div>
@@ -120,6 +205,7 @@ export default function RegisterPage() {
                       onChange={handleChange}
                       placeholder="John Doe"
                       required
+                      disabled={loading}
                       className="w-full py-3.5 pl-11 pr-5 rounded-full outline-none transition-all
                         bg-[#f0f2f5] dark:bg-[#0b0d12]
                         text-gray-900 dark:text-gray-100
@@ -127,7 +213,8 @@ export default function RegisterPage() {
                         shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
                         dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
                         focus:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff]
-                        dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]"
+                        dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]
+                        disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -145,6 +232,7 @@ export default function RegisterPage() {
                       onChange={handleChange}
                       placeholder="you@example.com"
                       required
+                      disabled={loading}
                       className="w-full py-3.5 pl-11 pr-5 rounded-full outline-none transition-all
                         bg-[#f0f2f5] dark:bg-[#0b0d12]
                         text-gray-900 dark:text-gray-100
@@ -152,7 +240,8 @@ export default function RegisterPage() {
                         shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
                         dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
                         focus:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff]
-                        dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]"
+                        dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]
+                        disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -168,8 +257,9 @@ export default function RegisterPage() {
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
-                      placeholder="Create a strong password"
+                      placeholder="Create a strong password (min 8 characters)"
                       required
+                      disabled={loading}
                       className="w-full py-3.5 pl-11 pr-11 rounded-full outline-none transition-all
                         bg-[#f0f2f5] dark:bg-[#0b0d12]
                         text-gray-900 dark:text-gray-100
@@ -177,12 +267,14 @@ export default function RegisterPage() {
                         shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
                         dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
                         focus:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff]
-                        dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]"
+                        dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]
+                        disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      disabled={loading}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-60"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -191,7 +283,7 @@ export default function RegisterPage() {
               </>
             )}
 
-            {/* مرحله ۲ */}
+            {/* Step 2 */}
             {currentStep === 2 && (
               <>
                 <div>
@@ -205,6 +297,7 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     placeholder="e.g. Senior Developer"
                     required
+                    disabled={loading}
                     className="w-full py-3.5 px-5 rounded-full outline-none transition-all
                       bg-[#f0f2f5] dark:bg-[#0b0d12]
                       text-gray-900 dark:text-gray-100
@@ -212,7 +305,8 @@ export default function RegisterPage() {
                       shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
                       dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
                       focus:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff]
-                      dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]"
+                      dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]
+                      disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -226,6 +320,7 @@ export default function RegisterPage() {
                     value={formData.location}
                     onChange={handleChange}
                     placeholder="e.g. San Francisco, CA"
+                    disabled={loading}
                     className="w-full py-3.5 px-5 rounded-full outline-none transition-all
                       bg-[#f0f2f5] dark:bg-[#0b0d12]
                       text-gray-900 dark:text-gray-100
@@ -233,13 +328,14 @@ export default function RegisterPage() {
                       shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
                       dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
                       focus:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff]
-                      dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]"
+                      dark:focus:shadow-[inset_2px_2px_5px_#050608,inset_-2px_-2px_5px_#1a1d24]
+                      disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </>
             )}
 
-            {/* مرحله ۳ */}
+            {/* Step 3 */}
             {currentStep === 3 && (
               <>
                 <div>
@@ -250,11 +346,13 @@ export default function RegisterPage() {
                     name="jobType"
                     value={formData.jobType}
                     onChange={handleChange}
+                    disabled={loading}
                     className="w-full py-3.5 px-5 rounded-full outline-none transition-all appearance-none
                       bg-[#f0f2f5] dark:bg-[#0b0d12]
                       text-gray-900 dark:text-gray-100
                       shadow-[inset_4px_4px_8px_#d1d5db,inset_-4px_-4px_8px_#ffffff]
-                      dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]"
+                      dark:shadow-[inset_4px_4px_8px_#050608,inset_-4px_-4px_8px_#1a1d24]
+                      disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option value="Full-time">Full-time</option>
                     <option value="Part-time">Part-time</option>
@@ -271,9 +369,10 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, remote: !formData.remote })}
+                    disabled={loading}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       formData.remote ? "bg-[#3478F5]" : "bg-gray-300 dark:bg-gray-600"
-                    }`}
+                    } disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -285,27 +384,36 @@ export default function RegisterPage() {
               </>
             )}
 
-            {/* دکمه‌ها */}
+            {/* Buttons */}
             <div className="flex gap-3 pt-2">
               {currentStep > 1 && (
                 <button
                   type="button"
                   onClick={() => setCurrentStep(currentStep - 1)}
+                  disabled={loading}
                   className="flex-1 py-3.5 rounded-full border border-gray-300 dark:border-gray-600 
                     text-gray-700 dark:text-gray-300 font-medium
-                    hover:bg-gray-50 dark:hover:bg-[#1a1d24] transition-all"
+                    hover:bg-gray-50 dark:hover:bg-[#1a1d24] transition-all
+                    disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Back
                 </button>
               )}
               <button
                 type="submit"
+                disabled={loading}
                 className="flex-1 py-3.5 rounded-full bg-[#3478F5] text-white font-semibold
                   shadow-[0_6px_20px_rgba(52,120,245,0.35)]
                   hover:bg-[#5B9BF7] active:scale-[0.98]
-                  transition-all flex items-center justify-center gap-2"
+                  transition-all flex items-center justify-center gap-2
+                  disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {currentStep === 3 ? (
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : currentStep === 3 ? (
                   <>
                     Complete <CheckCircle2 className="w-4 h-4" />
                   </>
