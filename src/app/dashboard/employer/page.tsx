@@ -11,6 +11,7 @@ import {
   Building2,
   CheckCircle2,
   AlertCircle,
+  Users,
 } from "lucide-react";
 
 interface MyJob {
@@ -22,6 +23,7 @@ interface MyJob {
   status: string;
   createdAt: string;
   company: { id: string; name: string } | null;
+  applicantCount: number;
 }
 
 export default function EmployerDashboardPage() {
@@ -47,13 +49,25 @@ export default function EmployerDashboardPage() {
   });
 
   const loadJobs = () => {
-    fetch("/api/jobs?limit=50")
-      .then((r) => r.json())
+    setLoading(true);
+    fetch("/api/employer/jobs")
+      .then(async (r) => {
+        if (r.status === 401) {
+          window.location.href = "/login?callbackUrl=/dashboard/employer";
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
-        setJobs(data.jobs || []);
+        if (!data) return;
+        if (data.jobs) setJobs(data.jobs);
+        else if (data.error) setError(data.error);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setError("Failed to load jobs");
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -83,7 +97,7 @@ export default function EmployerDashboardPage() {
     setPosting(true);
 
     try {
-      const res = await fetch("/api/jobs", {
+      const res = await fetch("/api/employer/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -150,7 +164,9 @@ export default function EmployerDashboardPage() {
             <Briefcase className="w-7 h-7 text-emerald-400" />
             <div>
               <h1 className="text-2xl font-bold text-white">Employer Panel</h1>
-              <p className="text-slate-400 text-sm">Post and manage jobs</p>
+              <p className="text-slate-400 text-sm">
+                Your jobs · {jobs.length} posted
+              </p>
             </div>
           </div>
           <button
@@ -183,7 +199,6 @@ export default function EmployerDashboardPage() {
             className="glass rounded-2xl p-6 border border-white/10 mb-8 space-y-4"
           >
             <h2 className="text-lg font-semibold text-white mb-2">New Job</h2>
-
             <input
               name="title"
               value={form.title}
@@ -192,7 +207,6 @@ export default function EmployerDashboardPage() {
               placeholder="Job title *"
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500/50"
             />
-
             <textarea
               name="description"
               value={form.description}
@@ -202,7 +216,6 @@ export default function EmployerDashboardPage() {
               placeholder="Job description (min 20 characters) *"
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50 resize-none"
             />
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
                 name="location"
@@ -210,17 +223,16 @@ export default function EmployerDashboardPage() {
                 onChange={handleChange}
                 required
                 placeholder="Location *"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500/50"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
               />
               <input
                 name="companyName"
                 value={form.companyName}
                 onChange={handleChange}
                 placeholder="Company name (optional)"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-500/50"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
               />
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <select
                 name="type"
@@ -237,7 +249,7 @@ export default function EmployerDashboardPage() {
                 name="experience"
                 value={form.experience}
                 onChange={handleChange}
-                placeholder="Experience (e.g. mid)"
+                placeholder="Experience"
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
               />
               <label className="flex items-center gap-2 text-slate-300 text-sm px-2">
@@ -246,12 +258,10 @@ export default function EmployerDashboardPage() {
                   name="remote"
                   checked={form.remote}
                   onChange={handleChange}
-                  className="rounded"
                 />
                 Remote
               </label>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <input
                 name="salaryMin"
@@ -280,15 +290,13 @@ export default function EmployerDashboardPage() {
                 <option value="GBP">GBP</option>
               </select>
             </div>
-
             <input
               name="tags"
               value={form.tags}
               onChange={handleChange}
-              placeholder="Tags (comma separated: React, Node)"
+              placeholder="Tags (React, Node)"
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
             />
-
             <button
               type="submit"
               disabled={posting}
@@ -311,10 +319,7 @@ export default function EmployerDashboardPage() {
 
         <div className="glass rounded-2xl border border-white/10 overflow-hidden">
           <div className="p-5 border-b border-white/10">
-            <h2 className="text-white font-semibold">Recent jobs on platform</h2>
-            <p className="text-slate-500 text-xs mt-1">
-              (Filtered view of your posts can be added next)
-            </p>
+            <h2 className="text-white font-semibold">Your posted jobs</h2>
           </div>
 
           {loading ? (
@@ -327,27 +332,46 @@ export default function EmployerDashboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-white/5">
-              {jobs.slice(0, 15).map((job) => (
-                <Link
+              {jobs.map((job) => (
+                <div
                   key={job.id}
-                  href={`/jobs/${job.id}`}
-                  className="flex items-center justify-between gap-4 p-4 hover:bg-white/5 transition-all"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-white/5"
                 >
                   <div className="min-w-0">
-                    <p className="text-white font-medium text-sm truncate">
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      className="text-white font-medium text-sm hover:text-emerald-300"
+                    >
                       {job.title}
-                    </p>
-                    <p className="text-slate-400 text-xs flex items-center gap-2 mt-1">
-                      <Building2 className="w-3 h-3" />
-                      {job.company?.name || "Company"}
-                      <MapPin className="w-3 h-3" />
-                      {job.location}
+                    </Link>
+                    <p className="text-slate-400 text-xs flex flex-wrap items-center gap-2 mt-1">
+                      <span className="flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        {job.company?.name || "Company"}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {job.location}
+                      </span>
+                      <span>{job.type}</span>
                     </p>
                   </div>
-                  <span className="text-xs text-slate-500 shrink-0">
-                    {job.type}
-                  </span>
-                </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      href={`/dashboard/employer/applicants/${job.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white text-xs"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      {job.applicantCount ?? 0} applicants
+                    </Link>
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      className="text-xs text-emerald-400 hover:text-emerald-300"
+                    >
+                      View →
+                    </Link>
+                  </div>
+                </div>
               ))}
             </div>
           )}
