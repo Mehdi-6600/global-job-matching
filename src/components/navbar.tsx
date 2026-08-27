@@ -6,12 +6,13 @@ import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const userRole = session?.user?.role as string | undefined;
 
   const isAdmin = userRole === ROLES.ADMIN || userRole === ROLES.OWNER;
   const isEmployer = userRole === ROLES.EMPLOYER;
+  const isLoggedIn = status === "authenticated" && !!session;
 
   const links = [
     { href: "/", label: "Home" },
@@ -41,20 +42,29 @@ export default function Navbar() {
             ))}
 
             {isAdmin && (
-              <Link href="/dashboard/admin" className="text-red-400 hover:text-red-300 text-sm font-medium">
+              <Link
+                href="/dashboard/admin"
+                className="text-red-400 hover:text-red-300 text-sm font-medium"
+              >
                 Admin
               </Link>
             )}
 
             {isEmployer && (
-              <Link href="/dashboard/employer" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium">
+              <Link
+                href="/dashboard/employer"
+                className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
+              >
                 Employer
               </Link>
             )}
 
-            {session ? (
+            {isLoggedIn ? (
               <div className="flex items-center gap-4">
-                <Link href="/dashboard" className="text-slate-300 hover:text-sky-400 text-sm">
+                <Link
+                  href="/dashboard"
+                  className="text-slate-300 hover:text-sky-400 text-sm"
+                >
                   Dashboard
                 </Link>
                 <button
@@ -77,6 +87,7 @@ export default function Navbar() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden text-slate-300 p-2"
+            aria-label="Toggle menu"
           >
             {mobileOpen ? "✕" : "☰"}
           </button>
@@ -94,17 +105,31 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            {session ? (
+            {isLoggedIn ? (
               <>
-                <Link href="/dashboard" className="block text-slate-300 py-2 text-sm" onClick={() => setMobileOpen(false)}>
+                <Link
+                  href="/dashboard"
+                  className="block text-slate-300 py-2 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
                   Dashboard
                 </Link>
-                <button onClick={() => { signOut(); setMobileOpen(false); }} className="block text-slate-400 py-2 text-sm">
+                <button
+                  onClick={() => {
+                    signOut();
+                    setMobileOpen(false);
+                  }}
+                  className="block text-slate-400 py-2 text-sm"
+                >
                   Logout
                 </button>
               </>
             ) : (
-              <Link href="/login" className="block bg-sky-500 text-white text-center text-sm font-semibold px-4 py-2 rounded-lg mt-2" onClick={() => setMobileOpen(false)}>
+              <Link
+                href="/login"
+                className="block bg-sky-500 text-white text-center text-sm font-semibold px-4 py-2 rounded-lg mt-2"
+                onClick={() => setMobileOpen(false)}
+              >
                 Login
               </Link>
             )}
