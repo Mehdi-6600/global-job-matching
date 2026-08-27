@@ -5,15 +5,13 @@ export const authConfig = {
     signIn: "/login",
     error: "/login",
   },
-  providers: [], // فقط برای Edge؛ providers واقعی در auth.ts
+  providers: [],
   callbacks: {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
-
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as { role?: string } | undefined)?.role;
 
-      // ─── صفحات عمومی (بدون نیاز به لاگین) ───
       const PUBLIC_PAGES = [
         "/",
         "/jobs",
@@ -27,7 +25,6 @@ export const authConfig = {
         "/search",
       ];
 
-      // ─── صفحات auth ───
       const AUTH_PAGES = [
         "/login",
         "/register",
@@ -36,21 +33,19 @@ export const authConfig = {
         "/verify-email",
       ];
 
-      // ─── APIهای عمومی (GET بدون لاگین) ───
-      // این‌ها نباید به /login ریدایرکت شوند
-      const isPublicApi =
+      // APIهای عمومی — بدون لاگین
+      if (
         pathname.startsWith("/api/auth") ||
         pathname === "/api/jobs" ||
-        pathname.startsWith("/api/jobs/") ||
+        (pathname.startsWith("/api/jobs/") &&
+          !pathname.includes("/applicants")) ||
         pathname === "/api/companies" ||
         pathname.startsWith("/api/companies/") ||
         pathname === "/api/blog" ||
         pathname.startsWith("/api/blog/") ||
         pathname === "/api/subscribe" ||
-        pathname === "/api/contact" ||
-        pathname === "/api/seed"; // اگر seed عمومی است؛ در غیر این صورت حذف کن
-
-      if (isPublicApi) {
+        pathname === "/api/contact"
+      ) {
         return true;
       }
 
@@ -64,7 +59,7 @@ export const authConfig = {
         return true;
       }
 
-      // صفحات لاگین / ثبت‌نام
+      // صفحات auth
       if (AUTH_PAGES.includes(pathname)) {
         if (isLoggedIn) {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
@@ -72,12 +67,12 @@ export const authConfig = {
         return true;
       }
 
-      // بقیه مسیرها (صفحات + APIهای خصوصی) نیاز به لاگین دارند
+      // بقیه نیاز به لاگین
       if (!isLoggedIn) {
-        return false; // NextAuth به /login ریدایرکت می‌کند
+        return false;
       }
 
-      // محدودیت ادمین
+      // فقط ادمین
       if (
         pathname.startsWith("/dashboard/admin") ||
         pathname.startsWith("/admin") ||
@@ -92,6 +87,6 @@ export const authConfig = {
     },
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
   },
 } satisfies NextAuthConfig;
