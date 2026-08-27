@@ -24,7 +24,7 @@ interface Job {
   location: string;
   remote: boolean;
   type: string;
-  experience: string;
+  experience: string | null;
   salaryMin: number | null;
   salaryMax: number | null;
   currency: string;
@@ -35,7 +35,7 @@ interface Job {
     name: string;
     logo: string | null;
     location: string | null;
-  };
+  } | null;
   category: { name: string; slug: string } | null;
 }
 
@@ -48,6 +48,30 @@ interface Filters {
   minSalary: string;
   maxSalary: string;
   tag: string;
+}
+
+function formatSalary(
+  currency: string | null | undefined,
+  min: number | null | undefined,
+  max: number | null | undefined
+) {
+  const cur = currency || "USD";
+  if (min == null && max == null) return "Salary not specified";
+  if (min != null && max != null) {
+    return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
+  }
+  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
+  return `Up to ${cur} ${max!.toLocaleString()}`;
+}
+
+function companyInitials(name?: string | null) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 export default function JobsPage() {
@@ -129,8 +153,12 @@ export default function JobsPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Find Your Dream Job</h1>
-          <p className="text-slate-400">Search through thousands of opportunities</p>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Find Your Dream Job
+          </h1>
+          <p className="text-slate-400">
+            Search through thousands of opportunities
+          </p>
         </div>
 
         <div className="glass rounded-2xl p-4 mb-6 border border-white/10">
@@ -155,14 +183,18 @@ export default function JobsPage() {
             >
               <Filter className="w-4 h-4" />
               Filters
-              {hasFilters && <span className="w-2 h-2 rounded-full bg-indigo-400" />}
+              {hasFilters && (
+                <span className="w-2 h-2 rounded-full bg-indigo-400" />
+              )}
             </button>
           </div>
 
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Location</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Location
+                </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
@@ -176,7 +208,9 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Job Type</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Job Type
+                </label>
                 <select
                   value={filters.type}
                   onChange={(e) => updateFilter("type", e.target.value)}
@@ -192,7 +226,9 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Experience</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Experience
+                </label>
                 <select
                   value={filters.experience}
                   onChange={(e) => updateFilter("experience", e.target.value)}
@@ -208,7 +244,9 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Tag</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Tag
+                </label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
@@ -222,7 +260,9 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Min Salary</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Min Salary
+                </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
@@ -236,7 +276,9 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Max Salary</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Max Salary
+                </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
@@ -284,7 +326,9 @@ export default function JobsPage() {
           <div className="glass rounded-2xl p-16 text-center border border-white/10">
             <Briefcase className="w-16 h-16 text-slate-600 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-white mb-2">No jobs found</h3>
-            <p className="text-slate-400">Try adjusting your search or filters</p>
+            <p className="text-slate-400">
+              Try adjusting your search or filters
+            </p>
           </div>
         ) : (
           <>
@@ -297,12 +341,7 @@ export default function JobsPage() {
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-indigo-300 font-bold text-sm">
-                      {job.company.name
-                        .split(" ")
-                        .map((w) => w[0])
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase()}
+                      {companyInitials(job.company?.name)}
                     </div>
                     {job.remote && (
                       <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium">
@@ -316,32 +355,45 @@ export default function JobsPage() {
                   </h3>
                   <div className="flex items-center gap-2 text-sm text-slate-400 mb-3">
                     <Building2 className="w-4 h-4" />
-                    <span>{job.company.name}</span>
+                    <span>{job.company?.name || "Company"}</span>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mb-4">
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {job.location}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5">{job.type}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5">{job.experience}</span>
+                    {job.type && (
+                      <span className="px-2 py-0.5 rounded-md bg-white/5">
+                        {job.type}
+                      </span>
+                    )}
+                    {job.experience && (
+                      <span className="px-2 py-0.5 rounded-md bg-white/5">
+                        {job.experience}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between pt-4 border-t border-white/5">
                     <span className="text-sm font-medium text-slate-300">
-                      {job.currency}
-                      {job.salaryMin?.toLocaleString() || "0"} - {job.currency}
-                      {job.salaryMax?.toLocaleString() || "0"}
+                      {formatSalary(
+                        job.currency,
+                        job.salaryMin,
+                        job.salaryMax
+                      )}
                     </span>
                     <span className="text-xs text-slate-500">
                       {new Date(job.createdAt).toLocaleDateString()}
                     </span>
                   </div>
 
-                  {job.tags.length > 0 && (
+                  {job.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {job.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/5">
+                        <span
+                          key={tag}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/5"
+                        >
                           {tag}
                         </span>
                       ))}
