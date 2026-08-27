@@ -13,7 +13,8 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as { role?: string } | undefined)?.role;
 
-      const PUBLIC_ROUTES = [
+      // ─── صفحات عمومی (بدون نیاز به لاگین) ───
+      const PUBLIC_PAGES = [
         "/",
         "/jobs",
         "/pricing",
@@ -26,19 +27,36 @@ export const authConfig = {
         "/search",
       ];
 
-      const AUTH_ROUTES = [
+      // ─── صفحات auth ───
+      const AUTH_PAGES = [
         "/login",
         "/register",
         "/forgot-password",
         "/reset-password",
+        "/verify-email",
       ];
 
-      // API auth همیشه آزاد
-      if (pathname.startsWith("/api/auth")) return true;
+      // ─── APIهای عمومی (GET بدون لاگین) ───
+      // این‌ها نباید به /login ریدایرکت شوند
+      const isPublicApi =
+        pathname.startsWith("/api/auth") ||
+        pathname === "/api/jobs" ||
+        pathname.startsWith("/api/jobs/") ||
+        pathname === "/api/companies" ||
+        pathname.startsWith("/api/companies/") ||
+        pathname === "/api/blog" ||
+        pathname.startsWith("/api/blog/") ||
+        pathname === "/api/subscribe" ||
+        pathname === "/api/contact" ||
+        pathname === "/api/seed"; // اگر seed عمومی است؛ در غیر این صورت حذف کن
 
-      // مسیرهای عمومی
+      if (isPublicApi) {
+        return true;
+      }
+
+      // صفحات عمومی
       if (
-        PUBLIC_ROUTES.includes(pathname) ||
+        PUBLIC_PAGES.includes(pathname) ||
         pathname.startsWith("/jobs/") ||
         pathname.startsWith("/companies/") ||
         pathname.startsWith("/blog/")
@@ -46,23 +64,24 @@ export const authConfig = {
         return true;
       }
 
-      // صفحات لاگین/ثبت‌نام
-      if (AUTH_ROUTES.includes(pathname)) {
+      // صفحات لاگین / ثبت‌نام
+      if (AUTH_PAGES.includes(pathname)) {
         if (isLoggedIn) {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
         }
         return true;
       }
 
-      // بقیه نیاز به لاگین دارند
+      // بقیه مسیرها (صفحات + APIهای خصوصی) نیاز به لاگین دارند
       if (!isLoggedIn) {
         return false; // NextAuth به /login ریدایرکت می‌کند
       }
 
-      // ادمین
+      // محدودیت ادمین
       if (
         pathname.startsWith("/dashboard/admin") ||
-        pathname.startsWith("/admin")
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/api/admin")
       ) {
         if (userRole !== "ADMIN" && userRole !== "OWNER") {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
