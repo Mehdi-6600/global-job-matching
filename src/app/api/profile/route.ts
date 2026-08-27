@@ -6,7 +6,7 @@ import { ratelimit } from "@/lib/ratelimit";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  title: z.string().max(100).optional(), // فقط برای سازگاری با فرانت؛ در DB ذخیره نمی‌شود
+  title: z.string().max(100).optional(), // stored in Profile.skills as job title
   bio: z.string().max(2000).optional(),
   location: z.string().max(200).optional(),
   phone: z.string().max(50).optional(),
@@ -32,11 +32,9 @@ export async function GET(_req: NextRequest) {
         profile: {
           select: {
             bio: true,
-            location: true,
-            phone: true,
             skills: true,
-            experience: true,
-            education: true,
+            phone: true,
+            location: true,
             resumeUrl: true,
             linkedin: true,
             github: true,
@@ -55,21 +53,17 @@ export async function GET(_req: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        title: null,
-        bio: user.profile?.bio ?? null,
-        location: user.profile?.location ?? null,
-        phone: user.profile?.phone ?? null,
-        image: user.image,
+        title: user.profile?.skills || null,
+        bio: user.profile?.bio || null,
+        location: user.profile?.location || null,
+        phone: user.profile?.phone || null,
         avatar: user.image,
         role: user.role,
+        resumeUrl: user.profile?.resumeUrl || null,
+        linkedin: user.profile?.linkedin || null,
+        github: user.profile?.github || null,
+        portfolio: user.profile?.portfolio || null,
         createdAt: user.createdAt,
-        skills: user.profile?.skills ?? null,
-        experience: user.profile?.experience ?? null,
-        education: user.profile?.education ?? null,
-        resumeUrl: user.profile?.resumeUrl ?? null,
-        linkedin: user.profile?.linkedin ?? null,
-        github: user.profile?.github ?? null,
-        portfolio: user.profile?.portfolio ?? null,
       },
     });
   } catch (error) {
@@ -110,9 +104,8 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const { name, bio, location, phone } = result.data;
+    const { name, title, bio, location, phone } = result.data;
 
-    // به‌روزرسانی name روی User
     if (name !== undefined) {
       await prisma.user.update({
         where: { id: session.user.id },
@@ -120,16 +113,17 @@ export async function PUT(req: NextRequest) {
       });
     }
 
-    // به‌روزرسانی فیلدهای پروفایل (اگر رکورد نبود، ساخته می‌شود)
     const profileData: {
       bio?: string | null;
+      skills?: string | null;
       location?: string | null;
       phone?: string | null;
     } = {};
 
-    if (bio !== undefined) profileData.bio = bio;
-    if (location !== undefined) profileData.location = location;
-    if (phone !== undefined) profileData.phone = phone;
+    if (bio !== undefined) profileData.bio = bio || null;
+    if (title !== undefined) profileData.skills = title || null;
+    if (location !== undefined) profileData.location = location || null;
+    if (phone !== undefined) profileData.phone = phone || null;
 
     if (Object.keys(profileData).length > 0) {
       await prisma.profile.upsert({
@@ -153,30 +147,28 @@ export async function PUT(req: NextRequest) {
         profile: {
           select: {
             bio: true,
-            location: true,
+            skills: true,
             phone: true,
+            location: true,
+            resumeUrl: true,
           },
         },
       },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     return NextResponse.json({
       success: true,
       profile: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        title: null,
-        bio: user.profile?.bio ?? null,
-        location: user.profile?.location ?? null,
-        phone: user.profile?.phone ?? null,
-        image: user.image,
-        avatar: user.image,
-        role: user.role,
+        id: user!.id,
+        email: user!.email,
+        name: user!.name,
+        title: user!.profile?.skills || null,
+        bio: user!.profile?.bio || null,
+        location: user!.profile?.location || null,
+        phone: user!.profile?.phone || null,
+        avatar: user!.image,
+        role: user!.role,
+        resumeUrl: user!.profile?.resumeUrl || null,
       },
     });
   } catch (error) {
