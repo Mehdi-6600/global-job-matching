@@ -3,417 +3,147 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
 
-function parseInteger(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") {
-    return null;
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const jobs = await prisma.job.findMany({
+      where: {
+        OR: [
+          { postedById: session.user.id },
+          { company: { ownerId: session.user.id } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        company: { select: { id: true, name: true } },
+        _count: { select: { applications: true } },
+      },
+    });
+
+    return NextResponse.json({
+      jobs: jobs.map((j) => ({
+        id: j.id,
+        title: j.title,
+        location: j.location,
+        type: j.type,
+        remote: j.remote,
+        status: j.status,
+        createdAt: j.createdAt,
+        company: j.company,
+        applicantCount: j._count.applications,
+      })),
+    });
+  } catch (error) {
+    console.error("Employer jobs list error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch jobs" },
+      { status: 500 }
+    );
   }
-
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed)
-    ? Math.trunc(parsed)
-    : null;
 }
 
-function parseDate(value: unknown): Date | null {
-  if (!value || typeof value !== "string") {
-    return null;
-  }
-
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? null
-    : date;
-}
-
-function cleanStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter(
-      (item): item is string =>
-        typeof item === "string"
-    )
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-export async function POST(
-  req: NextRequest
-) {
+export async function POST(req: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json(
-      {
-        error: "Unauthorized",
-      },
-      {
-        status: 401,
-      }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = session.user.role;
-
-  const allowedRoles = [
-    ROLES.EMPLOYER,
-    ROLES.ADMIN,
-    ROLES.OWNER,
-  ];
-
-  if (
-    !allowedRoles.includes(
-      role as (typeof allowedRoles)[number]
-    )
-  ) {
-    return NextResponse.json(
-      {
-        error: "Forbidden",
-      },
-      {
-        status: 403,
-      }
-    );
+  const role = session.user.role as string;
+  const allowed = [ROLES.EMPLOYER, ROLES.ADMIN, ROLES.OWNER];
+  if (!allowed.includes(role as any)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const body = await req.json();
 
-    if (
-      !body.title ||
-      !body.description ||
-      !body.location ||
-      !body.type
-    ) {
+    if (!body.title || !body.description || !body.location || !body.type) {
       return NextResponse.json(
-        {
-          error:
-            "Title, description, location and type are required",
-        },
-        {
-          status: 400,
-        }
+        { error: "Title, description, location and type are required" },
+        { status: 400 }
       );
     }
 
-    if (!body.companyId) {
-      return NextResponse.json(
-        {
-          error: "Company ID is required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
+    let companyId = body.companyId as string | undefined;
 
-    const company =
-      await prisma.company.findFirst({
-        where: {
-          id: body.companyId,
-          ownerId: session.user.id,
-        },
+    if (!companyId) {
+      const existing = await prisma.company.findFirst({
+        where: { ownerId: session.user.id },
       });
-
-    if (!company) {
-      return NextResponse.json(
-        {
-          error: "Company not found",
-        },
-        {
-          status: 404,
-        }
-      );
-    }
-
-    const salaryMin =
-      parseInteger(body.salaryMin);
-
-    const salaryMax =
-      parseInteger(body.salaryMax);
-
-    const deadline =
-      parseDate(body.deadline);
-
-    if (
-      salaryMin !== null &&
-      salaryMax !== null &&
-      salaryMin > salaryMax
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Minimum salary cannot be greater than maximum salary",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const remote = Boolean(body.remote);
-
-    let categoryId: string | null = null;
-
-    if (body.categoryId) {
-      const category =
-        await prisma.category.findUnique({
-          where: {
-            id: String(body.categoryId),
-          },
-          select: {
-            id: true,
+      if (existing) {
+        companyId = existing.id;
+      } else {
+        const created = await prisma.company.create({
+          data: {
+            name: body.companyName || "My Company",
+            ownerId: session.user.id,
+            email: session.user.email || null,
+            status: "active",
           },
         });
-
-      if (!category) {
+        companyId = created.id;
+      }
+    } else {
+      const company = await prisma.company.findFirst({
+        where: { id: companyId, ownerId: session.user.id },
+      });
+      if (!company) {
         return NextResponse.json(
-          {
-            error: "Category not found",
-          },
-          {
-            status: 400,
-          }
+          { error: "Company not found" },
+          { status: 404 }
         );
       }
-
-      categoryId = category.id;
     }
 
-    const job =
-      await prisma.job.create({
-        data: {
-          title: String(body.title).trim(),
-
-          description:
-            String(body.description).trim(),
-
-          location:
-            String(body.location).trim(),
-
-          remote,
-
-          type:
-            String(body.type).trim(),
-
-          experience:
-            typeof body.experience ===
-              "string" &&
-            body.experience.trim()
-              ? body.experience.trim()
-              : null,
-
-          salaryMin,
-
-          salaryMax,
-
-          currency:
-            typeof body.currency ===
-              "string" &&
-            body.currency.trim()
-              ? body.currency
-                  .trim()
-                  .toUpperCase()
-              : "USD",
-
-          requirements:
-            cleanStringArray(
-              body.requirements
-            ),
-
-          responsibilities:
-            cleanStringArray(
-              body.responsibilities
-            ),
-
-          benefits:
-            cleanStringArray(
-              body.benefits
-            ),
-
-          tags:
-            cleanStringArray(
-              body.tags
-            ),
-
-          deadline,
-
-          companyId: company.id,
-
-          categoryId,
-
-          postedById:
-            session.user.id,
-
-          status: "active",
-        },
-      });
-
-    const alerts =
-      await prisma.jobAlert.findMany({
-        where: {
-          active: true,
-
-          AND: [
-            {
-              OR: [
-                {
-                  keywords: null,
-                },
-                {
-                  keywords: {
-                    contains:
-                      String(body.title),
-                    mode:
-                      "insensitive",
-                  },
-                },
-              ],
-            },
-
-            {
-              OR: [
-                {
-                  location: null,
-                },
-                {
-                  location: {
-                    contains:
-                      String(
-                        body.location
-                      ),
-                    mode:
-                      "insensitive",
-                  },
-                },
-              ],
-            },
-
-            {
-              OR: [
-                {
-                  remote: null,
-                },
-                {
-                  remote,
-                },
-              ],
-            },
-
-            {
-              OR: [
-                {
-                  type: null,
-                },
-                {
-                  type:
-                    String(body.type),
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-    for (const alert of alerts) {
-      let matches = true;
-
-      if (
-        alert.keywords &&
-        !String(body.title)
-          .toLowerCase()
-          .includes(
-            alert.keywords.toLowerCase()
-          )
-      ) {
-        matches = false;
-      }
-
-      if (
-        alert.location &&
-        !String(body.location)
-          .toLowerCase()
-          .includes(
-            alert.location.toLowerCase()
-          )
-      ) {
-        matches = false;
-      }
-
-      if (
-        alert.remote !== null &&
-        alert.remote !== remote
-      ) {
-        matches = false;
-      }
-
-      if (
-        alert.type &&
-        alert.type !==
-          String(body.type)
-      ) {
-        matches = false;
-      }
-
-      if (
-        alert.minSalary !== null &&
-        salaryMax !== null &&
-        salaryMax <
-          alert.minSalary
-      ) {
-        matches = false;
-      }
-
-      if (matches) {
-        await prisma.notification.create({
-          data: {
-            userId:
-              alert.userId,
-
-            type: "job",
-
-            title:
-              "New Job Match!",
-
-            message:
-              `${job.title} at ${company.name} matches your alert.`,
-
-            description:
-              `${job.title} at ${company.name} matches your alert.`,
-
-            actionUrl:
-              `/jobs/${job.id}`,
-          },
-        });
-      }
-    }
-
-    return NextResponse.json(
-      {
-        job,
+    const job = await prisma.job.create({
+      data: {
+        title: String(body.title).trim(),
+        description: String(body.description).trim(),
+        location: String(body.location).trim(),
+        type: String(body.type).trim(),
+        remote: Boolean(body.remote),
+        experience: body.experience || null,
+        salaryMin:
+          body.salaryMin != null && body.salaryMin !== ""
+            ? Number(body.salaryMin)
+            : null,
+        salaryMax:
+          body.salaryMax != null && body.salaryMax !== ""
+            ? Number(body.salaryMax)
+            : null,
+        currency: (body.currency || "USD").toString().toUpperCase(),
+        requirements: Array.isArray(body.requirements)
+          ? body.requirements
+          : [],
+        responsibilities: Array.isArray(body.responsibilities)
+          ? body.responsibilities
+          : [],
+        benefits: Array.isArray(body.benefits) ? body.benefits : [],
+        tags: Array.isArray(body.tags)
+          ? body.tags
+          : typeof body.tags === "string"
+            ? body.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+            : [],
+        companyId: companyId!,
+        postedById: session.user.id,
+        status: "active",
       },
-      {
-        status: 201,
-      }
-    );
+      include: {
+        company: { select: { id: true, name: true } },
+      },
+    });
+
+    return NextResponse.json({ success: true, job }, { status: 201 });
   } catch (error) {
-    console.error(
-      "Create job error:",
-      error
-    );
-
+    console.error("Create job error:", error);
     return NextResponse.json(
-      {
-        error:
-          "Failed to create job",
-      },
-      {
-        status: 500,
-      }
+      { error: "Failed to create job" },
+      { status: 500 }
     );
   }
 }
