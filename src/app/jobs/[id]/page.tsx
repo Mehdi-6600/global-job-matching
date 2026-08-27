@@ -30,7 +30,7 @@ interface JobDetail {
   location: string;
   remote: boolean;
   type: string;
-  experience: string;
+  experience: string | null;
   salaryMin: number | null;
   salaryMax: number | null;
   currency: string;
@@ -50,12 +50,12 @@ interface JobDetail {
     location: string | null;
     description: string | null;
     website: string | null;
-  };
+  } | null;
   category: {
     id: string;
     name: string;
     slug: string;
-    color: string;
+    color: string | null;
   } | null;
 }
 
@@ -74,13 +74,28 @@ function timeAgo(dateString: string): string {
   return "Just now";
 }
 
-function getLogo(name: string): string {
+function getLogo(name?: string | null): string {
+  if (!name) return "?";
   return name
     .split(" ")
     .map((w) => w[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function formatSalary(
+  currency: string | null | undefined,
+  min: number | null | undefined,
+  max: number | null | undefined
+) {
+  const cur = currency || "USD";
+  if (min == null && max == null) return "Salary not specified";
+  if (min != null && max != null) {
+    return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
+  }
+  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
+  return `Up to ${cur} ${max!.toLocaleString()}`;
 }
 
 export default function JobDetailPage() {
@@ -116,7 +131,15 @@ export default function JobDetailPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.job) {
-          setJob(data.job);
+          setJob({
+            ...data.job,
+            requirements: data.job.requirements || [],
+            responsibilities: data.job.responsibilities || [],
+            benefits: data.job.benefits || [],
+            tags: data.job.tags || [],
+            applicantCount: data.job.applicantCount ?? 0,
+            viewCount: data.job.viewCount ?? 0,
+          });
         } else {
           setError(data.error || "Job not found");
         }
@@ -129,8 +152,21 @@ export default function JobDetailPage() {
       });
   }, [id]);
 
-  const handleSave = () => {
-    setSaved(!saved);
+  const handleSave = async () => {
+    try {
+      const res = await fetch("/api/saved-jobs", {
+        method: saved ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: id }),
+      });
+      if (res.status === 401) {
+        router.push(`/login?callbackUrl=/jobs/${id}`);
+        return;
+      }
+      if (res.ok) setSaved(!saved);
+    } catch {
+      // silent
+    }
   };
 
   const handleApply = async (e: React.FormEvent) => {
@@ -163,7 +199,7 @@ export default function JobDetailPage() {
       setApplySuccess(true);
       setCoverLetter("");
       if (job) {
-        setJob({ ...job, applicantCount: job.applicantCount + 1 });
+        setJob({ ...job, applicantCount: (job.applicantCount || 0) + 1 });
       }
     } catch {
       setApplyError("Network error. Please try again.");
@@ -188,7 +224,9 @@ export default function JobDetailPage() {
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
         <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="text-red-400 font-medium mb-4">{error || "Job not found"}</p>
+          <p className="text-red-400 font-medium mb-4">
+            {error || "Job not found"}
+          </p>
           <Link
             href="/jobs"
             className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
@@ -200,6 +238,9 @@ export default function JobDetailPage() {
       </main>
     );
   }
+
+  const companyName = job.company?.name || "Company";
+  const companyId = job.company?.id;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
@@ -219,7 +260,7 @@ export default function JobDetailPage() {
                 <div className="flex items-start gap-4">
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
                     <span className="text-cyan-400 font-bold text-sm">
-                      {getLogo(job.company.name)}
+                      {getLogo(companyName)}
                     </span>
                   </div>
                   <div>
@@ -229,16 +270,10 @@ export default function JobDetailPage() {
                     <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
                       <span className="flex items-center gap-1">
                         <Building2 className="w-3.5 h-3.5" />
-                        {job.company.name}
+                        {companyName}
                       </span>
                       {job.category && (
-                        <span
-                          className="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: `${job.category.color}20`,
-                            color: job.category.color.replace("bg-", ""),
-                          }}
-                        >
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300">
                           {job.category.name}
                         </span>
                       )}
@@ -254,6 +289,7 @@ export default function JobDetailPage() {
                         ? "bg-red-500/10 border-red-500/20 text-red-400"
                         : "bg-white/5 border-white/10 text-slate-400 hover:text-red-400"
                     }`}
+                    aria-label="Save job"
                   >
                     <Heart
                       className="w-5 h-5"
@@ -268,14 +304,18 @@ export default function JobDetailPage() {
                   <MapPin className="w-3.5 h-3.5 text-slate-400" />
                   {job.location}
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs sm:text-sm">
-                  <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                  {job.type}
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs sm:text-sm">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  {job.experience}
-                </span>
+                {job.type && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs sm:text-sm">
+                    <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                    {job.type}
+                  </span>
+                )}
+                {job.experience && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs sm:text-sm">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    {job.experience}
+                  </span>
+                )}
                 {job.remote && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs sm:text-sm">
                     <Wifi className="w-3.5 h-3.5" />
@@ -284,7 +324,7 @@ export default function JobDetailPage() {
                 )}
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs sm:text-sm">
                   <DollarSign className="w-3.5 h-3.5 text-slate-400" />
-                  {job.currency} {(job.salaryMin ?? 0).toLocaleString()} - {(job.salaryMax ?? 0).toLocaleString()}
+                  {formatSalary(job.currency, job.salaryMin, job.salaryMax)}
                 </span>
               </div>
 
@@ -303,7 +343,7 @@ export default function JobDetailPage() {
                 </button>
                 {shareUrl && (
                   <ShareButtons
-                    title={`${job.title} at ${job.company.name}`}
+                    title={`${job.title} at ${companyName}`}
                     url={shareUrl}
                   />
                 )}
@@ -328,9 +368,14 @@ export default function JobDetailPage() {
                 </h2>
                 <ul className="space-y-3">
                   {job.requirements.map((req, i) => (
-                    <li key={i} className="flex items-start gap-3 text-slate-300 text-sm sm:text-base">
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-slate-300 text-sm sm:text-base"
+                    >
                       <span className="w-5 h-5 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-purple-400 text-xs font-bold">{i + 1}</span>
+                        <span className="text-purple-400 text-xs font-bold">
+                          {i + 1}
+                        </span>
                       </span>
                       {req}
                     </li>
@@ -347,7 +392,10 @@ export default function JobDetailPage() {
                 </h2>
                 <ul className="space-y-3">
                   {job.responsibilities.map((resp, i) => (
-                    <li key={i} className="flex items-start gap-3 text-slate-300 text-sm sm:text-base">
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-slate-300 text-sm sm:text-base"
+                    >
                       <span className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                       </span>
@@ -380,7 +428,9 @@ export default function JobDetailPage() {
 
             {job.tags.length > 0 && (
               <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
-                <h2 className="text-lg font-bold text-white mb-4">Skills & Tags</h2>
+                <h2 className="text-lg font-bold text-white mb-4">
+                  Skills & Tags
+                </h2>
                 <div className="flex flex-wrap gap-2">
                   {job.tags
                     .filter((tag) => !tag.startsWith("http"))
@@ -406,12 +456,12 @@ export default function JobDetailPage() {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center">
                   <span className="text-cyan-400 font-bold text-sm">
-                    {getLogo(job.company.name)}
+                    {getLogo(companyName)}
                   </span>
                 </div>
                 <div>
-                  <p className="text-white font-medium text-sm">{job.company.name}</p>
-                  {job.company.location && (
+                  <p className="text-white font-medium text-sm">{companyName}</p>
+                  {job.company?.location && (
                     <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
                       <MapPin className="w-3 h-3" />
                       {job.company.location}
@@ -419,12 +469,12 @@ export default function JobDetailPage() {
                   )}
                 </div>
               </div>
-              {job.company.description && (
+              {job.company?.description && (
                 <p className="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-4">
                   {job.company.description}
                 </p>
               )}
-              {job.company.website && (
+              {job.company?.website && (
                 <a
                   href={job.company.website}
                   target="_blank"
@@ -435,38 +485,46 @@ export default function JobDetailPage() {
                   Visit Website
                 </a>
               )}
-              <Link
-                href={`/jobs?company=${job.company.id}`}
-                className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 px-4 py-2.5 rounded-xl text-sm transition-all"
-              >
-                <Briefcase className="w-4 h-4" />
-                More jobs at {job.company.name}
-              </Link>
+              {companyId && (
+                <Link
+                  href={`/jobs?company=${companyId}`}
+                  className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 px-4 py-2.5 rounded-xl text-sm transition-all"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  More jobs at {companyName}
+                </Link>
+              )}
             </div>
 
             <div className="glass rounded-2xl p-6 border border-white/10">
-              <h3 className="text-white font-semibold mb-4 text-sm">Job Overview</h3>
+              <h3 className="text-white font-semibold mb-4 text-sm">
+                Job Overview
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Posted
                   </span>
-                  <span className="text-slate-300">{timeAgo(job.createdAt)}</span>
+                  <span className="text-slate-300">
+                    {timeAgo(job.createdAt)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 flex items-center gap-2">
                     <Users className="w-4 h-4" />
                     Applicants
                   </span>
-                  <span className="text-slate-300">{job.applicantCount}</span>
+                  <span className="text-slate-300">
+                    {job.applicantCount ?? 0}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400 flex items-center gap-2">
                     <Globe className="w-4 h-4" />
                     Views
                   </span>
-                  <span className="text-slate-300">{job.viewCount}</span>
+                  <span className="text-slate-300">{job.viewCount ?? 0}</span>
                 </div>
                 {job.deadline && (
                   <div className="flex items-center justify-between text-sm">
@@ -524,9 +582,7 @@ export default function JobDetailPage() {
                 <h3 className="text-xl font-bold text-white mb-1">
                   Apply for {job.title}
                 </h3>
-                <p className="text-slate-400 text-sm mb-6">
-                  at {job.company.name}
-                </p>
+                <p className="text-slate-400 text-sm mb-6">at {companyName}</p>
 
                 {applyError && (
                   <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
