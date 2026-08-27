@@ -38,11 +38,6 @@ interface Application {
       name: string;
       logo: string | null;
       location: string | null;
-    };
-    category: {
-      id: string;
-      name: string;
-      color: string;
     } | null;
   };
 }
@@ -51,6 +46,12 @@ const statusConfig: Record<
   string,
   { label: string; icon: React.ReactNode; color: string; bg: string }
 > = {
+  pending: {
+    label: "Pending",
+    icon: <Clock className="w-4 h-4" />,
+    color: "text-amber-400",
+    bg: "bg-amber-500/10 border-amber-500/20",
+  },
   applied: {
     label: "Applied",
     icon: <Clock className="w-4 h-4" />,
@@ -98,13 +99,28 @@ function timeAgo(dateString: string): string {
   return "Just now";
 }
 
-function getLogo(name: string): string {
+function getLogo(name?: string | null): string {
+  if (!name) return "?";
   return name
     .split(" ")
     .map((w) => w[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function formatSalary(
+  currency: string | null | undefined,
+  min: number | null | undefined,
+  max: number | null | undefined
+) {
+  const cur = currency || "USD";
+  if (min == null && max == null) return "Salary not specified";
+  if (min != null && max != null) {
+    return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
+  }
+  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
+  return `Up to ${cur} ${max!.toLocaleString()}`;
 }
 
 export default function MyApplicationsPage() {
@@ -114,8 +130,15 @@ export default function MyApplicationsPage() {
 
   useEffect(() => {
     fetch("/api/applications")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.status === 401) {
+          window.location.href = "/login?callbackUrl=/my-applications";
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (!data) return;
         if (data.applications) {
           setApplications(data.applications);
         } else {
@@ -184,7 +207,10 @@ export default function MyApplicationsPage() {
         {applications.length > 0 ? (
           <div className="space-y-4">
             {applications.map((app) => {
-              const status = statusConfig[app.status] || statusConfig.applied;
+              const status =
+                statusConfig[app.status] || statusConfig.pending;
+              const companyName = app.job.company?.name || "Company";
+
               return (
                 <div
                   key={app.id}
@@ -194,7 +220,7 @@ export default function MyApplicationsPage() {
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
                         <span className="text-cyan-400 font-bold text-sm">
-                          {getLogo(app.job.company.name)}
+                          {getLogo(companyName)}
                         </span>
                       </div>
                       <div className="min-w-0">
@@ -203,7 +229,7 @@ export default function MyApplicationsPage() {
                         </h3>
                         <p className="text-slate-400 text-sm flex items-center gap-1 mb-2">
                           <Building2 className="w-3.5 h-3.5" />
-                          {app.job.company.name}
+                          {companyName}
                         </p>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
                           <span className="flex items-center gap-1">
@@ -212,7 +238,11 @@ export default function MyApplicationsPage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <DollarSign className="w-3 h-3" />
-                            {app.job.currency} {(app.job.salaryMin ?? 0).toLocaleString()} - {(app.job.salaryMax ?? 0).toLocaleString()}
+                            {formatSalary(
+                              app.job.currency,
+                              app.job.salaryMin,
+                              app.job.salaryMax
+                            )}
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -223,7 +253,9 @@ export default function MyApplicationsPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${status.bg} ${status.color}`}>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${status.bg} ${status.color}`}
+                      >
                         {status.icon}
                         {status.label}
                       </span>
@@ -232,7 +264,9 @@ export default function MyApplicationsPage() {
 
                   {app.coverLetter && (
                     <div className="mt-4 pt-4 border-t border-white/5">
-                      <p className="text-slate-500 text-xs mb-1">Your cover letter:</p>
+                      <p className="text-slate-500 text-xs mb-1">
+                        Your cover letter:
+                      </p>
                       <p className="text-slate-300 text-sm line-clamp-2">
                         {app.coverLetter}
                       </p>
