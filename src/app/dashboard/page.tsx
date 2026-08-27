@@ -6,18 +6,13 @@ import {
   LayoutDashboard,
   Briefcase,
   Heart,
-  MessageSquare,
   Settings,
   Bell,
-  TrendingUp,
   Users,
   Eye,
   CheckCircle2,
   Clock,
   XCircle,
-  ChevronRight,
-  Search,
-  Filter,
   Loader2,
   Sparkles,
   MapPin,
@@ -29,85 +24,70 @@ import {
 interface ApiJob {
   id: string;
   title: string;
-  description: string;
   location: string;
   remote: boolean;
   type: string;
-  experience: string;
   salaryMin: number | null;
   salaryMax: number | null;
   currency: string;
   tags: string[];
-  status: string;
   createdAt: string;
   company: {
     id: string;
     name: string;
     logo: string | null;
-    location: string | null;
-  };
+  } | null;
 }
 
 interface ProfileData {
-  name: string;
-  title: string;
+  name?: string;
+  title?: string;
   headline?: string;
-  skills?: string[];
 }
-
-const statusConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  applied: {
-    label: "Applied",
-    icon: <Clock className="w-4 h-4" />,
-    color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  },
-  viewed: {
-    label: "Viewed",
-    icon: <Eye className="w-4 h-4" />,
-    color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-  },
-  interview: {
-    label: "Interview",
-    icon: <Users className="w-4 h-4" />,
-    color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
-  },
-  rejected: {
-    label: "Rejected",
-    icon: <XCircle className="w-4 h-4" />,
-    color: "text-red-400 bg-red-500/10 border-red-500/20",
-  },
-  hired: {
-    label: "Hired",
-    icon: <CheckCircle2 className="w-4 h-4" />,
-    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  },
-};
 
 const sidebarItems = [
-  { icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard", href: "/dashboard", active: true },
-  { icon: <Briefcase className="w-5 h-5" />, label: "My Applications", href: "/my-applications", active: false },
-  { icon: <Heart className="w-5 h-5" />, label: "Saved Jobs", href: "/saved-jobs", active: false },
-  { icon: <MessageSquare className="w-5 h-5" />, label: "Messages", href: "/messages", active: false },
-  { icon: <Bell className="w-5 h-5" />, label: "Notifications", href: "/notifications", active: false },
-  { icon: <Settings className="w-5 h-5" />, label: "Settings", href: "/settings", active: false },
+  {
+    icon: <LayoutDashboard className="w-5 h-5" />,
+    label: "Dashboard",
+    href: "/dashboard",
+    active: true,
+  },
+  {
+    icon: <Briefcase className="w-5 h-5" />,
+    label: "My Applications",
+    href: "/my-applications",
+    active: false,
+  },
+  {
+    icon: <Heart className="w-5 h-5" />,
+    label: "Saved Jobs",
+    href: "/saved-jobs",
+    active: false,
+  },
+  {
+    icon: <Settings className="w-5 h-5" />,
+    label: "Settings",
+    href: "/settings",
+    active: false,
+  },
 ];
 
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 30) return `${Math.floor(days / 30)} months ago`;
-  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  return "Just now";
+function formatSalary(
+  currency: string | null | undefined,
+  min: number | null | undefined,
+  max: number | null | undefined
+) {
+  const cur = currency || "USD";
+  if (min == null && max == null) return "Not specified";
+  if (min != null && max != null) {
+    return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
+  }
+  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
+  return `Up to ${cur} ${max!.toLocaleString()}`;
 }
 
-function getLogo(name: string): string {
+function getLogo(name?: string | null): string {
+  if (!name) return "?";
   return name
     .split(" ")
     .map((w) => w[0])
@@ -119,26 +99,40 @@ function getLogo(name: string): string {
 export default function DashboardPage() {
   const [jobs, setJobs] = useState<ApiJob[]>([]);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [appCount, setAppCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
+  const [totalJobs, setTotalJobs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/jobs").then((r) => r.json()),
-      fetch("/api/profile").then((r) => r.json()).catch(() => ({ profile: null })),
+      fetch("/api/jobs?limit=6").then((r) => r.json()),
+      fetch("/api/profile")
+        .then((r) => r.json())
+        .catch(() => ({})),
+      fetch("/api/applications")
+        .then((r) => (r.ok ? r.json() : { count: 0 }))
+        .catch(() => ({ count: 0 })),
+      fetch("/api/saved-jobs")
+        .then((r) => (r.ok ? r.json() : { count: 0 }))
+        .catch(() => ({ count: 0 })),
     ])
-      .then(([jobsData, profileData]) => {
+      .then(([jobsData, profileData, appsData, savedData]) => {
         if (jobsData.jobs) setJobs(jobsData.jobs);
+        if (jobsData.pagination?.total != null) {
+          setTotalJobs(jobsData.pagination.total);
+        } else if (jobsData.jobs) {
+          setTotalJobs(jobsData.jobs.length);
+        }
         if (profileData.profile) setProfile(profileData.profile);
+        else if (profileData.user) setProfile(profileData.user);
+        setAppCount(appsData.count ?? appsData.applications?.length ?? 0);
+        setSavedCount(savedData.count ?? savedData.jobs?.length ?? 0);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
-
-  const recentJobs = jobs.slice(0, 6);
-  const totalJobs = jobs.length;
-  const savedCount = 0;
-  const appCount = 0;
 
   const stats = [
     {
@@ -147,13 +141,15 @@ export default function DashboardPage() {
       change: "Live",
       trend: "up" as const,
       icon: <Briefcase className="w-5 h-5 text-cyan-400" />,
+      href: "/jobs",
     },
     {
       title: "My Applications",
       value: appCount.toString(),
-      change: "Pending",
+      change: "Track",
       trend: "neutral" as const,
       icon: <CheckCircle2 className="w-5 h-5 text-purple-400" />,
+      href: "/my-applications",
     },
     {
       title: "Saved Jobs",
@@ -161,18 +157,21 @@ export default function DashboardPage() {
       change: "Bookmarked",
       trend: "neutral" as const,
       icon: <Heart className="w-5 h-5 text-pink-400" />,
+      href: "/saved-jobs",
     },
     {
-      title: "Profile Views",
-      value: "0",
-      change: "Coming soon",
+      title: "Profile",
+      value: profile?.name ? "Ready" : "Setup",
+      change: "Edit",
       trend: "neutral" as const,
       icon: <Eye className="w-5 h-5 text-emerald-400" />,
+      href: "/settings",
     },
   ];
 
   const userName = profile?.name || "Job Seeker";
-  const userTitle = profile?.title || profile?.headline || "Welcome to your dashboard";
+  const userTitle =
+    profile?.title || profile?.headline || "Welcome to your dashboard";
 
   if (loading) {
     return (
@@ -197,15 +196,24 @@ export default function DashboardPage() {
             <span>Menu</span>
           </button>
 
-          <aside className={`lg:w-64 shrink-0 ${sidebarOpen ? "block" : "hidden lg:block"}`}>
-            <div className="glass rounded-2xl p-4 sticky top-24">
+          <aside
+            className={`lg:w-64 shrink-0 ${sidebarOpen ? "block" : "hidden lg:block"}`}
+          >
+            <div className="glass rounded-2xl p-4 sticky top-24 border border-white/10">
               <div className="flex items-center gap-3 p-3 mb-4 border-b border-white/10 pb-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
-                  {userName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  {userName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
                 </div>
                 <div>
                   <h3 className="text-white font-semibold">{userName}</h3>
-                  <p className="text-slate-400 text-sm">{userTitle}</p>
+                  <p className="text-slate-400 text-sm line-clamp-1">
+                    {userTitle}
+                  </p>
                 </div>
               </div>
 
@@ -228,13 +236,22 @@ export default function DashboardPage() {
 
               <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-slate-300">Profile</span>
-                  <span className="text-sm text-cyan-400 font-semibold">60%</span>
+                  <span className="text-sm text-slate-300">Quick links</span>
                 </div>
-                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full w-[60%] bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" />
+                <div className="space-y-2">
+                  <Link
+                    href="/jobs"
+                    className="block text-xs text-cyan-400 hover:text-cyan-300"
+                  >
+                    Browse jobs →
+                  </Link>
+                  <Link
+                    href="/my-applications"
+                    className="block text-xs text-slate-400 hover:text-white"
+                  >
+                    Track applications →
+                  </Link>
                 </div>
-                <p className="text-xs text-slate-400 mt-2">Complete your profile for better matches</p>
               </div>
             </div>
           </aside>
@@ -242,17 +259,24 @@ export default function DashboardPage() {
           <div className="flex-1 space-y-8">
             <div className="glass rounded-2xl p-6 md:p-8 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
               <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                Welcome back, {userName.split(" ")[0]}! 👋
+                Welcome back, {userName.split(" ")[0]}!
               </h1>
               <p className="text-slate-300">
-                There are <span className="text-cyan-400 font-semibold">{totalJobs} active jobs</span> matching your profile.
-                Keep your profile updated for better recommendations.
+                There are{" "}
+                <span className="text-cyan-400 font-semibold">
+                  {totalJobs} active jobs
+                </span>{" "}
+                on the platform. Apply and track everything from here.
               </p>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map((stat) => (
-                <div key={stat.title} className="glass rounded-2xl p-5 hover:bg-white/10 transition-all">
+                <Link
+                  key={stat.title}
+                  href={stat.href}
+                  className="glass rounded-2xl p-5 hover:bg-white/10 transition-all border border-white/10"
+                >
                   <div className="flex items-center justify-between mb-4">
                     <div className="p-2.5 rounded-xl bg-white/5">{stat.icon}</div>
                     <span
@@ -265,17 +289,19 @@ export default function DashboardPage() {
                       {stat.change}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-1">{stat.value}</h3>
+                  <h3 className="text-2xl font-bold text-white mb-1">
+                    {stat.value}
+                  </h3>
                   <p className="text-slate-400 text-sm">{stat.title}</p>
-                </div>
+                </Link>
               ))}
             </div>
 
-            <div className="glass rounded-2xl overflow-hidden">
+            <div className="glass rounded-2xl overflow-hidden border border-white/10">
               <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-400" />
-                  <h2 className="text-xl font-bold text-white">Recommended Jobs</h2>
+                  <h2 className="text-xl font-bold text-white">Latest Jobs</h2>
                 </div>
                 <Link
                   href="/jobs"
@@ -285,9 +311,9 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
-              {recentJobs.length > 0 ? (
+              {jobs.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
-                  {recentJobs.map((job) => (
+                  {jobs.map((job) => (
                     <Link
                       key={job.id}
                       href={`/jobs/${job.id}`}
@@ -296,7 +322,7 @@ export default function DashboardPage() {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center text-cyan-300 text-xs font-bold">
-                            {getLogo(job.company.name)}
+                            {getLogo(job.company?.name)}
                           </div>
                           <div>
                             <h4 className="text-white font-medium text-sm group-hover:text-cyan-300 transition-colors">
@@ -304,7 +330,7 @@ export default function DashboardPage() {
                             </h4>
                             <p className="text-slate-400 text-xs flex items-center gap-1">
                               <Building2 className="w-3 h-3" />
-                              {job.company.name}
+                              {job.company?.name || "Company"}
                             </p>
                           </div>
                         </div>
@@ -317,72 +343,34 @@ export default function DashboardPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <DollarSign className="w-3 h-3" />
-                          {job.currency}{(job.salaryMin ?? 0).toLocaleString()} - {(job.salaryMax ?? 0).toLocaleString()}
+                          {formatSalary(
+                            job.currency,
+                            job.salaryMin,
+                            job.salaryMax
+                          )}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300">
-                          {job.type}
-                        </span>
+                        {job.type && (
+                          <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300">
+                            {job.type}
+                          </span>
+                        )}
                         {job.remote && (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
                             Remote
                           </span>
                         )}
                       </div>
-
-                      <div className="flex flex-wrap gap-1">
-                        {job.tags
-                          .filter((tag) => !tag.startsWith("http"))
-                          .slice(0, 4)
-                          .map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-300 border border-white/5 break-all max-w-[100px] truncate"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                      </div>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <div className="p-12 text-center">
-                  <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-400 font-medium mb-1">No jobs found</p>
-                  <p className="text-slate-500 text-sm mb-4">Check back later for new opportunities</p>
-                  <Link
-                    href="/jobs"
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2 rounded-xl text-sm font-medium"
-                  >
-                    Browse Jobs
+                <div className="p-10 text-center text-slate-400 text-sm">
+                  No jobs to show yet.{" "}
+                  <Link href="/jobs" className="text-cyan-400">
+                    Browse jobs
                   </Link>
                 </div>
               )}
-            </div>
-
-            <div className="glass rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Quick Actions</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { icon: <Briefcase className="w-5 h-5" />, label: "Find Jobs", href: "/jobs", color: "from-cyan-500 to-blue-500" },
-                  { icon: <Users className="w-5 h-5" />, label: "Companies", href: "/companies", color: "from-purple-500 to-pink-500" },
-                  { icon: <TrendingUp className="w-5 h-5" />, label: "Pricing", href: "/pricing", color: "from-emerald-500 to-teal-500" },
-                  { icon: <Settings className="w-5 h-5" />, label: "Settings", href: "/settings", color: "from-amber-500 to-orange-500" },
-                ].map((action) => (
-                  <Link
-                    key={action.label}
-                    href={action.href}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all group"
-                  >
-                    <div className={`p-2.5 rounded-lg bg-gradient-to-br ${action.color} text-white`}>
-                      {action.icon}
-                    </div>
-                    <span className="text-slate-300 text-sm font-medium group-hover:text-white">
-                      {action.label}
-                    </span>
-                  </Link>
-                ))}
-              </div>
             </div>
           </div>
         </div>
