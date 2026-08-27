@@ -1,62 +1,151 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+type RouteContext = {
+  params: Promise<{
+    id: string;
+  }>;
+};
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _req: NextRequest,
+  context: RouteContext
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    const { id } = await params;
+    const session = await auth();
 
-    // Check if user owns this job's company
-    const job = await prisma.job.findUnique({
-      where: { id },
-      include: { company: { select: { email: true } } },
-    });
-
-    if (!job) {
-      return NextResponse.json({ error: "Job not found" }, { status: 404 });
-    }
-
-    // Only company owner or admin can view applicants
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { email: true, role: true },
-    });
-
-    if (job.company.email !== user?.email && user?.role !== "admin" && user?.role !== "owner") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const applications = await prisma.application.findMany({
-      where: { jobId: id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            title: true,
-            location: true,
-            avatar: true,
-          },
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
         },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const user = session.user;
+
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          error: "Job ID is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const job = await prisma.job.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        company: true,
       },
     });
 
-    return NextResponse.json({ applications });
-  } catch (error: any) {
-    console.error("Fetch applicants error:", error);
+    if (!job) {
+      return NextResponse.json(
+        {
+          error: "Job not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    const isAdmin =
+      user.role === "ADMIN" ||
+      user.role === "admin";
+
+    const isOwner =
+      user.role === "OWNER" ||
+      user.role === "owner";
+
+    const isEmployer =
+      user.role === "EMPLOYER" ||
+      user.role === "employer";
+
+    const isJobOwner =
+      job.postedById === user.id;
+
+    const isCompanyOwner =
+      !!job.company &&
+      job.company.ownerId === user.id;
+
+    if (
+      !isAdmin &&
+      !isOwner &&
+      !isJobOwner &&
+      !(isEmployer && isCompanyOwner)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Forbidden",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    const applications =
+      await prisma.application.findMany({
+        where: {
+          jobId: job.id,
+        },
+        include: {
+          user: {
+            include: {
+              profile: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
     return NextResponse.json(
-      { error: error.message || "Failed to fetch applicants" },
-      { status: 500 }
+      {
+        job: {
+          id: job.id,
+          title: job.title,
+          company: job.company
+            ? {
+                id: job.company.id,
+                name: job.company.name,
+                email: job.company.email,
+              }
+            : null,
+        },
+        applications,
+      },
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error(
+      "Get job applicants error:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Failed to load job applicants",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
