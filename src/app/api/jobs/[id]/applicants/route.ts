@@ -1,16 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 import { auth } from "@/lib/auth";
-
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: NextRequest,
-  context: RouteContext
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
   try {
     const session = await auth();
@@ -26,9 +27,7 @@ export async function GET(
       );
     }
 
-    const user = session.user;
-
-    const { id } = await context.params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -41,14 +40,15 @@ export async function GET(
       );
     }
 
-    const job = await prisma.job.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        company: true,
-      },
-    });
+    const job =
+      await prisma.job.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          company: true,
+        },
+      });
 
     if (!job) {
       return NextResponse.json(
@@ -61,31 +61,61 @@ export async function GET(
       );
     }
 
+    const user =
+      await prisma.user.findUnique({
+        where: {
+          id: session.user.id,
+        },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+        },
+      });
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "User not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    const normalizedRole =
+      user.role?.toLowerCase();
+
     const isAdmin =
-      user.role === "ADMIN" ||
-      user.role === "admin";
+      normalizedRole === "admin";
 
     const isOwner =
-      user.role === "OWNER" ||
-      user.role === "owner";
+      normalizedRole === "owner";
 
     const isEmployer =
-      user.role === "EMPLOYER" ||
-      user.role === "employer";
+      normalizedRole === "employer";
 
-    const isJobOwner =
+    const isJobPoster =
       job.postedById === user.id;
 
     const isCompanyOwner =
       !!job.company &&
       job.company.ownerId === user.id;
 
-    if (
-      !isAdmin &&
-      !isOwner &&
-      !isJobOwner &&
-      !(isEmployer && isCompanyOwner)
-    ) {
+    const isCompanyEmailOwner =
+      !!job.company?.email &&
+      !!user.email &&
+      job.company.email === user.email;
+
+    const hasPermission =
+      isAdmin ||
+      isOwner ||
+      isJobPoster ||
+      (isEmployer && isCompanyOwner) ||
+      isCompanyEmailOwner;
+
+    if (!hasPermission) {
       return NextResponse.json(
         {
           error: "Forbidden",
@@ -99,49 +129,51 @@ export async function GET(
     const applications =
       await prisma.application.findMany({
         where: {
-          jobId: job.id,
-        },
-        include: {
-          user: {
-            include: {
-              profile: true,
-            },
-          },
+          jobId: id,
         },
         orderBy: {
           createdAt: "desc",
         },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              title: true,
+              location: true,
+              image: true,
+            },
+          },
+        },
       });
 
-    return NextResponse.json(
-      {
-        job: {
-          id: job.id,
-          title: job.title,
-          company: job.company
-            ? {
-                id: job.company.id,
-                name: job.company.name,
-                email: job.company.email,
-              }
-            : null,
-        },
-        applications,
-      },
-      {
-        status: 200,
-      }
-    );
+    const serializedApplications =
+      applications.map(
+        (application) => ({
+          ...application,
+          user: {
+            ...application.user,
+            avatar:
+              application.user.image,
+          },
+        })
+      );
+
+    return NextResponse.json({
+      applications:
+        serializedApplications,
+    });
   } catch (error) {
     console.error(
-      "Get job applicants error:",
+      "Fetch applicants error:",
       error
     );
 
     return NextResponse.json(
       {
         error:
-          "Failed to load job applicants",
+          "Failed to fetch applicants",
       },
       {
         status: 500,
