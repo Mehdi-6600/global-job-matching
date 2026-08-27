@@ -7,20 +7,17 @@ import { z } from "zod";
 import { db } from "./db";
 import { env } from "./env";
 import { ROLES } from "./roles";
+import { authConfig } from "./auth.config";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8), // ✅ تغییر از 6 به 8
+  password: z.string().min(8),
 });
 
 const authResult = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(db) as any,
-  session: { strategy: "jwt" },
   secret: env.AUTH_SECRET,
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
   providers: [
     Credentials({
       name: "credentials",
@@ -43,7 +40,7 @@ const authResult = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image, // ✅ تغییر از avatar به image
+          image: user.image,
           role: user.role,
         };
       },
@@ -54,6 +51,7 @@ const authResult = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         (token as any).id = user.id;
@@ -73,7 +71,7 @@ const authResult = NextAuth({
     async signIn({ user, isNewUser }) {
       if (isNewUser && user.email === env.OWNER_EMAIL) {
         await db.user.update({
-          where: { id: user.id },
+          where: { id: user.id! },
           data: { role: ROLES.OWNER },
         });
       }
