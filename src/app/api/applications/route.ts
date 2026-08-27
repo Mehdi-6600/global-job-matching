@@ -9,7 +9,6 @@ const applySchema = z.object({
   coverLetter: z.string().max(5000).optional(),
 });
 
-// ✅ GET — درخواست‌های کاربر لاگین‌شده را برمی‌گرداند
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -40,7 +39,6 @@ export async function GET(req: NextRequest) {
             location: true,
             salary: true,
             type: true,
-            category: true,
             company: {
               select: { id: true, name: true, logo: true, location: true },
             },
@@ -59,7 +57,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ✅ POST — ثبت درخواست جدید
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -106,9 +103,9 @@ export async function POST(req: NextRequest) {
     const application = await prisma.application.create({
       data: {
         userId: session.user.id,
-        jobId: jobId,
+        jobId,
         coverLetter: coverLetter || null,
-        status: "applied",
+        status: "pending",
       },
     });
 
