@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await req.formData();
-    const file = formData.get("resume") as File;
+    const file = formData.get("resume") as File | null;
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -18,30 +18,37 @@ export async function POST(req: NextRequest) {
 
     if (file.type !== "application/pdf") {
       return NextResponse.json(
-        { error: "Only PDF files allowed" },
+        { error: "Only PDF files are allowed" },
         { status: 400 }
       );
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "File too large (max 2MB)" },
+        { error: "File too large (max 5MB)" },
         { status: 400 }
       );
     }
 
-    // فعلاً فقط نام فایل را ذخیره می‌کنیم
-    // (برای ذخیره واقعی فایل بعداً می‌توان از Vercel Blob / S3 استفاده کرد)
-    await prisma.profile.updateMany({
+    // Store filename only for now (no blob storage yet)
+    const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+    await prisma.profile.upsert({
       where: { userId: session.user.id },
-      data: {
-        resumeUrl: file.name,
+      create: {
+        userId: session.user.id,
+        resumeUrl: filename,
+      },
+      update: {
+        resumeUrl: filename,
       },
     });
 
     return NextResponse.json({
-      message: "Resume uploaded",
-      filename: file.name,
+      success: true,
+      filename,
+      message:
+        "Resume filename saved. For production, connect S3/Blob storage.",
     });
   } catch (error) {
     console.error("Resume upload error:", error);
@@ -49,18 +56,21 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function DELETE(_req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await prisma.profile.updateMany({
+      where: { userId: session.user.id },
+      data: { resumeUrl: null },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Resume delete error:", error);
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
-
-  await prisma.profile.updateMany({
-    where: { userId: session.user.id },
-    data: {
-      resumeUrl: null,
-    },
-  });
-
-  return NextResponse.json({ message: "Resume deleted" });
 }
