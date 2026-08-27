@@ -50,76 +50,78 @@ model VerificationToken {
 // ─── Core Models ──────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          String    @default("JOB_SEEKER")
-  plan          String    @default("free")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  id                 String         @id @default(cuid())
+  name               String?
+  email              String         @unique
+  emailVerified      DateTime?
+  image              String?
+  password           String?
+  role               String         @default("JOB_SEEKER")
+  plan               String         @default("free")
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @default(now()) @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  companies     Company[]
-  jobs          Job[]         @relation("PostedBy")
-  transactions  Transaction[]
-  applications  Application[]
-  notifications Notification[]
-  messages      Message[]     @relation("SentMessages")
-  receivedMessages Message[]  @relation("ReceivedMessages")
-  interviews    Interview[]
-  savedJobs     SavedJob[]
-  jobAlerts     JobAlert[]
-  profile       Profile?
-  blogPosts     BlogPost[]
-  subscribers   Subscriber[]
+  accounts           Account[]
+  sessions           Session[]
+  companies          Company[]
+  jobs               Job[]          @relation("PostedBy")
+  transactions       Transaction[]
+  applications       Application[]
+  notifications      Notification[]
+  messages           Message[]      @relation("SentMessages")
+  receivedMessages   Message[]      @relation("ReceivedMessages")
+  interviews         Interview[]
+  savedJobs          SavedJob[]
+  jobAlerts          JobAlert[]
+  profile            Profile?
+  blogPosts          BlogPost[]
+  subscribers        Subscriber[]
 
   @@index([email])
   @@index([role])
 }
 
 model Company {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
-  description String?  @db.Text
+  description String?     @db.Text
   location    String?
   website     String?
   logo        String?
   ownerId     String?
   email       String?
-  status      String   @default("active")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  status      String      @default("active")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @default(now()) @updatedAt
 
-  owner User?  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  jobs  Job[]
+  owner       User?       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  jobs        Job[]
+  interviews  Interview[]
 
   @@index([ownerId])
   @@index([status])
 }
 
 model Job {
-  id          String   @id @default(cuid())
-  title       String
-  description String   @db.Text
-  location    String
-  salary      String?
-  type        String
-  category    String?
-  status      String   @default("active")
-  viewCount   Int      @default(0)
-  companyId   String?
-  postedById  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id           String         @id @default(cuid())
+  title        String
+  description  String         @db.Text
+  location     String
+  salary       String?
+  type         String
+  category     String?
+  status       String         @default("active")
+  viewCount    Int            @default(0)
+  companyId    String?
+  postedById   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @default(now()) @updatedAt
 
   company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
   postedBy     User?         @relation("PostedBy", fields: [postedById], references: [id], onDelete: Cascade)
   applications Application[]
   savedJobs    SavedJob[]
+  interviews   Interview[]
 
   @@index([companyId])
   @@index([postedById])
@@ -187,15 +189,23 @@ model Interview {
   jobId       String
   companyId   String
   scheduledAt DateTime
+  duration    Int      @default(30)
+  type        String   @default("video")
+  meetLink    String?
   status      String   @default("scheduled")
   notes       String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([jobId])
+  @@index([companyId])
   @@index([status])
+  @@index([scheduledAt])
 }
 
 // ─── Communication ──────────────────────────────────────────
@@ -254,8 +264,8 @@ model JobAlert {
   location  String?
   type      String?
   active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
