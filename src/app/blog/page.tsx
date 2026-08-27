@@ -1,19 +1,35 @@
 import Link from "next/link";
 import { ArrowRight, Calendar, BookOpen } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string | null;
-  coverImage: string | null;
-  createdAt: string;
-}
+export const revalidate = 60;
 
 export default async function BlogPage() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/blog`, { next: { revalidate: 60 } });
-  const data = await res.json();
-  const posts: BlogPost[] = data.posts || [];
+  let posts: {
+    id: string;
+    title: string;
+    slug: string;
+    excerpt: string | null;
+    coverImage: string | null;
+    createdAt: Date;
+  }[] = [];
+
+  try {
+    posts = await prisma.blogPost.findMany({
+      where: { published: true },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        coverImage: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    console.error("Blog fetch error:", error);
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
@@ -21,7 +37,9 @@ export default async function BlogPage() {
         <div className="text-center mb-12">
           <BookOpen className="w-10 h-10 text-indigo-400 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-white mb-3">Career Blog</h1>
-          <p className="text-slate-400">Tips, guides, and insights for your career journey</p>
+          <p className="text-slate-400">
+            Tips, guides, and insights for your career journey
+          </p>
         </div>
 
         {posts.length === 0 ? (
@@ -37,7 +55,10 @@ export default async function BlogPage() {
                 className="glass rounded-2xl overflow-hidden border border-white/10 hover:border-indigo-500/30 transition-all group"
               >
                 {post.coverImage ? (
-                  <div className="h-48 bg-cover bg-center" style={{ backgroundImage: `url(${post.coverImage})` }} />
+                  <div
+                    className="h-48 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${post.coverImage})` }}
+                  />
                 ) : (
                   <div className="h-48 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
                     <BookOpen className="w-10 h-10 text-indigo-400/50" />
@@ -52,7 +73,9 @@ export default async function BlogPage() {
                     {post.title}
                   </h2>
                   {post.excerpt && (
-                    <p className="text-slate-400 text-sm line-clamp-3">{post.excerpt}</p>
+                    <p className="text-slate-400 text-sm line-clamp-3">
+                      {post.excerpt}
+                    </p>
                   )}
                   <span className="inline-flex items-center gap-1 text-indigo-400 text-sm mt-4 group-hover:gap-2 transition-all">
                     Read more <ArrowRight className="w-3 h-3" />
