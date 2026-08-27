@@ -6,10 +6,12 @@ import { z } from "zod";
 const cryptoSchema = z.object({
   planId: z.enum(["pro", "business", "enterprise"]),
   txHash: z.string().min(10).max(200),
-  cryptoType: z.enum(["BTC", "ETH", "USDT", "USDC"]),
+  cryptoType: z.enum(["BTC", "ETH", "BNB", "USDT", "DOGE", "TON", "USDC"]),
+  amount: z.number().optional(),
+  currency: z.string().optional(),
 });
 
-const PLAN_PRICES = {
+const PLAN_PRICES: Record<string, number> = {
   pro: 9,
   business: 29,
   enterprise: 99,
@@ -25,15 +27,23 @@ export async function POST(req: Request) {
     const body = await req.json();
     const result = cryptoSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid data", details: result.error.issues },
+        { status: 400 }
+      );
     }
 
     const { planId, txHash, cryptoType } = result.data;
     const expectedAmount = PLAN_PRICES[planId];
 
-    const existingTx = await db.transaction.findUnique({ where: { txHash } });
+    const existingTx = await db.transaction.findUnique({
+      where: { txHash },
+    });
     if (existingTx) {
-      return NextResponse.json({ error: "Transaction hash already used" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Transaction hash already used" },
+        { status: 409 }
+      );
     }
 
     const transaction = await db.transaction.create({
@@ -51,11 +61,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Transaction submitted for verification. Will be activated within 24 hours.",
+      message:
+        "Transaction submitted for verification. Will be activated within 24 hours.",
       transaction,
     });
   } catch (error) {
     console.error("Crypto payment error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
