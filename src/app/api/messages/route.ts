@@ -2,97 +2,275 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-// GET - لیست مکالمات یا پیام‌های یک نفر
+function serializeUser(user: {
+  id: string;
+  name: string | null;
+  image: string | null;
+}) {
+  return {
+    id: user.id,
+    name: user.name,
+    avatar: user.image,
+  };
+}
+
+// GET - دریافت پیام‌های یک مکالمه یا لیست مکالمات
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await auth();
 
-  const { searchParams } = new URL(req.url);
-  const withUserId = searchParams.get("with");
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-  if (withUserId) {
-    const messages = await prisma.message.findMany({
-      where: {
-        OR: [
-          { senderId: session.user.id, receiverId: withUserId },
-          { senderId: withUserId, receiverId: session.user.id },
-        ],
-      },
-      orderBy: { createdAt: "asc" },
-      include: {
-        sender: { select: { id: true, name: true, avatar: true } },
-        receiver: { select: { id: true, name: true, avatar: true } },
-      },
-    });
+    const { searchParams } = new URL(req.url);
+    const withUserId = searchParams.get("with");
 
-    // علامت‌گذاری پیام‌های دریافتی به عنوان خوانده‌شده
-    await prisma.message.updateMany({
-      where: {
-        senderId: withUserId,
-        receiverId: session.user.id,
-        read: false,
-      },
-      data: { read: true },
-    });
+    // ---------------------------------------------------------
+    // دریافت پیام‌های بین کاربر فعلی و یک کاربر مشخص
+    // ---------------------------------------------------------
 
-    return NextResponse.json({ messages });
-  }
+    if (withUserId) {
+      if (withUserId === session.user.id) {
+        return NextResponse.json(
+          { error: "Cannot message yourself" },
+          { status: 400 }
+        );
+      }
 
-  // لیست مکالمات
-  const allMessages = await prisma.message.findMany({
-    where: {
-      OR: [{ senderId: session.user.id }, { receiverId: session.user.id }],
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
-      sender: { select: { id: true, name: true, avatar: true } },
-      receiver: { select: { id: true, name: true, avatar: true } },
-    },
-  });
+      const messages = await prisma.message.findMany({
+        where: {
+          OR: [
+            {
+              senderId: session.user.id,
+              receiverId: withUserId,
+            },
+            {
+              senderId: withUserId,
+              receiverId: session.user.id,
+            },
+          ],
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          receiver: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+      });
 
-  const conversationsMap = new Map();
-  allMessages.forEach((msg) => {
-    const partnerId = msg.senderId === session.user.id ? msg.receiverId : msg.senderId;
-    if (!conversationsMap.has(partnerId)) {
-      conversationsMap.set(partnerId, {
-        partner: msg.senderId === session.user.id ? msg.receiver : msg.sender,
-        lastMessage: msg,
-        unreadCount: 0,
+      // پیام‌های دریافتی را خوانده‌شده می‌کنیم
+      await prisma.message.updateMany({
+        where: {
+          senderId: withUserId,
+          receiverId: session.user.id,
+          read: false,
+        },
+        data: {
+          read: true,
+        },
+      });
+
+      const serializedMessages = messages.map((message) => ({
+        ...message,
+        sender: serializeUser(message.sender),
+        receiver: serializeUser(message.receiver),
+      }));
+
+      return NextResponse.json({
+        messages: serializedMessages,
       });
     }
-    if (msg.receiverId === session.user.id && !msg.read) {
-      conversationsMap.get(partnerId).unreadCount++;
-    }
-  });
 
-  return NextResponse.json({
-    conversations: Array.from(conversationsMap.values()),
-  });
+    // ---------------------------------------------------------
+    // دریافت تمام پیام‌های کاربر برای ساخت لیست مکالمات
+    // ---------------------------------------------------------
+
+    const allMessages = await prisma.message.findMany({
+      where: {
+        OR: [
+          {
+            senderId: session.user.id,
+          },
+          {
+            receiverId: session.user.id,
+          },
+        ],
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+      },
+    });
+
+    const conversationsMap = new Map<
+      string,
+      {
+        partner: {
+          id: string;
+          name: string | null;
+          avatar: string | null;
+        };
+        lastMessage: unknown;
+        unreadCount: number;
+      }
+    >();
+
+    for (const message of allMessages) {
+      const isSender =
+        message.senderId === session.user.id;
+
+      const partnerId = isSender
+        ? message.receiverId
+        : message.senderId;
+
+      if (!conversationsMap.has(partnerId)) {
+        const partner = isSender
+          ? message.receiver
+          : message.sender;
+
+        conversationsMap.set(partnerId, {
+          partner: serializeUser(partner),
+          lastMessage: {
+            ...message,
+            sender: serializeUser(message.sender),
+            receiver: serializeUser(message.receiver),
+          },
+          unreadCount: 0,
+        });
+      }
+
+      if (
+        message.receiverId === session.user.id &&
+        !message.read
+      ) {
+        const conversation =
+          conversationsMap.get(partnerId);
+
+        if (conversation) {
+          conversation.unreadCount += 1;
+        }
+      }
+    }
+
+    return NextResponse.json({
+      conversations: Array.from(
+        conversationsMap.values()
+      ),
+    });
+  } catch (error) {
+    console.error(
+      "Get messages error:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error: "Failed to load messages",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
 }
 
 // POST - ارسال پیام
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    const { receiverId, content } = await req.json();
+    const session = await auth();
 
-    if (!receiverId || !content?.trim()) {
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Receiver and content required" },
-        { status: 400 }
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+
+    const receiverId =
+      typeof body.receiverId === "string"
+        ? body.receiverId.trim()
+        : "";
+
+    const content =
+      typeof body.content === "string"
+        ? body.content.trim()
+        : "";
+
+    if (!receiverId || !content) {
+      return NextResponse.json(
+        {
+          error:
+            "Receiver and content are required",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
     if (receiverId === session.user.id) {
       return NextResponse.json(
-        { error: "Cannot message yourself" },
-        { status: 400 }
+        {
+          error: "Cannot message yourself",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // بررسی وجود گیرنده
+    const receiver = await prisma.user.findUnique({
+      where: {
+        id: receiverId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!receiver) {
+      return NextResponse.json(
+        {
+          error: "Receiver not found",
+        },
+        {
+          status: 404,
+        }
       );
     }
 
@@ -100,20 +278,51 @@ export async function POST(req: NextRequest) {
       data: {
         senderId: session.user.id,
         receiverId,
-        content: content.trim(),
+        content,
       },
       include: {
-        sender: { select: { id: true, name: true, avatar: true } },
-        receiver: { select: { id: true, name: true, avatar: true } },
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json({ message }, { status: 201 });
-  } catch (error) {
-    console.error("Send message error:", error);
     return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 }
+      {
+        message: {
+          ...message,
+          sender: serializeUser(message.sender),
+          receiver: serializeUser(message.receiver),
+        },
+      },
+      {
+        status: 201,
+      }
+    );
+  } catch (error) {
+    console.error(
+      "Send message error:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error: "Failed to send message",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
