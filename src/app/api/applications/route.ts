@@ -37,10 +37,17 @@ export async function GET(req: NextRequest) {
             id: true,
             title: true,
             location: true,
-            salary: true,
+            remote: true,
             type: true,
+            salary: true,
+            salaryMin: true,
+            salaryMax: true,
+            currency: true,
             company: {
               select: { id: true, name: true, logo: true, location: true },
+            },
+            category: {
+              select: { id: true, name: true, color: true },
             },
           },
         },
@@ -48,7 +55,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ applications, count: applications.length });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Applications fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch applications" },
