@@ -17,26 +17,32 @@ export async function POST(req: NextRequest) {
     }
 
     if (file.type !== "application/pdf") {
-      return NextResponse.json({ error: "Only PDF files allowed" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Only PDF files allowed" },
+        { status: 400 }
+      );
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      return NextResponse.json({ error: "File too large (max 2MB)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "File too large (max 2MB)" },
+        { status: 400 }
+      );
     }
 
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-    const dataUrl = `data:application/pdf;base64,${base64}`;
-
+    // فعلاً فقط نام فایل را ذخیره می‌کنیم
+    // (برای ذخیره واقعی فایل بعداً می‌توان از Vercel Blob / S3 استفاده کرد)
     await prisma.profile.updateMany({
       where: { userId: session.user.id },
       data: {
         resumeUrl: file.name,
-        resumeData: dataUrl,
       },
     });
 
-    return NextResponse.json({ message: "Resume uploaded", filename: file.name });
+    return NextResponse.json({
+      message: "Resume uploaded",
+      filename: file.name,
+    });
   } catch (error) {
     console.error("Resume upload error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
@@ -51,7 +57,9 @@ export async function DELETE() {
 
   await prisma.profile.updateMany({
     where: { userId: session.user.id },
-    data: { resumeUrl: null, resumeData: null, resumeParsed: null },
+    data: {
+      resumeUrl: null,
+    },
   });
 
   return NextResponse.json({ message: "Resume deleted" });
