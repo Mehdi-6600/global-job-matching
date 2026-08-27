@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
+import { Menu, X, Loader2 } from "lucide-react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -12,7 +13,6 @@ export default function Navbar() {
 
   const isAdmin = userRole === ROLES.ADMIN || userRole === ROLES.OWNER;
   const isEmployer = userRole === ROLES.EMPLOYER;
-  const isLoggedIn = status === "authenticated" && !!session;
 
   const links = [
     { href: "/", label: "Home" },
@@ -26,11 +26,11 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-xl font-bold text-gradient">
-            GJM
+          <Link href="/" className="text-xl font-bold text-white">
+            G<span className="text-sky-400">JM</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -59,28 +59,38 @@ export default function Navbar() {
               </Link>
             )}
 
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
+            {status === "loading" ? (
+              <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
+            ) : session ? (
+              <div className="flex items-center gap-3">
                 <Link
                   href="/dashboard"
-                  className="text-slate-300 hover:text-sky-400 text-sm"
+                  className="text-slate-300 hover:text-sky-400 text-sm font-medium"
                 >
                   Dashboard
                 </Link>
                 <button
-                  onClick={() => signOut()}
+                  onClick={() => signOut({ callbackUrl: "/" })}
                   className="text-slate-400 hover:text-white text-sm"
                 >
                   Logout
                 </button>
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all"
-              >
-                Login
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/register"
+                  className="text-slate-300 hover:text-white text-sm font-medium px-3 py-2"
+                >
+                  Sign up
+                </Link>
+                <Link
+                  href="/login"
+                  className="bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all"
+                >
+                  Login
+                </Link>
+              </div>
             )}
           </div>
 
@@ -89,12 +99,12 @@ export default function Navbar() {
             className="md:hidden text-slate-300 p-2"
             aria-label="Toggle menu"
           >
-            {mobileOpen ? "✕" : "☰"}
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
         {mobileOpen && (
-          <div className="md:hidden pb-4 space-y-2">
+          <div className="md:hidden pb-4 space-y-1 border-t border-white/10 pt-3">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -105,7 +115,7 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            {isLoggedIn ? (
+            {session ? (
               <>
                 <Link
                   href="/dashboard"
@@ -116,22 +126,31 @@ export default function Navbar() {
                 </Link>
                 <button
                   onClick={() => {
-                    signOut();
+                    signOut({ callbackUrl: "/" });
                     setMobileOpen(false);
                   }}
-                  className="block text-slate-400 py-2 text-sm"
+                  className="block text-slate-400 py-2 text-sm w-full text-left"
                 >
                   Logout
                 </button>
               </>
             ) : (
-              <Link
-                href="/login"
-                className="block bg-sky-500 text-white text-center text-sm font-semibold px-4 py-2 rounded-lg mt-2"
-                onClick={() => setMobileOpen(false)}
-              >
-                Login
-              </Link>
+              <>
+                <Link
+                  href="/register"
+                  className="block text-slate-300 py-2 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Sign up
+                </Link>
+                <Link
+                  href="/login"
+                  className="block bg-sky-500 text-white text-center text-sm font-semibold px-4 py-2 rounded-lg mt-2"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Login
+                </Link>
+              </>
             )}
           </div>
         )}
