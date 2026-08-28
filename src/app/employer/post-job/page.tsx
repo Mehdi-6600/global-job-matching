@@ -154,11 +154,11 @@ export default function PostJobPage() {
             You need to create a company profile before posting jobs.
           </p>
           <Link
-            href="/dashboard"
+            href="/employer/company/new"
             className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Go to Dashboard
+            <Building2 className="w-4 h-4" />
+            Create Company Profile
           </Link>
         </div>
       </main>
@@ -226,7 +226,6 @@ export default function PostJobPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Title */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Job Title *
@@ -242,7 +241,6 @@ export default function PostJobPage() {
               />
             </div>
 
-            {/* Company Info (read-only) */}
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 <Building2 className="w-4 h-4 inline mr-1" />
@@ -254,7 +252,6 @@ export default function PostJobPage() {
               )}
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Description *
@@ -270,7 +267,6 @@ export default function PostJobPage() {
               />
             </div>
 
-            {/* Location & Remote */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -304,7 +300,6 @@ export default function PostJobPage() {
               </div>
             </div>
 
-            {/* Type & Experience */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -344,7 +339,6 @@ export default function PostJobPage() {
               </div>
             </div>
 
-            {/* Salary */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -392,7 +386,6 @@ export default function PostJobPage() {
               </div>
             </div>
 
-            {/* Requirements */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 <ListChecks className="w-3.5 h-3.5 inline mr-1" />
@@ -408,7 +401,6 @@ export default function PostJobPage() {
               />
             </div>
 
-            {/* Responsibilities */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Responsibilities (one per line)
@@ -423,7 +415,6 @@ export default function PostJobPage() {
               />
             </div>
 
-            {/* Benefits */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Benefits (one per line)
@@ -438,7 +429,6 @@ export default function PostJobPage() {
               />
             </div>
 
-            {/* Tags */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 <Tag className="w-3.5 h-3.5 inline mr-1" />
@@ -454,7 +444,6 @@ export default function PostJobPage() {
               />
             </div>
 
-            {/* Deadline */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 <Clock className="w-3.5 h-3.5 inline mr-1" />
@@ -469,7 +458,6 @@ export default function PostJobPage() {
               />
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}
