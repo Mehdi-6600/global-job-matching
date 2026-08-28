@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
+import { normalizeLocation } from "@/lib/location";
 
 export async function POST(req: Request) {
   try {
@@ -32,14 +33,20 @@ export async function POST(req: Request) {
       data: {
         name: name.trim(),
         description: description || null,
-        location: location || null,
+        location: normalizeLocation(location) || location || null,
         website: website || null,
         ownerId: session.user.id,
         email: session.user.email || null,
       },
     });
 
-    return NextResponse.json({ success: true, company });
+    return NextResponse.json({
+      success: true,
+      company: {
+        ...company,
+        location: normalizeLocation(company.location),
+      },
+    });
   } catch (error) {
     console.error("Company create error:", error);
     return NextResponse.json(
@@ -93,7 +100,7 @@ export async function GET(req: Request) {
       slug: c.slug,
       email: c.email,
       website: c.website,
-      location: c.location,
+      location: normalizeLocation(c.location),
       description: c.description,
       logo: c.logo,
       status: c.status,
@@ -108,7 +115,7 @@ export async function GET(req: Request) {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit) || 1,
       },
     });
   } catch (error) {
