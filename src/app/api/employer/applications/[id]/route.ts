@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { ROLES } from "@/lib/roles";
+import { normalizeApplicationStatus } from "@/lib/application-status";
 
 export async function PATCH(
   req: NextRequest,
@@ -11,24 +13,33 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowed = ["employer", "admin", "owner"];
-  if (!allowed.includes(session.user.role || "")) {
+  const role = session.user.role as string;
+  if (
+    role !== ROLES.EMPLOYER &&
+    role !== ROLES.ADMIN &&
+    role !== ROLES.OWNER
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const { id } = await params;
-    const { status } = await req.json();
+    const body = await req.json();
+    const status = normalizeApplicationStatus(body.status);
 
-    const valid = ["applied", "viewed", "interview", "hired", "rejected"];
-    if (!valid.includes(status)) {
+    if (!status) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    const application = await prisma.application.findFirst({
-      where: {
-        id,
-        job: { company: { ownerId: session.user.id } },
+    const application = await db.application.findUnique({
+      where: { id },
+      include: {
+        job: {
+          select: {
+            postedById: true,
+            company: { select: { ownerId: true } },
+          },
+        },
       },
     });
 
@@ -36,12 +47,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const updated = await prisma.application.update({
+    const isCompanyOwner =
+      application.job.company?.ownerId === session.user.id;
+    const isPoster = application.job.postedById === session.user.id;
+    const isAdmin = role === ROLES.ADMIN || role === ROLES.OWNER;
+
+    if (!isCompanyOwner && !isPoster && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const updated = await db.application.update({
       where: { id },
       data: { status },
     });
 
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: application.userId,
         type: "application",
