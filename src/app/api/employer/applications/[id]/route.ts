@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { ROLES } from "@/lib/roles";
+import { isAdminRole, isEmployerRole } from "@/lib/roles";
 import { normalizeApplicationStatus } from "@/lib/application-status";
 
 export async function PATCH(
@@ -13,12 +13,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = session.user.role as string;
-  if (
-    role !== ROLES.EMPLOYER &&
-    role !== ROLES.ADMIN &&
-    role !== ROLES.OWNER
-  ) {
+  if (!isEmployerRole(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -50,7 +45,7 @@ export async function PATCH(
     const isCompanyOwner =
       application.job.company?.ownerId === session.user.id;
     const isPoster = application.job.postedById === session.user.id;
-    const isAdmin = role === ROLES.ADMIN || role === ROLES.OWNER;
+    const isAdmin = isAdminRole(session.user.role);
 
     if (!isCompanyOwner && !isPoster && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
