@@ -213,7 +213,7 @@ export default function ApplicantsPage() {
                       ) : null}
                       <select
                         value={
-                          STATUSES.includes(selectValue as any)
+                          (STATUSES as readonly string[]).includes(selectValue)
                             ? selectValue
                             : "pending"
                         }
