@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
-import { Menu, X, Loader2 } from "lucide-react";
+import { Menu, X, Loader2, Bell } from "lucide-react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -13,12 +13,14 @@ export default function Navbar() {
 
   const isAdmin = userRole === ROLES.ADMIN || userRole === ROLES.OWNER;
   const isEmployer = userRole === ROLES.EMPLOYER;
+  const isLoggedIn = status === "authenticated" && !!session;
 
   const links = [
     { href: "/", label: "Home" },
     { href: "/jobs", label: "Jobs" },
     { href: "/companies", label: "Companies" },
     { href: "/pricing", label: "Pricing" },
+    { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
   ];
 
@@ -61,8 +63,15 @@ export default function Navbar() {
 
             {status === "loading" ? (
               <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
-            ) : session ? (
+            ) : isLoggedIn ? (
               <div className="flex items-center gap-3">
+                <Link
+                  href="/notifications"
+                  className="text-slate-300 hover:text-sky-400 p-1"
+                  title="Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                </Link>
                 <Link
                   href="/dashboard"
                   className="text-slate-300 hover:text-sky-400 text-sm font-medium"
@@ -70,6 +79,7 @@ export default function Navbar() {
                   Dashboard
                 </Link>
                 <button
+                  type="button"
                   onClick={() => signOut({ callbackUrl: "/" })}
                   className="text-slate-400 hover:text-white text-sm"
                 >
@@ -95,6 +105,7 @@ export default function Navbar() {
           </div>
 
           <button
+            type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden text-slate-300 p-2"
             aria-label="Toggle menu"
@@ -115,8 +126,15 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            {session ? (
+            {isLoggedIn ? (
               <>
+                <Link
+                  href="/notifications"
+                  className="block text-slate-300 py-2 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Notifications
+                </Link>
                 <Link
                   href="/dashboard"
                   className="block text-slate-300 py-2 text-sm"
@@ -125,6 +143,7 @@ export default function Navbar() {
                   Dashboard
                 </Link>
                 <button
+                  type="button"
                   onClick={() => {
                     signOut({ callbackUrl: "/" });
                     setMobileOpen(false);
