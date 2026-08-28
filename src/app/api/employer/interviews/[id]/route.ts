@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { isAdminRole, isEmployerRole } from "@/lib/roles";
 
 export async function PATCH(
   req: NextRequest,
@@ -11,11 +12,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!isEmployerRole(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const { id } = await params;
-    const { status, notes } = await req.json();
+    const body = await req.json();
+    const { status, notes } = body;
 
-    const interview = await prisma.interview.findUnique({
+    const interview = await db.interview.findUnique({
       where: { id },
     });
 
@@ -23,19 +29,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // اصلاح: استفاده از ?? undefined برای handle کردن null
-    const company = await prisma.company.findFirst({
+    if (!interview.companyId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const company = await db.company.findFirst({
       where: {
-        id: interview.companyId ?? undefined,
+        id: interview.companyId,
         ownerId: session.user.id,
       },
     });
 
-    if (!company) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!company && !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const updated = await prisma.interview.update({
+    const updated = await db.interview.update({
       where: { id },
       data: {
         status: status || undefined,
@@ -44,7 +53,7 @@ export async function PATCH(
     });
 
     if (status && status !== interview.status) {
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           userId: interview.userId,
           type: "interview",
