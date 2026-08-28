@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
+import { normalizeLocation } from "@/lib/location";
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const savedJobs = await prisma.savedJob.findMany({
+    const savedJobs = await db.savedJob.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
       include: {
@@ -39,7 +40,19 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const jobs = savedJobs.map((sj) => sj.job).filter(Boolean);
+    const jobs = savedJobs
+      .map((sj) => sj.job)
+      .filter(Boolean)
+      .map((job) => ({
+        ...job,
+        location: normalizeLocation(job.location) || job.location,
+        company: job.company
+          ? {
+              ...job.company,
+              location: normalizeLocation(job.company.location),
+            }
+          : job.company,
+      }));
 
     return NextResponse.json({ jobs, count: jobs.length });
   } catch (error) {
@@ -77,12 +90,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid job ID" }, { status: 400 });
     }
 
-    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    const job = await db.job.findUnique({ where: { id: jobId } });
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    const existing = await prisma.savedJob.findUnique({
+    const existing = await db.savedJob.findUnique({
       where: {
         userId_jobId: {
           userId: session.user.id,
@@ -95,7 +108,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, alreadySaved: true });
     }
 
-    await prisma.savedJob.create({
+    await db.savedJob.create({
       data: {
         userId: session.user.id,
         jobId,
@@ -103,8 +116,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true }, { status: 201 });
-  } catch (error: any) {
-    if (error.code === "P2002") {
+  } catch (error: unknown) {
+    const err = error as { code?: string };
+    if (err.code === "P2002") {
       return NextResponse.json({ success: true, alreadySaved: true });
     }
     console.error("Save job error:", error);
@@ -129,7 +143,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Invalid job ID" }, { status: 400 });
     }
 
-    await prisma.savedJob.deleteMany({
+    await db.savedJob.deleteMany({
       where: {
         userId: session.user.id,
         jobId,
