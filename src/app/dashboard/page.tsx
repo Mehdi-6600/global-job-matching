@@ -8,11 +8,8 @@ import {
   Heart,
   Settings,
   Bell,
-  Users,
   Eye,
   CheckCircle2,
-  Clock,
-  XCircle,
   Loader2,
   Sparkles,
   MapPin,
@@ -65,6 +62,12 @@ const sidebarItems = [
     active: false,
   },
   {
+    icon: <Bell className="w-5 h-5" />,
+    label: "Notifications",
+    href: "/notifications",
+    active: false,
+  },
+  {
     icon: <Settings className="w-5 h-5" />,
     label: "Settings",
     href: "/settings",
@@ -101,6 +104,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [appCount, setAppCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [totalJobs, setTotalJobs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -117,8 +121,11 @@ export default function DashboardPage() {
       fetch("/api/saved-jobs")
         .then((r) => (r.ok ? r.json() : { count: 0 }))
         .catch(() => ({ count: 0 })),
+      fetch("/api/notifications")
+        .then((r) => (r.ok ? r.json() : { unreadCount: 0 }))
+        .catch(() => ({ unreadCount: 0 })),
     ])
-      .then(([jobsData, profileData, appsData, savedData]) => {
+      .then(([jobsData, profileData, appsData, savedData, notifData]) => {
         if (jobsData.jobs) setJobs(jobsData.jobs);
         if (jobsData.pagination?.total != null) {
           setTotalJobs(jobsData.pagination.total);
@@ -129,6 +136,7 @@ export default function DashboardPage() {
         else if (profileData.user) setProfile(profileData.user);
         setAppCount(appsData.count ?? appsData.applications?.length ?? 0);
         setSavedCount(savedData.count ?? savedData.jobs?.length ?? 0);
+        setUnreadCount(notifData.unreadCount ?? 0);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -160,12 +168,12 @@ export default function DashboardPage() {
       href: "/saved-jobs",
     },
     {
-      title: "Profile",
-      value: profile?.name ? "Ready" : "Setup",
-      change: "Edit",
-      trend: "neutral" as const,
-      icon: <Eye className="w-5 h-5 text-emerald-400" />,
-      href: "/settings",
+      title: "Notifications",
+      value: unreadCount.toString(),
+      change: unreadCount > 0 ? "Unread" : "All read",
+      trend: unreadCount > 0 ? ("up" as const) : ("neutral" as const),
+      icon: <Bell className="w-5 h-5 text-amber-400" />,
+      href: "/notifications",
     },
   ];
 
@@ -189,6 +197,7 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           <button
+            type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden glass rounded-xl p-3 text-white mb-4 flex items-center gap-2 w-fit"
           >
@@ -230,28 +239,28 @@ export default function DashboardPage() {
                   >
                     {item.icon}
                     {item.label}
+                    {item.href === "/notifications" && unreadCount > 0 && (
+                      <span className="ml-auto text-[10px] bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </nav>
 
-              <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-slate-300">Quick links</span>
-                </div>
-                <div className="space-y-2">
-                  <Link
-                    href="/jobs"
-                    className="block text-xs text-cyan-400 hover:text-cyan-300"
-                  >
-                    Browse jobs →
-                  </Link>
-                  <Link
-                    href="/my-applications"
-                    className="block text-xs text-slate-400 hover:text-white"
-                  >
-                    Track applications →
-                  </Link>
-                </div>
+              <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                <Link
+                  href="/jobs"
+                  className="block text-xs text-cyan-400 hover:text-cyan-300"
+                >
+                  Browse jobs →
+                </Link>
+                <Link
+                  href="/settings"
+                  className="block text-xs text-slate-400 hover:text-white"
+                >
+                  Edit profile →
+                </Link>
               </div>
             </div>
           </aside>
@@ -336,7 +345,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-3">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
                           {job.location}
@@ -365,7 +374,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="p-10 text-center text-slate-400 text-sm">
-                  No jobs to show yet.{" "}
+                  No jobs to show.{" "}
                   <Link href="/jobs" className="text-cyan-400">
                     Browse jobs
                   </Link>
