@@ -78,10 +78,14 @@ export async function GET(
     const serialized = applications.map((app) => {
       const skills = app.user.profile?.skills;
       let title: string | null = null;
-      if (Array.isArray(skills) && skills.length > 0) {
-        title = skills.slice(0, 3).join(", ");
-      } else if (typeof skills === "string" && skills.trim()) {
-        title = skills;
+
+      if (typeof skills === "string" && skills.trim()) {
+        title = skills
+          .split(/[,|]/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(", ");
       }
 
       return {
