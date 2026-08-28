@@ -150,72 +150,94 @@ export default function ApplicantsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {applications.map((app) => (
-              <div
-                key={app.id}
-                className="glass rounded-2xl p-5 border border-white/10"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-white font-semibold">
-                      {app.user.name || "Applicant"}
-                    </h3>
-                    {app.user.title && (
-                      <p className="text-slate-400 text-sm">{app.user.title}</p>
-                    )}
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3" />
-                        {app.user.email}
-                      </span>
-                      {app.user.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {app.user.location}
-                        </span>
+            {applications.map((app) => {
+              const selectValue =
+                app.status === "applied" ? "pending" : app.status;
+
+              return (
+                <div
+                  key={app.id}
+                  className="glass rounded-2xl p-5 border border-white/10"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-white font-semibold">
+                        {app.user.name || "Applicant"}
+                      </h3>
+                      {app.user.title && (
+                        <p className="text-slate-400 text-sm">
+                          {app.user.title}
+                        </p>
                       )}
-                      {app.user.resumeUrl && (
+                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
                         <span className="flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          {app.user.resumeUrl}
+                          <Mail className="w-3 h-3" />
+                          {app.user.email}
                         </span>
-                      )}
+                        {app.user.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {app.user.location}
+                          </span>
+                        )}
+                        {app.user.resumeUrl && (
+                          <span className="flex items-center gap-1">
+                            <FileText className="w-3 h-3" />
+                            {app.user.resumeUrl.startsWith("http") ? (
+                              <a
+                                href={app.user.resumeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-cyan-400 hover:underline"
+                              >
+                                Resume
+                              </a>
+                            ) : (
+                              app.user.resumeUrl
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/messages?with=${app.user.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 text-xs font-medium"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        Message
+                      </Link>
+                      {updatingId === app.id ? (
+                        <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                      ) : null}
+                      <select
+                        value={
+                          STATUSES.includes(selectValue as any)
+                            ? selectValue
+                            : "pending"
+                        }
+                        onChange={(e) => updateStatus(app.id, e.target.value)}
+                        disabled={updatingId === app.id}
+                        className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500/50"
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s} className="bg-slate-900">
+                            {s}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/messages?with=${app.user.id}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 text-xs font-medium"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      Message
-                    </Link>
-                    {updatingId === app.id ? (
-                      <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
-                    ) : null}
-                    <select
-                      value={app.status}
-                      onChange={(e) => updateStatus(app.id, e.target.value)}
-                      disabled={updatingId === app.id}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500/50"
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s} className="bg-slate-900">
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {app.coverLetter && (
+                    <p className="mt-4 text-sm text-slate-300 border-t border-white/5 pt-4">
+                      {app.coverLetter}
+                    </p>
+                  )}
                 </div>
-
-                {app.coverLetter && (
-                  <p className="mt-4 text-sm text-slate-300 border-t border-white/5 pt-4">
-                    {app.coverLetter}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
