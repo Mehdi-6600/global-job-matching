@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Terms of Service | Global Job Matching",
@@ -7,32 +8,107 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-[var(--page-bg)] py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto glass-card p-8 sm:p-12">
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-6">Terms of Service</h1>
-        <div className="text-[var(--text-secondary)] leading-relaxed space-y-6">
-          <p><strong className="text-[var(--text-primary)]">Last Updated:</strong> August 20, 2026</p>
-          
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">1. Acceptance of Terms</h2>
-          <p>By accessing or using Global Job Matching, you agree to be bound by these Terms of Service. If you do not agree, please do not use our platform.</p>
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto glass rounded-2xl p-8 sm:p-12 border border-white/10">
+        <h1 className="text-3xl font-bold text-white mb-2">Terms of Service</h1>
+        <p className="text-slate-500 text-sm mb-8">Last updated: August 28, 2026</p>
 
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">2. User Accounts</h2>
-          <p>You are responsible for maintaining the confidentiality of your account credentials. You agree to provide accurate and complete information when creating an account.</p>
+        <div className="text-slate-300 leading-relaxed space-y-6 text-sm sm:text-base">
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">
+              1. Acceptance of Terms
+            </h2>
+            <p>
+              By accessing or using Global Job Matching (&quot;the Platform&quot;),
+              you agree to these Terms of Service. If you do not agree, do not
+              use the Platform.
+            </p>
+          </section>
 
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">3. Job Listings</h2>
-          <p>Employers are solely responsible for the accuracy of job listings. Global Job Matching does not guarantee the validity of any job posting.</p>
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">
+              2. User Accounts
+            </h2>
+            <p>
+              You are responsible for keeping your account credentials secure
+              and for providing accurate information. You must be at least 16
+              years old (or the legal age in your country) to create an account.
+            </p>
+          </section>
 
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">4. Prohibited Conduct</h2>
-          <p>You may not use the platform for any unlawful purpose, including fraud, harassment, or distribution of malicious software.</p>
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">
+              3. Job Listings &amp; Applications
+            </h2>
+            <p>
+              Employers are responsible for the accuracy of their job posts.
+              We do not guarantee that any listing is still open, legitimate, or
+              suitable for you. Applicants are responsible for the content of
+              their applications and profiles.
+            </p>
+          </section>
 
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">5. Limitation of Liability</h2>
-          <p>Global Job Matching is provided &quot;as is&quot; without warranties of any kind. We are not liable for any damages arising from your use of the platform.</p>
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">
+              4. Prohibited Conduct
+            </h2>
+            <p>
+              You may not use the Platform for fraud, spam, harassment,
+              scraping without permission, or any illegal activity. We may
+              suspend or terminate accounts that violate these rules.
+            </p>
+          </section>
 
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">6. Changes to Terms</h2>
-          <p>We reserve the right to modify these terms at any time. Continued use of the platform after changes constitutes acceptance of the new terms.</p>
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">
+              5. Paid Plans
+            </h2>
+            <p>
+              Optional paid plans (including crypto payments) are subject to
+              verification. Features may change; refunds are handled case by
+              case according to our policies.
+            </p>
+          </section>
 
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">7. Contact</h2>
-          <p>For questions about these terms, please contact us at <a href="mailto:legal@globaljobmatching.com" className="text-[var(--ios-blue)] hover:underline">legal@globaljobmatching.com</a>.</p>
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">
+              6. Limitation of Liability
+            </h2>
+            <p>
+              The Platform is provided &quot;as is&quot; without warranties of
+              any kind. To the fullest extent allowed by law, Global Job Matching
+              is not liable for indirect, incidental, or consequential damages
+              arising from your use of the service.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">
+              7. Changes
+            </h2>
+            <p>
+              We may update these terms. Continued use after changes means you
+              accept the updated terms.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">8. Contact</h2>
+            <p>
+              Questions:{" "}
+              <a
+                href="mailto:legal@globaljobmatching.com"
+                className="text-sky-400 hover:underline"
+              >
+                legal@globaljobmatching.com
+              </a>{" "}
+              or our{" "}
+              <Link href="/contact" className="text-sky-400 hover:underline">
+                Contact page
+              </Link>
+              .
+            </p>
+          </section>
         </div>
       </div>
     </main>
