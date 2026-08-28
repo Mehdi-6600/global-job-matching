@@ -17,6 +17,7 @@ import {
   Save,
   Trash2,
   Download,
+  ExternalLink,
 } from "lucide-react";
 
 interface Profile {
@@ -30,7 +31,6 @@ interface Profile {
   avatar: string | null;
   role: string;
   resumeUrl: string | null;
-  resumeData: string | null;
 }
 
 export default function SettingsPage() {
@@ -114,6 +114,7 @@ export default function SettingsPage() {
     e.preventDefault();
     setResumeUploading(true);
     setError("");
+    setSuccess(false);
 
     try {
       const formData = new FormData(e.currentTarget);
@@ -126,8 +127,16 @@ export default function SettingsPage() {
       if (!res.ok) {
         setError(data.error || "Upload failed");
       } else {
-        setProfile((prev) => prev ? { ...prev, resumeUrl: data.filename, resumeData: "uploaded" } : prev);
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                resumeUrl: data.resumeUrl || data.filename,
+              }
+            : prev
+        );
         setSuccess(true);
+        e.currentTarget.reset();
       }
     } catch {
       setError("Upload failed");
@@ -142,13 +151,17 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/profile/resume", { method: "DELETE" });
       if (res.ok) {
-        setProfile((prev) => prev ? { ...prev, resumeUrl: null, resumeData: null } : prev);
+        setProfile((prev) => (prev ? { ...prev, resumeUrl: null } : prev));
         setSuccess(true);
+      } else {
+        setError("Failed to remove resume");
       }
     } catch {
       setError("Failed to remove resume");
     }
   }
+
+  const resumeIsUrl = !!profile?.resumeUrl?.startsWith("http");
 
   if (loading) {
     return (
@@ -168,11 +181,10 @@ export default function SettingsPage() {
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <p className="text-red-400 font-medium mb-4">{error}</p>
           <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+            href="/login?callbackUrl=/settings"
+            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Dashboard
+            Sign in
           </Link>
         </div>
       </main>
@@ -229,9 +241,6 @@ export default function SettingsPage() {
                 disabled
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-slate-400 text-sm cursor-not-allowed"
               />
-              <p className="text-slate-500 text-xs mt-1">
-                Email cannot be changed
-              </p>
             </div>
 
             <div>
@@ -245,7 +254,7 @@ export default function SettingsPage() {
                 value={form.name}
                 onChange={handleChange}
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
               />
             </div>
 
@@ -260,7 +269,7 @@ export default function SettingsPage() {
                 value={form.title}
                 onChange={handleChange}
                 placeholder="e.g. Senior Developer"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
               />
             </div>
 
@@ -275,7 +284,7 @@ export default function SettingsPage() {
                 value={form.location}
                 onChange={handleChange}
                 placeholder="e.g. Berlin, Germany"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
               />
             </div>
 
@@ -290,7 +299,7 @@ export default function SettingsPage() {
                 value={form.phone}
                 onChange={handleChange}
                 placeholder="+1 234 567 890"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
               />
             </div>
 
@@ -305,14 +314,14 @@ export default function SettingsPage() {
                 onChange={handleChange}
                 placeholder="Tell us about yourself..."
                 rows={4}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600 resize-none"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600 resize-none"
               />
             </div>
 
             <button
               type="submit"
               disabled={saving}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl text-sm font-semibold shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-60 active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl text-sm font-semibold shadow-lg shadow-cyan-500/25 disabled:opacity-60"
             >
               {saving ? (
                 <>
@@ -329,38 +338,43 @@ export default function SettingsPage() {
           </form>
         </div>
 
-        {/* Resume Section */}
         <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10 mt-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <FileText className="w-5 h-5 text-cyan-400" /> Resume / CV
           </h2>
 
           {profile?.resumeUrl ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
-                <FileText className="w-8 h-8 text-cyan-400" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium text-sm truncate">{profile.resumeUrl}</p>
-                  <p className="text-slate-500 text-xs">PDF uploaded</p>
-                </div>
-                {profile.resumeData && (
-                  <a
-                    href={profile.resumeData}
-                    download={profile.resumeUrl}
-                    className="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 transition-all"
-                    title="Download"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
-                )}
-                <button
-                  onClick={handleResumeDelete}
-                  className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
-                  title="Remove"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+              <FileText className="w-8 h-8 text-cyan-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm truncate">
+                  {resumeIsUrl ? "Uploaded resume (PDF)" : profile.resumeUrl}
+                </p>
+                <p className="text-slate-500 text-xs">
+                  {resumeIsUrl
+                    ? "Stored in cloud storage"
+                    : "Filename saved (enable Blob for full file storage)"}
+                </p>
               </div>
+              {resumeIsUrl && (
+                <a
+                  href={profile.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+                  title="Open"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleResumeDelete}
+                className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                title="Remove"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           ) : (
             <form onSubmit={handleResumeUpload} className="space-y-4">
@@ -368,24 +382,26 @@ export default function SettingsPage() {
                 <input
                   type="file"
                   name="resume"
-                  accept=".pdf"
+                  accept=".pdf,application/pdf"
                   required
-                  className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer"
+                  className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300"
                 />
-                <p className="text-slate-500 text-xs mt-3">PDF only, max 2MB</p>
+                <p className="text-xs text-slate-500 mt-3">PDF only · max 5MB</p>
               </div>
               <button
                 type="submit"
                 disabled={resumeUploading}
-                className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-sm font-medium transition-all flex items-center gap-2"
+                className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-white/10 disabled:opacity-60"
               >
                 {resumeUploading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
                   </>
                 ) : (
                   <>
-                    <FileText className="w-4 h-4" /> Upload Resume
+                    <Download className="w-4 h-4" />
+                    Upload Resume
                   </>
                 )}
               </button>
