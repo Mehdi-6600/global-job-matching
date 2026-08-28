@@ -12,6 +12,7 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
+  MessageCircle,
 } from "lucide-react";
 
 interface Applicant {
@@ -74,6 +75,7 @@ export default function ApplicantsPage() {
   async function updateStatus(appId: string, status: string) {
     setUpdatingId(appId);
     setToast("");
+    setError("");
     try {
       const res = await fetch(`/api/applications/${appId}`, {
         method: "PUT",
@@ -181,7 +183,14 @@ export default function ApplicantsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/messages?with=${app.user.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 text-xs font-medium"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      Message
+                    </Link>
                     {updatingId === app.id ? (
                       <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
                     ) : null}
