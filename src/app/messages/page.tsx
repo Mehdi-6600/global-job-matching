@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import {
   Send,
   ArrowLeft,
@@ -50,12 +51,15 @@ function formatTime(dateStr: string) {
   return date.toLocaleDateString();
 }
 
-export default function MessagesPage() {
+function MessagesInner() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
+  const withParam = searchParams.get("with");
   const currentUserId = session?.user?.id || null;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [partnerOverride, setPartnerOverride] = useState<Partner | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -70,9 +74,19 @@ export default function MessagesPage() {
       return;
     }
     if (status === "authenticated") {
-      fetchConversations();
+      fetchConversations().then(() => {
+        if (withParam && withParam !== currentUserId) {
+          setSelectedUserId(withParam);
+          setMobileView("chat");
+          setPartnerOverride({
+            id: withParam,
+            name: "User",
+            avatar: null,
+          });
+        }
+      });
     }
-  }, [status]);
+  }, [status, withParam, currentUserId]);
 
   useEffect(() => {
     if (!selectedUserId) return;
@@ -110,6 +124,12 @@ export default function MessagesPage() {
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages || []);
+        if (data.messages?.length > 0) {
+          const first = data.messages[0];
+          const other =
+            first.senderId === currentUserId ? first.receiver : first.sender;
+          setPartnerOverride(other);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -147,17 +167,19 @@ export default function MessagesPage() {
 
   function selectConversation(userId: string) {
     setSelectedUserId(userId);
+    setPartnerOverride(null);
     setMobileView("chat");
   }
 
   function backToList() {
     setMobileView("list");
     setSelectedUserId(null);
+    setPartnerOverride(null);
   }
 
-  const selectedPartner = conversations.find(
-    (c) => c.partner.id === selectedUserId
-  )?.partner;
+  const selectedPartner =
+    conversations.find((c) => c.partner.id === selectedUserId)?.partner ||
+    partnerOverride;
 
   if (status === "loading" || loading) {
     return (
@@ -210,7 +232,7 @@ export default function MessagesPage() {
                   <MessageCircle className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                   <p className="text-slate-400 text-sm">No messages yet</p>
                   <p className="text-slate-500 text-xs mt-1">
-                    When someone messages you, it will show here
+                    Open a chat from applicants or wait for a message
                   </p>
                 </div>
               ) : (
@@ -284,11 +306,9 @@ export default function MessagesPage() {
                       <User className="w-4 h-4 text-indigo-400" />
                     )}
                   </div>
-                  <div>
-                    <h3 className="font-medium text-white">
-                      {selectedPartner.name || "User"}
-                    </h3>
-                  </div>
+                  <h3 className="font-medium text-white">
+                    {selectedPartner.name || "User"}
+                  </h3>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -371,5 +391,19 @@ export default function MessagesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+        </div>
+      }
+    >
+      <MessagesInner />
+    </Suspense>
   );
 }
