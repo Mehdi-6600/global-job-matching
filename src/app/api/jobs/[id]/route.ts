@@ -4,28 +4,6 @@ import { auth } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
 
-const viewTracker = new Map<string, { count: number; resetAt: number }>();
-const VIEW_WINDOW_MS = 60 * 60 * 1000;
-const VIEW_MAX_PER_WINDOW = 3;
-
-function getClientIp(req: Request): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  return forwarded ? forwarded.split(",")[0].trim() : "unknown";
-}
-
-function canIncrementView(ip: string, jobId: string): boolean {
-  const key = `${ip}:${jobId}`;
-  const now = Date.now();
-  const record = viewTracker.get(key);
-  if (!record || now > record.resetAt) {
-    viewTracker.set(key, { count: 1, resetAt: now + VIEW_WINDOW_MS });
-    return true;
-  }
-  if (record.count >= VIEW_MAX_PER_WINDOW) return false;
-  record.count++;
-  return true;
-}
-
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -63,15 +41,12 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const ip = getClientIp(req);
-    let viewCount = job.viewCount;
-    if (canIncrementView(ip, id)) {
-      await db.job.update({
-        where: { id },
-        data: { viewCount: { increment: 1 } },
-      });
-      viewCount += 1;
-    }
+    // Reliable across serverless instances: always persist increment in DB
+    const updated = await db.job.update({
+      where: { id },
+      data: { viewCount: { increment: 1 } },
+      select: { viewCount: true },
+    });
 
     const { _count, ...rest } = job;
 
@@ -79,7 +54,7 @@ export async function GET(
       job: {
         ...rest,
         location: normalizeLocation(job.location) || job.location,
-        viewCount,
+        viewCount: updated.viewCount,
         applicantCount: _count.applications,
         requirements: job.requirements || [],
         responsibilities: job.responsibilities || [],
