@@ -1,36 +1,27 @@
-import { MetadataRoute } from "next";
-import { prisma } from "@/lib/prisma";
+import type { MetadataRoute } from "next";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://global-job-matching.vercel.app";
+export default function sitemap(): MetadataRoute.Sitemap {
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://globaljobmatching.com";
 
-  const [jobs, companies] = await Promise.all([
-    prisma.job.findMany({ where: { status: "active" }, select: { id: true, updatedAt: true } }),
-    prisma.company.findMany({ where: { status: "active" }, select: { id: true, createdAt: true } }),
-  ]);
-
-  const staticRoutes = [
-    { url: baseUrl, lastModified: new Date(), changeFrequency: "daily" as const, priority: 1 },
-    { url: `${baseUrl}/jobs`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.9 },
-    { url: `${baseUrl}/companies`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.8 },
-    { url: `${baseUrl}/pricing`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.7 },
-    { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.6 },
-    { url: `${baseUrl}/about`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.6 },
+  const staticPages = [
+    "",
+    "/jobs",
+    "/companies",
+    "/pricing",
+    "/about",
+    "/contact",
+    "/blog",
+    "/terms",
+    "/privacy",
+    "/login",
+    "/register",
   ];
 
-  const jobRoutes = jobs.map((job) => ({
-    url: `${baseUrl}/jobs/${job.id}`,
-    lastModified: job.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
+  return staticPages.map((path) => ({
+    url: `${base}${path}`,
+    lastModified: new Date(),
+    changeFrequency: path === "" || path === "/jobs" ? "daily" : "weekly",
+    priority: path === "" ? 1 : path === "/jobs" ? 0.9 : 0.6,
   }));
-
-  const companyRoutes = companies.map((company) => ({
-    url: `${baseUrl}/companies/${company.id}`,
-    lastModified: company.createdAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.6,
-  }));
-
-  return [...staticRoutes, ...jobRoutes, ...companyRoutes];
 }
