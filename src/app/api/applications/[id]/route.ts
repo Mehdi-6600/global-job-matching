@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
-
-const VALID = ["pending", "viewed", "interview", "rejected", "hired"] as const;
+import { normalizeApplicationStatus } from "@/lib/application-status";
 
 export async function PUT(
   req: NextRequest,
@@ -17,9 +16,9 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const status = body.status as string;
+    const status = normalizeApplicationStatus(body.status);
 
-    if (!VALID.includes(status as any)) {
+    if (!status) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
@@ -27,8 +26,9 @@ export async function PUT(
       where: { id },
       include: {
         job: {
-          include: {
-            company: { select: { ownerId: true, email: true } },
+          select: {
+            postedById: true,
+            company: { select: { ownerId: true } },
           },
         },
       },
@@ -47,11 +47,8 @@ export async function PUT(
     const isAdmin =
       session.user.role === ROLES.ADMIN ||
       session.user.role === ROLES.OWNER;
-    const isCompanyEmail =
-      !!application.job.company?.email &&
-      application.job.company.email === session.user.email;
 
-    if (!isCompanyOwner && !isPoster && !isAdmin && !isCompanyEmail) {
+    if (!isCompanyOwner && !isPoster && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -60,26 +57,20 @@ export async function PUT(
       data: { status },
     });
 
-    try {
-      await db.notification.create({
-        data: {
-          userId: application.userId,
-          type: "application",
-          title: "Application Updated",
-          message: `Your application status changed to "${status}"`,
-          description: `Status: ${status}`,
-          actionUrl: `/jobs/${application.jobId}`,
-        },
-      });
-    } catch (nErr) {
-      console.error("Notification create failed:", nErr);
-    }
+    await db.notification.create({
+      data: {
+        userId: application.userId,
+        type: "application",
+        title: "Application Updated",
+        message: `Your application status changed to "${status}"`,
+      },
+    });
 
     return NextResponse.json({ success: true, application: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Update application error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to update application" },
+      { error: "Failed to update application" },
       { status: 500 }
     );
   }
