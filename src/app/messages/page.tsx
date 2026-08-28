@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   Send,
   ArrowLeft,
@@ -50,7 +51,9 @@ function formatTime(dateStr: string) {
 }
 
 export default function MessagesPage() {
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { data: session, status } = useSession();
+  const currentUserId = session?.user?.id || null;
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -61,31 +64,21 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
-  // Check auth + load conversations
   useEffect(() => {
-    fetch("/api/profile")
-      .then((res) => {
-        if (res.status === 401) {
-          window.location.href = "/login";
-          return null;
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data?.profile?.userId) {
-          setCurrentUserId(data.profile.userId);
-        }
-        return fetchConversations();
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    if (status === "unauthenticated") {
+      window.location.href = "/login?callbackUrl=/messages";
+      return;
+    }
+    if (status === "authenticated") {
+      fetchConversations();
+    }
+  }, [status]);
 
   useEffect(() => {
-    if (selectedUserId) {
-      fetchMessages(selectedUserId);
-      const interval = setInterval(() => fetchMessages(selectedUserId), 5000);
-      return () => clearInterval(interval);
-    }
+    if (!selectedUserId) return;
+    fetchMessages(selectedUserId);
+    const interval = setInterval(() => fetchMessages(selectedUserId), 5000);
+    return () => clearInterval(interval);
   }, [selectedUserId]);
 
   useEffect(() => {
@@ -96,7 +89,7 @@ export default function MessagesPage() {
     try {
       const res = await fetch("/api/messages");
       if (res.status === 401) {
-        window.location.href = "/login";
+        window.location.href = "/login?callbackUrl=/messages";
         return;
       }
       if (res.ok) {
@@ -166,7 +159,7 @@ export default function MessagesPage() {
     (c) => c.partner.id === selectedUserId
   )?.partner;
 
-  if (loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
@@ -175,13 +168,13 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="max-w-6xl mx-auto h-screen flex flex-col">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-16">
+      <div className="max-w-6xl mx-auto h-[calc(100vh-4rem)] flex flex-col">
         <div className="glass border-b border-white/10 px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             {mobileView === "chat" && (
               <button
+                type="button"
                 onClick={backToList}
                 className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
               >
@@ -199,9 +192,7 @@ export default function MessagesPage() {
           </Link>
         </div>
 
-        {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Conversations List */}
           <div
             className={`${
               mobileView === "chat" ? "hidden" : "flex"
@@ -219,12 +210,13 @@ export default function MessagesPage() {
                   <MessageCircle className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                   <p className="text-slate-400 text-sm">No messages yet</p>
                   <p className="text-slate-500 text-xs mt-1">
-                    Messages from job applications will appear here
+                    When someone messages you, it will show here
                   </p>
                 </div>
               ) : (
                 conversations.map((conv) => (
                   <button
+                    type="button"
                     key={conv.partner.id}
                     onClick={() => selectConversation(conv.partner.id)}
                     className={`w-full p-4 flex items-start gap-3 hover:bg-white/5 transition-colors border-b border-white/5 text-left ${
@@ -235,6 +227,7 @@ export default function MessagesPage() {
                   >
                     <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
                       {conv.partner.avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={conv.partner.avatar}
                           alt=""
@@ -247,7 +240,7 @@ export default function MessagesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium text-white truncate">
-                          {conv.partner.name || "Unknown User"}
+                          {conv.partner.name || "User"}
                         </h3>
                         <span className="text-xs text-slate-500 shrink-0 ml-2">
                           {formatTime(conv.lastMessage.createdAt)}
@@ -271,7 +264,6 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Chat Area */}
           <div
             className={`${
               mobileView === "list" ? "hidden" : "flex"
@@ -279,10 +271,10 @@ export default function MessagesPage() {
           >
             {selectedUserId && selectedPartner ? (
               <>
-                {/* Chat Header */}
                 <div className="glass border-b border-white/10 px-4 py-3 flex items-center gap-3 shrink-0">
                   <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
                     {selectedPartner.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={selectedPartner.avatar}
                         alt=""
@@ -294,15 +286,13 @@ export default function MessagesPage() {
                   </div>
                   <div>
                     <h3 className="font-medium text-white">
-                      {selectedPartner.name || "Unknown User"}
+                      {selectedPartner.name || "User"}
                     </h3>
-                    <p className="text-xs text-slate-400">Online</p>
                   </div>
                 </div>
 
-                {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {loadingMsg ? (
+                  {loadingMsg && messages.length === 0 ? (
                     <div className="flex justify-center py-8">
                       <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
                     </div>
@@ -333,32 +323,13 @@ export default function MessagesPage() {
                             <p className="text-sm leading-relaxed">
                               {msg.content}
                             </p>
-                            <div
-                              className={`flex items-center gap-1 mt-1 ${
-                                isMe ? "justify-end" : "justify-start"
+                            <span
+                              className={`text-[10px] mt-1 block ${
+                                isMe ? "text-indigo-200" : "text-slate-500"
                               }`}
                             >
-                              <span
-                                className={`text-[10px] ${
-                                  isMe
-                                    ? "text-indigo-200"
-                                    : "text-slate-500"
-                                }`}
-                              >
-                                {formatTime(msg.createdAt)}
-                              </span>
-                              {isMe && (
-                                <span
-                                  className={`text-[10px] ${
-                                    msg.read
-                                      ? "text-indigo-300"
-                                      : "text-indigo-400/60"
-                                  }`}
-                                >
-                                  {msg.read ? "✓✓" : "✓"}
-                                </span>
-                              )}
-                            </div>
+                              {formatTime(msg.createdAt)}
+                            </span>
                           </div>
                         </div>
                       );
@@ -367,42 +338,33 @@ export default function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input */}
                 <form
                   onSubmit={sendMessage}
-                  className="glass border-t border-white/10 p-4 flex items-center gap-3 shrink-0"
+                  className="p-4 border-t border-white/10 glass flex gap-2 shrink-0"
                 >
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500/50"
                   />
                   <button
                     type="submit"
                     disabled={sending || !newMessage.trim()}
-                    className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all"
+                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
                   >
                     {sending ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4" />
                     )}
                   </button>
                 </form>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <MessageCircle className="w-16 h-16 text-slate-700 mx-auto mb-4" />
-                  <p className="text-slate-400 text-lg font-medium">
-                    Select a conversation
-                  </p>
-                  <p className="text-slate-500 text-sm mt-1">
-                    Choose someone from the list to start chatting
-                  </p>
-                </div>
+              <div className="flex-1 hidden lg:flex items-center justify-center text-slate-500 text-sm">
+                Select a conversation
               </div>
             )}
           </div>
