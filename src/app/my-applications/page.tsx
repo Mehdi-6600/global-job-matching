@@ -4,110 +4,81 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Briefcase,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Users,
-  Eye,
   Loader2,
-  ArrowLeft,
   MapPin,
   Building2,
-  DollarSign,
-  Search,
-  Calendar,
+  Clock,
+  Eye,
+  Users,
+  XCircle,
+  CheckCircle2,
+  ArrowLeft,
 } from "lucide-react";
 
-interface Application {
+interface ApplicationItem {
   id: string;
   status: string;
   coverLetter: string | null;
   createdAt: string;
-  updatedAt: string;
   job: {
     id: string;
     title: string;
-    location: string;
+    location: string | null;
     remote: boolean;
-    type: string;
+    type: string | null;
     salaryMin: number | null;
     salaryMax: number | null;
-    currency: string;
+    currency: string | null;
     company: {
       id: string;
       name: string;
       logo: string | null;
       location: string | null;
     } | null;
-  };
+  } | null;
 }
 
 const statusConfig: Record<
   string,
-  { label: string; icon: React.ReactNode; color: string; bg: string }
+  { label: string; icon: React.ReactNode; bg: string; color: string }
 > = {
   pending: {
     label: "Pending",
-    icon: <Clock className="w-4 h-4" />,
-    color: "text-amber-400",
+    icon: <Clock className="w-3.5 h-3.5" />,
     bg: "bg-amber-500/10 border-amber-500/20",
+    color: "text-amber-400",
   },
   applied: {
-    label: "Applied",
-    icon: <Clock className="w-4 h-4" />,
-    color: "text-amber-400",
+    label: "Pending",
+    icon: <Clock className="w-3.5 h-3.5" />,
     bg: "bg-amber-500/10 border-amber-500/20",
+    color: "text-amber-400",
   },
   viewed: {
     label: "Viewed",
-    icon: <Eye className="w-4 h-4" />,
-    color: "text-blue-400",
+    icon: <Eye className="w-3.5 h-3.5" />,
     bg: "bg-blue-500/10 border-blue-500/20",
+    color: "text-blue-400",
   },
   interview: {
     label: "Interview",
-    icon: <Users className="w-4 h-4" />,
-    color: "text-cyan-400",
+    icon: <Users className="w-3.5 h-3.5" />,
     bg: "bg-cyan-500/10 border-cyan-500/20",
+    color: "text-cyan-400",
   },
   rejected: {
     label: "Rejected",
-    icon: <XCircle className="w-4 h-4" />,
-    color: "text-red-400",
+    icon: <XCircle className="w-3.5 h-3.5" />,
     bg: "bg-red-500/10 border-red-500/20",
+    color: "text-red-400",
   },
   hired: {
     label: "Hired",
-    icon: <CheckCircle2 className="w-4 h-4" />,
-    color: "text-emerald-400",
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     bg: "bg-emerald-500/10 border-emerald-500/20",
+    color: "text-emerald-400",
   },
 };
-
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 30) return `${Math.floor(days / 30)} months ago`;
-  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  return "Just now";
-}
-
-function getLogo(name?: string | null): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 function formatSalary(
   currency: string | null | undefined,
@@ -115,16 +86,16 @@ function formatSalary(
   max: number | null | undefined
 ) {
   const cur = currency || "USD";
-  if (min == null && max == null) return "Salary not specified";
-  if (min != null && max != null) {
+  if (min == null && max == null) return null;
+  if (min != null && max != null && min !== max) {
     return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
   }
-  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
-  return `Up to ${cur} ${max!.toLocaleString()}`;
+  if (min != null) return `${cur} ${min.toLocaleString()}`;
+  return `${cur} ${max!.toLocaleString()}`;
 }
 
 export default function MyApplicationsPage() {
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -135,172 +106,128 @@ export default function MyApplicationsPage() {
           window.location.href = "/login?callbackUrl=/my-applications";
           return null;
         }
-        return res.json();
-      })
-      .then((data) => {
-        if (!data) return;
-        if (data.applications) {
-          setApplications(data.applications);
-        } else {
-          setError(data.error || "Failed to load applications");
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Failed to load");
+          setLoading(false);
+          return;
         }
+        setApplications(data.applications || []);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error(err);
-        setError("Failed to load applications");
+      .catch(() => {
+        setError("Network error");
         setLoading(false);
       });
   }, []);
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading applications...</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
-          <p className="text-red-400 font-medium mb-4">{error}</p>
-          <Link
-            href="/jobs"
-            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Browse Jobs
-          </Link>
-        </div>
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Link>
-          <div className="flex items-center gap-3 mb-2">
-            <Briefcase className="w-7 h-7 text-cyan-400" />
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
-              My Applications
-            </h1>
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
+      <div className="max-w-3xl mx-auto">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Dashboard
+        </Link>
+
+        <div className="flex items-center gap-3 mb-8">
+          <Briefcase className="w-7 h-7 text-cyan-400" />
+          <div>
+            <h1 className="text-2xl font-bold text-white">My Applications</h1>
+            <p className="text-slate-400 text-sm">
+              {applications.length} application
+              {applications.length !== 1 ? "s" : ""}
+            </p>
           </div>
-          <p className="text-slate-400 text-sm">
-            {applications.length} application
-            {applications.length !== 1 ? "s" : ""} submitted
-          </p>
         </div>
 
-        {applications.length > 0 ? (
+        {error && (
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
+        {applications.length === 0 && !error ? (
+          <div className="glass rounded-2xl p-12 text-center border border-white/10">
+            <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 mb-4">No applications yet</p>
+            <Link
+              href="/jobs"
+              className="inline-flex px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-semibold"
+            >
+              Browse Jobs
+            </Link>
+          </div>
+        ) : (
           <div className="space-y-4">
             {applications.map((app) => {
               const status =
                 statusConfig[app.status] || statusConfig.pending;
-              const companyName = app.job.company?.name || "Company";
+              const salary = formatSalary(
+                app.job?.currency,
+                app.job?.salaryMin,
+                app.job?.salaryMax
+              );
 
               return (
                 <div
                   key={app.id}
-                  className="glass rounded-2xl p-5 sm:p-6 border border-white/10 hover:border-white/20 transition-all"
+                  className="glass rounded-2xl p-5 border border-white/10"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                        <span className="text-cyan-400 font-bold text-sm">
-                          {getLogo(companyName)}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="text-white font-semibold text-base mb-1">
+                    <div className="min-w-0">
+                      {app.job ? (
+                        <Link
+                          href={`/jobs/${app.job.id}`}
+                          className="text-white font-semibold hover:text-cyan-300 transition-colors"
+                        >
                           {app.job.title}
-                        </h3>
-                        <p className="text-slate-400 text-sm flex items-center gap-1 mb-2">
-                          <Building2 className="w-3.5 h-3.5" />
-                          {companyName}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        </Link>
+                      ) : (
+                        <span className="text-white font-semibold">
+                          Job unavailable
+                        </span>
+                      )}
+                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
+                        {app.job?.company?.name && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            {app.job.company.name}
+                          </span>
+                        )}
+                        {app.job?.location && (
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
                             {app.job.location}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
-                            {formatSalary(
-                              app.job.currency,
-                              app.job.salaryMin,
-                              app.job.salaryMax
-                            )}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            Applied {timeAgo(app.createdAt)}
-                          </span>
-                        </div>
+                        )}
+                        {salary && <span>{salary}</span>}
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${status.bg} ${status.color}`}
-                      >
-                        {status.icon}
-                        {status.label}
-                      </span>
-                    </div>
-                  </div>
-
-                  {app.coverLetter && (
-                    <div className="mt-4 pt-4 border-t border-white/5">
-                      <p className="text-slate-500 text-xs mb-1">
-                        Your cover letter:
-                      </p>
-                      <p className="text-slate-300 text-sm line-clamp-2">
-                        {app.coverLetter}
+                      <p className="text-slate-600 text-xs mt-2">
+                        Applied {new Date(app.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                  )}
 
-                  <div className="mt-4 flex items-center gap-3">
-                    <Link
-                      href={`/jobs/${app.job.id}`}
-                      className="text-cyan-400 hover:text-cyan-300 text-sm font-medium transition-colors"
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border shrink-0 ${status.bg} ${status.color}`}
                     >
-                      View Job →
-                    </Link>
+                      {status.icon}
+                      {status.label}
+                    </span>
                   </div>
                 </div>
               );
             })}
-          </div>
-        ) : (
-          <div className="text-center py-20">
-            <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 font-medium mb-1">
-              No applications yet
-            </p>
-            <p className="text-slate-500 text-sm mb-6">
-              Start applying to jobs and track your progress here
-            </p>
-            <Link
-              href="/jobs"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all"
-            >
-              <Search className="w-4 h-4" />
-              Browse Jobs
-            </Link>
           </div>
         )}
       </div>
