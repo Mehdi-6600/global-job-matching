@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { ROLES } from "@/lib/roles";
+import { isAdminRole, isEmployerRole } from "@/lib/roles";
 
 export async function GET() {
   const session = await auth();
@@ -9,17 +9,12 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = session.user.role as string;
-  if (
-    role !== ROLES.EMPLOYER &&
-    role !== ROLES.ADMIN &&
-    role !== ROLES.OWNER
-  ) {
+  if (!isEmployerRole(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const isAdmin = role === ROLES.ADMIN || role === ROLES.OWNER;
+    const isAdmin = isAdminRole(session.user.role);
 
     const applications = await db.application.findMany({
       where: isAdmin
