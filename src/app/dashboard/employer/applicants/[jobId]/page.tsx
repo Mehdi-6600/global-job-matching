@@ -11,6 +11,7 @@ import {
   MapPin,
   FileText,
   AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 interface Applicant {
@@ -30,6 +31,14 @@ interface Applicant {
   };
 }
 
+const STATUSES = [
+  "pending",
+  "viewed",
+  "interview",
+  "rejected",
+  "hired",
+] as const;
+
 export default function ApplicantsPage() {
   const params = useParams();
   const jobId = params.jobId as string;
@@ -38,6 +47,8 @@ export default function ApplicantsPage() {
   const [jobTitle, setJobTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     if (!jobId) return;
@@ -59,6 +70,32 @@ export default function ApplicantsPage() {
         setLoading(false);
       });
   }, [jobId]);
+
+  async function updateStatus(appId: string, status: string) {
+    setUpdatingId(appId);
+    setToast("");
+    try {
+      const res = await fetch(`/api/applications/${appId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Update failed");
+      } else {
+        setApplications((prev) =>
+          prev.map((a) => (a.id === appId ? { ...a, status } : a))
+        );
+        setToast("Status updated");
+        setTimeout(() => setToast(""), 2000);
+      }
+    } catch {
+      setError("Network error");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -90,6 +127,13 @@ export default function ApplicantsPage() {
           </div>
         </div>
 
+        {toast && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            {toast}
+          </div>
+        )}
+
         {error && (
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2 mb-6">
             <AlertCircle className="w-4 h-4" />
@@ -109,7 +153,7 @@ export default function ApplicantsPage() {
                 key={app.id}
                 className="glass rounded-2xl p-5 border border-white/10"
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div>
                     <h3 className="text-white font-semibold">
                       {app.user.name || "Applicant"}
@@ -136,10 +180,26 @@ export default function ApplicantsPage() {
                       )}
                     </div>
                   </div>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                    {app.status}
-                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {updatingId === app.id ? (
+                      <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                    ) : null}
+                    <select
+                      value={app.status}
+                      onChange={(e) => updateStatus(app.id, e.target.value)}
+                      disabled={updatingId === app.id}
+                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500/50"
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s} className="bg-slate-900">
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
                 {app.coverLetter && (
                   <p className="mt-4 text-sm text-slate-300 border-t border-white/5 pt-4">
                     {app.coverLetter}
