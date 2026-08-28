@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { ROLES } from "@/lib/roles";
 
 export async function GET() {
   const session = await auth();
@@ -8,20 +9,29 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allowed = ["employer", "admin", "owner"];
-  if (!allowed.includes(session.user.role || "")) {
+  const role = session.user.role as string;
+  if (
+    role !== ROLES.EMPLOYER &&
+    role !== ROLES.ADMIN &&
+    role !== ROLES.OWNER
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const applications = await prisma.application.findMany({
-      where: {
-        job: {
-          company: {
-            ownerId: session.user.id,
+    const isAdmin = role === ROLES.ADMIN || role === ROLES.OWNER;
+
+    const applications = await db.application.findMany({
+      where: isAdmin
+        ? {}
+        : {
+            job: {
+              OR: [
+                { company: { ownerId: session.user.id } },
+                { postedById: session.user.id },
+              ],
+            },
           },
-        },
-      },
       orderBy: { createdAt: "desc" },
       include: {
         user: {
