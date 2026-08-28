@@ -54,7 +54,7 @@ export default function Navbar() {
 
             {isEmployer && (
               <Link
-                href="/dashboard/employer"
+                href="/employer/dashboard"
                 className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
               >
                 Employer
@@ -126,6 +126,27 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {isAdmin && (
+              <Link
+                href="/dashboard/admin"
+                className="block text-red-400 py-2 text-sm font-medium"
+                onClick={() => setMobileOpen(false)}
+              >
+                Admin
+              </Link>
+            )}
+
+            {isEmployer && (
+              <Link
+                href="/employer/dashboard"
+                className="block text-emerald-400 py-2 text-sm font-medium"
+                onClick={() => setMobileOpen(false)}
+              >
+                Employer
+              </Link>
+            )}
+
             {isLoggedIn ? (
               <>
                 <Link
