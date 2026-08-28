@@ -1,6 +1,6 @@
 /**
  * Canonical application statuses for the whole app.
- * Create uses "pending". Legacy "applied" is accepted as alias of pending.
+ * Create uses "pending". Legacy "applied" maps to pending.
  */
 export const APPLICATION_STATUSES = [
   "pending",
