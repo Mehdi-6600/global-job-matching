@@ -1,14 +1,15 @@
-import { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://global-job-matching.vercel.app";
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://globaljobmatching.com";
 
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/employer", "/dashboard", "/settings", "/messages", "/my-applications"],
+      disallow: ["/api/", "/dashboard/", "/settings/", "/messages/"],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${base}/sitemap.xml`,
   };
 }
