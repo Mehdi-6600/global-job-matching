@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { z } from "zod";
 import { ratelimit } from "@/lib/ratelimit";
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const applications = await prisma.application.findMany({
+    const applications = await db.application.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
       include: {
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     const { jobId, coverLetter } = result.data;
 
-    const job = await prisma.job.findUnique({
+    const job = await db.job.findUnique({
       where: { id: jobId, status: "active" },
     });
     if (!job) {
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const application = await prisma.application.create({
+    const application = await db.application.create({
       data: {
         userId: session.user.id,
         jobId,
@@ -120,8 +120,9 @@ export async function POST(req: NextRequest) {
       { success: true, application },
       { status: 201 }
     );
-  } catch (error: any) {
-    if (error.code === "P2002") {
+  } catch (error: unknown) {
+    const err = error as { code?: string };
+    if (err.code === "P2002") {
       return NextResponse.json(
         { error: "You have already applied for this job." },
         { status: 409 }
