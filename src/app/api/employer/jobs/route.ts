@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { ROLES } from "@/lib/roles";
+import { isEmployerRole } from "@/lib/roles";
+import { normalizeLocation } from "@/lib/location";
 
 export async function GET() {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    const jobs = await prisma.job.findMany({
+  if (!isEmployerRole(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const jobs = await db.job.findMany({
       where: {
         OR: [
           { postedById: session.user.id },
@@ -26,61 +31,72 @@ export async function GET() {
 
     return NextResponse.json({
       jobs: jobs.map((j) => ({
-        id: j.id,
-        title: j.title,
-        location: j.location,
-        type: j.type,
-        remote: j.remote,
-        status: j.status,
-        createdAt: j.createdAt,
-        company: j.company,
+        ...j,
+        location: normalizeLocation(j.location) || j.location,
         applicantCount: j._count.applications,
       })),
     });
   } catch (error) {
-    console.error("Employer jobs list error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch jobs" },
-      { status: 500 }
-    );
+    console.error("Employer jobs GET error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = session.user.role as string;
-  const allowed = [ROLES.EMPLOYER, ROLES.ADMIN, ROLES.OWNER];
-  if (!allowed.includes(role as any)) {
+  if (!isEmployerRole(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const body = await req.json();
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const description =
+      typeof body.description === "string" ? body.description.trim() : "";
+    const locationRaw =
+      typeof body.location === "string" ? body.location.trim() : "";
+    const type = typeof body.type === "string" ? body.type.trim() : "Full-time";
 
-    if (!body.title || !body.description || !body.location || !body.type) {
+    if (title.length < 2 || description.length < 20 || locationRaw.length < 2) {
       return NextResponse.json(
-        { error: "Title, description, location and type are required" },
+        { error: "Title, description (min 20 chars), and location required" },
         { status: 400 }
       );
     }
 
-    let companyId = body.companyId as string | undefined;
+    const location = normalizeLocation(locationRaw) || locationRaw;
 
-    if (!companyId) {
-      const existing = await prisma.company.findFirst({
+    let companyId: string | null =
+      typeof body.companyId === "string" ? body.companyId : null;
+
+    if (companyId) {
+      const owned = await db.company.findFirst({
+        where: { id: companyId, ownerId: session.user.id },
+      });
+      if (!owned) {
+        return NextResponse.json(
+          { error: "Company not found or not owned by you" },
+          { status: 403 }
+        );
+      }
+    } else {
+      const existing = await db.company.findFirst({
         where: { ownerId: session.user.id },
       });
       if (existing) {
         companyId = existing.id;
       } else {
-        const created = await prisma.company.create({
+        const name =
+          typeof body.companyName === "string" && body.companyName.trim()
+            ? body.companyName.trim()
+            : "My Company";
+        const created = await db.company.create({
           data: {
-            name: body.companyName || "My Company",
+            name,
             ownerId: session.user.id,
             email: session.user.email || null,
             status: "active",
@@ -88,50 +104,26 @@ export async function POST(req: NextRequest) {
         });
         companyId = created.id;
       }
-    } else {
-      const company = await prisma.company.findFirst({
-        where: { id: companyId, ownerId: session.user.id },
-      });
-      if (!company) {
-        return NextResponse.json(
-          { error: "Company not found" },
-          { status: 404 }
-        );
-      }
     }
 
-    const job = await prisma.job.create({
+    const job = await db.job.create({
       data: {
-        title: String(body.title).trim(),
-        description: String(body.description).trim(),
-        location: String(body.location).trim(),
-        type: String(body.type).trim(),
+        title,
+        description,
+        location,
+        type,
         remote: Boolean(body.remote),
-        experience: body.experience || null,
+        experience:
+          typeof body.experience === "string" ? body.experience : null,
         salaryMin:
-          body.salaryMin != null && body.salaryMin !== ""
-            ? Number(body.salaryMin)
-            : null,
+          typeof body.salaryMin === "number" ? body.salaryMin : null,
         salaryMax:
-          body.salaryMax != null && body.salaryMax !== ""
-            ? Number(body.salaryMax)
-            : null,
-        currency: (body.currency || "USD").toString().toUpperCase(),
-        requirements: Array.isArray(body.requirements)
-          ? body.requirements
-          : [],
-        responsibilities: Array.isArray(body.responsibilities)
-          ? body.responsibilities
-          : [],
-        benefits: Array.isArray(body.benefits) ? body.benefits : [],
-        tags: Array.isArray(body.tags)
-          ? body.tags
-          : typeof body.tags === "string"
-            ? body.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
-            : [],
-        companyId: companyId!,
-        postedById: session.user.id,
+          typeof body.salaryMax === "number" ? body.salaryMax : null,
+        currency:
+          typeof body.currency === "string" ? body.currency : "USD",
         status: "active",
+        companyId,
+        postedById: session.user.id,
       },
       include: {
         company: { select: { id: true, name: true } },
@@ -140,10 +132,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, job }, { status: 201 });
   } catch (error) {
-    console.error("Create job error:", error);
-    return NextResponse.json(
-      { error: "Failed to create job" },
-      { status: 500 }
-    );
+    console.error("Employer jobs POST error:", error);
+    return NextResponse.json({ error: "Failed to create job" }, { status: 500 });
   }
 }
