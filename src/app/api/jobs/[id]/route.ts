@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
+import { normalizeLocation } from "@/lib/location";
 
 const viewTracker = new Map<string, { count: number; resetAt: number }>();
 const VIEW_WINDOW_MS = 60 * 60 * 1000;
@@ -77,20 +78,26 @@ export async function GET(
     return NextResponse.json({
       job: {
         ...rest,
+        location: normalizeLocation(job.location) || job.location,
         viewCount,
         applicantCount: _count.applications,
         requirements: job.requirements || [],
         responsibilities: job.responsibilities || [],
         benefits: job.benefits || [],
         tags: job.tags || [],
-        company: job.company || {
-          id: "",
-          name: "Unknown Company",
-          location: null,
-          logo: null,
-          description: null,
-          website: null,
-        },
+        company: job.company
+          ? {
+              ...job.company,
+              location: normalizeLocation(job.company.location),
+            }
+          : {
+              id: "",
+              name: "Unknown Company",
+              location: null,
+              logo: null,
+              description: null,
+              website: null,
+            },
       },
     });
   } catch (error) {
@@ -154,8 +161,18 @@ export async function PATCH(
       if (body[key] !== undefined) data[key] = body[key];
     }
 
+    if (typeof data.location === "string") {
+      data.location = normalizeLocation(data.location) || data.location;
+    }
+
     const updated = await db.job.update({ where: { id }, data });
-    return NextResponse.json({ success: true, job: updated });
+    return NextResponse.json({
+      success: true,
+      job: {
+        ...updated,
+        location: normalizeLocation(updated.location) || updated.location,
+      },
+    });
   } catch (error) {
     console.error("Job patch error:", error);
     return NextResponse.json(
