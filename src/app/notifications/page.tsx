@@ -20,7 +20,8 @@ interface NotificationItem {
   id: string;
   type: string;
   title: string;
-  description: string;
+  message?: string | null;
+  description?: string | null;
   read: boolean;
   actionUrl: string | null;
   createdAt: string;
@@ -96,7 +97,7 @@ export default function NotificationsPage() {
     try {
       const res = await fetch("/api/notifications");
       if (res.status === 401) {
-        window.location.href = "/login";
+        window.location.href = "/login?callbackUrl=/notifications";
         return;
       }
       if (res.ok) {
@@ -152,6 +153,7 @@ export default function NotificationsPage() {
   }
 
   async function deleteNotification(id: string, e: React.MouseEvent) {
+    e.preventDefault();
     e.stopPropagation();
     setActionLoading(id);
     try {
@@ -159,8 +161,8 @@ export default function NotificationsPage() {
         method: "DELETE",
       });
       if (res.ok) {
-        setNotifications((prev) => prev.filter((n) => n.id !== id));
         const deleted = notifications.find((n) => n.id === id);
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
         if (deleted && !deleted.read) {
           setUnreadCount((prev) => Math.max(0, prev - 1));
         }
@@ -183,7 +185,6 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        {/* Header */}
         <div className="glass rounded-2xl p-6 mb-6 border border-white/10">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -196,9 +197,7 @@ export default function NotificationsPage() {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">
-                  Notifications
-                </h1>
+                <h1 className="text-2xl font-bold text-white">Notifications</h1>
                 <p className="text-slate-400 text-sm">
                   {unreadCount > 0
                     ? `${unreadCount} unread notification${
@@ -235,7 +234,6 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {/* Notifications List */}
         <div className="space-y-3">
           {notifications.length === 0 ? (
             <div className="glass rounded-2xl p-12 text-center border border-white/10">
@@ -251,6 +249,8 @@ export default function NotificationsPage() {
             notifications.map((notification) => {
               const style = getTypeStyle(notification.type);
               const isUnread = !notification.read;
+              const bodyText =
+                notification.message || notification.description || "";
 
               const content = (
                 <div
@@ -277,9 +277,11 @@ export default function NotificationsPage() {
                           >
                             {notification.title}
                           </h3>
-                          <p className="text-slate-400 text-sm mt-0.5 leading-relaxed">
-                            {notification.description}
-                          </p>
+                          {bodyText && (
+                            <p className="text-slate-400 text-sm mt-0.5 leading-relaxed">
+                              {bodyText}
+                            </p>
+                          )}
                           <span className="text-xs text-slate-500 mt-2 inline-block">
                             {formatTime(notification.createdAt)}
                           </span>
@@ -288,7 +290,12 @@ export default function NotificationsPage() {
                         <div className="flex items-center gap-1 shrink-0">
                           {isUnread && (
                             <button
-                              onClick={() => markAsRead(notification.id)}
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                markAsRead(notification.id);
+                              }}
                               disabled={actionLoading === notification.id}
                               className="p-2 rounded-lg hover:bg-white/10 text-indigo-400 transition-colors"
                               title="Mark as read"
@@ -301,6 +308,7 @@ export default function NotificationsPage() {
                             </button>
                           )}
                           <button
+                            type="button"
                             onClick={(e) =>
                               deleteNotification(notification.id, e)
                             }
