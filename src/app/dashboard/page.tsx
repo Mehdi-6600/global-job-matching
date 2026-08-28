@@ -8,7 +8,7 @@ import {
   Heart,
   Settings,
   Bell,
-  Eye,
+  MessageCircle,
   CheckCircle2,
   Loader2,
   Sparkles,
@@ -59,6 +59,12 @@ const sidebarItems = [
     icon: <Heart className="w-5 h-5" />,
     label: "Saved Jobs",
     href: "/saved-jobs",
+    active: false,
+  },
+  {
+    icon: <MessageCircle className="w-5 h-5" />,
+    label: "Messages",
+    href: "/messages",
     active: false,
   },
   {
@@ -254,6 +260,12 @@ export default function DashboardPage() {
                   className="block text-xs text-cyan-400 hover:text-cyan-300"
                 >
                   Browse jobs →
+                </Link>
+                <Link
+                  href="/dashboard/employer"
+                  className="block text-xs text-emerald-400 hover:text-emerald-300"
+                >
+                  Employer panel →
                 </Link>
                 <Link
                   href="/settings"
