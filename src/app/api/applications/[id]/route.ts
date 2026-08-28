@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 
+const VALID = ["pending", "viewed", "interview", "rejected", "hired"] as const;
+
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,27 +16,42 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { status } = await req.json();
+    const body = await req.json();
+    const status = body.status as string;
 
-    const validStatuses = ["pending", "viewed", "interview", "rejected", "hired"];
-    if (!validStatuses.includes(status)) {
+    if (!VALID.includes(status as any)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
     const application = await db.application.findUnique({
       where: { id },
-      include: { job: { include: { company: { select: { ownerId: true } } } } },
+      include: {
+        job: {
+          include: {
+            company: { select: { ownerId: true, email: true } },
+          },
+        },
+      },
     });
 
     if (!application) {
-      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Application not found" },
+        { status: 404 }
+      );
     }
 
-    // Check ownership: company owner, admin, or owner
-    const isCompanyOwner = application.job.company?.ownerId === session.user.id;
-    const isAdmin = session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER;
+    const isCompanyOwner =
+      application.job.company?.ownerId === session.user.id;
+    const isPoster = application.job.postedById === session.user.id;
+    const isAdmin =
+      session.user.role === ROLES.ADMIN ||
+      session.user.role === ROLES.OWNER;
+    const isCompanyEmail =
+      !!application.job.company?.email &&
+      application.job.company.email === session.user.email;
 
-    if (!isCompanyOwner && !isAdmin) {
+    if (!isCompanyOwner && !isPoster && !isAdmin && !isCompanyEmail) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -43,15 +60,20 @@ export async function PUT(
       data: { status },
     });
 
-    // Create notification for applicant
-    await db.notification.create({
-      data: {
-        userId: application.userId,
-        type: "application",
-        title: "Application Updated",
-        message: `Your application status changed to "${status}"`,
-      },
-    });
+    try {
+      await db.notification.create({
+        data: {
+          userId: application.userId,
+          type: "application",
+          title: "Application Updated",
+          message: `Your application status changed to "${status}"`,
+          description: `Status: ${status}`,
+          actionUrl: `/jobs/${application.jobId}`,
+        },
+      });
+    } catch (nErr) {
+      console.error("Notification create failed:", nErr);
+    }
 
     return NextResponse.json({ success: true, application: updated });
   } catch (error: any) {
