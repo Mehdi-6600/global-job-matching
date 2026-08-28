@@ -1,41 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { ROLES } from "@/lib/roles";
-
-const EMPLOYER_ROLES = [
-  ROLES.EMPLOYER,
-  ROLES.ADMIN,
-  ROLES.OWNER,
-];
-
-function isEmployerRole(role: string | undefined): boolean {
-  return (
-    role === ROLES.EMPLOYER ||
-    role === ROLES.ADMIN ||
-    role === ROLES.OWNER
-  );
-}
+import { isEmployerRole } from "@/lib/roles";
 
 export async function GET() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!isEmployerRole(session.user.role)) {
-    return NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const interviews = await prisma.interview.findMany({
+    const interviews = await db.interview.findMany({
       where: {
         company: {
           ownerId: session.user.id,
@@ -73,19 +53,11 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({
-      interviews,
-    });
+    return NextResponse.json({ interviews });
   } catch (error) {
-    console.error(
-      "Get employer interviews error:",
-      error
-    );
-
+    console.error("Get employer interviews error:", error);
     return NextResponse.json(
-      {
-        error: "Failed to load interviews",
-      },
+      { error: "Failed to load interviews" },
       { status: 500 }
     );
   }
@@ -95,17 +67,11 @@ export async function POST(req: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!isEmployerRole(session.user.role)) {
-    return NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
@@ -123,26 +89,20 @@ export async function POST(req: NextRequest) {
 
     if (!jobId || !userId || !scheduledAt) {
       return NextResponse.json(
-        {
-          error:
-            "Job, user, and date are required",
-        },
+        { error: "Job, user, and date are required" },
         { status: 400 }
       );
     }
 
     const parsedDate = new Date(scheduledAt);
-
     if (Number.isNaN(parsedDate.getTime())) {
       return NextResponse.json(
-        {
-          error: "Invalid interview date",
-        },
+        { error: "Invalid interview date" },
         { status: 400 }
       );
     }
 
-    const job = await prisma.job.findFirst({
+    const job = await db.job.findFirst({
       where: {
         id: jobId,
         company: {
@@ -158,67 +118,48 @@ export async function POST(req: NextRequest) {
 
     if (!job) {
       return NextResponse.json(
-        {
-          error:
-            "Job not found or you do not own this job",
-        },
+        { error: "Job not found or you do not own this job" },
         { status: 404 }
       );
     }
 
     if (!job.companyId) {
       return NextResponse.json(
-        {
-          error:
-            "This job is not associated with a company",
-        },
+        { error: "This job is not associated with a company" },
         { status: 400 }
       );
     }
 
-    const candidate = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-      select: {
-        id: true,
-      },
+    const candidate = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
     });
 
     if (!candidate) {
       return NextResponse.json(
-        {
-          error: "Candidate not found",
-        },
+        { error: "Candidate not found" },
         { status: 404 }
       );
     }
 
     const parsedDuration = Number(duration);
-
     const interviewDuration =
-      Number.isFinite(parsedDuration) &&
-      parsedDuration > 0
+      Number.isFinite(parsedDuration) && parsedDuration > 0
         ? Math.round(parsedDuration)
         : 30;
 
     const interviewType =
-      typeof type === "string" && type.trim()
-        ? type.trim()
-        : "video";
+      typeof type === "string" && type.trim() ? type.trim() : "video";
 
     const interviewNotes =
-      typeof notes === "string" && notes.trim()
-        ? notes.trim()
-        : null;
+      typeof notes === "string" && notes.trim() ? notes.trim() : null;
 
     const interviewMeetLink =
-      typeof meetLink === "string" &&
-      meetLink.trim()
+      typeof meetLink === "string" && meetLink.trim()
         ? meetLink.trim()
         : null;
 
-    const interview = await prisma.interview.create({
+    const interview = await db.interview.create({
       data: {
         userId: candidate.id,
         jobId: job.id,
@@ -258,32 +199,20 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: candidate.id,
         type: "interview",
         title: "Interview Scheduled",
-        message:
-          `You have an interview for ${job.title}`,
+        message: `You have an interview for ${job.title}`,
       },
     });
 
-    return NextResponse.json(
-      {
-        interview,
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({ interview }, { status: 201 });
   } catch (error) {
-    console.error(
-      "Create interview error:",
-      error
-    );
-
+    console.error("Create interview error:", error);
     return NextResponse.json(
-      {
-        error: "Failed to create interview",
-      },
+      { error: "Failed to create interview" },
       { status: 500 }
     );
   }
