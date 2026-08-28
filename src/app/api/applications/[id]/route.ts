@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ROLES } from "@/lib/roles";
+import { isAdminRole } from "@/lib/roles";
 import { normalizeApplicationStatus } from "@/lib/application-status";
 
 export async function PUT(
@@ -44,9 +44,7 @@ export async function PUT(
     const isCompanyOwner =
       application.job.company?.ownerId === session.user.id;
     const isPoster = application.job.postedById === session.user.id;
-    const isAdmin =
-      session.user.role === ROLES.ADMIN ||
-      session.user.role === ROLES.OWNER;
+    const isAdmin = isAdminRole(session.user.role);
 
     if (!isCompanyOwner && !isPoster && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -67,7 +65,7 @@ export async function PUT(
     });
 
     return NextResponse.json({ success: true, application: updated });
-  } catch (error: unknown) {
+  } catch (error) {
     console.error("Update application error:", error);
     return NextResponse.json(
       { error: "Failed to update application" },
