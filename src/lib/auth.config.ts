@@ -12,6 +12,11 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as { role?: string } | undefined)?.role;
 
+      // همه APIها را از middleware عبور بده — خود route کد 401 برمی‌گرداند
+      if (pathname.startsWith("/api/")) {
+        return true;
+      }
+
       const PUBLIC_PAGES = [
         "/",
         "/jobs",
@@ -33,23 +38,6 @@ export const authConfig = {
         "/verify-email",
       ];
 
-      // APIهای عمومی — بدون لاگین
-      if (
-        pathname.startsWith("/api/auth") ||
-        pathname === "/api/jobs" ||
-        (pathname.startsWith("/api/jobs/") &&
-          !pathname.includes("/applicants")) ||
-        pathname === "/api/companies" ||
-        pathname.startsWith("/api/companies/") ||
-        pathname === "/api/blog" ||
-        pathname.startsWith("/api/blog/") ||
-        pathname === "/api/subscribe" ||
-        pathname === "/api/contact"
-      ) {
-        return true;
-      }
-
-      // صفحات عمومی
       if (
         PUBLIC_PAGES.includes(pathname) ||
         pathname.startsWith("/jobs/") ||
@@ -59,7 +47,6 @@ export const authConfig = {
         return true;
       }
 
-      // صفحات auth
       if (AUTH_PAGES.includes(pathname)) {
         if (isLoggedIn) {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
@@ -67,16 +54,13 @@ export const authConfig = {
         return true;
       }
 
-      // بقیه نیاز به لاگین
       if (!isLoggedIn) {
         return false;
       }
 
-      // فقط ادمین
       if (
         pathname.startsWith("/dashboard/admin") ||
-        pathname.startsWith("/admin") ||
-        pathname.startsWith("/api/admin")
+        pathname.startsWith("/admin")
       ) {
         if (userRole !== "ADMIN" && userRole !== "OWNER") {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
