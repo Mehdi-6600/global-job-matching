@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
 import { z } from "zod";
+import { normalizeLocation } from "@/lib/location";
 
 const querySchema = z.object({
   page: z.coerce.number().min(1).max(1000).default(1),
@@ -39,6 +40,19 @@ const createSchema = z.object({
   companyName: z.string().min(2).max(200).optional(),
 });
 
+function mapJob(job: any) {
+  return {
+    ...job,
+    location: normalizeLocation(job.location) || job.location,
+    company: job.company
+      ? {
+          ...job.company,
+          location: normalizeLocation(job.company.location),
+        }
+      : job.company,
+  };
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -63,8 +77,6 @@ export async function GET(req: Request) {
       type,
       experience,
       remote,
-      minSalary,
-      maxSalary,
       tag,
       company,
     } = result.data;
@@ -103,7 +115,7 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({
-      jobs,
+      jobs: jobs.map(mapJob),
       pagination: {
         page,
         limit,
@@ -168,11 +180,14 @@ export async function POST(req: Request) {
       }
     }
 
+    const cleanLocation =
+      normalizeLocation(data.location) || data.location.trim();
+
     const job = await db.job.create({
       data: {
         title: data.title,
         description: data.description,
-        location: data.location,
+        location: cleanLocation,
         type: data.type,
         remote: data.remote ?? false,
         experience: data.experience || null,
@@ -192,7 +207,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, job }, { status: 201 });
+    return NextResponse.json({ success: true, job: mapJob(job) }, { status: 201 });
   } catch (error) {
     console.error("Job create error:", error);
     return NextResponse.json(
