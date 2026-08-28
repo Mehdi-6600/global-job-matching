@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { isAdminRole, isEmployerRole } from "@/lib/roles";
 
 export async function GET(
   _req: NextRequest,
@@ -22,7 +23,7 @@ export async function GET(
       );
     }
 
-    const job = await prisma.job.findUnique({
+    const job = await db.job.findUnique({
       where: { id },
       include: { company: true },
     });
@@ -31,39 +32,26 @@ export async function GET(
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, email: true, role: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const role = (user.role || "").toUpperCase();
-    const isAdmin = role === "ADMIN";
-    const isOwner = role === "OWNER";
-    const isEmployer = role === "EMPLOYER";
-    const isJobPoster = job.postedById === user.id;
+    const role = session.user.role as string | undefined;
+    const isJobPoster = job.postedById === session.user.id;
     const isCompanyOwner =
-      !!job.company && job.company.ownerId === user.id;
+      !!job.company && job.company.ownerId === session.user.id;
     const isCompanyEmailOwner =
       !!job.company?.email &&
-      !!user.email &&
-      job.company.email === user.email;
+      !!session.user.email &&
+      job.company.email === session.user.email;
 
     const hasPermission =
-      isAdmin ||
-      isOwner ||
+      isAdminRole(role) ||
       isJobPoster ||
-      (isEmployer && isCompanyOwner) ||
+      (isEmployerRole(role) && isCompanyOwner) ||
       isCompanyEmailOwner;
 
     if (!hasPermission) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const applications = await prisma.application.findMany({
+    const applications = await db.application.findMany({
       where: { jobId: id },
       orderBy: { createdAt: "desc" },
       include: {
@@ -87,24 +75,34 @@ export async function GET(
       },
     });
 
-    const serialized = applications.map((app) => ({
-      id: app.id,
-      status: app.status,
-      coverLetter: app.coverLetter,
-      createdAt: app.createdAt,
-      updatedAt: app.updatedAt,
-      user: {
-        id: app.user.id,
-        name: app.user.name,
-        email: app.user.email,
-        avatar: app.user.image,
-        title: app.user.profile?.skills || null,
-        location: app.user.profile?.location || null,
-        phone: app.user.profile?.phone || null,
-        resumeUrl: app.user.profile?.resumeUrl || null,
-        bio: app.user.profile?.bio || null,
-      },
-    }));
+    const serialized = applications.map((app) => {
+      const skills = app.user.profile?.skills;
+      let title: string | null = null;
+      if (Array.isArray(skills) && skills.length > 0) {
+        title = skills.slice(0, 3).join(", ");
+      } else if (typeof skills === "string" && skills.trim()) {
+        title = skills;
+      }
+
+      return {
+        id: app.id,
+        status: app.status === "applied" ? "pending" : app.status,
+        coverLetter: app.coverLetter,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
+        user: {
+          id: app.user.id,
+          name: app.user.name,
+          email: app.user.email,
+          avatar: app.user.image,
+          title,
+          location: app.user.profile?.location || null,
+          phone: app.user.profile?.phone || null,
+          resumeUrl: app.user.profile?.resumeUrl || null,
+          bio: app.user.profile?.bio || null,
+        },
+      };
+    });
 
     return NextResponse.json({
       applications: serialized,
