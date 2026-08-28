@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { ROLES } from "@/lib/roles";
+import { isAdminRole } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -41,7 +41,6 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Reliable across serverless instances: always persist increment in DB
     const updated = await db.job.update({
       where: { id },
       data: { viewCount: { increment: 1 } },
@@ -105,8 +104,7 @@ export async function PATCH(
 
     const isOwner = job.company?.ownerId === session.user.id;
     const isPoster = job.postedById === session.user.id;
-    const isAdmin =
-      session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER;
+    const isAdmin = isAdminRole(session.user.role);
     if (!isOwner && !isPoster && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -158,7 +156,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -178,8 +176,7 @@ export async function DELETE(
 
     const isOwner = job.company?.ownerId === session.user.id;
     const isPoster = job.postedById === session.user.id;
-    const isAdmin =
-      session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER;
+    const isAdmin = isAdminRole(session.user.role);
     if (!isOwner && !isPoster && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
