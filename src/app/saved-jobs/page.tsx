@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Heart,
   MapPin,
   DollarSign,
   Clock,
@@ -11,7 +10,6 @@ import {
   Loader2,
   ArrowLeft,
   Trash2,
-  Briefcase,
   Bookmark,
   Search,
 } from "lucide-react";
@@ -19,28 +17,19 @@ import {
 interface SavedJob {
   id: string;
   title: string;
-  description: string;
   location: string;
   remote: boolean;
   type: string;
-  experience: string;
   salaryMin: number | null;
   salaryMax: number | null;
   currency: string;
   tags: string[];
-  status: string;
   createdAt: string;
   company: {
     id: string;
     name: string;
     logo: string | null;
     location: string | null;
-  };
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-    color: string;
   } | null;
 }
 
@@ -59,13 +48,28 @@ function timeAgo(dateString: string): string {
   return "Just now";
 }
 
-function getLogo(name: string): string {
+function getLogo(name?: string | null): string {
+  if (!name) return "?";
   return name
     .split(" ")
     .map((w) => w[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function formatSalary(
+  currency: string | null | undefined,
+  min: number | null | undefined,
+  max: number | null | undefined
+) {
+  const cur = currency || "USD";
+  if (min == null && max == null) return "Not specified";
+  if (min != null && max != null && min !== max) {
+    return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
+  }
+  if (min != null) return `${cur} ${min.toLocaleString()}`;
+  return `${cur} ${max!.toLocaleString()}`;
 }
 
 export default function SavedJobsPage() {
@@ -76,8 +80,15 @@ export default function SavedJobsPage() {
 
   useEffect(() => {
     fetch("/api/saved-jobs")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.status === 401) {
+          window.location.href = "/login?callbackUrl=/saved-jobs";
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (!data) return;
         if (data.jobs) {
           setJobs(data.jobs);
         } else {
@@ -85,8 +96,7 @@ export default function SavedJobsPage() {
         }
         setLoading(false);
       })
-      .catch((err) => {
-        console.error(err);
+      .catch(() => {
         setError("Failed to load saved jobs");
         setLoading(false);
       });
@@ -128,11 +138,10 @@ export default function SavedJobsPage() {
         <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
           <p className="text-red-400 font-medium mb-4">{error}</p>
           <Link
-            href="/jobs"
-            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+            href="/login?callbackUrl=/saved-jobs"
+            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Browse Jobs
+            Sign in
           </Link>
         </div>
       </main>
@@ -142,14 +151,13 @@ export default function SavedJobsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Link
-            href="/jobs"
+            href="/dashboard"
             className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Jobs
+            Back to Dashboard
           </Link>
           <div className="flex items-center gap-3 mb-2">
             <Bookmark className="w-7 h-7 text-cyan-400" />
@@ -167,9 +175,8 @@ export default function SavedJobsPage() {
             {jobs.map((job) => (
               <div
                 key={job.id}
-                className="glass rounded-2xl p-5 border border-transparent hover:border-white/10 transition-all group relative"
+                className="glass rounded-2xl p-5 border border-transparent hover:border-white/10 transition-all relative"
               >
-                {/* Remove Button */}
                 <button
                   type="button"
                   onClick={() => handleRemove(job.id)}
@@ -186,7 +193,7 @@ export default function SavedJobsPage() {
                 <div className="flex items-start gap-3 mb-4 pr-8">
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
                     <span className="text-cyan-400 font-bold text-xs">
-                      {getLogo(job.company.name)}
+                      {getLogo(job.company?.name)}
                     </span>
                   </div>
                   <div className="min-w-0">
@@ -195,7 +202,7 @@ export default function SavedJobsPage() {
                     </h3>
                     <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
                       <Building2 className="w-3 h-3" />
-                      {job.company.name}
+                      {job.company?.name || "Company"}
                     </p>
                   </div>
                 </div>
@@ -207,24 +214,27 @@ export default function SavedJobsPage() {
                   </span>
                   <span className="flex items-center gap-1">
                     <DollarSign className="w-3 h-3" />
-                    {job.currency}{" "}
-                    {(job.salaryMin ?? 0).toLocaleString()} -{" "}
-                    {(job.salaryMax ?? 0).toLocaleString()}
+                    {formatSalary(job.currency, job.salaryMin, job.salaryMax)}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {job.type}
-                  </span>
+                  {job.type && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {job.type}
+                    </span>
+                  )}
+                  {job.remote && (
+                    <span className="text-emerald-400">Remote</span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 mb-5">
-                  {job.tags
+                  {(job.tags || [])
                     .filter((tag) => !tag.startsWith("http"))
                     .slice(0, 5)
                     .map((tag) => (
                       <span
                         key={tag}
-                        className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/5 break-all max-w-[120px] truncate"
+                        className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/5"
                       >
                         {tag}
                       </span>
@@ -233,11 +243,11 @@ export default function SavedJobsPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-slate-500">
-                    Saved {timeAgo(job.createdAt)}
+                    {timeAgo(job.createdAt)}
                   </span>
                   <Link
                     href={`/jobs/${job.id}`}
-                    className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-medium transition-all"
+                    className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-medium"
                   >
                     View Job
                   </Link>
@@ -248,15 +258,13 @@ export default function SavedJobsPage() {
         ) : (
           <div className="text-center py-20">
             <Bookmark className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 font-medium mb-1">
-              No saved jobs yet
-            </p>
+            <p className="text-slate-400 font-medium mb-1">No saved jobs yet</p>
             <p className="text-slate-500 text-sm mb-6">
               Browse jobs and save the ones you like
             </p>
             <Link
               href="/jobs"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium"
             >
               <Search className="w-4 h-4" />
               Browse Jobs
