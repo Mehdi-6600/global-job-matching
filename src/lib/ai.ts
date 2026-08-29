@@ -1,6 +1,5 @@
 /**
  * Shared AI helper — prefers OpenRouter (free models), falls back to OpenAI.
- * Returns null if no API key is configured (caller can use local template).
  */
 
 export type ChatMessage = {
@@ -8,7 +7,6 @@ export type ChatMessage = {
   content: string;
 };
 
-/** Free OpenRouter model — change if one is rate-limited */
 const OPENROUTER_FREE_MODEL =
   process.env.OPENROUTER_MODEL || "google/gemma-2-9b-it:free";
 
@@ -104,7 +102,9 @@ export function buildTemplateResume(input: {
   lines.push("PROFESSIONAL SUMMARY");
   lines.push(
     input.summary?.trim() ||
-      `Motivated professional seeking opportunities as ${input.targetRole || "a specialist"}. Strong work ethic, clear communication, and continuous learning.`
+      `Motivated professional seeking opportunities as ${
+        input.targetRole || "a specialist"
+      }. Strong work ethic, clear communication, and continuous learning.`
   );
   lines.push("");
   if (input.skills?.trim()) {
