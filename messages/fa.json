@@ -20,7 +20,20 @@
     "title": "شغل بعدی‌ات را در هر جای دنیا پیدا کن",
     "subtitle": "جاب‌مچینگ جهانی با هوش مصنوعی. شروع رایگان.",
     "ctaJobs": "مشاهده شغل‌ها",
-    "ctaRegister": "شروع کنید"
+    "ctaRegister": "شروع کنید",
+    "statCompanies": "شرکت‌ها",
+    "statRoles": "موقعیت شغلی",
+    "statFreeValue": "رایگان",
+    "statFreeLabel": "برای شروع",
+    "featuresTitle": "هرآنچه برای موفقیت لازم داری",
+    "featureSearchTitle": "جستجوی هوشمند",
+    "featureSearchDesc": "بر اساس نقش، مکان، دورکاری و حقوق فیلتر کن.",
+    "featureGlobalTitle": "دسترسی جهانی",
+    "featureGlobalDesc": "فرصت‌های شغلی شرکت‌های سراسر دنیا در یک جا.",
+    "featureAlertsTitle": "هشدار شغل",
+    "featureAlertsDesc": "جستجو را ذخیره کن و از شغل‌های جدید باخبر شو.",
+    "featureApplyTitle": "درخواست سریع",
+    "featureApplyDesc": "یک‌بار پروفایل بساز و با چند کلیک اپلای کن."
   },
   "Common": {
     "loading": "در حال بارگذاری...",
