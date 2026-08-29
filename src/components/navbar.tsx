@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
-import { Menu, X, Loader2, Bell, FileText } from "lucide-react";
+import { Menu, X, Loader2, Bell, FileText, ShieldAlert } from "lucide-react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -66,6 +66,13 @@ export default function Navbar() {
             ) : isLoggedIn ? (
               <div className="flex items-center gap-3">
                 <Link
+                  href="/career-risk"
+                  className="text-slate-300 hover:text-sky-400 p-1"
+                  title="AI Career Risk"
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                </Link>
+                <Link
                   href="/resume-builder"
                   className="text-slate-300 hover:text-sky-400 p-1"
                   title="Resume Builder"
@@ -117,7 +124,11 @@ export default function Navbar() {
             className="md:hidden text-slate-300 p-2"
             aria-label="Toggle menu"
           >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </button>
         </div>
 
@@ -144,6 +155,13 @@ export default function Navbar() {
             )}
             {isLoggedIn ? (
               <>
+                <Link
+                  href="/career-risk"
+                  className="block text-slate-300 py-2 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  AI Career Risk
+                </Link>
                 <Link
                   href="/resume-builder"
                   className="block text-slate-300 py-2 text-sm"
