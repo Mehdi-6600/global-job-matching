@@ -1,7 +1,51 @@
 {
   "Nav": {
-    "login": "Se connecter",
+    "home": "Accueil",
+    "jobs": "Emplois",
+    "companies": "Entreprises",
+    "pricing": "Tarifs",
+    "about": "À propos",
+    "contact": "Contact",
+    "login": "Connexion",
     "register": "S'inscrire",
-    "logout": "Se déconnecter"
+    "logout": "Déconnexion",
+    "dashboard": "Tableau de bord",
+    "admin": "Admin",
+    "employer": "Employeur",
+    "resume": "CV IA",
+    "careerRisk": "Risque IA",
+    "notifications": "Notifications"
+  },
+  "Home": {
+    "title": "Trouvez votre prochain emploi partout",
+    "subtitle": "Matching d'emplois mondial propulsé par l'IA. Gratuit pour commencer.",
+    "ctaJobs": "Voir les offres",
+    "ctaRegister": "Commencer"
+  },
+  "Common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "search": "Rechercher",
+    "error": "Une erreur est survenue"
+  },
+  "Auth": {
+    "loginTitle": "Connexion",
+    "registerTitle": "Créer un compte",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "name": "Nom complet",
+    "role": "Je suis...",
+    "jobSeeker": "Candidat",
+    "employer": "Employeur",
+    "submitLogin": "Se connecter",
+    "submitRegister": "Créer le compte",
+    "noAccount": "Pas de compte ?",
+    "hasAccount": "Déjà un compte ?",
+    "errors": {
+      "invalidCredentials": "E-mail ou mot de passe invalide",
+      "emailExists": "E-mail déjà enregistré",
+      "generic": "Une erreur est survenue"
+    }
   }
 }
