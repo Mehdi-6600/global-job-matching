@@ -44,21 +44,29 @@
   },
   "Auth": {
     "loginTitle": "ورود",
+    "loginSubtitle": "به Global Job Matching خوش آمدید",
     "registerTitle": "ساخت حساب",
+    "registerSubtitle": "برای پیدا کردن شغل ایده‌آل شروع کنید",
     "email": "ایمیل",
     "password": "رمز عبور",
+    "passwordHint": "حداقل ۸ کاراکتر",
     "name": "نام کامل",
+    "namePlaceholder": "نام و نام خانوادگی",
     "role": "من هستم...",
     "jobSeeker": "کارجو",
     "employer": "کارفرما",
     "submitLogin": "ورود",
     "submitRegister": "ثبت‌نام",
+    "signingIn": "در حال ورود...",
+    "creatingAccount": "در حال ساخت حساب...",
+    "forgotPassword": "رمز را فراموش کردید؟",
     "noAccount": "حساب ندارید؟",
     "hasAccount": "قبلاً ثبت‌نام کرده‌اید؟",
     "errors": {
       "invalidCredentials": "ایمیل یا رمز اشتباه است",
       "emailExists": "این ایمیل قبلاً ثبت شده",
-      "generic": "مشکلی پیش آمد"
+      "generic": "مشکلی پیش آمد",
+      "network": "خطای شبکه. دوباره تلاش کنید."
     }
   }
 }
