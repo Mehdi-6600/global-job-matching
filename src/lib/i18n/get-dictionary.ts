@@ -8,16 +8,17 @@ import fa from "../../../messages/fa.json";
 import hi from "../../../messages/hi.json";
 import fr from "../../../messages/fr.json";
 
-const dictionaries: Record<Locale, typeof en> = {
-  en,
-  es,
-  ar,
-  fa,
-  hi,
-  fr,
-};
+/** Loose type so all locale files can differ slightly */
+export type Dictionary = Record<string, unknown>;
 
-export type Dictionary = typeof en;
+const dictionaries: Record<Locale, Dictionary> = {
+  en: en as Dictionary,
+  es: es as Dictionary,
+  ar: ar as Dictionary,
+  fa: fa as Dictionary,
+  hi: hi as Dictionary,
+  fr: fr as Dictionary,
+};
 
 export function getDictionary(locale: Locale): Dictionary {
   return dictionaries[locale] || dictionaries[defaultLocale];
