@@ -1,5 +1,5 @@
 /**
- * Shared AI helper — prefers OpenRouter, falls back to OpenAI.
+ * Shared AI helper — prefers OpenRouter (free models), falls back to OpenAI.
  * Returns null if no API key is configured (caller can use local template).
  */
 
@@ -7,6 +7,10 @@ export type ChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
 };
+
+/** Free OpenRouter model — change if one is rate-limited */
+const OPENROUTER_FREE_MODEL =
+  process.env.OPENROUTER_MODEL || "google/gemma-2-9b-it:free";
 
 export async function chatCompletion(
   messages: ChatMessage[],
@@ -25,11 +29,12 @@ export async function chatCompletion(
         Authorization: `Bearer ${openRouterKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer":
-          process.env.NEXT_PUBLIC_APP_URL || "https://global-job-matching.vercel.app",
+          process.env.NEXT_PUBLIC_APP_URL ||
+          "https://global-job-matching.vercel.app",
         "X-Title": "Global Job Matching",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
+        model: OPENROUTER_FREE_MODEL,
         messages,
         max_tokens: maxTokens,
         temperature,
