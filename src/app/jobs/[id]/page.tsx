@@ -22,6 +22,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import ShareButtons from "../../components/ShareButtons";
+import { ContactEmployer } from "@/components/contact-employer";
 
 interface JobDetail {
   id: string;
@@ -445,6 +446,8 @@ export default function JobDetailPage() {
                 </div>
               </div>
             )}
+
+            <ContactEmployer jobId={job.id} jobTitle={job.title} />
           </div>
 
           <div className="lg:w-80 shrink-0 space-y-6">
