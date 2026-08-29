@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const { t } = useLocale();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +33,9 @@ function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password. Please try again.");
+      setError(
+        t("Auth.errors.invalidCredentials", "Invalid email or password")
+      );
       return;
     }
 
@@ -52,10 +56,10 @@ function LoginForm() {
           </div>
 
           <h1 className="text-2xl font-bold text-center text-white mb-1">
-            Sign In
+            {t("Auth.loginTitle", "Sign In")}
           </h1>
           <p className="text-center text-slate-400 text-sm mb-8">
-            Welcome back to Global Job Matching
+            {t("Auth.loginSubtitle", "Welcome back to Global Job Matching")}
           </p>
 
           {error && (
@@ -67,7 +71,7 @@ function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Email
+                {t("Auth.email", "Email")}
               </label>
               <input
                 type="email"
@@ -82,7 +86,7 @@ function LoginForm() {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Password
+                {t("Auth.password", "Password")}
               </label>
               <input
                 type="password"
@@ -100,7 +104,7 @@ function LoginForm() {
                 href="/forgot-password"
                 className="text-sky-400 hover:underline font-medium"
               >
-                Forgot password?
+                {t("Auth.forgotPassword", "Forgot password?")}
               </Link>
             </div>
 
@@ -112,21 +116,21 @@ function LoginForm() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
+                  {t("Auth.signingIn", "Signing in...")}
                 </>
               ) : (
-                "Sign In"
+                t("Auth.submitLogin", "Sign In")
               )}
             </button>
           </form>
 
           <p className="mt-7 text-center text-sm text-slate-400">
-            Don&apos;t have an account?{" "}
+            {t("Auth.noAccount", "Don't have an account?")}{" "}
             <Link
               href="/register"
               className="font-medium text-sky-400 hover:underline"
             >
-              Create Account
+              {t("Auth.submitRegister", "Create Account")}
             </Link>
           </p>
         </div>
