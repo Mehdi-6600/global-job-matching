@@ -1,7 +1,51 @@
 {
   "Nav": {
+    "home": "الرئيسية",
+    "jobs": "الوظائف",
+    "companies": "الشركات",
+    "pricing": "الأسعار",
+    "about": "من نحن",
+    "contact": "اتصل بنا",
     "login": "تسجيل الدخول",
-    "register": "اشتراك",
-    "logout": "تسجيل خروج"
+    "register": "إنشاء حساب",
+    "logout": "خروج",
+    "dashboard": "لوحة التحكم",
+    "admin": "المسؤول",
+    "employer": "صاحب عمل",
+    "resume": "منشئ السيرة",
+    "careerRisk": "مخاطر الذكاء الاصطناعي",
+    "notifications": "الإشعارات"
+  },
+  "Home": {
+    "title": "اعثر على وظيفتك التالية في أي مكان",
+    "subtitle": "مطابقة وظائف عالمية مدعومة بالذكاء الاصطناعي. ابدأ مجاناً.",
+    "ctaJobs": "تصفح الوظائف",
+    "ctaRegister": "ابدأ الآن"
+  },
+  "Common": {
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "search": "بحث",
+    "error": "حدث خطأ ما"
+  },
+  "Auth": {
+    "loginTitle": "تسجيل الدخول",
+    "registerTitle": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "name": "الاسم الكامل",
+    "role": "أنا...",
+    "jobSeeker": "باحث عن عمل",
+    "employer": "صاحب عمل",
+    "submitLogin": "دخول",
+    "submitRegister": "إنشاء الحساب",
+    "noAccount": "ليس لديك حساب؟",
+    "hasAccount": "لديك حساب بالفعل؟",
+    "errors": {
+      "invalidCredentials": "بريد أو كلمة مرور غير صحيحة",
+      "emailExists": "البريد مسجل مسبقاً",
+      "generic": "حدث خطأ ما"
+    }
   }
 }
