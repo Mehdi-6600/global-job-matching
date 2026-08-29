@@ -1,18 +1,33 @@
 {
   "Nav": {
+    "home": "Home",
+    "jobs": "Jobs",
+    "companies": "Companies",
+    "pricing": "Pricing",
+    "about": "About",
+    "contact": "Contact",
     "login": "Login",
-    "register": "Register",
+    "register": "Sign up",
     "logout": "Logout",
     "dashboard": "Dashboard",
-    "jobs": "Jobs",
-    "profile": "Profile",
-    "admin": "Admin"
+    "admin": "Admin",
+    "employer": "Employer",
+    "resume": "Resume Builder",
+    "careerRisk": "AI Career Risk",
+    "notifications": "Notifications"
   },
   "Home": {
     "title": "Find Your Next Job Anywhere",
     "subtitle": "Global job matching powered by AI. Free to start.",
     "ctaJobs": "Browse Jobs",
     "ctaRegister": "Get Started"
+  },
+  "Common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "error": "Something went wrong"
   },
   "Auth": {
     "loginTitle": "Sign In",
