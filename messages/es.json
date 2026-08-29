@@ -1,34 +1,49 @@
 {
   "Nav": {
-    "login": "Iniciar sesión",
-    "register": "Registrarse",
-    "logout": "Cerrar sesión",
-    "dashboard": "Panel",
+    "home": "Inicio",
     "jobs": "Empleos",
-    "profile": "Perfil",
-    "admin": "Admin"
+    "companies": "Empresas",
+    "pricing": "Precios",
+    "about": "Acerca de",
+    "contact": "Contacto",
+    "login": "Entrar",
+    "register": "Registrarse",
+    "logout": "Salir",
+    "dashboard": "Panel",
+    "admin": "Admin",
+    "employer": "Empleador",
+    "resume": "Creador de CV",
+    "careerRisk": "Riesgo IA",
+    "notifications": "Notificaciones"
   },
   "Home": {
     "title": "Encuentra tu próximo trabajo en cualquier lugar",
-    "subtitle": "Búsqueda global de empleo impulsada por IA. Gratis para empezar.",
-    "ctaJobs": "Explorar empleos",
+    "subtitle": "Emparejamiento global de empleos con IA. Empieza gratis.",
+    "ctaJobs": "Ver empleos",
     "ctaRegister": "Empezar"
+  },
+  "Common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "search": "Buscar",
+    "error": "Algo salió mal"
   },
   "Auth": {
     "loginTitle": "Iniciar sesión",
     "registerTitle": "Crear cuenta",
-    "email": "Correo electrónico",
+    "email": "Correo",
     "password": "Contraseña",
     "name": "Nombre completo",
-    "role": "Soy un...",
-    "jobSeeker": "Buscador de empleo",
+    "role": "Soy...",
+    "jobSeeker": "Candidato",
     "employer": "Empleador",
-    "submitLogin": "Iniciar sesión",
+    "submitLogin": "Entrar",
     "submitRegister": "Crear cuenta",
     "noAccount": "¿No tienes cuenta?",
     "hasAccount": "¿Ya tienes cuenta?",
     "errors": {
-      "invalidCredentials": "Correo o contraseña inválidos",
+      "invalidCredentials": "Correo o contraseña incorrectos",
       "emailExists": "El correo ya está registrado",
       "generic": "Algo salió mal"
     }
