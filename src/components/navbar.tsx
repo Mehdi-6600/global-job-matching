@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
-import { Menu, X, Loader2, Bell } from "lucide-react";
+import { Menu, X, Loader2, Bell, FileText } from "lucide-react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -66,6 +66,13 @@ export default function Navbar() {
             ) : isLoggedIn ? (
               <div className="flex items-center gap-3">
                 <Link
+                  href="/resume-builder"
+                  className="text-slate-300 hover:text-sky-400 p-1"
+                  title="Resume Builder"
+                >
+                  <FileText className="w-4 h-4" />
+                </Link>
+                <Link
                   href="/notifications"
                   className="text-slate-300 hover:text-sky-400 p-1"
                   title="Notifications"
@@ -126,35 +133,23 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-
-            {isAdmin && (
-              <Link
-                href="/dashboard/admin"
-                className="block text-red-400 py-2 text-sm font-medium"
-                onClick={() => setMobileOpen(false)}
-              >
-                Admin
-              </Link>
-            )}
-
             {isEmployer && (
               <Link
                 href="/employer/dashboard"
-                className="block text-emerald-400 py-2 text-sm font-medium"
+                className="block text-emerald-400 py-2 text-sm"
                 onClick={() => setMobileOpen(false)}
               >
                 Employer
               </Link>
             )}
-
             {isLoggedIn ? (
               <>
                 <Link
-                  href="/notifications"
+                  href="/resume-builder"
                   className="block text-slate-300 py-2 text-sm"
                   onClick={() => setMobileOpen(false)}
                 >
-                  Notifications
+                  Resume Builder
                 </Link>
                 <Link
                   href="/dashboard"
