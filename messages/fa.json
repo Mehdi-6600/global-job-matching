@@ -1,7 +1,51 @@
 {
   "Nav": {
+    "home": "خانه",
+    "jobs": "شغل‌ها",
+    "companies": "شرکت‌ها",
+    "pricing": "قیمت‌ها",
+    "about": "درباره ما",
+    "contact": "تماس",
     "login": "ورود",
     "register": "ثبت‌نام",
-    "logout": "خروج"
+    "logout": "خروج",
+    "dashboard": "داشبورد",
+    "admin": "مدیر",
+    "employer": "کارفرما",
+    "resume": "رزومه‌ساز",
+    "careerRisk": "ریسک هوش مصنوعی",
+    "notifications": "اعلان‌ها"
+  },
+  "Home": {
+    "title": "شغل بعدی‌ات را در هر جای دنیا پیدا کن",
+    "subtitle": "جاب‌مچینگ جهانی با هوش مصنوعی. شروع رایگان.",
+    "ctaJobs": "مشاهده شغل‌ها",
+    "ctaRegister": "شروع کنید"
+  },
+  "Common": {
+    "loading": "در حال بارگذاری...",
+    "save": "ذخیره",
+    "cancel": "لغو",
+    "search": "جستجو",
+    "error": "مشکلی پیش آمد"
+  },
+  "Auth": {
+    "loginTitle": "ورود",
+    "registerTitle": "ساخت حساب",
+    "email": "ایمیل",
+    "password": "رمز عبور",
+    "name": "نام کامل",
+    "role": "من هستم...",
+    "jobSeeker": "کارجو",
+    "employer": "کارفرما",
+    "submitLogin": "ورود",
+    "submitRegister": "ثبت‌نام",
+    "noAccount": "حساب ندارید؟",
+    "hasAccount": "قبلاً ثبت‌نام کرده‌اید؟",
+    "errors": {
+      "invalidCredentials": "ایمیل یا رمز اشتباه است",
+      "emailExists": "این ایمیل قبلاً ثبت شده",
+      "generic": "مشکلی پیش آمد"
+    }
   }
 }
