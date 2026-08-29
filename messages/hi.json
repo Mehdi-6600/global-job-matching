@@ -1,7 +1,51 @@
 {
   "Nav": {
-    "login": "लॉग इन करें",
-    "register": "पंजीकरण करें",
-    "logout": "लॉग आउट"
+    "home": "होम",
+    "jobs": "नौकरियाँ",
+    "companies": "कंपनियाँ",
+    "pricing": "मूल्य",
+    "about": "हमारे बारे में",
+    "contact": "संपर्क",
+    "login": "लॉगिन",
+    "register": "साइन अप",
+    "logout": "लॉग आउट",
+    "dashboard": "डैशबोर्ड",
+    "admin": "एडमिन",
+    "employer": "नियोक्ता",
+    "resume": "रिज्यूमे बिल्डर",
+    "careerRisk": "AI जोखिम",
+    "notifications": "सूचनाएँ"
+  },
+  "Home": {
+    "title": "कहीं भी अपनी अगली नौकरी खोजें",
+    "subtitle": "AI से वैश्विक जॉब मैचिंग। मुफ़्त शुरू करें।",
+    "ctaJobs": "नौकरियाँ देखें",
+    "ctaRegister": "शुरू करें"
+  },
+  "Common": {
+    "loading": "लोड हो रहा है...",
+    "save": "सेव",
+    "cancel": "रद्द",
+    "search": "खोज",
+    "error": "कुछ गलत हो गया"
+  },
+  "Auth": {
+    "loginTitle": "साइन इन",
+    "registerTitle": "खाता बनाएँ",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "name": "पूरा नाम",
+    "role": "मैं हूँ...",
+    "jobSeeker": "नौकरी खोजने वाला",
+    "employer": "नियोक्ता",
+    "submitLogin": "साइन इन",
+    "submitRegister": "खाता बनाएँ",
+    "noAccount": "खाता नहीं है?",
+    "hasAccount": "पहले से खाता है?",
+    "errors": {
+      "invalidCredentials": "गलत ईमेल या पासवर्ड",
+      "emailExists": "ईमेल पहले से पंजीकृत है",
+      "generic": "कुछ गलत हो गया"
+    }
   }
 }
