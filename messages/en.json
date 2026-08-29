@@ -1,3 +1,74 @@
+{
+  "Nav": {
+    "home": "Home",
+    "jobs": "Jobs",
+    "companies": "Companies",
+    "pricing": "Pricing",
+    "about": "About",
+    "contact": "Contact",
+    "login": "Login",
+    "register": "Sign up",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "employer": "Employer",
+    "resume": "Resume Builder",
+    "careerRisk": "AI Career Risk",
+    "notifications": "Notifications"
+  },
+  "Home": {
+    "title": "Find Your Next Job Anywhere",
+    "subtitle": "Global job matching powered by AI. Free to start.",
+    "ctaJobs": "Browse Jobs",
+    "ctaRegister": "Get Started",
+    "statCompanies": "Companies",
+    "statRoles": "Open Roles",
+    "statFreeValue": "Free",
+    "statFreeLabel": "To Get Started",
+    "featuresTitle": "Everything You Need to Succeed",
+    "featureSearchTitle": "Smart Search",
+    "featureSearchDesc": "Filter by role, location, remote and salary to find the right fit faster.",
+    "featureGlobalTitle": "Global Reach",
+    "featureGlobalDesc": "Access job listings from companies worldwide in one place.",
+    "featureAlertsTitle": "Job Alerts",
+    "featureAlertsDesc": "Save searches and get notified when new matching roles appear.",
+    "featureApplyTitle": "Fast Apply",
+    "featureApplyDesc": "Build your profile once and apply to roles in a few clicks."
+  },
+  "Common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "error": "Something went wrong"
+  },
+  "Auth": {
+    "loginTitle": "Sign In",
+    "loginSubtitle": "Welcome back to Global Job Matching",
+    "registerTitle": "Create Account",
+    "registerSubtitle": "Start your journey to find your dream job",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "At least 8 characters",
+    "name": "Full Name",
+    "namePlaceholder": "John Doe",
+    "role": "I am a...",
+    "jobSeeker": "Job Seeker",
+    "employer": "Employer",
+    "submitLogin": "Sign In",
+    "submitRegister": "Create Account",
+    "signingIn": "Signing in...",
+    "creatingAccount": "Creating account...",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "emailExists": "Email already registered",
+      "generic": "Something went wrong",
+      "network": "Network error. Please try again."
+    }
+  },
   "Contact": {
     "title": "Contact Us",
     "subtitle": "Have a question, suggestion, or need help? We would love to hear from you.",
@@ -26,3 +97,4 @@
     "rights": "All rights reserved.",
     "builtFor": "Built for seekers & employers"
   }
+}
