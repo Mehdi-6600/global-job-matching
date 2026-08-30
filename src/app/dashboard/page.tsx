@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -16,7 +16,10 @@ import {
   DollarSign,
   Building2,
   ArrowRight,
+  FileText,
+  ShieldAlert,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface ApiJob {
   id: string;
@@ -42,57 +45,19 @@ interface ProfileData {
   headline?: string;
 }
 
-const sidebarItems = [
-  {
-    icon: <LayoutDashboard className="w-5 h-5" />,
-    label: "Dashboard",
-    href: "/dashboard",
-    active: true,
-  },
-  {
-    icon: <Briefcase className="w-5 h-5" />,
-    label: "My Applications",
-    href: "/my-applications",
-    active: false,
-  },
-  {
-    icon: <Heart className="w-5 h-5" />,
-    label: "Saved Jobs",
-    href: "/saved-jobs",
-    active: false,
-  },
-  {
-    icon: <MessageCircle className="w-5 h-5" />,
-    label: "Messages",
-    href: "/messages",
-    active: false,
-  },
-  {
-    icon: <Bell className="w-5 h-5" />,
-    label: "Notifications",
-    href: "/notifications",
-    active: false,
-  },
-  {
-    icon: <Settings className="w-5 h-5" />,
-    label: "Settings",
-    href: "/settings",
-    active: false,
-  },
-];
-
 function formatSalary(
   currency: string | null | undefined,
   min: number | null | undefined,
-  max: number | null | undefined
+  max: number | null | undefined,
+  notSpecified: string
 ) {
   const cur = currency || "USD";
-  if (min == null && max == null) return "Not specified";
+  if (min == null && max == null) return notSpecified;
   if (min != null && max != null) {
     return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
   }
-  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
-  return `Up to ${cur} ${max!.toLocaleString()}`;
+  if (min != null) return `${cur} ${min.toLocaleString()}+`;
+  return `${cur} ≤ ${max!.toLocaleString()}`;
 }
 
 function getLogo(name?: string | null): string {
@@ -106,6 +71,7 @@ function getLogo(name?: string | null): string {
 }
 
 export default function DashboardPage() {
+  const { t } = useLocale();
   const [jobs, setJobs] = useState<ApiJob[]>([]);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [appCount, setAppCount] = useState(0);
@@ -148,51 +114,113 @@ export default function DashboardPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  const sidebarItems = useMemo(
+    () => [
+      {
+        icon: <LayoutDashboard className="w-5 h-5" />,
+        label: t("Dashboard.navDashboard", "Dashboard"),
+        href: "/dashboard",
+        active: true,
+      },
+      {
+        icon: <Briefcase className="w-5 h-5" />,
+        label: t("Dashboard.navApplications", "My Applications"),
+        href: "/my-applications",
+        active: false,
+      },
+      {
+        icon: <Heart className="w-5 h-5" />,
+        label: t("Dashboard.navSaved", "Saved Jobs"),
+        href: "/saved-jobs",
+        active: false,
+      },
+      {
+        icon: <MessageCircle className="w-5 h-5" />,
+        label: t("Dashboard.navMessages", "Messages"),
+        href: "/messages",
+        active: false,
+      },
+      {
+        icon: <Bell className="w-5 h-5" />,
+        label: t("Dashboard.navNotifications", "Notifications"),
+        href: "/notifications",
+        active: false,
+      },
+      {
+        icon: <FileText className="w-5 h-5" />,
+        label: t("Dashboard.navResume", "Resume Builder"),
+        href: "/resume-builder",
+        active: false,
+      },
+      {
+        icon: <ShieldAlert className="w-5 h-5" />,
+        label: t("Dashboard.navCareerRisk", "Career Risk"),
+        href: "/career-risk",
+        active: false,
+      },
+      {
+        icon: <Settings className="w-5 h-5" />,
+        label: t("Dashboard.navSettings", "Settings"),
+        href: "/settings",
+        active: false,
+      },
+    ],
+    [t]
+  );
+
   const stats = [
     {
-      title: "Available Jobs",
+      title: t("Dashboard.statJobs", "Available Jobs"),
       value: totalJobs.toString(),
-      change: "Live",
+      change: t("Dashboard.live", "Live"),
       trend: "up" as const,
       icon: <Briefcase className="w-5 h-5 text-cyan-400" />,
       href: "/jobs",
     },
     {
-      title: "My Applications",
+      title: t("Dashboard.statApps", "My Applications"),
       value: appCount.toString(),
-      change: "Track",
+      change: t("Dashboard.track", "Track"),
       trend: "neutral" as const,
       icon: <CheckCircle2 className="w-5 h-5 text-purple-400" />,
       href: "/my-applications",
     },
     {
-      title: "Saved Jobs",
+      title: t("Dashboard.statSaved", "Saved Jobs"),
       value: savedCount.toString(),
-      change: "Bookmarked",
+      change: t("Dashboard.bookmarked", "Bookmarked"),
       trend: "neutral" as const,
       icon: <Heart className="w-5 h-5 text-pink-400" />,
       href: "/saved-jobs",
     },
     {
-      title: "Notifications",
+      title: t("Dashboard.statNotifs", "Notifications"),
       value: unreadCount.toString(),
-      change: unreadCount > 0 ? "Unread" : "All read",
+      change:
+        unreadCount > 0
+          ? t("Dashboard.unread", "Unread")
+          : t("Dashboard.allRead", "All read"),
       trend: unreadCount > 0 ? ("up" as const) : ("neutral" as const),
       icon: <Bell className="w-5 h-5 text-amber-400" />,
       href: "/notifications",
     },
   ];
 
-  const userName = profile?.name || "Job Seeker";
+  const userName =
+    profile?.name || t("Dashboard.defaultName", "Job Seeker");
   const userTitle =
-    profile?.title || profile?.headline || "Welcome to your dashboard";
+    profile?.title ||
+    profile?.headline ||
+    t("Dashboard.welcomeSub", "Welcome to your dashboard");
 
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading dashboard...</p>
+          <p className="text-slate-400">
+            {t("Dashboard.loading", "Loading dashboard...")}
+          </p>
         </div>
       </main>
     );
@@ -208,11 +236,13 @@ export default function DashboardPage() {
             className="lg:hidden glass rounded-xl p-3 text-white mb-4 flex items-center gap-2 w-fit"
           >
             <LayoutDashboard className="w-5 h-5" />
-            <span>Menu</span>
+            <span>{t("Dashboard.menu", "Menu")}</span>
           </button>
 
           <aside
-            className={`lg:w-64 shrink-0 ${sidebarOpen ? "block" : "hidden lg:block"}`}
+            className={`lg:w-64 shrink-0 ${
+              sidebarOpen ? "block" : "hidden lg:block"
+            }`}
           >
             <div className="glass rounded-2xl p-4 sticky top-24 border border-white/10">
               <div className="flex items-center gap-3 p-3 mb-4 border-b border-white/10 pb-4">
@@ -235,7 +265,7 @@ export default function DashboardPage() {
               <nav className="space-y-1">
                 {sidebarItems.map((item) => (
                   <Link
-                    key={item.label}
+                    key={item.href}
                     href={item.href}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                       item.active
@@ -246,7 +276,7 @@ export default function DashboardPage() {
                     {item.icon}
                     {item.label}
                     {item.href === "/notifications" && unreadCount > 0 && (
-                      <span className="ml-auto text-[10px] bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className="ms-auto text-[10px] bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
@@ -259,19 +289,19 @@ export default function DashboardPage() {
                   href="/jobs"
                   className="block text-xs text-cyan-400 hover:text-cyan-300"
                 >
-                  Browse jobs →
+                  {t("Dashboard.linkJobs", "Browse jobs →")}
                 </Link>
                 <Link
-                  href="/dashboard/employer"
+                  href="/employer/dashboard"
                   className="block text-xs text-emerald-400 hover:text-emerald-300"
                 >
-                  Employer panel →
+                  {t("Dashboard.linkEmployer", "Employer panel →")}
                 </Link>
                 <Link
                   href="/settings"
                   className="block text-xs text-slate-400 hover:text-white"
                 >
-                  Edit profile →
+                  {t("Dashboard.linkProfile", "Edit profile →")}
                 </Link>
               </div>
             </div>
@@ -280,14 +310,18 @@ export default function DashboardPage() {
           <div className="flex-1 space-y-8">
             <div className="glass rounded-2xl p-6 md:p-8 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
               <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                Welcome back, {userName.split(" ")[0]}!
+                {t("Dashboard.welcome", "Welcome back")},{" "}
+                {userName.split(" ")[0]}!
               </h1>
               <p className="text-slate-300">
-                There are{" "}
+                {t("Dashboard.thereAre", "There are")}{" "}
                 <span className="text-cyan-400 font-semibold">
-                  {totalJobs} active jobs
+                  {totalJobs} {t("Dashboard.activeJobs", "active jobs")}
                 </span>{" "}
-                on the platform. Apply and track everything from here.
+                {t(
+                  "Dashboard.onPlatform",
+                  "on the platform. Apply and track everything from here."
+                )}
               </p>
             </div>
 
@@ -299,7 +333,9 @@ export default function DashboardPage() {
                   className="glass rounded-2xl p-5 hover:bg-white/10 transition-all border border-white/10"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="p-2.5 rounded-xl bg-white/5">{stat.icon}</div>
+                    <div className="p-2.5 rounded-xl bg-white/5">
+                      {stat.icon}
+                    </div>
                     <span
                       className={`text-xs font-semibold px-2 py-1 rounded-full ${
                         stat.trend === "up"
@@ -322,13 +358,16 @@ export default function DashboardPage() {
               <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-400" />
-                  <h2 className="text-xl font-bold text-white">Latest Jobs</h2>
+                  <h2 className="text-xl font-bold text-white">
+                    {t("Dashboard.latestJobs", "Latest Jobs")}
+                  </h2>
                 </div>
                 <Link
                   href="/jobs"
                   className="text-cyan-400 text-sm font-medium hover:text-cyan-300 transition-colors flex items-center gap-1"
                 >
-                  Browse All <ArrowRight className="w-4 h-4" />
+                  {t("Dashboard.browseAll", "Browse All")}{" "}
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
 
@@ -351,7 +390,8 @@ export default function DashboardPage() {
                             </h4>
                             <p className="text-slate-400 text-xs flex items-center gap-1">
                               <Building2 className="w-3 h-3" />
-                              {job.company?.name || "Company"}
+                              {job.company?.name ||
+                                t("Dashboard.company", "Company")}
                             </p>
                           </div>
                         </div>
@@ -367,17 +407,13 @@ export default function DashboardPage() {
                           {formatSalary(
                             job.currency,
                             job.salaryMin,
-                            job.salaryMax
+                            job.salaryMax,
+                            t("Dashboard.salaryNA", "Not specified")
                           )}
                         </span>
-                        {job.type && (
-                          <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300">
-                            {job.type}
-                          </span>
-                        )}
                         {job.remote && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
-                            Remote
+                          <span className="text-emerald-400">
+                            {t("Dashboard.remote", "Remote")}
                           </span>
                         )}
                       </div>
@@ -386,10 +422,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="p-10 text-center text-slate-400 text-sm">
-                  No jobs to show.{" "}
-                  <Link href="/jobs" className="text-cyan-400">
-                    Browse jobs
-                  </Link>
+                  {t("Dashboard.noJobs", "No jobs to show yet.")}
                 </div>
               )}
             </div>
