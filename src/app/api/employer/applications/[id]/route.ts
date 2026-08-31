@@ -31,8 +31,10 @@ export async function PATCH(
       include: {
         job: {
           select: {
+            id: true,
+            title: true,
             postedById: true,
-            company: { select: { ownerId: true } },
+            company: { select: { ownerId: true, name: true } },
           },
         },
       },
@@ -56,12 +58,17 @@ export async function PATCH(
       data: { status },
     });
 
+    const jobTitle = application.job.title || "a job";
+    const companyName = application.job.company?.name;
+    const where = companyName ? ` at ${companyName}` : "";
+
     await db.notification.create({
       data: {
         userId: application.userId,
         type: "application",
         title: "Application Status Updated",
-        message: `Your application is now: ${status}`,
+        message: `Your application for "${jobTitle}"${where} is now: ${status}.`,
+        actionUrl: "/my-applications",
       },
     });
 
