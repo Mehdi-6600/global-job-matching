@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/roles";
+import { db } from "@/lib/db";
+import { isEmployerRole } from "@/lib/roles";
 import { ratelimit } from "@/lib/ratelimit";
 
 export async function GET(req: NextRequest) {
@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const role = (session.user.role as string) || "jobseeker";
-    if (role !== ROLES.EMPLOYER && role !== ROLES.ADMIN && role !== ROLES.OWNER) {
+    if (!isEmployerRole(session.user.role)) {
       return NextResponse.json(
         { error: "Only employers can access this." },
         { status: 403 }
@@ -31,7 +30,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const companies = await prisma.company.findMany({
+    const companies = await db.company.findMany({
       where: { ownerId: session.user.id },
       select: { id: true },
     });
@@ -42,7 +41,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ jobs: [], count: 0 });
     }
 
-    const jobs = await prisma.job.findMany({
+    const jobs = await db.job.findMany({
       where: { companyId: { in: companyIds } },
       orderBy: { createdAt: "desc" },
       include: {
@@ -58,10 +57,11 @@ export async function GET(req: NextRequest) {
     const formatted = jobs.map((j) => ({
       ...j,
       applicationCount: j._count.applications,
+      applicantCount: j._count.applications,
     }));
 
     return NextResponse.json({ jobs: formatted, count: formatted.length });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Employer jobs list error:", error);
     return NextResponse.json(
       { error: "Failed to fetch jobs" },
