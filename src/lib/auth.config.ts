@@ -8,12 +8,27 @@ export const authConfig = {
   },
   providers: [],
   callbacks: {
+    // Role must be on the token for Edge middleware (authorized)
+    async jwt({ token, user }) {
+      if (user) {
+        (token as { id?: string }).id = (user as { id?: string }).id;
+        (token as { role?: string }).role = (user as { role?: string }).role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as { id?: string }).id = (token as { id?: string }).id as string;
+        (session.user as { role?: string }).role = (token as { role?: string })
+          .role as string;
+      }
+      return session;
+    },
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as { role?: string } | undefined)?.role;
 
-      // API routes handle their own 401/403
       if (pathname.startsWith("/api/")) {
         return true;
       }
@@ -68,7 +83,6 @@ export const authConfig = {
         }
       }
 
-      // Employer area: job seekers should not access
       if (pathname.startsWith("/employer")) {
         if (
           userRole !== ROLES.EMPLOYER &&
