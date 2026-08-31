@@ -3,6 +3,13 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isEmployerRole } from "@/lib/roles";
 
+const ALLOWED_STATUS = new Set([
+  "scheduled",
+  "completed",
+  "cancelled",
+  "no_show",
+]);
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,17 +26,17 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, notes } = body;
+    const { status, notes } = body || {};
+
+    if (status != null && !ALLOWED_STATUS.has(String(status))) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
 
     const interview = await db.interview.findUnique({
       where: { id },
     });
 
-    if (!interview) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    if (!interview.companyId) {
+    if (!interview || !interview.companyId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -47,8 +54,8 @@ export async function PATCH(
     const updated = await db.interview.update({
       where: { id },
       data: {
-        status: status || undefined,
-        notes: notes !== undefined ? notes : undefined,
+        ...(status ? { status: String(status) } : {}),
+        ...(notes !== undefined ? { notes } : {}),
       },
     });
 
@@ -59,6 +66,7 @@ export async function PATCH(
           type: "interview",
           title: "Interview Updated",
           message: `Your interview status is now: ${status}`,
+          actionUrl: "/dashboard",
         },
       });
     }
