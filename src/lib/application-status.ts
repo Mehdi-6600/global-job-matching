@@ -17,6 +17,7 @@ const ALIASES: Record<string, ApplicationStatus> = {
   pending: "pending",
   viewed: "viewed",
   interview: "interview",
+  shortlisted: "viewed",
   rejected: "rejected",
   hired: "hired",
 };
@@ -29,6 +30,20 @@ export function normalizeApplicationStatus(
   return ALIASES[key] ?? null;
 }
 
-export function isApplicationStatus(value: string): value is ApplicationStatus {
+export function isApplicationStatus(
+  value: string
+): value is ApplicationStatus {
   return (APPLICATION_STATUSES as readonly string[]).includes(value);
+}
+
+export function applicationStatusLabel(status: string): string {
+  const n = normalizeApplicationStatus(status) || status;
+  const labels: Record<string, string> = {
+    pending: "Pending",
+    viewed: "Viewed",
+    interview: "Interview",
+    rejected: "Rejected",
+    hired: "Hired",
+  };
+  return labels[n] || status;
 }
