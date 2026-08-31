@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { ROLES } from "@/lib/roles";
 
 export const authConfig = {
   pages: {
@@ -12,7 +13,7 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as { role?: string } | undefined)?.role;
 
-      // همه APIها را از middleware عبور بده — خود route کد 401 برمی‌گرداند
+      // API routes handle their own 401/403
       if (pathname.startsWith("/api/")) {
         return true;
       }
@@ -62,7 +63,18 @@ export const authConfig = {
         pathname.startsWith("/dashboard/admin") ||
         pathname.startsWith("/admin")
       ) {
-        if (userRole !== "ADMIN" && userRole !== "OWNER") {
+        if (userRole !== ROLES.ADMIN && userRole !== ROLES.OWNER) {
+          return Response.redirect(new URL("/dashboard", request.nextUrl));
+        }
+      }
+
+      // Employer area: job seekers should not access
+      if (pathname.startsWith("/employer")) {
+        if (
+          userRole !== ROLES.EMPLOYER &&
+          userRole !== ROLES.ADMIN &&
+          userRole !== ROLES.OWNER
+        ) {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
         }
       }
