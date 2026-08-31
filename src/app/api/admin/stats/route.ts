@@ -1,27 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/roles";
+import { db } from "@/lib/db";
+import { isAdminRole } from "@/lib/roles";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const role = (session.user.role as string) || "jobseeker";
-    if (role !== ROLES.ADMIN && role !== ROLES.OWNER) {
+    if (!isAdminRole(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const [totalUsers, totalCompanies, totalJobs, totalApplications, pendingCompanies, pendingJobs] = await Promise.all([
-      prisma.user.count(),
-      prisma.company.count(),
-      prisma.job.count(),
-      prisma.application.count(),
-      prisma.company.count({ where: { status: "pending" } }),
-      prisma.job.count({ where: { status: "pending" } }),
+    const [
+      totalUsers,
+      totalCompanies,
+      totalJobs,
+      totalApplications,
+      pendingCompanies,
+      pendingJobs,
+    ] = await Promise.all([
+      db.user.count(),
+      db.company.count(),
+      db.job.count(),
+      db.application.count(),
+      db.company.count({ where: { status: "pending" } }),
+      db.job.count({ where: { status: "pending" } }),
     ]);
 
     return NextResponse.json({
@@ -34,7 +40,7 @@ export async function GET(req: NextRequest) {
         pendingJobs,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin stats error:", error);
     return NextResponse.json(
       { error: "Failed to fetch stats" },
