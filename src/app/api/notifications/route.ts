@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
-// GET - لیست اعلانات کاربر
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -10,7 +9,7 @@ export async function GET() {
   }
 
   try {
-    const notifications = await prisma.notification.findMany({
+    const notifications = await db.notification.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -28,7 +27,6 @@ export async function GET() {
   }
 }
 
-// PATCH - علامت‌گذاری خوانده‌شده
 export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -36,27 +34,32 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    const { id, readAll } = await req.json();
+    const body = await req.json();
+    const { id, readAll } = body || {};
 
     if (readAll) {
-      await prisma.notification.updateMany({
+      await db.notification.updateMany({
         where: { userId: session.user.id, read: false },
         data: { read: true },
       });
       return NextResponse.json({ message: "All marked as read" });
     }
 
-    if (!id) {
+    if (!id || typeof id !== "string") {
       return NextResponse.json(
         { error: "Notification ID required" },
         { status: 400 }
       );
     }
 
-    await prisma.notification.updateMany({
+    const result = await db.notification.updateMany({
       where: { id, userId: session.user.id },
       data: { read: true },
     });
+
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     return NextResponse.json({ message: "Marked as read" });
   } catch (error) {
@@ -65,7 +68,6 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE - حذف یک اعلان
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -83,9 +85,13 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await prisma.notification.deleteMany({
+    const result = await db.notification.deleteMany({
       where: { id, userId: session.user.id },
     });
+
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     return NextResponse.json({ message: "Deleted" });
   } catch (error) {
