@@ -99,11 +99,31 @@ export async function POST(req: NextRequest) {
 
     const job = await db.job.findUnique({
       where: { id: jobId, status: "active" },
+      select: {
+        id: true,
+        title: true,
+        postedById: true,
+        company: {
+          select: { ownerId: true, name: true },
+        },
+      },
     });
+
     if (!job) {
       return NextResponse.json(
         { error: "Job not found or no longer active." },
         { status: 404 }
+      );
+    }
+
+    const existing = await db.application.findFirst({
+      where: { userId: session.user.id, jobId },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "You have already applied for this job." },
+        { status: 409 }
       );
     }
 
@@ -115,6 +135,29 @@ export async function POST(req: NextRequest) {
         status: "pending",
       },
     });
+
+    const applicantName =
+      session.user.name || session.user.email || "A candidate";
+    const companyName = job.company?.name;
+    const notifyUserId = job.company?.ownerId || job.postedById;
+
+    if (notifyUserId && notifyUserId !== session.user.id) {
+      try {
+        await db.notification.create({
+          data: {
+            userId: notifyUserId,
+            type: "application",
+            title: "New application received",
+            message: `${applicantName} applied for "${job.title}"${
+              companyName ? ` at ${companyName}` : ""
+            }.`,
+            actionUrl: "/employer/applications",
+          },
+        });
+      } catch (notifyError) {
+        console.error("Employer notify error:", notifyError);
+      }
+    }
 
     return NextResponse.json(
       { success: true, application },
