@@ -1,36 +1,25 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
 export async function GET() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json(
-      {
-        error: "Unauthorized",
-      },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const interviews = await prisma.interview.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      orderBy: {
-        scheduledAt: "asc",
-      },
+    const interviews = await db.interview.findMany({
+      where: { userId: session.user.id },
+      orderBy: { scheduledAt: "asc" },
       include: {
         job: {
           select: {
             id: true,
             title: true,
             company: {
-              select: {
-                name: true,
-              },
+              select: { name: true },
             },
           },
         },
@@ -43,19 +32,11 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({
-      interviews,
-    });
+    return NextResponse.json({ interviews });
   } catch (error) {
-    console.error(
-      "Get user interviews error:",
-      error
-    );
-
+    console.error("Get user interviews error:", error);
     return NextResponse.json(
-      {
-        error: "Failed to load interviews",
-      },
+      { error: "Failed to load interviews" },
       { status: 500 }
     );
   }
