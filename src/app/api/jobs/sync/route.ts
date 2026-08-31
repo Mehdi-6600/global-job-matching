@@ -1,29 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { fetchFromArbeitnow } from "@/lib/jobs/fetcher";
 import { env } from "@/lib/env";
+import { isAuthorizedBearerSecret } from "@/lib/api-auth";
 
-function parseLocation(location: string): { city: string; country: string } {
-  if (!location) return { city: "Remote", country: "Remote" };
-  const parts = location.split(",").map((s) => s.trim());
-  if (parts.length >= 2) {
-    return { city: parts[0], country: parts[parts.length - 1] };
+function parseLocation(location: string): {
+  city: string;
+  country: string;
+} {
+  if (!location) {
+    return {
+      city: "Remote",
+      country: "Remote",
+    };
   }
-  return { city: location, country: location };
+
+  const parts = location
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    return {
+      city: parts[0],
+      country: parts[parts.length - 1],
+    };
+  }
+
+  return {
+    city: location,
+    country: location,
+  };
 }
 
 function mapJobType(apiType: string): string {
-  const t = apiType.toLowerCase();
-  if (t.includes("full")) return "full-time";
-  if (t.includes("part")) return "part-time";
-  if (t.includes("contract")) return "contract";
-  if (t.includes("freelance")) return "freelance";
-  if (t.includes("intern")) return "internship";
+  const type = apiType.toLowerCase();
+
+  if (type.includes("full")) {
+    return "full-time";
+  }
+
+  if (type.includes("part")) {
+    return "part-time";
+  }
+
+  if (type.includes("contract")) {
+    return "contract";
+  }
+
+  if (type.includes("freelance")) {
+    return "freelance";
+  }
+
+  if (type.includes("intern")) {
+    return "internship";
+  }
+
   return "full-time";
 }
 
 function stripHtml(html: string): string {
-  if (!html) return "";
+  if (!html) {
+    return "";
+  }
+
   return html
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
@@ -38,27 +78,41 @@ function generateSlug(name: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get("secret");
-  if (secret !== env.SYNC_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAuthorizedBearerSecret(request, env.SYNC_SECRET)) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   try {
-    const jobs = await fetchFromArbeitnow({ page: 1, perPage: 100 });
+    const jobs = await fetchFromArbeitnow({
+      page: 1,
+      perPage: 100,
+    });
+
     let created = 0;
     let skipped = 0;
 
     for (const job of jobs) {
       const { city, country } = parseLocation(job.location);
-      const jobType = mapJobType(job.job_types?.[0] || "full_time");
 
-      let company = await prisma.company.findFirst({
-        where: { name: job.company_name },
+      const jobType = mapJobType(
+        job.job_types?.[0] || "full_time"
+      );
+
+      let company = await db.company.findFirst({
+        where: {
+          name: job.company_name,
+        },
       });
 
       if (!company) {
-        const slug = generateSlug(job.company_name) || `company-${Date.now()}`;
-        company = await prisma.company.create({
+        const slug =
+          generateSlug(job.company_name) ||
+          `company-${Date.now()}`;
+
+        company = await db.company.create({
           data: {
             name: job.company_name,
             slug,
@@ -69,11 +123,18 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      const existing = await prisma.job.findFirst({
+      const existing = await db.job.findFirst({
         where: {
           OR: [
-            { title: job.title, companyId: company.id },
-            { tags: { has: job.url } },
+            {
+              title: job.title,
+              companyId: company.id,
+            },
+            {
+              tags: {
+                has: job.url,
+              },
+            },
           ],
         },
       });
@@ -83,10 +144,11 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      await prisma.job.create({
+      await db.job.create({
         data: {
           title: job.title,
-          description: stripHtml(job.description) || job.title,
+          description:
+            stripHtml(job.description) || job.title,
           location: `${city}, ${country}`,
           remote: job.remote ?? false,
           type: jobType,
@@ -95,7 +157,10 @@ export async function GET(request: NextRequest) {
           requirements: job.tags || [],
           responsibilities: [],
           benefits: [],
-          tags: [...(job.tags || []), job.url],
+          tags: [
+            ...(job.tags || []),
+            job.url,
+          ],
           status: "active",
           companyId: company.id,
         },
@@ -110,11 +175,16 @@ export async function GET(request: NextRequest) {
       skipped,
       totalFetched: jobs.length,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Sync error:", error);
+
     return NextResponse.json(
-      { error: error.message || "Sync failed" },
-      { status: 500 }
+      {
+        error: "Sync failed",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
