@@ -27,8 +27,10 @@ export async function PUT(
       include: {
         job: {
           select: {
+            id: true,
+            title: true,
             postedById: true,
-            company: { select: { ownerId: true } },
+            company: { select: { ownerId: true, name: true } },
           },
         },
       },
@@ -55,12 +57,17 @@ export async function PUT(
       data: { status },
     });
 
+    const jobTitle = application.job.title || "a job";
+    const companyName = application.job.company?.name;
+    const where = companyName ? ` at ${companyName}` : "";
+
     await db.notification.create({
       data: {
         userId: application.userId,
         type: "application",
         title: "Application Updated",
-        message: `Your application status changed to "${status}"`,
+        message: `Your application for "${jobTitle}"${where} is now: ${status}.`,
+        actionUrl: "/my-applications",
       },
     });
 
