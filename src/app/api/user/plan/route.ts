@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
+/**
+ * Source of truth for plan is User.plan.
+ * Confirmed transactions may upgrade plan (admin/manual), but we do not
+ * treat pending crypto as paid.
+ */
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -9,18 +14,15 @@ export async function GET() {
   }
 
   try {
-    const transaction = await prisma.transaction.findFirst({
-      where: {
-        userId: session.user.id,
-        status: "confirmed",
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { plan: true },
     });
 
+    const plan = (user?.plan || "free").toLowerCase();
+
     return NextResponse.json({
-      plan: transaction?.planId || "free",
+      plan: plan || "free",
     });
   } catch (error) {
     console.error("Error fetching user plan:", error);
