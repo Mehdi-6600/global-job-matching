@@ -200,6 +200,13 @@ export async function POST(
     }
 
     /*
+     * Store the narrowed company ID in a local constant.
+     * This prevents TypeScript from widening it back
+     * to string | null inside the transaction callback.
+     */
+    const companyId = job.companyId;
+
+    /*
      * Critical authorization check:
      * The candidate must actually have an application
      * for THIS job.
@@ -233,7 +240,7 @@ export async function POST(
 
     /*
      * Do not schedule an interview for a rejected
-     * or otherwise invalid application.
+     * application.
      */
     if (
       application.status ===
@@ -279,11 +286,7 @@ export async function POST(
         where: {
           userId,
           jobId,
-          status: {
-            in: [
-              "scheduled",
-            ],
-          },
+          status: "scheduled",
         },
 
         select: {
@@ -313,8 +316,7 @@ export async function POST(
                 jobId:
                   job.id,
 
-                companyId:
-                  job.companyId,
+                companyId,
 
                 scheduledAt,
 
