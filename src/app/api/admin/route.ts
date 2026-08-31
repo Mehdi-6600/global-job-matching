@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { ROLES } from "@/lib/roles";
+import { isAdminRole } from "@/lib/roles";
 
 export async function GET() {
   try {
     const session = await auth();
-    if (!session?.user?.id || (session.user.role !== ROLES.ADMIN && session.user.role !== ROLES.OWNER)) {
+    if (!session?.user?.id || !isAdminRole(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -57,6 +57,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Admin dashboard error:", error);
-    return NextResponse.json({ error: "Failed to fetch admin data" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch admin data" },
+      { status: 500 }
+    );
   }
 }
