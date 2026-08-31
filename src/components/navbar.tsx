@@ -56,7 +56,7 @@ export default function Navbar() {
 
             {isAdmin && (
               <Link
-                href="/dashboard/admin"
+                href="/admin"
                 className="text-red-400 hover:text-red-300 text-sm font-medium"
               >
                 {t("Nav.admin", "Admin")}
@@ -72,7 +72,6 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Language — always visible on desktop */}
             <LanguageSwitcher />
 
             {status === "loading" ? (
@@ -162,6 +161,17 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="block text-red-400 py-2 text-sm font-medium"
+                onClick={() => setMobileOpen(false)}
+              >
+                {t("Nav.admin", "Admin")}
+              </Link>
+            )}
+
             {isEmployer && (
               <Link
                 href="/employer/dashboard"
@@ -171,6 +181,7 @@ export default function Navbar() {
                 {t("Nav.employer", "Employer")}
               </Link>
             )}
+
             {isLoggedIn ? (
               <>
                 <Link
