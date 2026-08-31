@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { ratelimit } from "@/lib/ratelimit";
 
 const cryptoSchema = z.object({
   planId: z.enum(["pro", "business", "enterprise"]),
-  txHash: z.string().min(10).max(200),
+  txHash: z
+    .string()
+    .min(10)
+    .max(200)
+    .transform((s) => s.trim()),
   cryptoType: z.enum(["BTC", "ETH", "BNB", "USDT", "DOGE", "TON", "USDC"]),
   amount: z.number().optional(),
   currency: z.string().optional(),
@@ -24,6 +29,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { success } = await ratelimit.limit(
+      `crypto_pay_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const result = cryptoSchema.safeParse(body);
     if (!result.success) {
@@ -36,6 +53,7 @@ export async function POST(req: Request) {
     const { planId, txHash, cryptoType } = result.data;
     const expectedAmount = PLAN_PRICES[planId];
 
+    // Never auto-activate paid plan here
     const existingTx = await db.transaction.findUnique({
       where: { txHash },
     });
@@ -62,8 +80,14 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message:
-        "Transaction submitted for verification. Will be activated within 24 hours.",
-      transaction,
+        "Transaction submitted for verification. Plan activates after admin confirmation.",
+      transaction: {
+        id: transaction.id,
+        planId: transaction.planId,
+        status: transaction.status,
+        cryptoType: transaction.cryptoType,
+        createdAt: transaction.createdAt,
+      },
     });
   } catch (error) {
     console.error("Crypto payment error:", error);
