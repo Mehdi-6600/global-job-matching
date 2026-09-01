@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
-import { paymentSchema } from "@/lib/validation/payment";
+import { PLAN_PRICES } from "@/lib/payment/plans";
+import { z } from "zod";
 
-const PLAN_PRICES = {
-  free: 0,
-  pro: 9,
-  business: 29,
-  enterprise: 99,
-} as const;
+const paymentSchema = z
+  .object({
+    planId: z.enum(["free", "pro", "business", "enterprise"]),
+  })
+  .strict();
 
 export async function POST(req: NextRequest) {
   try {
