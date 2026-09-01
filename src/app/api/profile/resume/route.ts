@@ -48,46 +48,25 @@ export async function POST(req: NextRequest) {
     }
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-    let resumeUrl = safeName;
-    let storedInBlob = false;
-
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      try {
-        const { put } = await import("@vercel/blob");
-        const blob = await put(
-          `resumes/${session.user.id}/${Date.now()}-${safeName}`,
-          file,
-          {
-            access: "public",
-            token: process.env.BLOB_READ_WRITE_TOKEN,
-          }
-        );
-        resumeUrl = blob.url;
-        storedInBlob = true;
-      } catch (blobErr) {
-        console.error("Blob upload failed, saving filename only:", blobErr);
-      }
-    }
 
     await db.profile.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
-        resumeUrl,
+        resumeUrl: safeName,
       },
       update: {
-        resumeUrl,
+        resumeUrl: safeName,
       },
     });
 
     return NextResponse.json({
       success: true,
       filename: safeName,
-      resumeUrl,
-      storedInBlob,
-      message: storedInBlob
-        ? "Resume uploaded"
-        : "Resume filename saved. Set BLOB_READ_WRITE_TOKEN for real file storage.",
+      resumeUrl: safeName,
+      storedInBlob: false,
+      message:
+        "Resume filename saved. To store the real PDF later, install @vercel/blob and set BLOB_READ_WRITE_TOKEN.",
     });
   } catch (error) {
     console.error("Resume upload error:", error);
