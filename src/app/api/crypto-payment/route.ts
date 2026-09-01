@@ -2,13 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
-import { cryptoPaymentSchema } from "@/lib/validation/crypto-payment";
+import { PLAN_PRICES } from "@/lib/payment/plans";
+import { z } from "zod";
 
-const PLAN_PRICES: Record<string, number> = {
-  pro: 9,
-  business: 29,
-  enterprise: 99,
-};
+const cryptoPaymentSchema = z
+  .object({
+    planId: z.enum(["pro", "business", "enterprise"]),
+    txHash: z.string().trim().min(10).max(200),
+    cryptoType: z.enum([
+      "BTC",
+      "ETH",
+      "BNB",
+      "USDT",
+      "DOGE",
+      "TON",
+      "USDC",
+    ]),
+  })
+  .strict();
 
 export async function POST(req: NextRequest) {
   try {
