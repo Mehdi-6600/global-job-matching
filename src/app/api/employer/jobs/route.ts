@@ -1,20 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { isEmployerRole } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
+import { ratelimit } from "@/lib/ratelimit";
+import { jobCreateSchema } from "@/lib/validation/job";
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+function getClientIp(req: NextRequest) {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  );
+}
 
-  if (!isEmployerRole(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!isEmployerRole(session.user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const ip = getClientIp(req);
+    const { success } = await ratelimit.limit(
+      `employer_jobs_get_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const jobs = await db.job.findMany({
       where: {
         OR: [
@@ -34,6 +50,7 @@ export async function GET() {
         ...j,
         location: normalizeLocation(j.location) || j.location,
         applicantCount: j._count.applications,
+        applicationCount: j._count.applications,
       })),
     });
   } catch (error) {
@@ -43,35 +60,41 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!isEmployerRole(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   try {
-    const body = await req.json();
-    const title = typeof body.title === "string" ? body.title.trim() : "";
-    const description =
-      typeof body.description === "string" ? body.description.trim() : "";
-    const locationRaw =
-      typeof body.location === "string" ? body.location.trim() : "";
-    const type = typeof body.type === "string" ? body.type.trim() : "Full-time";
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (title.length < 2 || description.length < 20 || locationRaw.length < 2) {
+    if (!isEmployerRole(session.user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const ip = getClientIp(req);
+    const { success } = await ratelimit.limit(
+      `employer_jobs_post_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    const body = await req.json();
+    const parsed = jobCreateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Title, description (min 20 chars), and location required" },
+        {
+          error:
+            "Invalid input (title, description min 20 chars, location required)",
+          details: parsed.error.issues,
+        },
         { status: 400 }
       );
     }
 
-    const location = normalizeLocation(locationRaw) || locationRaw;
+    const data = parsed.data;
+    const location = normalizeLocation(data.location) || data.location;
 
-    let companyId: string | null =
-      typeof body.companyId === "string" ? body.companyId : null;
+    let companyId: string | null = data.companyId ?? null;
 
     if (companyId) {
       const owned = await db.company.findFirst({
@@ -90,10 +113,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         companyId = existing.id;
       } else {
-        const name =
-          typeof body.companyName === "string" && body.companyName.trim()
-            ? body.companyName.trim()
-            : "My Company";
+        const name = data.companyName?.trim() || "My Company";
         const created = await db.company.create({
           data: {
             name,
@@ -108,19 +128,20 @@ export async function POST(req: NextRequest) {
 
     const job = await db.job.create({
       data: {
-        title,
-        description,
+        title: data.title,
+        description: data.description,
         location,
-        type,
-        remote: Boolean(body.remote),
-        experience:
-          typeof body.experience === "string" ? body.experience : null,
-        salaryMin:
-          typeof body.salaryMin === "number" ? body.salaryMin : null,
-        salaryMax:
-          typeof body.salaryMax === "number" ? body.salaryMax : null,
-        currency:
-          typeof body.currency === "string" ? body.currency : "USD",
+        type: data.type || "Full-time",
+        remote: Boolean(data.remote),
+        experience: data.experience ?? null,
+        salaryMin: data.salaryMin ?? null,
+        salaryMax: data.salaryMax ?? null,
+        currency: data.currency || "USD",
+        requirements: data.requirements ?? [],
+        responsibilities: data.responsibilities ?? [],
+        benefits: data.benefits ?? [],
+        tags: data.tags ?? [],
+        deadline: data.deadline ?? null,
         status: "active",
         companyId,
         postedById: session.user.id,
@@ -130,9 +151,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, job }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        job: {
+          ...job,
+          location: normalizeLocation(job.location) || job.location,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Employer jobs POST error:", error);
-    return NextResponse.json({ error: "Failed to create job" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create job" },
+      { status: 500 }
+    );
   }
 }
