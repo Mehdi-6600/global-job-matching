@@ -14,62 +14,40 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
-
-const cryptoWallets = [
-  {
-    type: "BTC",
-    name: "Bitcoin",
-    address: "bc1qd8pz8kh8ghh5dzlz4y5t8fgzyhe6y8y67j33m3",
-  },
-  {
-    type: "ETH",
-    name: "Ethereum",
-    address: "0x0CAF488206AC367C37Cd6a56C71d9b1BC9D7Be5c",
-  },
-  {
-    type: "BNB",
-    name: "BNB (BSC)",
-    address: "bnb1da7gyaynhqwz3yf6aq5u2x4vy2k6c5futd84z5",
-  },
-  {
-    type: "USDT",
-    name: "USDT (TRC20)",
-    address: "TU3QBM4VnypRobQHh1w1n7QXdFQ8yPqRex",
-  },
-  {
-    type: "DOGE",
-    name: "Dogecoin",
-    address: "DJyuoTooAZYdC8NPpuAbUBKhjmeoWSBnFS",
-  },
-  {
-    type: "TON",
-    name: "TON",
-    address: "UQDol0GBbL3km5-9F4rEQO8UQnUo6XJbsG_LwBcG_6cPs1oh",
-  },
-];
+import {
+  PLAN_PRICES,
+  CRYPTO_WALLETS,
+  type PlanId,
+} from "@/lib/payment/plans";
 
 export default function PricingPage() {
   const { t } = useLocale();
   const [yearly, setYearly] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [cryptoType, setCryptoType] = useState("USDT");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
+  const [cryptoType, setCryptoType] = useState<string>(
+    CRYPTO_WALLETS[3]?.type || "USDT"
+  );
   const [txHash, setTxHash] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
 
   const plans = useMemo(
     () => [
       {
-        id: "free",
+        id: "free" as const,
         name: t("Pricing.planFree", "Free"),
-        price: { monthly: 0, yearly: 0 },
+        price: {
+          monthly: PLAN_PRICES.free,
+          yearly: PLAN_PRICES.free,
+        },
         description: t(
           "Pricing.planFreeDesc",
           "For job seekers getting started"
         ),
         features: [
-          t("Pricing.freeF1", "Apply to 5 jobs/month"),
+          t("Pricing.freeF1", "Browse and apply to jobs"),
           t("Pricing.freeF2", "Basic profile"),
           t("Pricing.freeF3", "Email alerts"),
           t("Pricing.freeF4", "Standard support"),
@@ -79,15 +57,18 @@ export default function PricingPage() {
         popular: false,
       },
       {
-        id: "pro",
+        id: "pro" as const,
         name: t("Pricing.planPro", "Pro"),
-        price: { monthly: 9, yearly: 90 },
+        price: {
+          monthly: PLAN_PRICES.pro,
+          yearly: PLAN_PRICES.pro * 10,
+        },
         description: t("Pricing.planProDesc", "For active job seekers"),
         features: [
           t("Pricing.proF1", "Unlimited applications"),
-          t("Pricing.proF2", "Featured profile"),
-          t("Pricing.proF3", "Priority alerts"),
-          t("Pricing.proF4", "Resume review"),
+          t("Pricing.proF2", "AI resume tools"),
+          t("Pricing.proF3", "Career risk insights"),
+          t("Pricing.proF4", "Priority alerts"),
           t("Pricing.proF5", "Chat support"),
         ],
         icon: <Zap className="w-6 h-6" />,
@@ -95,18 +76,21 @@ export default function PricingPage() {
         popular: true,
       },
       {
-        id: "business",
+        id: "business" as const,
         name: t("Pricing.planBusiness", "Business"),
-        price: { monthly: 29, yearly: 290 },
+        price: {
+          monthly: PLAN_PRICES.business,
+          yearly: PLAN_PRICES.business * 10,
+        },
         description: t(
           "Pricing.planBusinessDesc",
           "For employers & recruiters"
         ),
         features: [
-          t("Pricing.bizF1", "Post 10 jobs/month"),
+          t("Pricing.bizF1", "Post jobs"),
           t("Pricing.bizF2", "Applicant tracking"),
           t("Pricing.bizF3", "Company profile"),
-          t("Pricing.bizF4", "Analytics dashboard"),
+          t("Pricing.bizF4", "Email outreach tools"),
           t("Pricing.bizF5", "Priority support"),
         ],
         icon: <Building2 className="w-6 h-6" />,
@@ -114,19 +98,21 @@ export default function PricingPage() {
         popular: false,
       },
       {
-        id: "enterprise",
+        id: "enterprise" as const,
         name: t("Pricing.planEnterprise", "Enterprise"),
-        price: { monthly: 99, yearly: 990 },
+        price: {
+          monthly: PLAN_PRICES.enterprise,
+          yearly: PLAN_PRICES.enterprise * 10,
+        },
         description: t(
           "Pricing.planEnterpriseDesc",
-          "For large organizations"
+          "For larger hiring needs"
         ),
         features: [
-          t("Pricing.entF1", "Unlimited job posts"),
-          t("Pricing.entF2", "ATS integration"),
-          t("Pricing.entF3", "API access"),
-          t("Pricing.entF4", "Dedicated manager"),
-          t("Pricing.entF5", "Custom branding"),
+          t("Pricing.entF1", "Everything in Business"),
+          t("Pricing.entF2", "Advanced analytics"),
+          t("Pricing.entF3", "Custom limits"),
+          t("Pricing.entF4", "Dedicated support"),
         ],
         icon: <Crown className="w-6 h-6" />,
         color: "from-amber-500 to-orange-500",
@@ -136,44 +122,50 @@ export default function PricingPage() {
     [t]
   );
 
-  const plan = plans.find((p) => p.id === selectedPlan);
+  const faqs = useMemo(
+    () => [
+      {
+        q: t("Pricing.faq1q", "How does crypto payment work?"),
+        a: t(
+          "Pricing.faq1a",
+          "Send the plan amount to the wallet, paste the transaction hash, and we verify within 24 hours."
+        ),
+      },
+      {
+        q: t("Pricing.faq2q", "Can I change plans later?"),
+        a: t(
+          "Pricing.faq2a",
+          "Yes. Contact support or submit a new payment for a higher plan."
+        ),
+      },
+      {
+        q: t("Pricing.faq3q", "Is the free plan really free?"),
+        a: t(
+          "Pricing.faq3a",
+          "Yes. You can browse and apply without paying."
+        ),
+      },
+      {
+        q: t("Pricing.faq4q", "Which cryptocurrencies are accepted?"),
+        a: t(
+          "Pricing.faq4a",
+          "BTC, ETH, BNB, USDT, USDC, DOGE, and TON."
+        ),
+      },
+    ],
+    [t]
+  );
 
-  const faqs = [
-    {
-      q: t("Pricing.faq1q", "Can I cancel anytime?"),
-      a: t(
-        "Pricing.faq1a",
-        "Yes, you can cancel or change your plan at any time."
-      ),
-    },
-    {
-      q: t("Pricing.faq2q", "Is crypto payment safe?"),
-      a: t(
-        "Pricing.faq2a",
-        "Yes, we verify each transaction manually before activating your plan."
-      ),
-    },
-    {
-      q: t("Pricing.faq3q", "What happens after I pay?"),
-      a: t(
-        "Pricing.faq3a",
-        "Submit your TXID and we will verify it within 24 hours."
-      ),
-    },
-    {
-      q: t("Pricing.faq4q", "Can I switch plans?"),
-      a: t(
-        "Pricing.faq4a",
-        "Absolutely. You can upgrade or downgrade whenever you want."
-      ),
-    },
-  ];
+  const plan = plans.find((p) => p.id === selectedPlan) || null;
+  const selectedWallet =
+    CRYPTO_WALLETS.find((w) => w.type === cryptoType) || CRYPTO_WALLETS[0];
 
-  async function submitCrypto(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!plan || !txHash.trim()) return;
+    if (!plan || plan.id === "free" || !txHash.trim()) return;
 
     setSubmitting(true);
+    setError("");
     try {
       const res = await fetch("/api/crypto-payment", {
         method: "POST",
@@ -192,24 +184,25 @@ export default function PricingPage() {
         return;
       }
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setSubmitted(true);
         setTxHash("");
+      } else {
+        setError(data.error || "Submission failed");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      setError("Network error");
     } finally {
       setSubmitting(false);
     }
   }
 
   function copyAddress() {
-    const wallet = cryptoWallets.find((w) => w.type === cryptoType);
-    if (wallet) {
-      navigator.clipboard.writeText(wallet.address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!selectedWallet) return;
+    navigator.clipboard.writeText(selectedWallet.address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -249,7 +242,7 @@ export default function PricingPage() {
             >
               {t("Pricing.yearly", "Yearly")}{" "}
               <span className="text-xs opacity-80">
-                {t("Pricing.save20", "Save 20%")}
+                {t("Pricing.save20", "Save ~17%")}
               </span>
             </button>
           </div>
@@ -280,10 +273,13 @@ export default function PricingPage() {
                 <p className="text-slate-400 text-sm mb-4">{p.description}</p>
                 <div className="mb-6">
                   <span className="text-3xl font-bold text-white">
-                    €{yearly ? p.price.yearly : p.price.monthly}
+                    ${yearly ? p.price.yearly : p.price.monthly}
                   </span>
                   <span className="text-slate-500 text-sm">
-                    /{yearly ? t("Pricing.perYear", "year") : t("Pricing.perMonth", "month")}
+                    /
+                    {yearly
+                      ? t("Pricing.perYear", "year")
+                      : t("Pricing.perMonth", "month")}
                   </span>
                 </div>
                 <ul className="space-y-3 mb-6">
@@ -304,12 +300,14 @@ export default function PricingPage() {
                   className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all ${
                     p.id === "free"
                       ? "bg-white/5 text-slate-500 cursor-not-allowed"
-                      : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                      : p.popular
+                        ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+                        : "bg-white/10 hover:bg-white/15 text-white"
                   }`}
                 >
                   {p.id === "free"
-                    ? t("Pricing.currentPlan", "Current Plan")
-                    : t("Pricing.choosePlan", "Choose Plan")}
+                    ? t("Pricing.current", "Current plan")
+                    : t("Pricing.choose", "Choose plan")}
                 </button>
               </div>
             ))}
@@ -321,105 +319,90 @@ export default function PricingPage() {
               onClick={() => {
                 setSelectedPlan(null);
                 setSubmitted(false);
+                setError("");
               }}
-              className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
+              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
-              {t("Pricing.backToPlans", "Back to plans")}
+              {t("Pricing.back", "Back to plans")}
             </button>
 
-            <div className="glass rounded-2xl p-8 border border-white/10">
-              <h2 className="text-2xl font-bold text-white mb-2">
-                {t("Pricing.cryptoTitle", "Crypto Payment")}
-              </h2>
-              <p className="text-slate-400 mb-6">
-                {t("Pricing.youSelected", "You selected")}{" "}
-                <span className="text-indigo-400 font-medium">
-                  {plan?.name}
-                </span>{" "}
-                (
-                {yearly
-                  ? t("Pricing.yearly", "Yearly")
-                  : t("Pricing.monthly", "Monthly")}
-                )
-              </p>
-
+            <div className="glass rounded-2xl p-6 border border-white/10">
               {!submitted ? (
                 <>
-                  <div className="space-y-4 mb-6">
-                    <label className="block text-sm font-medium text-slate-300">
-                      {t("Pricing.selectCrypto", "Select Crypto")}
-                    </label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {cryptoWallets.map((w) => (
-                        <button
-                          type="button"
-                          key={w.type}
-                          onClick={() => setCryptoType(w.type)}
-                          className={`p-3 rounded-xl border text-sm font-medium transition-all ${
-                            cryptoType === w.type
-                              ? "border-indigo-500/50 bg-indigo-500/10 text-indigo-300"
-                              : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"
-                          }`}
-                        >
-                          {w.type}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">
+                    {t("Pricing.payTitle", "Pay with crypto")}
+                  </h2>
+                  <p className="text-slate-400 text-sm mb-6">
+                    {plan?.name} — $
+                    {yearly ? plan?.price.yearly : plan?.price.monthly} USD
+                  </p>
 
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-6">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
-                      {t("Pricing.sendTo", "Send")} {cryptoType}{" "}
-                      {t("Pricing.to", "to")}:
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <code className="flex-1 text-sm text-slate-300 break-all">
-                        {
-                          cryptoWallets.find((w) => w.type === cryptoType)
-                            ?.address
-                        }
-                      </code>
+                  <label className="block text-sm text-slate-400 mb-2">
+                    {t("Pricing.selectCrypto", "Cryptocurrency")}
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {CRYPTO_WALLETS.map((w) => (
                       <button
+                        key={w.type}
                         type="button"
-                        onClick={copyAddress}
-                        className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors shrink-0"
+                        onClick={() => setCryptoType(w.type)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          cryptoType === w.type
+                            ? "bg-indigo-600 border-indigo-500 text-white"
+                            : "bg-white/5 border-white/10 text-slate-300 hover:border-white/20"
+                        }`}
                       >
-                        {copied ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
+                        {w.type}
                       </button>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">
-                      {t("Pricing.amount", "Amount")}: €
-                      {yearly ? plan?.price.yearly : plan?.price.monthly}{" "}
-                      {t("Pricing.equivalent", "equivalent in")} {cryptoType}
-                    </p>
+                    ))}
                   </div>
 
-                  <form onSubmit={submitCrypto} className="space-y-4">
+                  <p className="text-xs text-slate-500 mb-1">
+                    {selectedWallet?.name} {t("Pricing.address", "address")}
+                  </p>
+                  <div className="flex items-center gap-2 mb-6">
+                    <code className="flex-1 text-xs text-cyan-300 bg-black/30 rounded-lg px-3 py-2 break-all border border-white/10">
+                      {selectedWallet?.address}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={copyAddress}
+                      className="p-2 rounded-lg bg-white/10 hover:bg-white/15 text-white"
+                      title="Copy"
+                    >
+                      {copied ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        {t("Pricing.txHash", "Transaction Hash (TXID)")}
+                      <label className="block text-sm text-slate-400 mb-2">
+                        {t("Pricing.txHash", "Transaction hash")}
                       </label>
                       <input
                         type="text"
-                        required
                         value={txHash}
                         onChange={(e) => setTxHash(e.target.value)}
-                        placeholder={t(
-                          "Pricing.txPlaceholder",
-                          "Paste transaction ID here..."
-                        )}
-                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                        required
+                        minLength={10}
+                        placeholder="0x... or tx id"
+                        className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500"
                       />
                     </div>
+
+                    {error && (
+                      <p className="text-sm text-red-400">{error}</p>
+                    )}
+
                     <button
                       type="submit"
-                      disabled={submitting}
-                      className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium transition-all flex items-center justify-center gap-2"
+                      disabled={submitting || txHash.trim().length < 10}
+                      className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium flex items-center justify-center gap-2"
                     >
                       {submitting ? (
                         <>
