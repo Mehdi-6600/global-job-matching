@@ -1,31 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ratelimit } from "@/lib/ratelimit";
+import { contactSchema } from "@/lib/validation/contact";
+
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, subject, message } = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
-    if (
-      !name?.trim() ||
-      !email?.trim() ||
-      !subject?.trim() ||
-      !message?.trim()
-    ) {
+    const parsed = contactSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "Invalid input", details: parsed.error.issues },
         { status: 400 }
       );
     }
 
-    if (!email.includes("@") || !email.includes(".")) {
-      return NextResponse.json(
-        { error: "Valid email is required" },
-        { status: 400 }
-      );
-    }
+    const { name, email, subject, message } = parsed.data;
+    const emailKey = email.toLowerCase();
+
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 
     const { success } = await ratelimit.limit(
-      `contact:${email.toLowerCase().trim()}`
+      `contact_${emailKey}_${ip}`
     );
     if (!success) {
       return NextResponse.json(
@@ -34,32 +44,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Optional email via Resend
     if (process.env.RESEND_API_KEY && process.env.OWNER_EMAIL) {
       try {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
           from:
-            process.env.RESEND_FROM_EMAIL ||
-            "onboarding@resend.dev",
+            process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
           to: process.env.OWNER_EMAIL,
-          subject: `Contact Form: ${subject}`,
+          subject: `Contact Form: ${subject.slice(0, 120)}`,
           replyTo: email,
           html: `
             <h2>New Contact Message</h2>
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Subject:</strong> ${subject}</p>
+            <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+            <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
             <p><strong>Message:</strong></p>
-            <p>${String(message).replace(/\n/g, "<br>")}</p>
+            <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
           `,
         });
       } catch (mailErr) {
         console.error("Resend error (message still accepted):", mailErr);
       }
     } else {
-      console.log("[Contact form]", { name, email, subject, message });
+      console.log("[Contact form]", {
+        name,
+        email: emailKey,
+        subject,
+      });
     }
 
     return NextResponse.json(
