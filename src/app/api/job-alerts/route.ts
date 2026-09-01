@@ -1,37 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { ratelimit } from "@/lib/ratelimit";
+import {
+  jobAlertCreateSchema,
+  jobAlertDeleteSchema,
+} from "@/lib/validation/job-alert";
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+function getClientIp(req: NextRequest) {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  );
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getClientIp(req);
+    const { success } = await ratelimit.limit(
+      `job_alerts_get_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    const alerts = await db.jobAlert.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ alerts });
+  } catch (error) {
+    console.error("Job alerts GET error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
-
-  const alerts = await prisma.jobAlert.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json({ alerts });
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getClientIp(req);
+    const { success } = await ratelimit.limit(
+      `job_alerts_post_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const body = await req.json();
-    const alert = await prisma.jobAlert.create({
+    const parsed = jobAlertCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { keywords, location, remote, type, minSalary } = parsed.data;
+
+    const alert = await db.jobAlert.create({
       data: {
         userId: session.user.id,
-        keywords: body.keywords || null,
-        location: body.location || null,
-        remote: body.remote ?? null,
-        type: body.type || null,
-        minSalary: body.minSalary ? parseInt(body.minSalary) : null,
+        keywords: keywords ?? null,
+        location: location ?? null,
+        remote: remote ?? null,
+        type: type ?? null,
+        minSalary: minSalary ?? null,
         active: true,
       },
     });
@@ -44,20 +86,37 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getClientIp(req);
+    const { success } = await ratelimit.limit(
+      `job_alerts_delete_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    const id = new URL(req.url).searchParams.get("id");
+    const parsed = jobAlertDeleteSchema.safeParse({ id });
+    if (!parsed.success) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+
+    const result = await db.jobAlert.deleteMany({
+      where: { id: parsed.data.id, userId: session.user.id },
+    });
+
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Deleted" });
+  } catch (error) {
+    console.error("Delete alert error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
-
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-  if (!id) {
-    return NextResponse.json({ error: "ID required" }, { status: 400 });
-  }
-
-  await prisma.jobAlert.deleteMany({
-    where: { id, userId: session.user.id },
-  });
-
-  return NextResponse.json({ message: "Deleted" });
 }
