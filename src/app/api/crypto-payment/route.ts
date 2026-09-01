@@ -1,20 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { z } from "zod";
 import { ratelimit } from "@/lib/ratelimit";
-
-const cryptoSchema = z.object({
-  planId: z.enum(["pro", "business", "enterprise"]),
-  txHash: z
-    .string()
-    .min(10)
-    .max(200)
-    .transform((s) => s.trim()),
-  cryptoType: z.enum(["BTC", "ETH", "BNB", "USDT", "DOGE", "TON", "USDC"]),
-  amount: z.number().optional(),
-  currency: z.string().optional(),
-});
+import { cryptoPaymentSchema } from "@/lib/validation/crypto-payment";
 
 const PLAN_PRICES: Record<string, number> = {
   pro: 9,
@@ -22,7 +10,7 @@ const PLAN_PRICES: Record<string, number> = {
   enterprise: 99,
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -35,14 +23,17 @@ export async function POST(req: Request) {
       `crypto_pay_${session.user.id}_${ip}`
     );
     if (!success) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const body = await req.json();
-    const result = cryptoSchema.safeParse(body);
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const result = cryptoPaymentSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid data", details: result.error.issues },
@@ -53,7 +44,6 @@ export async function POST(req: Request) {
     const { planId, txHash, cryptoType } = result.data;
     const expectedAmount = PLAN_PRICES[planId];
 
-    // Never auto-activate paid plan here
     const existingTx = await db.transaction.findUnique({
       where: { txHash },
     });
