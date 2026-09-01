@@ -6,7 +6,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     process.env.NEXT_PUBLIC_SITE_URL ||
     "https://global-job-matching.vercel.app";
 
-  const staticPages: { path: string; priority: number; changeFrequency: "daily" | "weekly" | "monthly" }[] = [
+  const staticPages: {
+    path: string;
+    priority: number;
+    changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+  }[] = [
     { path: "", priority: 1, changeFrequency: "daily" },
     { path: "/jobs", priority: 0.9, changeFrequency: "daily" },
     { path: "/companies", priority: 0.8, changeFrequency: "daily" },
