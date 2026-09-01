@@ -8,226 +8,160 @@
     --neu-surface: #eef2f7;
     --neu-text: #1e293b;
     --neu-muted: #64748b;
-    --neu-shadow-dark: #c8d0dc;
-    --neu-shadow-light: #ffffff;
+    --neu-dark: #c8d0dc;
+    --neu-light: #ffffff;
     --neu-cyan: #22d3ee;
     --neu-cyan-deep: #06b6d4;
-    --neu-cyan-soft: #a5f3fc;
-    --radius: 1rem;
-
     --background: 210 40% 94%;
     --foreground: 215 25% 17%;
-    --card: 210 40% 96%;
-    --card-foreground: 215 25% 17%;
     --primary: 187 92% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 30% 92%;
-    --secondary-foreground: 215 25% 17%;
-    --muted: 210 25% 90%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 187 85% 45%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 210 25% 88%;
-    --input: 210 25% 88%;
-    --ring: 187 92% 50%;
+    --radius: 1rem;
   }
 
   html {
-    color-scheme: light;
-  }
-
-  body {
-    background: var(--neu-bg) !important;
-    color: var(--neu-text) !important;
-    min-height: 100vh;
+    color-scheme: light !important;
   }
 }
 
-/* ——— Soft neumorphism kit ——— */
 @layer components {
   .glass {
-    background: var(--neu-surface) !important;
-    border: 1px solid rgba(255, 255, 255, 0.85) !important;
-    border-radius: 1.25rem !important;
-    box-shadow:
-      10px 10px 20px var(--neu-shadow-dark),
-      -10px -10px 20px var(--neu-shadow-light) !important;
-    backdrop-filter: none !important;
-  }
-
-  .glass-strong {
-    background: #f4f7fb !important;
-    border: 1px solid rgba(255, 255, 255, 0.95) !important;
-    border-radius: 1.25rem !important;
-    box-shadow:
-      12px 12px 24px var(--neu-shadow-dark),
-      -12px -12px 24px var(--neu-shadow-light) !important;
-  }
-
-  .neu-inset {
-    background: var(--neu-surface) !important;
-    border-radius: 1rem !important;
-    box-shadow:
-      inset 6px 6px 12px var(--neu-shadow-dark),
-      inset -6px -6px 12px var(--neu-shadow-light) !important;
-    border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  }
-
-  .neu-raised {
-    background: var(--neu-surface) !important;
-    border-radius: 1rem !important;
-    box-shadow:
-      8px 8px 16px var(--neu-shadow-dark),
-      -8px -8px 16px var(--neu-shadow-light) !important;
+    @apply rounded-2xl;
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, var(--neu-cyan), var(--neu-cyan-deep)) !important;
-    color: #fff !important;
-    font-weight: 600;
-    border-radius: 9999px !important;
-    border: none !important;
-    box-shadow:
-      0 10px 24px rgba(6, 182, 212, 0.35),
-      4px 4px 10px var(--neu-shadow-dark),
-      -4px -4px 10px var(--neu-shadow-light) !important;
-    transition: transform 0.15s ease, filter 0.15s ease;
-  }
-
-  .btn-primary:hover {
-    filter: brightness(1.05);
-    transform: translateY(-1px);
+    @apply font-semibold px-6 py-3 rounded-full transition-all;
   }
 
   .btn-secondary {
-    background: var(--neu-surface) !important;
-    color: var(--neu-text) !important;
-    font-weight: 600;
-    border-radius: 9999px !important;
-    border: 1px solid rgba(255, 255, 255, 0.8) !important;
-    box-shadow:
-      6px 6px 12px var(--neu-shadow-dark),
-      -6px -6px 12px var(--neu-shadow-light) !important;
-  }
-
-  .btn-secondary:hover {
-    background: #f8fafc !important;
+    @apply font-semibold px-6 py-3 rounded-full transition-all;
   }
 }
 
-@layer utilities {
-  .text-gradient {
-    background: linear-gradient(135deg, #06b6d4, #22d3ee);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
+/* ========== FORCE SOFT UI (outside layers = higher priority) ========== */
+
+html,
+body {
+  background: #e8eef5 !important;
+  color: #1e293b !important;
 }
 
-/* ——— Map existing dark page styles → soft UI (site-wide) ——— */
-
+/* Kill dark page shells used everywhere */
 .bg-slate-950,
 .bg-slate-900,
+.bg-slate-800,
 .bg-\[\#0B1120\],
-.bg-\[\#0f172a\] {
-  background-color: var(--neu-bg) !important;
+.bg-\[\#0f172a\],
+.bg-black {
+  background-color: #e8eef5 !important;
 }
 
-.from-slate-900 {
-  --tw-gradient-from: #e8eef5 var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: rgb(232 238 245 / 0) var(--tw-gradient-to-position) !important;
+.from-slate-900,
+.from-slate-950,
+.from-slate-800 {
+  --tw-gradient-from: #e8eef5 !important;
+  --tw-gradient-to: rgba(232, 238, 245, 0) !important;
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
-.via-slate-800 {
-  --tw-gradient-to: rgb(238 242 247 / 0) var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), #eef2f7 var(--tw-gradient-via-position),
-    var(--tw-gradient-to) !important;
+.via-slate-800,
+.via-slate-900 {
+  --tw-gradient-to: rgba(238, 242, 247, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), #eef2f7, var(--tw-gradient-to) !important;
 }
 
-.to-slate-900 {
-  --tw-gradient-to: #e8eef5 var(--tw-gradient-to-position) !important;
+.to-slate-900,
+.to-slate-950,
+.to-slate-800 {
+  --tw-gradient-to: #e8eef5 !important;
 }
 
-.text-white {
-  color: var(--neu-text) !important;
+/* Soft raised cards */
+.glass,
+.glass-strong {
+  background: #eef2f7 !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 1.25rem !important;
+  box-shadow:
+    10px 10px 20px #c8d0dc,
+    -10px -10px 20px #ffffff !important;
+  backdrop-filter: none !important;
 }
 
+/* Text on light */
+.text-white,
+.text-slate-50,
 .text-slate-100,
-.text-slate-200,
-.text-slate-300 {
-  color: #334155 !important;
+.text-slate-200 {
+  color: #1e293b !important;
 }
 
+.text-slate-300,
 .text-slate-400,
 .text-slate-500 {
-  color: var(--neu-muted) !important;
-}
-
-.text-slate-600 {
-  color: #475569 !important;
+  color: #64748b !important;
 }
 
 .border-white\/5,
 .border-white\/10,
-.border-white\/20 {
-  border-color: rgba(255, 255, 255, 0.75) !important;
+.border-white\/20,
+.border-slate-700,
+.border-slate-800 {
+  border-color: rgba(255, 255, 255, 0.85) !important;
 }
 
 .bg-white\/5,
 .bg-white\/10,
-.bg-white\/\[0\.03\] {
-  background: var(--neu-surface) !important;
+.bg-white\/\[0\.03\],
+.bg-slate-800\/50,
+.bg-slate-800\/80 {
+  background: #eef2f7 !important;
   box-shadow:
-    inset 4px 4px 8px var(--neu-shadow-dark),
-    inset -4px -4px 8px var(--neu-shadow-light) !important;
+    inset 5px 5px 10px #c8d0dc,
+    inset -5px -5px 10px #ffffff !important;
 }
 
+/* Cyan primary buttons (like the image) */
 .bg-indigo-600,
 .bg-indigo-500,
 .bg-sky-500,
 .bg-sky-400,
 .bg-cyan-500,
-.from-cyan-500,
-.from-indigo-500 {
-  /* primary actions keep bright cyan */
-}
-
-button.bg-indigo-600,
-a.bg-indigo-600,
-button.bg-sky-500,
-a.bg-sky-500,
-button.bg-indigo-500,
-.bg-gradient-to-r.from-cyan-500,
-.bg-gradient-to-r.from-indigo-600 {
-  background-image: linear-gradient(
-    135deg,
-    var(--neu-cyan),
-    var(--neu-cyan-deep)
-  ) !important;
-  color: #fff !important;
-  box-shadow: 0 10px 22px rgba(6, 182, 212, 0.3) !important;
+.btn-primary {
+  background: linear-gradient(135deg, #22d3ee, #06b6d4) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow:
+    0 10px 22px rgba(6, 182, 212, 0.35),
+    4px 4px 8px #c8d0dc,
+    -4px -4px 8px #ffffff !important;
 }
 
 .bg-indigo-600:hover,
+.bg-indigo-500:hover,
 .bg-sky-500:hover,
-.bg-indigo-500:hover {
+.btn-primary:hover {
   filter: brightness(1.06);
 }
 
-/* Inputs look inset (recessed) */
-input,
+.btn-secondary {
+  background: #eef2f7 !important;
+  color: #1e293b !important;
+  box-shadow:
+    6px 6px 12px #c8d0dc,
+    -6px -6px 12px #ffffff !important;
+}
+
+/* Soft inset fields */
+input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
-  background: var(--neu-surface) !important;
-  color: var(--neu-text) !important;
-  border: 1px solid rgba(255, 255, 255, 0.7) !important;
-  box-shadow:
-    inset 5px 5px 10px var(--neu-shadow-dark),
-    inset -5px -5px 10px var(--neu-shadow-light) !important;
+  background: #eef2f7 !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
   border-radius: 0.9rem !important;
+  box-shadow:
+    inset 5px 5px 10px #c8d0dc,
+    inset -5px -5px 10px #ffffff !important;
 }
 
 input::placeholder,
@@ -235,33 +169,40 @@ textarea::placeholder {
   color: #94a3b8 !important;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none !important;
-  box-shadow:
-    inset 5px 5px 10px var(--neu-shadow-dark),
-    inset -5px -5px 10px var(--neu-shadow-light),
-    0 0 0 3px rgba(34, 211, 238, 0.25) !important;
-}
-
-/* Nav / footer soft bar */
-nav.glass,
+/* Navbar / footer */
+nav,
 footer {
-  background: rgba(238, 242, 247, 0.92) !important;
-  box-shadow:
-    0 8px 24px rgba(200, 208, 220, 0.55),
-    0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  background: rgba(238, 242, 247, 0.95) !important;
+  color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 8px 24px rgba(200, 208, 220, 0.45) !important;
 }
 
-/* Keep accent texts readable */
 .text-sky-400,
 .text-cyan-400,
 .text-indigo-400,
 .text-emerald-400 {
-  color: var(--neu-cyan-deep) !important;
+  color: #0891b2 !important;
 }
 
-.text-red-400 {
+.text-red-400,
+.text-red-300 {
   color: #e11d48 !important;
+}
+
+/* Keep white text ON cyan buttons */
+.bg-indigo-600,
+.bg-indigo-500,
+.bg-sky-500,
+.bg-cyan-500,
+.btn-primary,
+a.bg-indigo-600,
+button.bg-indigo-600 {
+  color: #ffffff !important;
+}
+
+.bg-indigo-600 *,
+.bg-sky-500 *,
+.btn-primary * {
+  color: #ffffff !important;
 }
