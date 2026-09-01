@@ -23,16 +23,6 @@ export const metadata: Metadata = {
   },
   description:
     "Global Job Matching helps job seekers and employers connect worldwide. Browse jobs, apply, and hire with a modern secure job board.",
-  keywords: [
-    "jobs",
-    "job board",
-    "remote jobs",
-    "global jobs",
-    "hiring",
-    "career",
-    "Global Job Matching",
-  ],
-  authors: [{ name: "Global Job Matching" }],
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -45,16 +35,10 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Global Job Matching",
-    description:
-      "Find jobs and hire talent worldwide on Global Job Matching.",
+    description: "Find jobs and hire talent worldwide on Global Job Matching.",
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
-  alternates: {
-    canonical: siteUrl,
-  },
+  robots: { index: true, follow: true },
+  alternates: { canonical: siteUrl },
 };
 
 export default function RootLayout({
@@ -63,10 +47,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="light" suppressHydrationWarning>
       <body
-        className={`${inter.className} antialiased min-h-screen flex flex-col`}
-        style={{ background: "#e8eef5", color: "#1e293b" }}
+        className={`${inter.className} antialiased min-h-screen flex flex-col bg-[#e8eef5] text-slate-800`}
       >
         <Providers>
           <Navbar />
