@@ -53,11 +53,7 @@ export async function GET(
       parsedId.data;
 
     /*
-     * Rate limit public job reads.
-     *
-     * This prevents a single client from
-     * hammering the endpoint and artificially
-     * inflating view counts.
+     * Rate-limit public job requests.
      */
     const ip =
       req.headers
@@ -136,11 +132,8 @@ export async function GET(
     }
 
     /*
-     * Increment view count only after the job
-     * has been successfully found.
-     *
-     * Applicant count is deliberately NOT exposed
-     * through this public endpoint.
+     * Increment the view count only after the
+     * requested job has been found.
      */
     const updated =
       await db.job.update({
@@ -159,10 +152,18 @@ export async function GET(
         },
       });
 
+    /*
+     * Public response.
+     *
+     * IMPORTANT:
+     * applicant count is intentionally not exposed.
+     */
     return NextResponse.json({
       job: {
         id: job.id,
-        title: job.title,
+
+        title:
+          job.title,
 
         description:
           job.description,
@@ -170,7 +171,11 @@ export async function GET(
         location:
           normalizeLocation(
             job.location
-          ) || job.location,
+          ) ||
+          job.location,
+
+        salary:
+          job.salary,
 
         salaryMin:
           job.salaryMin,
@@ -178,14 +183,14 @@ export async function GET(
         salaryMax:
           job.salaryMax,
 
-        salaryCurrency:
-          job.salaryCurrency,
+        currency:
+          job.currency,
 
-        employmentType:
-          job.employmentType,
+        type:
+          job.type,
 
-        experienceLevel:
-          job.experienceLevel,
+        experience:
+          job.experience,
 
         remote:
           job.remote,
@@ -199,27 +204,23 @@ export async function GET(
         updatedAt:
           job.updatedAt,
 
-        expiresAt:
-          job.expiresAt,
+        deadline:
+          job.deadline,
 
         viewCount:
           updated.viewCount,
 
         requirements:
-          job.requirements ||
-          [],
+          job.requirements,
 
         responsibilities:
-          job.responsibilities ||
-          [],
+          job.responsibilities,
 
         benefits:
-          job.benefits ||
-          [],
+          job.benefits,
 
         tags:
-          job.tags ||
-          [],
+          job.tags,
 
         company:
           job.company
@@ -234,7 +235,9 @@ export async function GET(
                   normalizeLocation(
                     job.company
                       .location
-                  ),
+                  ) ||
+                  job.company
+                    .location,
 
                 logo:
                   job.company.logo,
@@ -266,7 +269,7 @@ export async function GET(
     });
   } catch (error) {
     console.error(
-      "Job get error:",
+      "Job GET error:",
       error
     );
 
@@ -329,6 +332,10 @@ export async function PATCH(
     const id =
       parsedId.data;
 
+    /*
+     * Load ownership information before allowing
+     * any modification.
+     */
     const job =
       await db.job.findUnique({
         where: {
@@ -388,7 +395,8 @@ export async function PATCH(
     let body: unknown;
 
     try {
-      body = await req.json();
+      body =
+        await req.json();
     } catch {
       return NextResponse.json(
         {
@@ -423,6 +431,10 @@ export async function PATCH(
       );
     }
 
+    /*
+     * Keep only fields accepted by the existing
+     * project validation schema.
+     */
     const data = {
       ...parsed.data,
 
@@ -463,7 +475,7 @@ export async function PATCH(
     });
   } catch (error) {
     console.error(
-      "Job patch error:",
+      "Job PATCH error:",
       error
     );
 
@@ -593,7 +605,7 @@ export async function DELETE(
     });
   } catch (error) {
     console.error(
-      "Job delete error:",
+      "Job DELETE error:",
       error
     );
 
