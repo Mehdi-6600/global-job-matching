@@ -64,7 +64,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased min-h-screen flex flex-col bg-slate-950 text-slate-100`}>
+      <body
+        className={`${inter.className} antialiased min-h-screen flex flex-col`}
+        style={{ background: "#e8eef5", color: "#1e293b" }}
+      >
         <Providers>
           <Navbar />
           <main className="flex-1">{children}</main>
