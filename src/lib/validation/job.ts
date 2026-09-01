@@ -9,50 +9,57 @@ export const JOB_STATUSES = [
 
 export const jobStatusSchema = z.enum(JOB_STATUSES);
 
+export const jobCreateSchema = z
+  .object({
+    title: z.string().trim().min(2).max(200),
+    description: z.string().trim().min(20).max(20000),
+    location: z.string().trim().min(2).max(200),
+    type: z.string().trim().min(1).max(50).default("Full-time"),
+    remote: z.boolean().optional().default(false),
+    experience: z.string().trim().max(50).nullable().optional(),
+    salaryMin: z.number().int().min(0).nullable().optional(),
+    salaryMax: z.number().int().min(0).nullable().optional(),
+    currency: z.string().trim().min(3).max(10).optional().default("USD"),
+    companyId: z.string().trim().min(1).max(100).nullable().optional(),
+    companyName: z.string().trim().min(2).max(150).optional(),
+    requirements: z.array(z.string().max(500)).max(100).optional(),
+    responsibilities: z.array(z.string().max(500)).max(100).optional(),
+    benefits: z.array(z.string().max(500)).max(100).optional(),
+    tags: z.array(z.string().max(100)).max(100).optional(),
+    deadline: z.coerce.date().nullable().optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (
+      data.salaryMin != null &&
+      data.salaryMax != null &&
+      data.salaryMin > data.salaryMax
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["salaryMax"],
+        message: "salaryMax must be >= salaryMin",
+      });
+    }
+  });
+
 export const jobUpdateSchema = z
   .object({
     title: z.string().min(2).max(200).optional(),
-
     description: z.string().min(20).max(20000).optional(),
-
     location: z.string().min(2).max(200).optional(),
-
     salary: z.string().max(100).nullable().optional(),
-
     type: z.string().min(1).max(50).optional(),
-
     remote: z.boolean().optional(),
-
     experience: z.string().max(50).nullable().optional(),
-
     salaryMin: z.number().int().min(0).nullable().optional(),
-
     salaryMax: z.number().int().min(0).nullable().optional(),
-
     currency: z.string().min(3).max(10).optional(),
-
-    requirements: z
-      .array(z.string().max(500))
-      .max(100)
-      .optional(),
-
-    responsibilities: z
-      .array(z.string().max(500))
-      .max(100)
-      .optional(),
-
-    benefits: z
-      .array(z.string().max(500))
-      .max(100)
-      .optional(),
-
-    tags: z
-      .array(z.string().max(100))
-      .max(100)
-      .optional(),
-
+    requirements: z.array(z.string().max(500)).max(100).optional(),
+    responsibilities: z.array(z.string().max(500)).max(100).optional(),
+    benefits: z.array(z.string().max(500)).max(100).optional(),
+    tags: z.array(z.string().max(100)).max(100).optional(),
     deadline: z.coerce.date().nullable().optional(),
-
     status: jobStatusSchema.optional(),
   })
   .superRefine((data, ctx) => {
@@ -66,10 +73,10 @@ export const jobUpdateSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["salaryMax"],
-        message:
-          "salaryMax must be greater than or equal to salaryMin",
+        message: "salaryMax must be greater than or equal to salaryMin",
       });
     }
   });
 
+export type JobCreateInput = z.infer<typeof jobCreateSchema>;
 export type JobUpdateInput = z.infer<typeof jobUpdateSchema>;
