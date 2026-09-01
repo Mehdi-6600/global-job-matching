@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { ratelimit } from "@/lib/ratelimit";
+
+const MAX_SIZE = 5 * 1024 * 1024;
+
+function getClientIp(req: NextRequest) {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,10 +18,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const formData = await req.formData();
-    const file = formData.get("resume") as File | null;
+    const ip = getClientIp(req);
+    const { success } = await ratelimit.limit(
+      `resume_upload_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
 
-    if (!file) {
+    const formData = await req.formData();
+    const file = formData.get("resume");
+
+    if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
@@ -23,33 +40,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_SIZE) {
       return NextResponse.json(
         { error: "File too large (max 5MB)" },
         { status: 400 }
       );
     }
 
-    const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+    let resumeUrl = safeName;
+    let storedInBlob = false;
 
-    await prisma.profile.upsert({
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { put } = await import("@vercel/blob");
+        const blob = await put(
+          `resumes/${session.user.id}/${Date.now()}-${safeName}`,
+          file,
+          {
+            access: "public",
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+          }
+        );
+        resumeUrl = blob.url;
+        storedInBlob = true;
+      } catch (blobErr) {
+        console.error("Blob upload failed, saving filename only:", blobErr);
+      }
+    }
+
+    await db.profile.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
-        resumeUrl: filename,
+        resumeUrl,
       },
       update: {
-        resumeUrl: filename,
+        resumeUrl,
       },
     });
 
     return NextResponse.json({
       success: true,
-      filename,
-      resumeUrl: filename,
-      storedInBlob: false,
-      message:
-        "Resume filename saved. To store the real PDF, install @vercel/blob and set BLOB_READ_WRITE_TOKEN.",
+      filename: safeName,
+      resumeUrl,
+      storedInBlob,
+      message: storedInBlob
+        ? "Resume uploaded"
+        : "Resume filename saved. Set BLOB_READ_WRITE_TOKEN for real file storage.",
     });
   } catch (error) {
     console.error("Resume upload error:", error);
@@ -57,14 +95,22 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(_req: NextRequest) {
+export async function DELETE(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await prisma.profile.updateMany({
+    const ip = getClientIp(req);
+    const { success } = await ratelimit.limit(
+      `resume_delete_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    await db.profile.updateMany({
       where: { userId: session.user.id },
       data: { resumeUrl: null },
     });
