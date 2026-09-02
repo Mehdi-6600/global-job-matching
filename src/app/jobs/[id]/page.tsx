@@ -306,7 +306,6 @@ export default function JobDetailPage() {
   }
 
   const companyName = job.company?.name || "Company";
-  const companyId = job.company?.id;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
@@ -417,7 +416,6 @@ export default function JobDetailPage() {
               </div>
             </div>
 
-            {/* Match Score */}
             <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Target className="w-5 h-5 text-cyan-400" />
@@ -593,9 +591,7 @@ export default function JobDetailPage() {
               >
                 Apply now
               </button>
-              {companyId && (
-                <ContactEmployer jobId={job.id} companyName={companyName} />
-              )}
+              <ContactEmployer jobId={job.id} jobTitle={job.title} />
               {shareUrl && (
                 <ShareButtons
                   title={`${job.title} at ${companyName}`}
