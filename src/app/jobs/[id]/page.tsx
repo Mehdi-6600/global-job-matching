@@ -24,6 +24,10 @@ import {
 } from "lucide-react";
 import ShareButtons from "../../components/ShareButtons";
 import { ContactEmployer } from "@/components/contact-employer";
+import {
+  PlanLimitBanner,
+  getPlanLimitFromResponse,
+} from "@/components/plan-limit-banner";
 
 interface JobDetail {
   id: string;
@@ -139,6 +143,10 @@ export default function JobDetailPage() {
   const [applyError, setApplyError] = useState("");
   const [applySuccess, setApplySuccess] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  const [planLimit, setPlanLimit] = useState<{
+    message: string;
+    code?: string;
+  } | null>(null);
 
   const [match, setMatch] = useState<MatchData | null>(null);
   const [matchLoading, setMatchLoading] = useState(false);
@@ -219,16 +227,30 @@ export default function JobDetailPage() {
   }, [id]);
 
   const handleSave = async () => {
+    setPlanLimit(null);
     try {
       const res = await fetch("/api/saved-jobs", {
         method: saved ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId: id }),
       });
+
+      const data = await res.json().catch(() => ({}));
+
       if (res.status === 401) {
         router.push(`/login?callbackUrl=/jobs/${id}`);
         return;
       }
+
+      if (!res.ok) {
+        const limit = getPlanLimitFromResponse(data);
+        if (limit) {
+          setPlanLimit(limit);
+          return;
+        }
+        return;
+      }
+
       if (res.ok) setSaved(!saved);
     } catch {
       // silent
@@ -238,6 +260,7 @@ export default function JobDetailPage() {
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     setApplyError("");
+    setPlanLimit(null);
     setApplying(true);
 
     try {
@@ -258,6 +281,13 @@ export default function JobDetailPage() {
           setApplyError("You have already applied for this job.");
           return;
         }
+
+        const limit = getPlanLimitFromResponse(data);
+        if (limit) {
+          setPlanLimit(limit);
+          return;
+        }
+
         setApplyError(data.error || "Failed to submit application");
         return;
       }
@@ -317,6 +347,16 @@ export default function JobDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           Back to all jobs
         </Link>
+
+        {planLimit && (
+          <div className="mb-6">
+            <PlanLimitBanner
+              message={planLimit.message}
+              code={planLimit.code}
+              onClose={() => setPlanLimit(null)}
+            />
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0 space-y-6">
@@ -612,6 +652,7 @@ export default function JobDetailPage() {
                 setApplyOpen(false);
                 setApplyError("");
                 setApplySuccess(false);
+                setPlanLimit(null);
               }}
               className="absolute top-4 right-4 text-slate-400 hover:text-white"
             >
@@ -641,6 +682,16 @@ export default function JobDetailPage() {
                   Apply for {job.title}
                 </h3>
                 <p className="text-slate-400 text-sm mb-6">at {companyName}</p>
+
+                {planLimit && (
+                  <div className="mb-4">
+                    <PlanLimitBanner
+                      message={planLimit.message}
+                      code={planLimit.code}
+                      onClose={() => setPlanLimit(null)}
+                    />
+                  </div>
+                )}
 
                 {applyError && (
                   <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
