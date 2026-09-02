@@ -74,7 +74,6 @@ body {
   --tw-gradient-to: #e8eef5 !important;
 }
 
-/* Raised cards */
 .glass,
 .glass-strong {
   background: #eef2f7 !important;
@@ -107,7 +106,6 @@ body {
   border-color: rgba(255, 255, 255, 0.85) !important;
 }
 
-/* Inset panels (NOT buttons) */
 .bg-white\/5:not(button):not(a):not([role="button"]),
 .bg-white\/10:not(button):not(a):not([role="button"]),
 .bg-white\/\[0\.03\]:not(button):not(a),
@@ -118,8 +116,6 @@ body {
     inset 5px 5px 10px #c8d0dc,
     inset -5px -5px 10px #ffffff !important;
 }
-
-/* ===== BUTTONS = RAISED (convex) ===== */
 
 button,
 a.btn-primary,
@@ -149,7 +145,6 @@ a.bg-white\/10 {
     filter 0.15s ease !important;
 }
 
-/* Primary / colored = cyan pill, raised */
 .bg-indigo-600,
 .bg-indigo-500,
 .bg-sky-500,
@@ -193,7 +188,6 @@ button:active {
     inset -2px -2px 6px rgba(255, 255, 255, 0.25) !important;
 }
 
-/* Secondary / neutral buttons = soft raised (not inset) */
 .btn-secondary,
 button.bg-white\/5,
 button.bg-white\/10,
@@ -216,7 +210,6 @@ button.bg-white\/10:hover {
   transform: translateY(-1px);
 }
 
-/* White text only on cyan buttons */
 .bg-indigo-600,
 .bg-indigo-500,
 .bg-sky-500,
@@ -233,7 +226,6 @@ button.bg-indigo-600 {
   color: #ffffff !important;
 }
 
-/* Inputs stay inset */
 input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
@@ -269,4 +261,83 @@ footer {
 .text-red-400,
 .text-red-300 {
   color: #e11d48 !important;
+}
+
+/* ========== RTL logical layout helpers ========== */
+[dir="rtl"] {
+  text-align: start;
+}
+
+[dir="rtl"] .text-left {
+  text-align: right !important;
+}
+
+[dir="rtl"] .text-right {
+  text-align: left !important;
+}
+
+/* Common absolute icons in inputs / search */
+[dir="rtl"] .left-3 {
+  left: auto !important;
+  right: 0.75rem !important;
+}
+
+[dir="rtl"] .left-4 {
+  left: auto !important;
+  right: 1rem !important;
+}
+
+[dir="rtl"] .right-3 {
+  right: auto !important;
+  left: 0.75rem !important;
+}
+
+[dir="rtl"] .right-4 {
+  right: auto !important;
+  left: 1rem !important;
+}
+
+[dir="rtl"] .pl-10 {
+  padding-left: 0 !important;
+  padding-right: 2.5rem !important;
+}
+
+[dir="rtl"] .pl-12 {
+  padding-left: 0 !important;
+  padding-right: 3rem !important;
+}
+
+[dir="rtl"] .pr-10 {
+  padding-right: 0 !important;
+  padding-left: 2.5rem !important;
+}
+
+[dir="rtl"] .ml-auto {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+[dir="rtl"] .mr-auto {
+  margin-right: 0 !important;
+  margin-left: auto !important;
+}
+
+[dir="rtl"] .space-x-2 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
+
+[dir="rtl"] .space-x-3 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
+
+[dir="rtl"] .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
+
+[dir="rtl"] .translate-x-full {
+  --tw-translate-x: -100% !important;
+}
+
+[dir="rtl"] .-translate-x-full {
+  --tw-translate-x: 100% !important;
 }
