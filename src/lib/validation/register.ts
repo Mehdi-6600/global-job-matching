@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ROLES } from "@/lib/roles";
 
 export const registerSchema = z
   .object({
@@ -11,10 +10,7 @@ export const registerSchema = z
       .max(128)
       .regex(/[A-Za-z]/, "Password must include a letter")
       .regex(/[0-9]/, "Password must include a number"),
-    role: z
-      .enum([ROLES.JOB_SEEKER, ROLES.EMPLOYER])
-      .optional()
-      .default(ROLES.JOB_SEEKER),
+    role: z.enum(["JOB_SEEKER", "EMPLOYER"]).optional().default("JOB_SEEKER"),
   })
   .strict();
 
