@@ -32,6 +32,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, plan: true },
+    });
+
+    const limits = getPlanLimits(user?.plan);
+
     const jobs = await db.job.findMany({
       where: {
         OR: [
@@ -46,6 +53,8 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    const activeCount = jobs.filter((j) => j.status === "active").length;
+
     return NextResponse.json({
       jobs: jobs.map((j) => ({
         ...j,
@@ -53,6 +62,13 @@ export async function GET(req: NextRequest) {
         applicantCount: j._count.applications,
         applicationCount: j._count.applications,
       })),
+      plan: {
+        name: user?.plan || "free",
+        maxActiveJobsEmployer: limits.maxActiveJobsEmployer,
+        activeJobs: activeCount,
+        remaining: Math.max(0, limits.maxActiveJobsEmployer - activeCount),
+        atLimit: activeCount >= limits.maxActiveJobsEmployer,
+      },
     });
   } catch (error) {
     console.error("Employer jobs GET error:", error);
@@ -173,7 +189,7 @@ export async function POST(req: NextRequest) {
         responsibilities: data.responsibilities ?? [],
         benefits: data.benefits ?? [],
         tags: data.tags ?? [],
-        deadline: data.deadline ?? null,
+        deadline: data.deadline ? new Date(data.deadline) : null,
         status: "active",
         companyId,
         postedById: session.user.id,
