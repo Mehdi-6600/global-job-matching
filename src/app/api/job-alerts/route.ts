@@ -6,6 +6,7 @@ import {
   jobAlertCreateSchema,
   jobAlertDeleteSchema,
 } from "@/lib/validation/job-alert";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 function getClientIp(req: NextRequest) {
   return (
@@ -53,6 +54,31 @@ export async function POST(req: NextRequest) {
     );
     if (!success) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, plan: true },
+    });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const limits = getPlanLimits(user.plan);
+    const alertCount = await db.jobAlert.count({
+      where: { userId: user.id },
+    });
+
+    if (alertCount >= limits.maxJobAlerts) {
+      return NextResponse.json(
+        {
+          error: `Job alert limit reached (${limits.maxJobAlerts}). Upgrade your plan for more.`,
+          code: "PLAN_LIMIT_JOB_ALERTS",
+          limit: limits.maxJobAlerts,
+          used: alertCount,
+        },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();
