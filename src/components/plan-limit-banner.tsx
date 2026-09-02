@@ -39,9 +39,6 @@ export function PlanLimitBanner({ message, code, onClose }: Props) {
   );
 }
 
-/**
- * Parse API JSON error into a plan-limit friendly message.
- */
 export function getPlanLimitFromResponse(data: unknown): {
   message: string;
   code?: string;
