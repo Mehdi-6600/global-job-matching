@@ -34,9 +34,7 @@ export async function POST(req: NextRequest) {
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 
-    const { success } = await ratelimit.limit(
-      `contact_${emailKey}_${ip}`
-    );
+    const { success } = await ratelimit.limit(`contact_${emailKey}_${ip}`);
     if (!success) {
       return NextResponse.json(
         { error: "Too many requests. Please wait a minute." },
@@ -44,38 +42,55 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (process.env.RESEND_API_KEY && process.env.OWNER_EMAIL) {
-      try {
-        const { Resend } = await import("resend");
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        await resend.emails.send({
-          from:
-            process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-          to: process.env.OWNER_EMAIL,
-          subject: `Contact Form: ${subject.slice(0, 120)}`,
-          replyTo: email,
-          html: `
-            <h2>New Contact Message</h2>
-            <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-            <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-            <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
-            <p><strong>Message:</strong></p>
-            <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
-          `,
-        });
-      } catch (mailErr) {
-        console.error("Resend error (message still accepted):", mailErr);
-      }
-    } else {
-      console.log("[Contact form]", {
-        name,
-        email: emailKey,
-        subject,
+    if (!process.env.RESEND_API_KEY || !process.env.OWNER_EMAIL) {
+      console.error("[Contact] RESEND_API_KEY or OWNER_EMAIL missing");
+      return NextResponse.json(
+        {
+          error:
+            "Contact email is not configured on the server. Please try again later.",
+        },
+        { status: 503 }
+      );
+    }
+
+    try {
+      const { Resend } = await import("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const result = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+        to: process.env.OWNER_EMAIL,
+        subject: `Contact Form: ${subject.slice(0, 120)}`,
+        replyTo: email,
+        html: `
+          <h2>New Contact Message</h2>
+          <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+          <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
+          <p><strong>Message:</strong></p>
+          <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
+        `,
       });
+
+      if (result.error) {
+        console.error("Resend API error:", result.error);
+        return NextResponse.json(
+          { error: "Failed to deliver message. Please try again later." },
+          { status: 502 }
+        );
+      }
+    } catch (mailErr) {
+      console.error("Resend error:", mailErr);
+      return NextResponse.json(
+        { error: "Failed to send message. Please try again later." },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json(
-      { message: "Message sent successfully" },
+      {
+        success: true,
+        message: "Message sent successfully",
+      },
       { status: 200 }
     );
   } catch (error) {
