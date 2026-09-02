@@ -16,6 +16,10 @@ import {
   Trash2,
   Ban,
 } from "lucide-react";
+import {
+  PlanLimitBanner,
+  getPlanLimitFromResponse,
+} from "@/components/plan-limit-banner";
 
 interface Job {
   id: string;
@@ -36,6 +40,14 @@ interface Application {
   job: { title: string };
 }
 
+interface PlanInfo {
+  name: string;
+  maxActiveJobsEmployer: number;
+  activeJobs: number;
+  remaining: number;
+  atLimit: boolean;
+}
+
 function jobApplicantCount(job: Job): number {
   return job.applicationCount ?? job.applicantCount ?? 0;
 }
@@ -43,6 +55,7 @@ function jobApplicantCount(job: Job): number {
 export default function EmployerDashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -52,19 +65,30 @@ export default function EmployerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState<string | null>(null);
+  const [planLimit, setPlanLimit] = useState<{
+    message: string;
+    code?: string;
+  } | null>(null);
 
   const loadDashboard = useCallback(async () => {
     try {
       const [jobsRes, appsRes] = await Promise.all([
-        fetch("/api/employer/jobs/list"),
+        fetch("/api/employer/jobs"),
         fetch("/api/employer/applications"),
       ]);
 
       const jobsData = await jobsRes.json().catch(() => ({}));
       const appsData = await appsRes.json().catch(() => ({}));
 
+      if (!jobsRes.ok && jobsRes.status === 403) {
+        const limit = getPlanLimitFromResponse(jobsData);
+        if (limit) setPlanLimit(limit);
+      }
+
       const jobList: Job[] = jobsData.jobs || [];
       setJobs(jobList);
+      if (jobsData.plan) setPlan(jobsData.plan);
+
       setApplications(appsData.applications?.slice(0, 5) || []);
       setStats({
         total: jobList.length,
@@ -109,18 +133,12 @@ export default function EmployerDashboardPage() {
   }
 
   async function deleteJob(jobId: string) {
-    if (
-      !confirm(
-        "Permanently delete this job? This cannot be undone."
-      )
-    ) {
+    if (!confirm("Permanently delete this job? This cannot be undone.")) {
       return;
     }
     setActionId(jobId);
     try {
-      const res = await fetch(`/api/jobs/${jobId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         alert(data.error || "Failed to delete job");
@@ -163,12 +181,36 @@ export default function EmployerDashboardPage() {
             </Link>
             <Link
               href="/employer/post-job"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-all"
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                plan?.atLimit
+                  ? "bg-white/10 text-slate-400 cursor-not-allowed pointer-events-none"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white"
+              }`}
             >
               <Plus className="w-4 h-4" /> Post New Job
             </Link>
           </div>
         </div>
+
+        {(planLimit || plan?.atLimit) && (
+          <div className="mb-6">
+            <PlanLimitBanner
+              message={
+                planLimit?.message ||
+                `Active job limit reached (${plan?.activeJobs}/${plan?.maxActiveJobsEmployer}). Upgrade to post more jobs.`
+              }
+              code={planLimit?.code || "PLAN_LIMIT_JOBS"}
+              onClose={() => setPlanLimit(null)}
+            />
+          </div>
+        )}
+
+        {plan && !plan.atLimit && (
+          <p className="text-xs text-slate-500 mb-4">
+            Plan: {plan.name} · Active jobs {plan.activeJobs}/
+            {plan.maxActiveJobsEmployer} · Remaining {plan.remaining}
+          </p>
+        )}
 
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
@@ -225,12 +267,14 @@ export default function EmployerDashboardPage() {
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-cyan-400" /> Posted Jobs
                 </h2>
-                <Link
-                  href="/employer/post-job"
-                  className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" /> New
-                </Link>
+                {!plan?.atLimit && (
+                  <Link
+                    href="/employer/post-job"
+                    className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" /> New
+                  </Link>
+                )}
               </div>
 
               {jobs.length === 0 ? (
@@ -281,21 +325,18 @@ export default function EmployerDashboardPage() {
                           <Users className="w-3 h-3" />{" "}
                           {jobApplicantCount(job)}
                         </span>
-
                         <Link
                           href="/employer/applications"
                           className="px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs font-medium hover:bg-indigo-600/30 transition-all"
                         >
                           Applicants
                         </Link>
-
                         {job.status === "active" && (
                           <button
                             type="button"
                             disabled={actionId === job.id}
                             onClick={() => closeJob(job.id)}
                             className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-300 text-xs font-medium hover:bg-amber-500/20 transition-all flex items-center gap-1 disabled:opacity-50"
-                            title="Close job"
                           >
                             {actionId === job.id ? (
                               <Loader2 className="w-3 h-3 animate-spin" />
@@ -305,13 +346,11 @@ export default function EmployerDashboardPage() {
                             Close
                           </button>
                         )}
-
                         <button
                           type="button"
                           disabled={actionId === job.id}
                           onClick={() => deleteJob(job.id)}
                           className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-all flex items-center gap-1 disabled:opacity-50"
-                          title="Delete job"
                         >
                           {actionId === job.id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -352,8 +391,7 @@ export default function EmployerDashboardPage() {
                       </div>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                          app.status === "pending" ||
-                          app.status === "applied"
+                          app.status === "pending" || app.status === "applied"
                             ? "bg-amber-500/10 text-amber-400"
                             : app.status === "hired"
                               ? "bg-emerald-500/10 text-emerald-400"
@@ -404,6 +442,12 @@ export default function EmployerDashboardPage() {
               >
                 <MessageSquare className="w-4 h-4 text-amber-400" /> Schedule
                 Interviews
+              </Link>
+              <Link
+                href="/pricing"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
+              >
+                <CheckCircle2 className="w-4 h-4 text-amber-400" /> Upgrade plan
               </Link>
             </div>
           </div>
