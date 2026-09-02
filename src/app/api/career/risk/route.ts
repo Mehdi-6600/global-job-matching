@@ -9,6 +9,7 @@ import {
   isPaidPlan,
   parseRiskJson,
 } from "@/lib/career-risk";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 const schema = z.object({
   jobTitle: z.string().min(2).max(120),
@@ -40,7 +41,10 @@ export async function POST(req: NextRequest) {
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
@@ -49,9 +53,38 @@ export async function POST(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true },
+      select: { id: true, plan: true },
     });
-    const paid = isPaidPlan(user?.plan);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const paid = isPaidPlan(user.plan);
+    const limits = getPlanLimits(user.plan);
+
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+
+    const usedAi = await db.notification.count({
+      where: {
+        userId: user.id,
+        type: "ai_career_risk",
+        createdAt: { gte: monthStart },
+      },
+    });
+
+    if (usedAi >= limits.maxAiGenerationsPerMonth) {
+      return NextResponse.json(
+        {
+          error: `AI analysis limit reached this month (${limits.maxAiGenerationsPerMonth}). Upgrade your plan for more.`,
+          code: "PLAN_LIMIT_AI",
+          limit: limits.maxAiGenerationsPerMonth,
+          used: usedAi,
+        },
+        { status: 403 }
+      );
+    }
 
     const system = `You are a careful labor-market analyst. Estimate how exposed a job is to AI/automation in the next 5–10 years.
 Return ONLY valid JSON (no markdown) with this shape:
@@ -71,19 +104,32 @@ Skills: ${skills || "n/a"}
 Years of experience: ${experienceYears ?? "n/a"}
 Industry: ${industry || "n/a"}`;
 
-    let result =
-      parseRiskJson(
-        (await chatCompletion(
-          [
-            { role: "system", content: system },
-            { role: "user", content: userMsg },
-          ],
-          { maxTokens: 1200, temperature: 0.4 }
-        )) || "",
-        jobTitle
-      ) || heuristicCareerRisk(jobTitle, skills);
+    const aiRaw = await chatCompletion(
+      [
+        { role: "system", content: system },
+        { role: "user", content: userMsg },
+      ],
+      { maxTokens: 1200, temperature: 0.4 }
+    );
 
-    // Free users: hide alternatives detail
+    let result =
+      parseRiskJson(aiRaw || "", jobTitle) ||
+      heuristicCareerRisk(jobTitle, skills);
+
+    const usedAiCall = Boolean(aiRaw && result.source === "ai");
+
+    if (usedAiCall) {
+      await db.notification.create({
+        data: {
+          userId: user.id,
+          type: "ai_career_risk",
+          title: "Career risk analysis",
+          message: `AI career risk analysis for "${jobTitle}"`,
+          actionUrl: "/career-risk",
+        },
+      });
+    }
+
     if (!paid) {
       result = {
         ...result,
@@ -95,7 +141,7 @@ Industry: ${industry || "n/a"}`;
       success: true,
       analysis: result,
       alternativesLocked: !paid,
-      plan: user?.plan || "free",
+      plan: user.plan || "free",
       message: paid
         ? "Full analysis including alternative careers"
         : "Risk analysis is free. Upgrade your plan to unlock alternative career suggestions.",
