@@ -13,6 +13,16 @@ export const PLAN_PRICES: Record<PlanId, number> = {
   enterprise: 99,
 };
 
+/** Monthly price, or yearly = 10× monthly (~2 months free) */
+export function getPlanAmount(
+  planId: PlanId,
+  billing: "monthly" | "yearly" = "monthly"
+): number {
+  const monthly = PLAN_PRICES[planId];
+  if (billing === "yearly") return monthly * 10;
+  return monthly;
+}
+
 export const PLANS = [
   {
     id: "free" as const,
