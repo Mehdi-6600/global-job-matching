@@ -172,10 +172,9 @@ export default function PricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planId: plan.id,
-          amount: yearly ? plan.price.yearly : plan.price.monthly,
-          currency: "USD",
           txHash: txHash.trim(),
           cryptoType,
+          billing: yearly ? "yearly" : "monthly",
         }),
       });
 
@@ -189,7 +188,9 @@ export default function PricingPage() {
         setSubmitted(true);
         setTxHash("");
       } else {
-        setError(data.error || "Submission failed");
+        setError(
+          typeof data.error === "string" ? data.error : "Submission failed"
+        );
       }
     } catch {
       setError("Network error");
@@ -335,7 +336,8 @@ export default function PricingPage() {
                   </h2>
                   <p className="text-slate-400 text-sm mb-6">
                     {plan?.name} — $
-                    {yearly ? plan?.price.yearly : plan?.price.monthly} USD
+                    {yearly ? plan?.price.yearly : plan?.price.monthly} USD (
+                    {yearly ? "yearly" : "monthly"})
                   </p>
 
                   <label className="block text-sm text-slate-400 mb-2">
