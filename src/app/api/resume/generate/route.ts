@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { ratelimit } from "@/lib/ratelimit";
 import { buildTemplateResume, chatCompletion } from "@/lib/ai";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 const schema = z.object({
   fullName: z.string().min(2).max(120),
@@ -39,11 +40,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, plan: true },
+    });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const limits = getPlanLimits(user.plan);
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+
+    const usedAi = await db.notification.count({
+      where: {
+        userId: user.id,
+        type: "ai_resume",
+        createdAt: { gte: monthStart },
+      },
+    });
+
+    if (usedAi >= limits.maxAiGenerationsPerMonth) {
+      return NextResponse.json(
+        {
+          error: `AI resume limit reached this month (${limits.maxAiGenerationsPerMonth}). Upgrade your plan for more.`,
+          code: "PLAN_LIMIT_AI",
+          limit: limits.maxAiGenerationsPerMonth,
+          used: usedAi,
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
@@ -98,6 +135,18 @@ Languages: ${data.languages || "n/a"}`;
         experience: data.experience || undefined,
         education: data.education || undefined,
         languages: data.languages || undefined,
+      });
+    }
+
+    if (source === "ai") {
+      await db.notification.create({
+        data: {
+          userId: user.id,
+          type: "ai_resume",
+          title: "AI resume generated",
+          message: "Your AI resume was generated successfully.",
+          actionUrl: "/resume-builder",
+        },
       });
     }
 
