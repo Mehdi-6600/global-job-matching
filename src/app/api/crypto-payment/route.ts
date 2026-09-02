@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
-import { PLAN_PRICES } from "@/lib/payment/plans";
+import { PLAN_PRICES, type PlanId } from "@/lib/payment/plans";
 import { z } from "zod";
 
 const cryptoPaymentSchema = z
@@ -18,6 +18,7 @@ const cryptoPaymentSchema = z
       "TON",
       "USDC",
     ]),
+    billing: z.enum(["monthly", "yearly"]).optional().default("monthly"),
   })
   .strict();
 
@@ -52,8 +53,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { planId, txHash, cryptoType } = result.data;
-    const expectedAmount = PLAN_PRICES[planId];
+    const { planId, txHash, cryptoType, billing } = result.data;
+    const monthly = PLAN_PRICES[planId as PlanId];
+    const expectedAmount = billing === "yearly" ? monthly * 10 : monthly;
 
     const existingTx = await db.transaction.findUnique({
       where: { txHash },
@@ -85,6 +87,8 @@ export async function POST(req: NextRequest) {
       transaction: {
         id: transaction.id,
         planId: transaction.planId,
+        amount: transaction.amount,
+        billing,
         status: transaction.status,
         cryptoType: transaction.cryptoType,
         createdAt: transaction.createdAt,
