@@ -50,32 +50,32 @@ model VerificationToken {
 // ─── Core Models ──────────────────────────────────────────────
 
 model User {
-  id                 String         @id @default(cuid())
-  name               String?
-  email              String         @unique
-  emailVerified      DateTime?
-  image              String?
-  password           String?
-  role               String         @default("JOB_SEEKER")
-  plan               String         @default("free")
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @default(now()) @updatedAt
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("JOB_SEEKER")
+  plan          String    @default("free")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
 
-  accounts           Account[]
-  sessions           Session[]
-  companies          Company[]
-  jobs               Job[]          @relation("PostedBy")
-  transactions       Transaction[]
-  applications       Application[]
-  notifications      Notification[]
-  messages           Message[]      @relation("SentMessages")
-  receivedMessages   Message[]      @relation("ReceivedMessages")
-  interviews         Interview[]
-  savedJobs          SavedJob[]
-  jobAlerts          JobAlert[]
-  profile            Profile?
-  blogPosts          BlogPost[]
-  subscribers        Subscriber[]
+  accounts         Account[]
+  sessions         Session[]
+  companies        Company[]
+  jobs             Job[]          @relation("PostedBy")
+  transactions     Transaction[]
+  applications     Application[]
+  notifications    Notification[]
+  messages         Message[]      @relation("SentMessages")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+  interviews       Interview[]
+  savedJobs        SavedJob[]
+  jobAlerts        JobAlert[]
+  profile          Profile?
+  blogPosts        BlogPost[]
+  subscribers      Subscriber[]
 
   @@index([email])
   @@index([role])
@@ -104,29 +104,29 @@ model Company {
 }
 
 model Job {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   title            String
-  description      String   @db.Text
+  description      String    @db.Text
   location         String
   salary           String?
   type             String
-  remote           Boolean  @default(false)
+  remote           Boolean   @default(false)
   experience       String?
   salaryMin        Int?
   salaryMax        Int?
-  currency         String   @default("USD")
-  requirements     String[] @default([])
-  responsibilities String[] @default([])
-  benefits         String[] @default([])
-  tags             String[] @default([])
+  currency         String    @default("USD")
+  requirements     String[]  @default([])
+  responsibilities String[]  @default([])
+  benefits         String[]  @default([])
+  tags             String[]  @default([])
   deadline         DateTime?
   categoryId       String?
-  status           String   @default("active")
-  viewCount        Int      @default(0)
+  status           String    @default("active")
+  viewCount        Int       @default(0)
   companyId        String?
   postedById       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @default(now()) @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
 
   company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
   postedBy     User?         @relation("PostedBy", fields: [postedById], references: [id], onDelete: Cascade)
@@ -338,7 +338,7 @@ model Subscriber {
   name      String?
   active    Boolean  @default(true)
   userId    String?
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -356,4 +356,20 @@ model Category {
   jobs Job[]
 
   @@index([slug])
+}
+
+// ─── Analytics ────────────────────────────────────────────────
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  path      String
+  referrer  String?
+  userId    String?
+  ipHash    String?
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@index([userId])
 }
