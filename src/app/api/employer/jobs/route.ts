@@ -5,6 +5,7 @@ import { isEmployerRole } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
 import { ratelimit } from "@/lib/ratelimit";
 import { jobCreateSchema } from "@/lib/validation/job";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 function getClientIp(req: NextRequest) {
   return (
@@ -76,6 +77,37 @@ export async function POST(req: NextRequest) {
     );
     if (!success) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, plan: true, email: true },
+    });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const limits = getPlanLimits(user.plan);
+    const activeJobs = await db.job.count({
+      where: {
+        status: "active",
+        OR: [
+          { postedById: user.id },
+          { company: { ownerId: user.id } },
+        ],
+      },
+    });
+
+    if (activeJobs >= limits.maxActiveJobsEmployer) {
+      return NextResponse.json(
+        {
+          error: `Active job limit reached (${limits.maxActiveJobsEmployer}). Upgrade your plan to post more jobs.`,
+          code: "PLAN_LIMIT_JOBS",
+          limit: limits.maxActiveJobsEmployer,
+          used: activeJobs,
+        },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();
