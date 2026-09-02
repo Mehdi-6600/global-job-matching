@@ -1,10 +1,68 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { redis } from "./redis";
 
-// اگر Redis تنظیم نشده باشد، gracefully رد نمی‌کند (برای dev)
-const fallbackLimiter = {
-  limit: async () => ({ success: true, limit: 100, remaining: 100, reset: 0 }),
-} as unknown as Ratelimit;
+type LimitResult = {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number;
+};
+
+/**
+ * In-memory fallback (per server instance).
+ * Better than allowing unlimited traffic when Redis is missing.
+ */
+function createMemoryLimiter(
+  max: number,
+  windowMs: number
+): { limit: (key: string) => Promise<LimitResult> } {
+  const hits = new Map<string, { count: number; resetAt: number }>();
+
+  return {
+    async limit(key: string): Promise<LimitResult> {
+      const now = Date.now();
+      const row = hits.get(key);
+
+      if (!row || now > row.resetAt) {
+        hits.set(key, { count: 1, resetAt: now + windowMs });
+        return {
+          success: true,
+          limit: max,
+          remaining: max - 1,
+          reset: now + windowMs,
+        };
+      }
+
+      if (row.count >= max) {
+        return {
+          success: false,
+          limit: max,
+          remaining: 0,
+          reset: row.resetAt,
+        };
+      }
+
+      row.count += 1;
+      hits.set(key, row);
+      return {
+        success: true,
+        limit: max,
+        remaining: max - row.count,
+        reset: row.resetAt,
+      };
+    },
+  };
+}
+
+const memoryGeneral = createMemoryLimiter(10, 60_000);
+const memoryAuth = createMemoryLimiter(5, 60_000);
+const memoryEmail = createMemoryLimiter(2, 60 * 60_000);
+
+if (!redis && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[ratelimit] Redis/KV not configured — using in-memory limiter (not shared across instances)."
+  );
+}
 
 export const ratelimit = redis
   ? new Ratelimit({
@@ -13,9 +71,8 @@ export const ratelimit = redis
       analytics: true,
       prefix: "rl",
     })
-  : fallbackLimiter;
+  : memoryGeneral;
 
-// Rate limiter سنگین‌تر برای Auth (5 بار در دقیقه)
 export const authRatelimit = redis
   ? new Ratelimit({
       redis,
@@ -23,9 +80,8 @@ export const authRatelimit = redis
       analytics: true,
       prefix: "rl_auth",
     })
-  : fallbackLimiter;
+  : memoryAuth;
 
-// Rate limiter خیلی سنگین برای Email (2 بار در ساعت)
 export const emailRatelimit = redis
   ? new Ratelimit({
       redis,
@@ -33,4 +89,4 @@ export const emailRatelimit = redis
       analytics: true,
       prefix: "rl_email",
     })
-  : fallbackLimiter;
+  : memoryEmail;
