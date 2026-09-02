@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { NotificationProvider } from "@/components/notification-provider";
 import { LocaleProvider } from "@/components/locale-provider";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -16,7 +17,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         disableTransitionOnChange
       >
         <LocaleProvider>
-          <NotificationProvider>{children}</NotificationProvider>
+          <NotificationProvider>
+            <AnalyticsTracker />
+            {children}
+          </NotificationProvider>
         </LocaleProvider>
       </ThemeProvider>
     </SessionProvider>
