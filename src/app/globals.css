@@ -37,7 +37,7 @@
   }
 }
 
-/* ========== FORCE SOFT UI (outside layers = higher priority) ========== */
+/* ========== FORCE SOFT UI ========== */
 
 html,
 body {
@@ -45,7 +45,6 @@ body {
   color: #1e293b !important;
 }
 
-/* Kill dark page shells used everywhere */
 .bg-slate-950,
 .bg-slate-900,
 .bg-slate-800,
@@ -75,7 +74,7 @@ body {
   --tw-gradient-to: #e8eef5 !important;
 }
 
-/* Soft raised cards */
+/* Raised cards */
 .glass,
 .glass-strong {
   background: #eef2f7 !important;
@@ -87,7 +86,6 @@ body {
   backdrop-filter: none !important;
 }
 
-/* Text on light */
 .text-white,
 .text-slate-50,
 .text-slate-100,
@@ -109,49 +107,133 @@ body {
   border-color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.bg-white\/5,
-.bg-white\/10,
-.bg-white\/\[0\.03\],
-.bg-slate-800\/50,
-.bg-slate-800\/80 {
+/* Inset panels (NOT buttons) */
+.bg-white\/5:not(button):not(a):not([role="button"]),
+.bg-white\/10:not(button):not(a):not([role="button"]),
+.bg-white\/\[0\.03\]:not(button):not(a),
+.bg-slate-800\/50:not(button):not(a),
+.bg-slate-800\/80:not(button):not(a) {
   background: #eef2f7 !important;
   box-shadow:
     inset 5px 5px 10px #c8d0dc,
     inset -5px -5px 10px #ffffff !important;
 }
 
-/* Cyan primary buttons (like the image) */
+/* ===== BUTTONS = RAISED (convex) ===== */
+
+button,
+a.btn-primary,
+a.btn-secondary,
+.btn-primary,
+.btn-secondary,
+a.bg-indigo-600,
+a.bg-indigo-500,
+a.bg-sky-500,
+a.bg-sky-400,
+a.bg-cyan-500,
+button.bg-indigo-600,
+button.bg-indigo-500,
+button.bg-sky-500,
+button.bg-sky-400,
+button.bg-cyan-500,
+button.bg-white\/5,
+button.bg-white\/10,
+a.bg-white\/5,
+a.bg-white\/10 {
+  border-radius: 9999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  transform: translateY(0);
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease,
+    filter 0.15s ease !important;
+}
+
+/* Primary / colored = cyan pill, raised */
 .bg-indigo-600,
 .bg-indigo-500,
 .bg-sky-500,
 .bg-sky-400,
 .bg-cyan-500,
-.btn-primary {
-  background: linear-gradient(135deg, #22d3ee, #06b6d4) !important;
+.btn-primary,
+button.bg-indigo-600,
+button.bg-indigo-500,
+button.bg-sky-500,
+button.bg-cyan-500,
+a.bg-indigo-600,
+a.bg-sky-500 {
+  background: linear-gradient(145deg, #2ee6f5, #06b6d4) !important;
   color: #ffffff !important;
-  border: none !important;
   box-shadow:
-    0 10px 22px rgba(6, 182, 212, 0.35),
-    4px 4px 8px #c8d0dc,
-    -4px -4px 8px #ffffff !important;
+    6px 6px 14px #b8c2d0,
+    -6px -6px 14px #ffffff,
+    0 8px 18px rgba(6, 182, 212, 0.35) !important;
 }
 
 .bg-indigo-600:hover,
 .bg-indigo-500:hover,
 .bg-sky-500:hover,
-.btn-primary:hover {
-  filter: brightness(1.06);
+.btn-primary:hover,
+button.bg-indigo-600:hover,
+a.bg-indigo-600:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow:
+    8px 8px 18px #b0bac8,
+    -6px -6px 14px #ffffff,
+    0 10px 22px rgba(6, 182, 212, 0.4) !important;
 }
 
-.btn-secondary {
+.bg-indigo-600:active,
+.btn-primary:active,
+button:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.12),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Secondary / neutral buttons = soft raised (not inset) */
+.btn-secondary,
+button.bg-white\/5,
+button.bg-white\/10,
+a.bg-white\/5,
+a.bg-white\/10,
+button.bg-slate-800\/50 {
   background: #eef2f7 !important;
   color: #1e293b !important;
   box-shadow:
-    6px 6px 12px #c8d0dc,
-    -6px -6px 12px #ffffff !important;
+    7px 7px 14px #c5cedb,
+    -7px -7px 14px #ffffff !important;
 }
 
-/* Soft inset fields */
+.btn-secondary:hover,
+button.bg-white\/5:hover,
+button.bg-white\/10:hover {
+  box-shadow:
+    9px 9px 18px #b8c2d0,
+    -7px -7px 14px #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* White text only on cyan buttons */
+.bg-indigo-600,
+.bg-indigo-500,
+.bg-sky-500,
+.bg-cyan-500,
+.btn-primary,
+a.bg-indigo-600,
+button.bg-indigo-600 {
+  color: #ffffff !important;
+}
+
+.bg-indigo-600 *,
+.bg-sky-500 *,
+.btn-primary * {
+  color: #ffffff !important;
+}
+
+/* Inputs stay inset */
 input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
@@ -169,7 +251,6 @@ textarea::placeholder {
   color: #94a3b8 !important;
 }
 
-/* Navbar / footer */
 nav,
 footer {
   background: rgba(238, 242, 247, 0.95) !important;
@@ -189,21 +270,3 @@ footer {
 .text-red-300 {
   color: #e11d48 !important;
 }
-
-/* Keep white text ON cyan buttons */
-.bg-indigo-600,
-.bg-indigo-500,
-.bg-sky-500,
-.bg-cyan-500,
-.btn-primary,
-a.bg-indigo-600,
-button.bg-indigo-600 {
-  color: #ffffff !important;
-}
-
-.bg-indigo-600 *,
-.bg-sky-500 *,
-.btn-primary * {
-  color: #ffffff !important;
-}
-
