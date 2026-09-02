@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Briefcase,
@@ -13,6 +13,8 @@ import {
   AlertCircle,
   CheckCircle2,
   MessageSquare,
+  Trash2,
+  Ban,
 } from "lucide-react";
 
 interface Job {
@@ -49,32 +51,88 @@ export default function EmployerDashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionId, setActionId] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [jobsRes, appsRes] = await Promise.all([
+        fetch("/api/employer/jobs/list"),
+        fetch("/api/employer/applications"),
+      ]);
+
+      const jobsData = await jobsRes.json().catch(() => ({}));
+      const appsData = await appsRes.json().catch(() => ({}));
+
+      const jobList: Job[] = jobsData.jobs || [];
+      setJobs(jobList);
+      setApplications(appsData.applications?.slice(0, 5) || []);
+      setStats({
+        total: jobList.length,
+        active: jobList.filter((j) => j.status === "active").length,
+        pending: jobList.filter((j) => j.status === "pending").length,
+        applicants: jobList.reduce((sum, j) => sum + jobApplicantCount(j), 0),
+      });
+      setError("");
+    } catch {
+      setError("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/employer/jobs/list").then((r) => r.json()),
-      fetch("/api/employer/applications").then((r) => r.json()),
-    ])
-      .then(([jobsData, appsData]) => {
-        const jobList: Job[] = jobsData.jobs || [];
-        setJobs(jobList);
-        setApplications(appsData.applications?.slice(0, 5) || []);
-        setStats({
-          total: jobList.length,
-          active: jobList.filter((j) => j.status === "active").length,
-          pending: jobList.filter((j) => j.status === "pending").length,
-          applicants: jobList.reduce(
-            (sum, j) => sum + jobApplicantCount(j),
-            0
-          ),
-        });
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load dashboard data");
-        setLoading(false);
+    loadDashboard();
+  }, [loadDashboard]);
+
+  async function closeJob(jobId: string) {
+    if (!confirm("Close this job? Candidates will no longer be able to apply.")) {
+      return;
+    }
+    setActionId(jobId);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "closed" }),
       });
-  }, []);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Failed to close job");
+        return;
+      }
+      await loadDashboard();
+    } catch {
+      alert("Network error");
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function deleteJob(jobId: string) {
+    if (
+      !confirm(
+        "Permanently delete this job? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+    setActionId(jobId);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Failed to delete job");
+        return;
+      }
+      await loadDashboard();
+    } catch {
+      alert("Network error");
+    } finally {
+      setActionId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -89,7 +147,9 @@ export default function EmployerDashboardPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Employer Dashboard</h1>
+            <h1 className="text-2xl font-bold text-white">
+              Employer Dashboard
+            </h1>
             <p className="text-slate-400 text-sm">
               Manage your jobs and applicants
             </p>
@@ -189,10 +249,10 @@ export default function EmployerDashboardPage() {
                   {jobs.map((job) => (
                     <div
                       key={job.id}
-                      className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all"
                     >
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-medium text-white text-sm">
                             {job.title}
                           </h3>
@@ -212,7 +272,8 @@ export default function EmployerDashboardPage() {
                           {job.company?.name}
                         </p>
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-slate-400">
+
+                      <div className="flex items-center gap-2 flex-wrap text-xs text-slate-400">
                         <span className="flex items-center gap-1">
                           <Eye className="w-3 h-3" /> {job.viewCount ?? 0}
                         </span>
@@ -220,27 +281,58 @@ export default function EmployerDashboardPage() {
                           <Users className="w-3 h-3" />{" "}
                           {jobApplicantCount(job)}
                         </span>
+
                         <Link
                           href="/employer/applications"
                           className="px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs font-medium hover:bg-indigo-600/30 transition-all"
                         >
-                          View Applicants
+                          Applicants
                         </Link>
+
+                        {job.status === "active" && (
+                          <button
+                            type="button"
+                            disabled={actionId === job.id}
+                            onClick={() => closeJob(job.id)}
+                            className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-300 text-xs font-medium hover:bg-amber-500/20 transition-all flex items-center gap-1 disabled:opacity-50"
+                            title="Close job"
+                          >
+                            {actionId === job.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Ban className="w-3 h-3" />
+                            )}
+                            Close
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={actionId === job.id}
+                          onClick={() => deleteJob(job.id)}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-all flex items-center gap-1 disabled:opacity-50"
+                          title="Delete job"
+                        >
+                          {actionId === job.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                          Delete
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="space-y-6">
             <div className="glass rounded-2xl p-6 border border-white/10">
               <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-400" /> Recent Applicants
+                <Users className="w-5 h-5 text-emerald-400" /> Recent Applicants
               </h2>
               {applications.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-4">
+                <p className="text-slate-500 text-sm text-center py-6">
                   No applications yet
                 </p>
               ) : (
@@ -248,31 +340,28 @@ export default function EmployerDashboardPage() {
                   {applications.map((app) => (
                     <div
                       key={app.id}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5"
+                      className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5"
                     >
-                      <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-300 text-xs font-bold">
-                        {(app.user.name || "?").charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-white text-sm truncate">
-                          {app.user.name || "Anonymous"}
+                      <div>
+                        <p className="text-sm text-white font-medium">
+                          {app.user?.name || app.user?.email || "Applicant"}
                         </p>
-                        <p className="text-slate-500 text-xs truncate">
-                          {app.job.title}
+                        <p className="text-xs text-slate-500">
+                          {app.job?.title}
                         </p>
-                        <span
-                          className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                            app.status === "pending" ||
-                            app.status === "applied"
-                              ? "bg-amber-500/10 text-amber-400"
-                              : app.status === "hired"
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-slate-500/10 text-slate-400"
-                          }`}
-                        >
-                          {app.status}
-                        </span>
                       </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          app.status === "pending" ||
+                          app.status === "applied"
+                            ? "bg-amber-500/10 text-amber-400"
+                            : app.status === "hired"
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-slate-500/10 text-slate-400"
+                        }`}
+                      >
+                        {app.status}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -284,39 +373,38 @@ export default function EmployerDashboardPage() {
                 View All <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
+          </div>
 
-            <div className="glass rounded-2xl p-6 border border-white/10">
-              <h2 className="text-lg font-semibold text-white mb-3">
-                Quick Actions
-              </h2>
-              <div className="space-y-2">
-                <Link
-                  href="/employer/company/new"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
-                >
-                  <Plus className="w-4 h-4 text-cyan-400" /> Add Company
-                </Link>
-                <Link
-                  href="/employer/post-job"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
-                >
-                  <Briefcase className="w-4 h-4 text-indigo-400" /> Post Job
-                </Link>
-                <Link
-                  href="/employer/applications"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
-                >
-                  <Users className="w-4 h-4 text-emerald-400" /> Review
-                  Applicants
-                </Link>
-                <Link
-                  href="/employer/interviews"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
-                >
-                  <MessageSquare className="w-4 h-4 text-amber-400" /> Schedule
-                  Interviews
-                </Link>
-              </div>
+          <div className="glass rounded-2xl p-6 border border-white/10 h-fit">
+            <h2 className="text-lg font-semibold text-white mb-3">
+              Quick Actions
+            </h2>
+            <div className="space-y-2">
+              <Link
+                href="/employer/company/new"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
+              >
+                <Plus className="w-4 h-4 text-cyan-400" /> Add Company
+              </Link>
+              <Link
+                href="/employer/post-job"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
+              >
+                <Briefcase className="w-4 h-4 text-indigo-400" /> Post Job
+              </Link>
+              <Link
+                href="/employer/applications"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
+              >
+                <Users className="w-4 h-4 text-emerald-400" /> Review Applicants
+              </Link>
+              <Link
+                href="/employer/interviews"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
+              >
+                <MessageSquare className="w-4 h-4 text-amber-400" /> Schedule
+                Interviews
+              </Link>
             </div>
           </div>
         </div>
