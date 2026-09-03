@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { ROLES } from "@/lib/roles";
+import { normalizeLocation } from "@/lib/location";
+import { createJobForUser } from "@/services/jobs/create-job";
 
+/**
+ * Legacy path — must not bypass plan or ownership checks.
+ * Prefer: POST /api/employer/jobs
+ */
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -10,54 +14,48 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { title, description, location, salary, type, companyId } = body;
-
-    if (!title || !description || !location || !type) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    let finalCompanyId: string | null = companyId || null;
+    const result = await createJobForUser(
+      {
+        id: session.user.id,
+        role: session.user.role,
+        email: session.user.email,
+      },
+      body
+    );
 
-    if (session.user.role === ROLES.EMPLOYER) {
-      if (!companyId) {
-        return NextResponse.json({ error: "Company ID required for employers" }, { status: 400 });
-      }
-      const company = await db.company.findUnique({ where: { id: companyId } });
-      if (!company) {
-        return NextResponse.json({ error: "Company not found" }, { status: 404 });
-      }
-      if (company.ownerId !== session.user.id) {
-        return NextResponse.json({ error: "You do not own this company" }, { status: 403 });
-      }
-      finalCompanyId = company.id;
-    } else if (session.user.role === ROLES.ADMIN || session.user.role === ROLES.OWNER) {
-      if (companyId) {
-        const company = await db.company.findUnique({ where: { id: companyId } });
-        if (!company) {
-          return NextResponse.json({ error: "Company not found" }, { status: 404 });
-        }
-        finalCompanyId = company.id;
-      }
-    } else {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!result.ok) {
+      return NextResponse.json(
+        {
+          error: result.error,
+          code: result.code,
+          details: result.details,
+          limit: result.limit,
+          used: result.used,
+        },
+        { status: result.status }
+      );
     }
 
-    const job = await db.job.create({
-      data: {
-        title,
-        description,
-        location,
-        salary: salary || null,
-        type,
-        companyId: finalCompanyId,
-        postedById: session.user.id,
+    const job = result.job;
+    return NextResponse.json({
+      success: true,
+      job: {
+        ...job,
+        location: normalizeLocation(job.location) || job.location,
       },
     });
-
-    return NextResponse.json({ success: true, job });
   } catch (error) {
     console.error("Job create error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
