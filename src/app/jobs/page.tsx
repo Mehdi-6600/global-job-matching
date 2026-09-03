@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Search,
   MapPin,
-  Briefcase,
   DollarSign,
   Filter,
   X,
@@ -16,6 +15,7 @@ import {
   Globe,
   Tag,
 } from "lucide-react";
+import { CompanyLogo } from "@/components/company-logo";
 
 interface Job {
   id: string;
@@ -62,16 +62,6 @@ function formatSalary(
   }
   if (min != null) return `From ${cur} ${min.toLocaleString()}`;
   return `Up to ${cur} ${max!.toLocaleString()}`;
-}
-
-function companyInitials(name?: string | null) {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 export default function JobsPage() {
@@ -170,12 +160,13 @@ export default function JobsPage() {
                 placeholder="Job title, keywords, or company..."
                 value={filters.search}
                 onChange={(e) => updateFilter("search", e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
               />
             </div>
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl border transition-all font-medium ${
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                 showFilters || hasFilters
                   ? "bg-indigo-600/20 border-indigo-500/30 text-indigo-300"
                   : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
@@ -308,6 +299,7 @@ export default function JobsPage() {
 
               <div className="flex items-end">
                 <button
+                  type="button"
                   onClick={clearFilters}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium w-full justify-center"
                 >
@@ -319,13 +311,14 @@ export default function JobsPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16">
+          <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
           </div>
         ) : jobs.length === 0 ? (
-          <div className="glass rounded-2xl p-16 text-center border border-white/10">
-            <Briefcase className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-white mb-2">No jobs found</h3>
+          <div className="text-center py-20 glass rounded-2xl border border-white/10">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              No jobs found
+            </h3>
             <p className="text-slate-400">
               Try adjusting your search or filters
             </p>
@@ -340,9 +333,11 @@ export default function JobsPage() {
                   className="glass rounded-2xl p-6 border border-white/10 hover:border-indigo-500/30 hover:bg-white/5 transition-all group"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-indigo-300 font-bold text-sm">
-                      {companyInitials(job.company?.name)}
-                    </div>
+                    <CompanyLogo
+                      name={job.company?.name}
+                      logo={job.company?.logo}
+                      size={48}
+                    />
                     {job.remote && (
                       <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium">
                         Remote
@@ -406,6 +401,7 @@ export default function JobsPage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-30 transition-all"
@@ -416,6 +412,7 @@ export default function JobsPage() {
                   Page {page} of {totalPages}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-30 transition-all"
