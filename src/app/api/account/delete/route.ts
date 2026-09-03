@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.email) {
       return NextResponse.json(
@@ -16,7 +17,7 @@ export async function DELETE(request: Request) {
     const userEmail = session.user.email;
     const ownerEmail = process.env.OWNER_EMAIL;
 
-    // اگر OWNER_EMAIL تعریف شده بود، از حذف اکانت مالک جلوگیری کن
+    // جلوگیری از حذف اکانت مدیر اصلی سیستم
     if (ownerEmail && userEmail.toLowerCase() === ownerEmail.toLowerCase()) {
       return NextResponse.json(
         { error: "Owner account cannot be deleted." },
@@ -24,7 +25,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // حذف داده‌های مربوط به کاربر و خود کاربر در یک تراکنش
+    // پاکسازی داده‌های مربوط به کاربر و خود کاربر به‌صورت همزمان
     await prisma.$transaction([
       prisma.jobAlert.deleteMany({ where: { user: { email: userEmail } } }),
       prisma.application.deleteMany({ where: { applicant: { email: userEmail } } }),
