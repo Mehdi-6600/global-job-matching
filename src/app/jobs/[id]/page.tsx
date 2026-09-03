@@ -28,6 +28,7 @@ import {
   PlanLimitBanner,
   getPlanLimitFromResponse,
 } from "@/components/plan-limit-banner";
+import { CompanyLogo } from "@/components/company-logo";
 
 interface JobDetail {
   id: string;
@@ -90,16 +91,6 @@ function timeAgo(dateString: string): string {
   if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
   if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
   return "Just now";
-}
-
-function getLogo(name?: string | null): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function formatSalary(
@@ -363,11 +354,12 @@ export default function JobDetailPage() {
             <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                    <span className="text-cyan-400 font-bold text-sm">
-                      {getLogo(companyName)}
-                    </span>
-                  </div>
+                  <CompanyLogo
+                    name={companyName}
+                    logo={job.company?.logo}
+                    size={56}
+                    priority
+                  />
                   <div>
                     <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">
                       {job.title}
