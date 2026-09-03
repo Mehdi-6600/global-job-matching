@@ -1,163 +1,199 @@
-import { prisma } from "@/lib/prisma";
-import { JobStatus, Role } from "@prisma/client";
+import { db } from "@/lib/db";
+import { isAdminRole, isEmployerRole } from "@/lib/roles";
+import { normalizeLocation } from "@/lib/location";
+import { jobCreateSchema } from "@/lib/validation/job";
+import { getEmployerActiveJobLimit } from "@/lib/plan-limits";
+import type { z } from "zod";
 
-export interface CreateJobInput {
+export type CreateJobInput = z.infer<typeof jobCreateSchema>;
+
+export type CreateJobResult =
+  | {
+      ok: true;
+      job: Awaited<ReturnType<typeof persistJob>>;
+    }
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      code?: string;
+      details?: unknown;
+      limit?: number;
+      used?: number;
+    };
+
+type Actor = {
+  id: string;
+  role?: string | null;
+  email?: string | null;
+  plan?: string | null;
+};
+
+async function persistJob(data: {
   title: string;
   description: string;
-  requirements?: string;
-  responsibilities?: string;
-  benefits?: string;
   location: string;
   type: string;
-  experienceLevel: string;
-  salaryMin?: number;
-  salaryMax?: number;
-  salaryCurrency?: string;
-  skills: string[];
-  companyName: string;
-  companyLogo?: string;
-  companyWebsite?: string;
+  remote: boolean;
+  experience: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  currency: string;
+  requirements: string[];
+  responsibilities: string[];
+  benefits: string[];
+  tags: string[];
+  deadline: Date | null;
+  companyId: string | null;
+  postedById: string;
+}) {
+  return db.job.create({
+    data: {
+      title: data.title,
+      description: data.description,
+      location: data.location,
+      type: data.type,
+      remote: data.remote,
+      experience: data.experience,
+      salaryMin: data.salaryMin,
+      salaryMax: data.salaryMax,
+      currency: data.currency,
+      requirements: data.requirements,
+      responsibilities: data.responsibilities,
+      benefits: data.benefits,
+      tags: data.tags,
+      deadline: data.deadline,
+      status: "active",
+      companyId: data.companyId,
+      postedById: data.postedById,
+    },
+    include: {
+      company: { select: { id: true, name: true, logo: true, location: true } },
+    },
+  });
 }
 
-export interface UserContext {
-  id: string;
-  role?: string;
-  email?: string | null;
-}
-
-export interface CreateJobResult {
-  success: boolean;
-  jobId?: string;
-  error?: string;
-  statusCode: number;
-}
-
+/**
+ * Single entry point for creating jobs.
+ * All API routes must call this — no duplicated create logic.
+ */
 export async function createJobForUser(
-  userParam: string | UserContext,
-  input: CreateJobInput
+  actor: Actor,
+  rawBody: unknown
 ): Promise<CreateJobResult> {
-  try {
-    const userId = typeof userParam === "string" ? userParam : userParam.id;
-
-    if (!userId) {
-      return {
-        success: false,
-        error: "INVALID_USER_ID",
-        statusCode: 400,
-      };
-    }
-
-    return await prisma.$transaction(async (tx) => {
-      // 1. Fetch user status and subscription plan within transaction
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          role: true,
-          plan: true,
-          companies: {
-            select: { id: true, name: true },
-            take: 1,
-          },
-        },
-      });
-
-      if (!user) {
-        return { success: false, error: "USER_NOT_FOUND", statusCode: 404 };
-      }
-
-      if (user.role !== Role.EMPLOYER && user.role !== Role.ADMIN) {
-        return {
-          success: false,
-          error: "FORBIDDEN_EMPLOYER_ROLE_REQUIRED",
-          statusCode: 403,
-        };
-      }
-
-      // 2. Determine active job limit based on subscription plan
-      let maxAllowedJobs = 1;
-      const planUpper = (user.plan || "FREE").toUpperCase();
-
-      if (planUpper === "PRO") {
-        maxAllowedJobs = 10;
-      } else if (planUpper === "ENTERPRISE") {
-        maxAllowedJobs = 100;
-      }
-
-      // 3. Count active jobs atomically
-      const activeJobsCount = await tx.job.count({
-        where: {
-          userId: user.id,
-          status: JobStatus.ACTIVE,
-        },
-      });
-
-      if (activeJobsCount >= maxAllowedJobs) {
-        return {
-          success: false,
-          error: "PLAN_LIMIT_REACHED",
-          statusCode: 400,
-        };
-      }
-
-      // 4. Handle idempotent company creation
-      let companyId: string;
-
-      if (user.companies.length > 0) {
-        companyId = user.companies[0].id;
-      } else {
-        const existingCompany = await tx.company.findFirst({
-          where: { ownerId: user.id },
-        });
-
-        if (existingCompany) {
-          companyId = existingCompany.id;
-        } else {
-          const newCompany = await tx.company.create({
-            data: {
-              name: input.companyName,
-              logo: input.companyLogo || null,
-              website: input.companyWebsite || null,
-              ownerId: user.id,
-            },
-          });
-          companyId = newCompany.id;
-        }
-      }
-
-      // 5. Create new job posting
-      const newJob = await tx.job.create({
-        data: {
-          title: input.title,
-          description: input.description,
-          requirements: input.requirements || "",
-          responsibilities: input.responsibilities || "",
-          benefits: input.benefits || "",
-          location: input.location,
-          type: input.type,
-          experienceLevel: input.experienceLevel,
-          salaryMin: input.salaryMin || null,
-          salaryMax: input.salaryMax || null,
-          salaryCurrency: input.salaryCurrency || "USD",
-          skills: input.skills,
-          status: JobStatus.ACTIVE,
-          userId: user.id,
-          companyId: companyId,
-        },
-      });
-
-      return {
-        success: true,
-        jobId: newJob.id,
-        statusCode: 201,
-      };
-    });
-  } catch (error: unknown) {
-    console.error("Error in createJobForUser service:", error);
+  if (!isEmployerRole(actor.role)) {
     return {
-      success: false,
-      error: "INTERNAL_SERVER_ERROR",
-      statusCode: 500,
+      ok: false,
+      status: 403,
+      error: "Only employers can post jobs",
     };
   }
+
+  const parsed = jobCreateSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid input",
+      details: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const data = parsed.data;
+
+  // Fresh plan from DB (do not trust client)
+  const user = await db.user.findUnique({
+    where: { id: actor.id },
+    select: { id: true, plan: true, email: true },
+  });
+  if (!user) {
+    return { ok: false, status: 404, error: "User not found" };
+  }
+
+  const maxJobs = getEmployerActiveJobLimit(user.plan);
+  const activeJobs = await db.job.count({
+    where: {
+      status: "active",
+      OR: [
+        { postedById: user.id },
+        { company: { ownerId: user.id } },
+      ],
+    },
+  });
+
+  if (activeJobs >= maxJobs) {
+    return {
+      ok: false,
+      status: 403,
+      error: `Active job limit reached (${maxJobs}). Upgrade your plan to post more jobs.`,
+      code: "PLAN_LIMIT_JOBS",
+      limit: maxJobs,
+      used: activeJobs,
+    };
+  }
+
+  let companyId: string | null = data.companyId ?? null;
+
+  if (companyId) {
+    const company = await db.company.findUnique({
+      where: { id: companyId },
+      select: { id: true, ownerId: true, status: true },
+    });
+
+    if (!company) {
+      return { ok: false, status: 404, error: "Company not found" };
+    }
+
+    // Admins may attach to any company; employers only their own
+    if (!isAdminRole(actor.role) && company.ownerId !== actor.id) {
+      return {
+        ok: false,
+        status: 403,
+        error: "You do not own this company",
+      };
+    }
+  } else {
+    const existing = await db.company.findFirst({
+      where: { ownerId: actor.id },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (existing) {
+      companyId = existing.id;
+    } else {
+      const name = data.companyName?.trim() || "My Company";
+      const created = await db.company.create({
+        data: {
+          name,
+          ownerId: actor.id,
+          email: user.email || actor.email || null,
+          status: "active",
+        },
+      });
+      companyId = created.id;
+    }
+  }
+
+  const location = normalizeLocation(data.location) || data.location.trim();
+
+  const job = await persistJob({
+    title: data.title,
+    description: data.description,
+    location,
+    type: data.type || "full-time",
+    remote: Boolean(data.remote),
+    experience: data.experience ?? null,
+    salaryMin: data.salaryMin ?? null,
+    salaryMax: data.salaryMax ?? null,
+    currency: data.currency || "USD",
+    requirements: data.requirements ?? [],
+    responsibilities: data.responsibilities ?? [],
+    benefits: data.benefits ?? [],
+    tags: data.tags ?? [],
+    deadline: data.deadline ? new Date(data.deadline) : null,
+    companyId,
+    postedById: actor.id,
+  });
+
+  return { ok: true, job };
 }
