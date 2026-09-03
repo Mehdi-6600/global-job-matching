@@ -1,6 +1,7 @@
 /**
  * Single source of truth for plans + crypto wallets.
- * Used by pricing UI and payment APIs.
+ * Wallet addresses come from environment variables (not hardcoded secrets,
+ * but avoids redeploy mistakes and keeps prod/test separate).
  */
 
 export const PLAN_IDS = ["free", "pro", "business", "enterprise"] as const;
@@ -72,45 +73,69 @@ export const PLANS = [
       "Custom limits",
     ],
   },
-];
-
-/** Display wallets — verify these are yours before launch */
-export const CRYPTO_WALLETS = [
-  {
-    type: "BTC",
-    name: "Bitcoin",
-    address: "bc1qd8pz8kh8ghh5dzlz4y5t8fgzyhe6y8y67j33m3",
-  },
-  {
-    type: "ETH",
-    name: "Ethereum",
-    address: "0x0CAF488206AC367C37Cd6a56C71d9b1BC9D7Be5c",
-  },
-  {
-    type: "BNB",
-    name: "BNB (BSC)",
-    address: "bnb1da7gyaynhqwz3yf6aq5u2x4vy2k6c5futd84z5",
-  },
-  {
-    type: "USDT",
-    name: "USDT (TRC20)",
-    address: "TU3QBM4VnypRobQHh1w1n7QXdFQ8yPqRex",
-  },
-  {
-    type: "USDC",
-    name: "USDC",
-    address: "0x0CAF488206AC367C37Cd6a56C71d9b1BC9D7Be5c",
-  },
-  {
-    type: "DOGE",
-    name: "Dogecoin",
-    address: "DJyuoTooAZYdC8NPpuAbUBKhjmeoWSBnFS",
-  },
-  {
-    type: "TON",
-    name: "TON",
-    address: "UQDol0GBbL3km5-9F4rEQO8UQnUo6XJbsG_LwBcG_6cPs1oh",
-  },
 ] as const;
 
-export type CryptoType = (typeof CRYPTO_WALLETS)[number]["type"];
+const WALLET_DEFS = [
+  { type: "BTC", name: "Bitcoin", env: "CRYPTO_BTC_ADDRESS" },
+  { type: "ETH", name: "Ethereum", env: "CRYPTO_ETH_ADDRESS" },
+  { type: "BNB", name: "BNB (BSC)", env: "CRYPTO_BNB_ADDRESS" },
+  { type: "USDT", name: "USDT (TRC20)", env: "CRYPTO_USDT_ADDRESS" },
+  { type: "USDC", name: "USDC", env: "CRYPTO_USDC_ADDRESS" },
+  { type: "DOGE", name: "Dogecoin", env: "CRYPTO_DOGE_ADDRESS" },
+  { type: "TON", name: "TON", env: "CRYPTO_TON_ADDRESS" },
+] as const;
+
+export type CryptoType = (typeof WALLET_DEFS)[number]["type"];
+
+export type CryptoWallet = {
+  type: CryptoType;
+  name: string;
+  address: string;
+};
+
+function readEnvAddress(key: string): string | null {
+  const raw = process.env[key];
+  if (!raw) return null;
+  const address = raw.trim();
+  if (address.length < 8) return null;
+  return address;
+}
+
+/**
+ * Only wallets with a non-empty env address are exposed.
+ * Safe to call from Server Components / API routes.
+ */
+export function getCryptoWallets(): CryptoWallet[] {
+  const list: CryptoWallet[] = [];
+  for (const def of WALLET_DEFS) {
+    const address = readEnvAddress(def.env);
+    if (!address) continue;
+    list.push({
+      type: def.type,
+      name: def.name,
+      address,
+    });
+  }
+  return list;
+}
+
+export function getCryptoWallet(
+  type: string
+): CryptoWallet | null {
+  const t = type.toUpperCase();
+  return getCryptoWallets().find((w) => w.type === t) || null;
+}
+
+export function isSupportedCryptoType(type: string): boolean {
+  return getCryptoWallet(type) !== null;
+}
+
+/**
+ * @deprecated Prefer getCryptoWallets() so empty env keys are hidden.
+ * Kept as a name some UI may still import — resolves at runtime from env.
+ */
+export const CRYPTO_WALLETS = {
+  get list() {
+    return getCryptoWallets();
+  },
+};
