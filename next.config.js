@@ -1,20 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Smaller client bundles for icon-heavy pages
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
 
-  // Prefer modern image formats when next/image is used
   images: {
     formats: ["image/avif", "image/webp"],
-    remotePatterns: [{ protocol: "https", hostname: "**" }],
-    minimumCacheTTL: 60 * 60 * 24,
+    remotePatterns: [
+      { protocol: "https", hostname: "**" },
+      { protocol: "http", hostname: "**" },
+    ],
+    // Cache optimized images on the edge/CDN
+    minimumCacheTTL: 60 * 60 * 24 * 7,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
-  // Gzip/brotli handled by Vercel; keep compress on for local/self-host
   compress: true,
-
   poweredByHeader: false,
 
   async headers() {
@@ -32,13 +34,21 @@ const nextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ],
       },
-      // Long cache for hashed static assets
       {
         source: "/_next/static/:path*",
         headers: [
           {
             key: "Cache-Control",
             value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/_next/image",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, stale-while-revalidate=86400",
           },
         ],
       },
