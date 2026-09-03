@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Check,
@@ -14,24 +14,60 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
-import {
-  PLAN_PRICES,
-  CRYPTO_WALLETS,
-  type PlanId,
-} from "@/lib/payment/plans";
+import { PLAN_PRICES, type PlanId } from "@/lib/payment/plans";
+
+type Wallet = {
+  type: string;
+  name: string;
+  address: string;
+};
 
 export default function PricingPage() {
   const { t } = useLocale();
   const [yearly, setYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
-  const [cryptoType, setCryptoType] = useState<string>(
-    CRYPTO_WALLETS[3]?.type || "USDT"
-  );
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [walletsLoading, setWalletsLoading] = useState(false);
+  const [cryptoType, setCryptoType] = useState<string>("USDT");
   const [txHash, setTxHash] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setWalletsLoading(true);
+    fetch("/api/crypto-payment")
+      .then(async (res) => {
+        if (res.status === 401) {
+          // Not logged in — wallets still may be empty until login
+          return { wallets: [] as Wallet[] };
+        }
+        return res.json().catch(() => ({ wallets: [] }));
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const list: Wallet[] = Array.isArray(data.wallets) ? data.wallets : [];
+        setWallets(list);
+        if (list.length > 0) {
+          const prefer =
+            list.find((w) => w.type === "USDT") ||
+            list.find((w) => w.type === "USDC") ||
+            list[0];
+          setCryptoType(prefer.type);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setWallets([]);
+      })
+      .finally(() => {
+        if (!cancelled) setWalletsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const plans = useMemo(
     () => [
@@ -132,24 +168,24 @@ export default function PricingPage() {
         ),
       },
       {
-        q: t("Pricing.faq2q", "Can I change plans later?"),
+        q: t("Pricing.faq2q", "When is my plan activated?"),
         a: t(
           "Pricing.faq2a",
-          "Yes. Contact support or submit a new payment for a higher plan."
+          "After an admin confirms your transaction (usually within 24 hours)."
         ),
       },
       {
-        q: t("Pricing.faq3q", "Is the free plan really free?"),
+        q: t("Pricing.faq3q", "Can I switch plans later?"),
         a: t(
           "Pricing.faq3a",
-          "Yes. You can browse and apply without paying."
+          "Yes. Submit a new payment for the plan you want; support can adjust your account."
         ),
       },
       {
         q: t("Pricing.faq4q", "Which cryptocurrencies are accepted?"),
         a: t(
           "Pricing.faq4a",
-          "BTC, ETH, BNB, USDT, USDC, DOGE, and TON."
+          "BTC, ETH, BNB, USDT, USDC, DOGE, and TON (only those configured by the site)."
         ),
       },
     ],
@@ -158,11 +194,20 @@ export default function PricingPage() {
 
   const plan = plans.find((p) => p.id === selectedPlan) || null;
   const selectedWallet =
-    CRYPTO_WALLETS.find((w) => w.type === cryptoType) || CRYPTO_WALLETS[0];
+    wallets.find((w) => w.type === cryptoType) || wallets[0] || null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!plan || plan.id === "free" || !txHash.trim()) return;
+    if (!selectedWallet) {
+      setError(
+        t(
+          "Pricing.noWallet",
+          "No payment wallet configured. Please try again later."
+        )
+      );
+      return;
+    }
 
     setSubmitting(true);
     setError("");
@@ -173,7 +218,7 @@ export default function PricingPage() {
         body: JSON.stringify({
           planId: plan.id,
           txHash: txHash.trim(),
-          cryptoType,
+          cryptoType: selectedWallet.type,
           billing: yearly ? "yearly" : "monthly",
         }),
       });
@@ -241,28 +286,29 @@ export default function PricingPage() {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              {t("Pricing.yearly", "Yearly")}{" "}
-              <span className="text-xs opacity-80">
-                {t("Pricing.save20", "Save ~17%")}
+              {t("Pricing.yearly", "Yearly")}
+              <span className="ml-1 text-xs text-emerald-400">
+                {t("Pricing.save", "save ~2 mo")}
               </span>
             </button>
           </div>
         </div>
 
-        {!selectedPlan ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {plans.map((p) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {plans.map((p) => {
+            const price = yearly ? p.price.yearly : p.price.monthly;
+            return (
               <div
                 key={p.id}
                 className={`glass rounded-2xl p-6 border transition-all relative ${
                   p.popular
-                    ? "border-indigo-500/30 hover:border-indigo-500/50"
-                    : "border-white/10 hover:border-white/20"
+                    ? "border-indigo-500/40 shadow-lg shadow-indigo-500/10"
+                    : "border-white/10"
                 }`}
               >
                 {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-medium">
-                    {t("Pricing.popular", "Most Popular")}
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-medium">
+                    {t("Pricing.popular", "Popular")}
                   </span>
                 )}
                 <div
@@ -272,153 +318,176 @@ export default function PricingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-1">{p.name}</h3>
                 <p className="text-slate-400 text-sm mb-4">{p.description}</p>
-                <div className="mb-6">
-                  <span className="text-3xl font-bold text-white">
-                    ${yearly ? p.price.yearly : p.price.monthly}
-                  </span>
-                  <span className="text-slate-500 text-sm">
-                    /
-                    {yearly
-                      ? t("Pricing.perYear", "year")
-                      : t("Pricing.perMonth", "month")}
-                  </span>
-                </div>
-                <ul className="space-y-3 mb-6">
-                  {p.features.map((feature) => (
+                <p className="text-3xl font-bold text-white mb-1">
+                  ${price}
+                  {p.id !== "free" && (
+                    <span className="text-sm font-normal text-slate-400">
+                      /{yearly ? "yr" : "mo"}
+                    </span>
+                  )}
+                </p>
+                <ul className="space-y-2 my-6">
+                  {p.features.map((f) => (
                     <li
-                      key={feature}
-                      className="flex items-center gap-2 text-sm text-slate-300"
+                      key={f}
+                      className="flex items-start gap-2 text-sm text-slate-300"
                     >
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                      {feature}
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      {f}
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPlan(p.id)}
-                  disabled={p.id === "free"}
-                  className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all ${
-                    p.id === "free"
-                      ? "bg-white/5 text-slate-500 cursor-not-allowed"
-                      : p.popular
-                        ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-                        : "bg-white/10 hover:bg-white/15 text-white"
-                  }`}
-                >
-                  {p.id === "free"
-                    ? t("Pricing.current", "Current plan")
-                    : t("Pricing.choose", "Choose plan")}
-                </button>
+                {p.id === "free" ? (
+                  <Link
+                    href="/register"
+                    className="block w-full text-center py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white/10 transition-all"
+                  >
+                    {t("Pricing.getStarted", "Get started")}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPlan(p.id);
+                      setSubmitted(false);
+                      setError("");
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-all"
+                  >
+                    {t("Pricing.choose", "Choose plan")}
+                  </button>
+                )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="max-w-lg mx-auto">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedPlan(null);
-                setSubmitted(false);
-                setError("");
-              }}
-              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              {t("Pricing.back", "Back to plans")}
-            </button>
+            );
+          })}
+        </div>
 
-            <div className="glass rounded-2xl p-6 border border-white/10">
+        {selectedPlan && selectedPlan !== "free" && plan && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+            <div className="glass w-full max-w-md rounded-2xl p-6 border border-white/10 relative max-h-[90vh] overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPlan(null);
+                  setSubmitted(false);
+                  setError("");
+                }}
+                className="absolute top-4 left-4 text-slate-400 hover:text-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
               {!submitted ? (
                 <>
-                  <h2 className="text-xl font-bold text-white mb-2">
+                  <h2 className="text-xl font-bold text-white text-center mb-1">
                     {t("Pricing.payTitle", "Pay with crypto")}
                   </h2>
-                  <p className="text-slate-400 text-sm mb-6">
-                    {plan?.name} — $
-                    {yearly ? plan?.price.yearly : plan?.price.monthly} USD (
-                    {yearly ? "yearly" : "monthly"})
+                  <p className="text-slate-400 text-sm text-center mb-6">
+                    {plan.name} — $
+                    {yearly ? plan.price.yearly : plan.price.monthly}
+                    /{yearly ? "year" : "month"}
                   </p>
 
-                  <label className="block text-sm text-slate-400 mb-2">
-                    {t("Pricing.selectCrypto", "Cryptocurrency")}
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {CRYPTO_WALLETS.map((w) => (
-                      <button
-                        key={w.type}
-                        type="button"
-                        onClick={() => setCryptoType(w.type)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                          cryptoType === w.type
-                            ? "bg-indigo-600 border-indigo-500 text-white"
-                            : "bg-white/5 border-white/10 text-slate-300 hover:border-white/20"
-                        }`}
-                      >
-                        {w.type}
-                      </button>
-                    ))}
-                  </div>
-
-                  <p className="text-xs text-slate-500 mb-1">
-                    {selectedWallet?.name} {t("Pricing.address", "address")}
-                  </p>
-                  <div className="flex items-center gap-2 mb-6">
-                    <code className="flex-1 text-xs text-cyan-300 bg-black/30 rounded-lg px-3 py-2 break-all border border-white/10">
-                      {selectedWallet?.address}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={copyAddress}
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/15 text-white"
-                      title="Copy"
-                    >
-                      {copied ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm text-slate-400 mb-2">
-                        {t("Pricing.txHash", "Transaction hash")}
-                      </label>
-                      <input
-                        type="text"
-                        value={txHash}
-                        onChange={(e) => setTxHash(e.target.value)}
-                        required
-                        minLength={10}
-                        placeholder="0x... or tx id"
-                        className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500"
-                      />
+                  {walletsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
                     </div>
+                  ) : wallets.length === 0 ? (
+                    <div className="text-center py-6 space-y-3">
+                      <p className="text-amber-300 text-sm">
+                        {t(
+                          "Pricing.walletsEmpty",
+                          "Crypto wallets are not configured yet. Please log in or contact support."
+                        )}
+                      </p>
+                      <Link
+                        href="/login?callbackUrl=/pricing"
+                        className="inline-flex text-cyan-400 text-sm hover:underline"
+                      >
+                        {t("Pricing.login", "Sign in")}
+                      </Link>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1.5">
+                          {t("Pricing.asset", "Asset")}
+                        </label>
+                        <select
+                          value={cryptoType}
+                          onChange={(e) => setCryptoType(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
+                        >
+                          {wallets.map((w) => (
+                            <option key={w.type} value={w.type}>
+                              {w.name} ({w.type})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                    {error && (
-                      <p className="text-sm text-red-400">{error}</p>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={submitting || txHash.trim().length < 10}
-                      className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium flex items-center justify-center gap-2"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          {t("Pricing.submitting", "Submitting...")}
-                        </>
-                      ) : (
-                        <>
-                          <Bitcoin className="w-4 h-4" />
-                          {t("Pricing.confirm", "Confirm Payment")}
-                        </>
+                      {selectedWallet && (
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1.5">
+                            {t("Pricing.sendTo", "Send payment to")}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-xs text-cyan-300 break-all bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                              {selectedWallet.address}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={copyAddress}
+                              className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white"
+                              title="Copy"
+                            >
+                              {copied ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
                       )}
-                    </button>
-                  </form>
+
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1.5">
+                          {t("Pricing.txHash", "Transaction hash")}
+                        </label>
+                        <input
+                          type="text"
+                          value={txHash}
+                          onChange={(e) => setTxHash(e.target.value)}
+                          placeholder="Paste TX hash after sending"
+                          className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
+                          required
+                        />
+                      </div>
+
+                      {error && (
+                        <p className="text-sm text-red-400">{error}</p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={submitting || !txHash.trim()}
+                        className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        {submitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            {t("Pricing.submitting", "Submitting...")}
+                          </>
+                        ) : (
+                          <>
+                            <Bitcoin className="w-4 h-4" />
+                            {t("Pricing.confirm", "Confirm Payment")}
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
 
                   <p className="text-xs text-slate-500 mt-4 text-center">
                     {t(
