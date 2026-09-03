@@ -1,85 +1,66 @@
 import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
-import { db } from "./db";
-import { env } from "./env";
-import { ROLES } from "./roles";
-import { authConfig } from "./auth.config";
 
-const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-const authResult = NextAuth({
-  ...authConfig,
-  adapter: PrismaAdapter(db) as any,
-  secret: env.AUTH_SECRET,
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: "jwt" },
+  pages: {
+    signIn: "/login",
+  },
   providers: [
     Credentials({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const parsed = credentialsSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
-        const { email, password } = parsed.data;
-        const user = await db.user.findUnique({ where: { email } });
-        if (!user || !user.password) return null;
+        const email = credentials.email as string;
+        const password = credentials.password as string;
 
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return null;
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (!user || !user.password) {
+          return null;
+        }
+
+        const isValid = await bcrypt.compare(password, user.password);
+
+        if (!isValid) {
+          return null;
+        }
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image,
           role: user.role,
         };
       },
     }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
   ],
   callbacks: {
-    ...authConfig.callbacks,
-    async jwt({ token, user }) {
-      if (user) {
-        (token as any).id = user.id;
-        (token as any).role = (user as any).role;
-      }
-      return token;
-    },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = (token as any).id as string;
-        session.user.role = (token as any).role as string;
+        session.user.id = token.sub as string;
+        (session.user as any).role = token.role as string;
       }
       return session;
     },
-  },
-  events: {
-    async signIn({ user, isNewUser }) {
-      if (isNewUser && user.email === env.OWNER_EMAIL) {
-        await db.user.update({
-          where: { id: user.id! },
-          data: { role: ROLES.OWNER },
-        });
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = (user as any).role;
       }
+      return token;
     },
   },
 });
-
-export const handlers = authResult.handlers;
-export const auth = authResult.auth;
-export const signIn = authResult.signIn;
-export const signOut = authResult.signOut;
