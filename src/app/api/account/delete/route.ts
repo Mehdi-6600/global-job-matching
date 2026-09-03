@@ -1,70 +1,44 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { ratelimit } from "@/lib/ratelimit";
-import { z } from "zod";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { prisma } from "@/lib/prisma";
 
-const deleteSchema = z
-  .object({
-    confirm: z.literal("DELETE"),
-  })
-  .strict();
-
-/**
- * Permanently deletes the authenticated user's account and related data
- * (cascade where schema supports it).
- */
-export async function POST(req: NextRequest) {
+export async function DELETE(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session = await getServerSession();
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const { success } = await ratelimit.limit(
-      `account_delete_${session.user.id}_${ip}`
-    );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-    }
-
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const parsed = deleteSchema.safeParse(body);
-    if (!parsed.success) {
+    if (!session || !session.user?.email) {
       return NextResponse.json(
-        { error: 'Send { "confirm": "DELETE" } to proceed' },
-        { status: 400 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userEmail = session.user.email;
+    const ownerEmail = process.env.OWNER_EMAIL;
 
-    // Best-effort cleanup for relations without cascade
-    await db.$transaction([
-      db.notification.deleteMany({ where: { userId } }),
-      db.savedJob.deleteMany({ where: { userId } }),
-      db.jobAlert.deleteMany({ where: { userId } }),
-      db.application.deleteMany({ where: { userId } }),
-      db.profile.deleteMany({ where: { userId } }),
-      db.user.delete({ where: { id: userId } }),
+    // اگر OWNER_EMAIL تعریف شده بود، از حذف اکانت مالک جلوگیری کن
+    if (ownerEmail && userEmail.toLowerCase() === ownerEmail.toLowerCase()) {
+      return NextResponse.json(
+        { error: "Owner account cannot be deleted." },
+        { status: 403 }
+      );
+    }
+
+    // حذف داده‌های مربوط به کاربر و خود کاربر در یک تراکنش
+    await prisma.$transaction([
+      prisma.jobAlert.deleteMany({ where: { user: { email: userEmail } } }),
+      prisma.application.deleteMany({ where: { applicant: { email: userEmail } } }),
+      prisma.user.delete({ where: { email: userEmail } }),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      message: "Account deleted",
-    });
-  } catch (error) {
-    console.error("Account delete error:", error);
     return NextResponse.json(
-      { error: "Failed to delete account" },
+      { message: "Account deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Account deletion error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }
