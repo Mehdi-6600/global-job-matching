@@ -13,7 +13,12 @@ export function normalizePlan(plan: string | null | undefined): PlanId {
   return "free";
 }
 
-/** Soft limits — enforce in APIs next */
+/**
+ * Product model:
+ * - free / pro → strong for job seekers; employers still get a small posting quota
+ *   so an EMPLOYER with plan=pro is never stuck at 0 jobs.
+ * - business / enterprise → employer-oriented quotas
+ */
 export const PLAN_LIMITS = {
   free: {
     maxApplicationsPerMonth: 20,
@@ -27,7 +32,8 @@ export const PLAN_LIMITS = {
     maxSavedJobs: 500,
     maxJobAlerts: 20,
     maxAiGenerationsPerMonth: 30,
-    maxActiveJobsEmployer: 0,
+    // Was 0 (broken for EMPLOYER + pro). Allow modest posting.
+    maxActiveJobsEmployer: 3,
   },
   business: {
     maxApplicationsPerMonth: 500,
@@ -47,4 +53,11 @@ export const PLAN_LIMITS = {
 
 export function getPlanLimits(plan: string | null | undefined) {
   return PLAN_LIMITS[normalizePlan(plan)];
+}
+
+/** Explicit helper for employer posting (same numbers, clearer name). */
+export function getEmployerActiveJobLimit(
+  plan: string | null | undefined
+): number {
+  return getPlanLimits(plan).maxActiveJobsEmployer;
 }
