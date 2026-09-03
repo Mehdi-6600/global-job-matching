@@ -19,6 +19,12 @@ export interface CreateJobInput {
   companyWebsite?: string;
 }
 
+export interface UserContext {
+  id: string;
+  role?: string;
+  email?: string | null;
+}
+
 export interface CreateJobResult {
   success: boolean;
   jobId?: string;
@@ -27,10 +33,20 @@ export interface CreateJobResult {
 }
 
 export async function createJobForUser(
-  userId: string,
+  userParam: string | UserContext,
   input: CreateJobInput
 ): Promise<CreateJobResult> {
   try {
+    const userId = typeof userParam === "string" ? userParam : userParam.id;
+
+    if (!userId) {
+      return {
+        success: false,
+        error: "INVALID_USER_ID",
+        statusCode: 400,
+      };
+    }
+
     return await prisma.$transaction(async (tx) => {
       // 1. Fetch user status and subscription plan within transaction
       const user = await tx.user.findUnique({
