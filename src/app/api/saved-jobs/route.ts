@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { normalizeLocation } from "@/lib/location";
 import { getPlanLimits } from "@/lib/plan-limits";
+import { getEffectivePlan } from "@/lib/subscription";
 
 const savedJobSchema = z
   .object({
@@ -82,8 +83,7 @@ export async function GET(req: NextRequest) {
         savedJobId: item.id,
         savedAt: item.createdAt,
         ...item.job,
-        location:
-          normalizeLocation(item.job!.location) || item.job!.location,
+        location: normalizeLocation(item.job!.location) || item.job!.location,
         company: item.job!.company
           ? {
               ...item.job!.company,
@@ -131,7 +131,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const limits = getPlanLimits(user.plan);
+    const effective = await getEffectivePlan(user.id);
+    const limits = getPlanLimits(effective.plan);
     const savedCount = await db.savedJob.count({
       where: { userId: user.id },
     });
