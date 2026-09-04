@@ -9,6 +9,7 @@ import {
   lockUserRow,
 } from "@/services/jobs/active-job-limit";
 import { ensureDefaultCompany } from "@/services/companies/ensure-default-company";
+import { resolveEffectivePlan } from "@/lib/subscription";
 
 export type CreateJobInput = z.infer<typeof jobCreateSchema>;
 
@@ -37,8 +38,8 @@ type Actor = {
 
 /**
  * Single entry point for creating jobs.
- * Plan limit + default company are enforced inside one DB transaction
- * with a row lock on the employer to prevent concurrent bypass.
+ * Plan limit uses effective plan (expired paid → free quota).
+ * Default company + limit enforced inside one transaction with row lock.
  */
 export async function createJobForUser(
   actor: Actor,
@@ -70,16 +71,23 @@ export async function createJobForUser(
 
       const user = await tx.user.findUnique({
         where: { id: actor.id },
-        select: { id: true, plan: true, email: true },
+        select: {
+          id: true,
+          plan: true,
+          planExpiresAt: true,
+          email: true,
+        },
       });
 
       if (!user) {
         throw Object.assign(new Error("USER_NOT_FOUND"), { status: 404 });
       }
 
+      const { plan: effectivePlan } = resolveEffectivePlan(user);
+
       const limitError = await assertCanCreateOrActivateJob(tx, {
         userId: user.id,
-        plan: user.plan,
+        plan: effectivePlan,
       });
 
       if (limitError) {
