@@ -18,8 +18,25 @@ export function computePlanExpiry(
 }
 
 /**
+ * Pure helper — safe inside Prisma transactions (no DB calls).
+ */
+export function resolveEffectivePlan(user: {
+  plan: string | null | undefined;
+  planExpiresAt?: Date | null;
+}): { plan: PlanId; expired: boolean } {
+  const normalized = normalizePlan(user.plan);
+  const expired =
+    normalized !== "free" && isPlanExpired(user.planExpiresAt ?? null);
+
+  if (expired) {
+    return { plan: "free", expired: true };
+  }
+  return { plan: normalized, expired: false };
+}
+
+/**
  * Effective plan: if paid plan is past planExpiresAt → treat as free.
- * Does not write to DB (lazy enforcement). Optional side-effect: pass write=true to persist free.
+ * Optional persistDowngrade writes plan=free when expired.
  */
 export async function getEffectivePlan(
   userId: string,
@@ -51,39 +68,28 @@ export async function getEffectivePlan(
     };
   }
 
-  const normalized = normalizePlan(user.plan);
-  const expired =
-    normalized !== "free" && isPlanExpired(user.planExpiresAt);
+  const { plan, expired } = resolveEffectivePlan(user);
 
-  if (expired) {
-    if (options?.persistDowngrade) {
-      await db.user.update({
-        where: { id: userId },
-        data: {
-          plan: "free",
-          billingCycle: null,
-        },
-      });
-    }
-    return {
-      plan: "free",
-      planStartedAt: user.planStartedAt,
-      planExpiresAt: user.planExpiresAt,
-      billingCycle: user.billingCycle,
-      expired: true,
-    };
+  if (expired && options?.persistDowngrade) {
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        plan: "free",
+        billingCycle: null,
+      },
+    });
   }
 
   return {
-    plan: normalized,
+    plan,
     planStartedAt: user.planStartedAt,
     planExpiresAt: user.planExpiresAt,
     billingCycle: user.billingCycle,
-    expired: false,
+    expired,
   };
 }
 
-/** Activate plan after admin confirms payment (call inside a transaction client if needed). */
+/** Activate plan after admin confirms payment. */
 export async function activatePlanForUser(params: {
   userId: string;
   planId: string;
