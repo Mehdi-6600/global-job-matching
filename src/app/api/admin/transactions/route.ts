@@ -3,13 +3,17 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdminRole } from "@/lib/roles";
 import { z } from "zod";
+import {
+  activatePlanForUser,
+  type BillingCycle,
+} from "@/lib/subscription";
 
 const patchSchema = z.object({
   id: z.string().min(1),
   status: z.enum(["confirmed", "rejected"]),
 });
 
-/** List pending/recent crypto payments — Admin only */
+/** List pending/recent payments — Admin only */
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id || !isAdminRole(session.user.role)) {
@@ -22,7 +26,14 @@ export async function GET() {
       take: 100,
       include: {
         user: {
-          select: { id: true, email: true, name: true, plan: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            plan: true,
+            planExpiresAt: true,
+            billingCycle: true,
+          },
         },
       },
     });
@@ -36,7 +47,8 @@ export async function GET() {
 
 /**
  * Confirm or reject a crypto payment.
- * Only confirmed upgrades User.plan.
+ * Confirmed → activates plan with expiry (monthly/yearly from transaction.billingCycle).
+ * Hash alone never activates a plan.
  */
 export async function PATCH(req: NextRequest) {
   const session = await auth();
@@ -65,41 +77,57 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    if (tx.status === "rejected" && status === "confirmed") {
+      return NextResponse.json(
+        { error: "Cannot confirm a rejected transaction" },
+        { status: 409 }
+      );
+    }
+
     if (status === "confirmed") {
+      const billing: BillingCycle =
+        tx.billingCycle === "yearly" ? "yearly" : "monthly";
+
+      await db.$transaction(async (prisma) => {
+        await prisma.transaction.update({
+          where: { id },
+          data: { status: "confirmed" },
+        });
+
+        // activatePlanForUser uses db; keep activation consistent inside outer flow
+        await activatePlanForUser({
+          userId: tx.userId,
+          planId: tx.planId,
+          billingCycle: billing,
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: tx.userId,
+            type: "alert",
+            title: "Payment confirmed",
+            message: `Your ${tx.planId} plan (${billing}) is now active.`,
+            actionUrl: "/pricing",
+          },
+        });
+      });
+    } else {
       await db.$transaction([
         db.transaction.update({
           where: { id },
-          data: { status: "confirmed" },
-        }),
-        db.user.update({
-          where: { id: tx.userId },
-          data: { plan: tx.planId },
+          data: { status: "rejected" },
         }),
         db.notification.create({
           data: {
             userId: tx.userId,
             type: "alert",
-            title: "Payment confirmed",
-            message: `Your ${tx.planId} plan is now active.`,
-            actionUrl: "/pricing",
+            title: "Payment not verified",
+            message:
+              "We could not verify your crypto payment. Contact support if you need help.",
+            actionUrl: "/contact",
           },
         }),
       ]);
-    } else {
-      await db.transaction.update({
-        where: { id },
-        data: { status: "rejected" },
-      });
-      await db.notification.create({
-        data: {
-          userId: tx.userId,
-          type: "alert",
-          title: "Payment not verified",
-          message:
-            "We could not verify your crypto payment. Contact support if you need help.",
-          actionUrl: "/contact",
-        },
-      });
     }
 
     const updated = await db.transaction.findUnique({ where: { id } });
