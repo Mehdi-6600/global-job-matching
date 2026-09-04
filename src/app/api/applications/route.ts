@@ -6,6 +6,7 @@ import { applicationCreateSchema } from "@/lib/validation/application";
 import { normalizeLocation } from "@/lib/location";
 import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
+import { getRequestIp } from "@/lib/client-ip";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,8 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `applications_get_${session.user.id}_${ip}`
     );
@@ -126,8 +126,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `apply_${session.user.id}_${ip}`
     );
