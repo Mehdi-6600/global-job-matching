@@ -10,6 +10,8 @@ import {
   getPlanAmount,
   type PlanId,
 } from "@/lib/payment/plans";
+import { getRequestIp } from "@/lib/client-ip";
+import { isPlausibleTxHash } from "@/lib/payment/verify-crypto";
 
 const cryptoPaymentSchema = z
   .object({
@@ -62,8 +64,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `crypto_pay_${session.user.id}_${ip}`
     );
@@ -88,6 +89,16 @@ export async function POST(req: NextRequest) {
 
     const { planId, cryptoType, billing } = result.data;
     const txHash = normalizeTxHash(result.data.txHash);
+
+    if (!isPlausibleTxHash(cryptoType, txHash)) {
+      return NextResponse.json(
+        {
+          error: "Transaction hash format is not valid for the selected crypto",
+          code: "INVALID_TX_HASH",
+        },
+        { status: 400 }
+      );
+    }
 
     const wallet = getCryptoWallet(cryptoType);
     if (!wallet) {
