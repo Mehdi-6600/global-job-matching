@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { authRatelimit } from "@/lib/ratelimit";
 import { validatePassword, hashPassword } from "@/lib/password";
 import { consumePasswordResetToken } from "@/lib/auth/tokens";
+import { getRequestIp } from "@/lib/client-ip";
 
 /**
  * Confirm password reset with token + new password.
@@ -10,8 +11,7 @@ import { consumePasswordResetToken } from "@/lib/auth/tokens";
  */
 export async function POST(req: NextRequest) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await authRatelimit.limit(`reset_pw_${ip}`);
     if (!success) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
