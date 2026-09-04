@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdminRole } from "@/lib/roles";
 import { ratelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +25,9 @@ function hashIp(ip: string): string {
   return createHash("sha256").update(ip).digest("hex").slice(0, 32);
 }
 
-/**
- * POST — track a page view (public, rate-limited)
- */
 export async function POST(req: NextRequest) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      "unknown";
+    const ip = getRequestIp(req);
 
     const { success } = await ratelimit.limit(`analytics_${ip}`);
     if (!success) {
@@ -70,15 +65,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Analytics POST error:", error);
-    // Do not break the page if tracking fails
     return NextResponse.json({ success: false }, { status: 200 });
   }
 }
 
-/**
- * GET — summary for Admin / Owner only
- * Query: ?days=7 (default 7, max 90)
- */
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
