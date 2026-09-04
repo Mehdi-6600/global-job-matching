@@ -3,10 +3,9 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Adapter } from "next-auth/adapters";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { verifyPassword } from "@/lib/password";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // Version mismatch between @auth/prisma-adapter and next-auth's nested @auth/core
   adapter: PrismaAdapter(prisma) as Adapter,
   session: { strategy: "jwt" },
   pages: {
@@ -24,18 +23,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const email = String(credentials.email);
+        const email = String(credentials.email).toLowerCase().trim();
         const password = String(credentials.password);
 
         const user = await prisma.user.findUnique({
           where: { email },
         });
 
-        if (!user || !user.password) {
+        if (!user?.password) {
           return null;
         }
 
-        const isValid = await bcrypt.compare(password, user.password);
+        const isValid = await verifyPassword(password, user.password);
         if (!isValid) {
           return null;
         }
