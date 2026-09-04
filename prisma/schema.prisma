@@ -50,16 +50,19 @@ model VerificationToken {
 // ─── Core Models ──────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          String    @default("JOB_SEEKER")
-  plan          String    @default("free")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  image          String?
+  password       String?
+  role           String    @default("JOB_SEEKER")
+  plan           String    @default("free")
+  planStartedAt  DateTime?
+  planExpiresAt  DateTime?
+  billingCycle   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
 
   accounts         Account[]
   sessions         Session[]
@@ -79,6 +82,8 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([plan])
+  @@index([planExpiresAt])
 }
 
 model Company {
@@ -143,17 +148,18 @@ model Job {
 }
 
 model Transaction {
-  id         String   @id @default(cuid())
-  userId     String
-  planId     String
-  amount     Float
-  currency   String   @default("USD")
-  cryptoType String?
-  txHash     String?  @unique
-  status     String   @default("pending")
-  type       String   @default("card")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  planId       String
+  amount       Float
+  currency     String   @default("USD")
+  cryptoType   String?
+  txHash       String?  @unique
+  status       String   @default("pending")
+  type         String   @default("card")
+  billingCycle String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
