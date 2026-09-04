@@ -1,172 +1,118 @@
-import crypto from "crypto";
-import { db } from "@/lib/db";
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "next-auth/adapters";
+import { prisma } from "@/lib/prisma";
+import { verifyPassword } from "@/lib/password";
+import { authRatelimit } from "@/lib/ratelimit";
 
-const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
-const VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma) as Adapter,
+  session: { strategy: "jwt" },
+  pages: {
+    signIn: "/login",
+  },
+  providers: [
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
-export function hashToken(raw: string): string {
-  return crypto.createHash("sha256").update(raw).digest("hex");
-}
+        const email = String(credentials.email).toLowerCase().trim();
+        const password = String(credentials.password);
 
-export function createRawToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
+        const { success } = await authRatelimit.limit(`login_${email}`);
+        if (!success) {
+          return null;
+        }
 
-function appBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXTAUTH_URL ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "");
-}
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            password: true,
+            sessionVersion: true,
+          },
+        });
 
-/** Invalidate previous unused reset tokens for this email, then create a new one */
-export async function issuePasswordResetToken(email: string): Promise<{
-  rawToken: string;
-  resetUrl: string;
-  expiresAt: Date;
-}> {
-  const normalized = email.toLowerCase().trim();
-  const rawToken = createRawToken();
-  const tokenHash = hashToken(rawToken);
-  const expiresAt = new Date(Date.now() + RESET_TTL_MS);
+        if (!user?.password) {
+          return null;
+        }
 
-  await db.$transaction([
-    db.passwordResetToken.updateMany({
-      where: { email: normalized, usedAt: null },
-      data: { usedAt: new Date() },
-    }),
-    db.passwordResetToken.create({
-      data: {
-        email: normalized,
-        tokenHash,
-        expiresAt,
+        const isValid = await verifyPassword(password, user.password);
+        if (!isValid) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          sessionVersion: user.sessionVersion ?? 0,
+        };
       },
     }),
-  ]);
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = (user as { role?: string }).role;
+        token.sub = user.id;
+        token.sessionVersion =
+          (user as { sessionVersion?: number }).sessionVersion ?? 0;
+      }
 
-  const resetUrl = `${appBaseUrl()}/reset-password?token=${rawToken}`;
-  return { rawToken, resetUrl, expiresAt };
-}
+      // Re-validate role + sessionVersion from DB (stale JWT protection)
+      if (token.sub) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub as string },
+            select: { role: true, sessionVersion: true },
+          });
+          if (!dbUser) {
+            return { ...token, error: "SessionInvalid" };
+          }
+          const tokenVersion = Number(token.sessionVersion ?? 0);
+          const dbVersion = dbUser.sessionVersion ?? 0;
+          if (tokenVersion !== dbVersion) {
+            return { ...token, error: "SessionInvalid" };
+          }
+          token.role = dbUser.role;
+          token.sessionVersion = dbVersion;
+        } catch {
+          // keep existing token on transient DB errors
+        }
+      }
 
-/**
- * Atomically consume a reset token.
- * Only one concurrent request can succeed (UPDATE ... WHERE usedAt IS NULL).
- */
-export async function consumePasswordResetToken(rawToken: string): Promise<
-  | { ok: true; email: string; tokenHash: string }
-  | { ok: false; error: string; status: number }
-> {
-  const tokenHash = hashToken(rawToken.trim());
-  const now = new Date();
-
-  const claimed = await db.passwordResetToken.updateMany({
-    where: {
-      tokenHash,
-      usedAt: null,
-      expiresAt: { gt: now },
+      return token;
     },
-    data: { usedAt: now },
-  });
-
-  if (claimed.count !== 1) {
-    const row = await db.passwordResetToken.findUnique({
-      where: { tokenHash },
-    });
-    if (!row) {
-      return { ok: false, error: "Invalid or expired token", status: 400 };
-    }
-    if (row.usedAt) {
-      return { ok: false, error: "Token already used", status: 400 };
-    }
-    return { ok: false, error: "Token expired", status: 400 };
-  }
-
-  const row = await db.passwordResetToken.findUnique({
-    where: { tokenHash },
-  });
-  if (!row) {
-    return { ok: false, error: "Invalid or expired token", status: 400 };
-  }
-
-  return { ok: true, email: row.email, tokenHash };
-}
-
-export async function markPasswordResetUsed(tokenHash: string): Promise<void> {
-  await db.passwordResetToken.updateMany({
-    where: { tokenHash },
-    data: { usedAt: new Date() },
-  });
-}
-
-/** Email verification via NextAuth VerificationToken table */
-export async function issueEmailVerificationToken(email: string): Promise<{
-  rawToken: string;
-  verifyUrl: string;
-}> {
-  const normalized = email.toLowerCase().trim();
-  const rawToken = createRawToken();
-  const tokenHash = hashToken(rawToken);
-  const expires = new Date(Date.now() + VERIFY_TTL_MS);
-
-  await db.$transaction([
-    db.verificationToken.deleteMany({
-      where: { identifier: normalized },
-    }),
-    db.verificationToken.create({
-      data: {
-        identifier: normalized,
-        token: tokenHash,
-        expires,
-      },
-    }),
-  ]);
-
-  const verifyUrl = `${appBaseUrl()}/verify-email?token=${rawToken}&email=${encodeURIComponent(normalized)}`;
-  return { rawToken, verifyUrl };
-}
-
-export async function consumeEmailVerificationToken(
-  rawToken: string,
-  email: string
-): Promise<
-  | { ok: true }
-  | { ok: false; error: string; status: number }
-> {
-  const normalized = email.toLowerCase().trim();
-  const tokenHash = hashToken(rawToken.trim());
-  const now = new Date();
-
-  const row = await db.verificationToken.findUnique({
-    where: {
-      identifier_token: {
-        identifier: normalized,
-        token: tokenHash,
-      },
+    async session({ session, token }) {
+      if (token.error === "SessionInvalid") {
+        return {
+          ...session,
+          user: {
+            ...session.user,
+            id: "",
+            role: "",
+          },
+          expires: new Date(0).toISOString(),
+        };
+      }
+      if (session.user) {
+        session.user.id = token.sub as string;
+        (session.user as { role?: string }).role = token.role as string;
+      }
+      return session;
     },
-  });
-
-  if (!row) {
-    return { ok: false, error: "Invalid or expired token", status: 400 };
-  }
-  if (row.expires < now) {
-    await db.verificationToken
-      .deleteMany({
-        where: { identifier: normalized, token: tokenHash },
-      })
-      .catch(() => undefined);
-    return { ok: false, error: "Token expired", status: 400 };
-  }
-
-  await db.$transaction([
-    db.user.update({
-      where: { email: normalized },
-      data: { emailVerified: now },
-    }),
-    db.verificationToken.deleteMany({
-      where: { identifier: normalized },
-    }),
-  ]);
-
-  return { ok: true };
-}
+  },
+});
