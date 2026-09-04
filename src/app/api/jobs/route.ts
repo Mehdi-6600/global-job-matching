@@ -22,7 +22,11 @@ const querySchema = z.object({
   company: z.string().optional(),
 });
 
-function mapJob(job: any) {
+function mapJob(job: {
+  location: string | null;
+  company?: { location: string | null } | null;
+  [key: string]: unknown;
+}) {
   return {
     ...job,
     location: normalizeLocation(job.location) || job.location,
@@ -61,10 +65,12 @@ export async function GET(req: Request) {
       remote,
       tag,
       company,
+      minSalary,
+      maxSalary,
     } = result.data;
 
     const skip = (page - 1) * limit;
-    const where: any = { status: "active" };
+    const where: Record<string, unknown> = { status: "active" };
 
     if (search) {
       where.OR = [
@@ -79,6 +85,36 @@ export async function GET(req: Request) {
     if (remote) where.remote = true;
     if (company) where.companyId = company;
     if (tag) where.tags = { has: tag };
+
+    // Apply salary filters (previously parsed but ignored)
+    if (minSalary != null || maxSalary != null) {
+      const salaryFilter: Record<string, number> = {};
+      if (minSalary != null) salaryFilter.gte = minSalary;
+      if (maxSalary != null) salaryFilter.lte = maxSalary;
+      // Jobs whose max salary is at least min filter, and min salary at most max filter
+      if (minSalary != null && maxSalary != null) {
+        where.AND = [
+          { OR: [{ salaryMax: { gte: minSalary } }, { salaryMin: { gte: minSalary } }] },
+          { OR: [{ salaryMin: { lte: maxSalary } }, { salaryMax: { lte: maxSalary } }] },
+        ];
+      } else if (minSalary != null) {
+        where.OR = [
+          ...(Array.isArray(where.OR) ? (where.OR as object[]) : []),
+          { salaryMax: { gte: minSalary } },
+          { salaryMin: { gte: minSalary } },
+        ];
+      } else if (maxSalary != null) {
+        where.AND = [
+          {
+            OR: [
+              { salaryMin: { lte: maxSalary } },
+              { salaryMax: { lte: maxSalary } },
+              { salaryMin: null, salaryMax: null },
+            ],
+          },
+        ];
+      }
+    }
 
     const [jobs, total] = await Promise.all([
       db.job.findMany({
@@ -114,9 +150,6 @@ export async function GET(req: Request) {
   }
 }
 
-/**
- * Legacy alias — same security as POST /api/employer/jobs
- */
 export async function POST(req: Request) {
   try {
     const session = await auth();
