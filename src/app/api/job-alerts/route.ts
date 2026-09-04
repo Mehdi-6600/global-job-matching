@@ -7,12 +7,7 @@ import {
   jobAlertDeleteSchema,
 } from "@/lib/validation/job-alert";
 import { getPlanLimits } from "@/lib/plan-limits";
-
-function getClientIp(req: NextRequest) {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
-  );
-}
+import { getRequestIp } from "@/lib/client-ip";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +16,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `job_alerts_get_${session.user.id}_${ip}`
     );
@@ -48,7 +43,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `job_alerts_post_${session.user.id}_${ip}`
     );
@@ -118,7 +113,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `job_alerts_delete_${session.user.id}_${ip}`
     );
