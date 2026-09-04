@@ -6,6 +6,7 @@ import { normalizeLocation } from "@/lib/location";
 import { ratelimit } from "@/lib/ratelimit";
 import { createJobForUser } from "@/services/jobs/create-job";
 import { getEmployerActiveJobLimit } from "@/lib/plan-limits";
+import { getEffectivePlan } from "@/lib/subscription";
 
 function getClientIp(req: NextRequest) {
   return (
@@ -32,12 +33,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, plan: true },
-    });
-
-    const maxActive = getEmployerActiveJobLimit(user?.plan);
+    const effective = await getEffectivePlan(session.user.id);
+    const maxActive = getEmployerActiveJobLimit(effective.plan);
 
     const jobs = await db.job.findMany({
       where: {
@@ -63,7 +60,10 @@ export async function GET(req: NextRequest) {
         applicationCount: j._count.applications,
       })),
       plan: {
-        name: user?.plan || "free",
+        name: effective.plan,
+        expiresAt: effective.planExpiresAt,
+        billingCycle: effective.billingCycle,
+        expired: effective.expired,
         maxActiveJobsEmployer: maxActive,
         activeJobs: activeCount,
         remaining: Math.max(0, maxActive - activeCount),
