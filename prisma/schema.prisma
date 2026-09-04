@@ -252,7 +252,7 @@ model Notification {
   userId      String
   title       String
   message     String   @db.Text
-  description String?
+  description String?  @db.Text
   actionUrl   String?
   read        Boolean  @default(false)
   type        String   @default("general")
@@ -364,4 +364,20 @@ model Category {
   jobs Job[]
 
   @@index([slug])
+}
+
+// ─── Analytics (REQUIRED — used by /api/analytics) ────────────
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  path      String
+  referrer  String?
+  userId    String?
+  ipHash    String?
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@index([userId])
 }
