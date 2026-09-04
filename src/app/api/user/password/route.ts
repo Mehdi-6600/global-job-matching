@@ -66,10 +66,16 @@ export async function PUT(req: NextRequest) {
     const hashed = await hashPassword(passwordCheck.password);
     await db.user.update({
       where: { id: session.user.id },
-      data: { password: hashed },
+      data: {
+        password: hashed,
+        sessionVersion: { increment: 1 },
+      },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: "Password updated. Please sign in again on other devices.",
+    });
   } catch (error) {
     console.error("Change password error:", error);
     return NextResponse.json(
