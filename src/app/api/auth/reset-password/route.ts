@@ -2,14 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { authRatelimit } from "@/lib/ratelimit";
 import { validatePassword, hashPassword } from "@/lib/password";
-import {
-  consumePasswordResetToken,
-  markPasswordResetUsed,
-} from "@/lib/auth/tokens";
+import { consumePasswordResetToken } from "@/lib/auth/tokens";
 
 /**
  * Confirm password reset with token + new password.
- * (Requesting a link is POST /api/auth/forgot-password only.)
+ * Token is consumed atomically; sessionVersion is bumped so old JWTs die.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -49,13 +46,11 @@ export async function POST(req: NextRequest) {
     await db.$transaction(async (tx) => {
       await tx.user.update({
         where: { email: consumed.email },
-        data: { password: hashed },
+        data: {
+          password: hashed,
+          sessionVersion: { increment: 1 },
+        },
       });
-      await tx.passwordResetToken.update({
-        where: { tokenHash: consumed.tokenHash },
-        data: { usedAt: new Date() },
-      });
-      // Invalidate any other unused tokens for this email
       await tx.passwordResetToken.updateMany({
         where: {
           email: consumed.email,
@@ -66,11 +61,9 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    await markPasswordResetUsed(consumed.tokenHash).catch(() => undefined);
-
     return NextResponse.json({
       success: true,
-      message: "Password reset successfully",
+      message: "Password reset successfully. Please sign in again.",
     });
   } catch (error) {
     console.error("Reset password error:", error);
