@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ratelimit } from "@/lib/ratelimit";
 import { contactSchema } from "@/lib/validation/contact";
+import { getRequestIp } from "@/lib/client-ip";
 
 function escapeHtml(input: string) {
   return input
@@ -31,8 +32,7 @@ export async function POST(req: NextRequest) {
     const { name, email, subject, message } = parsed.data;
     const emailKey = email.toLowerCase();
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
 
     const { success } = await ratelimit.limit(`contact_${emailKey}_${ip}`);
     if (!success) {
