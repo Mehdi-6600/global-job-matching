@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { emailRatelimit } from "@/lib/ratelimit";
 import { issuePasswordResetToken } from "@/lib/auth/tokens";
+import { getRequestIp } from "@/lib/client-ip";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -32,8 +33,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await emailRatelimit.limit(`forgot_${email}_${ip}`);
     if (!success) {
       return NextResponse.json(
@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Always same response (no email enumeration)
     const generic = {
       message: "If this email exists, a reset link has been sent.",
     };
