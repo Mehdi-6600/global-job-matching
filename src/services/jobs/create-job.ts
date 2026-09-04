@@ -1,3 +1,4 @@
+import type { Job, Company } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isAdminRole, isEmployerRole } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
@@ -11,17 +12,12 @@ import { ensureDefaultCompany } from "@/services/companies/ensure-default-compan
 
 export type CreateJobInput = z.infer<typeof jobCreateSchema>;
 
+export type CreatedJob = Job & {
+  company: Pick<Company, "id" | "name" | "logo" | "location"> | null;
+};
+
 export type CreateJobResult =
-  | {
-      ok: true;
-      job: {
-        id: string;
-        title: string;
-        status: string;
-        companyId: string | null;
-        [key: string]: unknown;
-      };
-    }
+  | { ok: true; job: CreatedJob }
   | {
       ok: false;
       status: number;
@@ -148,7 +144,7 @@ export async function createJobForUser(
   } catch (err: unknown) {
     const e = err as {
       status?: number;
-      payload?: CreateJobResult & { ok: false };
+      payload?: Extract<CreateJobResult, { ok: false }>;
       message?: string;
     };
 
