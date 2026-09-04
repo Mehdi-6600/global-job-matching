@@ -61,6 +61,7 @@ model User {
   planStartedAt  DateTime?
   planExpiresAt  DateTime?
   billingCycle   String?
+  sessionVersion Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @default(now()) @updatedAt
 
@@ -84,6 +85,7 @@ model User {
   @@index([role])
   @@index([plan])
   @@index([planExpiresAt])
+  @@index([sessionVersion])
 }
 
 model Company {
@@ -151,7 +153,7 @@ model Transaction {
   id           String   @id @default(cuid())
   userId       String
   planId       String
-  amount       Float
+  amount       Decimal  @db.Decimal(10, 2)
   currency     String   @default("USD")
   cryptoType   String?
   txHash       String?  @unique
@@ -250,7 +252,7 @@ model Notification {
   userId      String
   title       String
   message     String   @db.Text
-  description String?  @db.Text
+  description String?
   actionUrl   String?
   read        Boolean  @default(false)
   type        String   @default("general")
@@ -362,20 +364,4 @@ model Category {
   jobs Job[]
 
   @@index([slug])
-}
-
-// ─── Analytics ────────────────────────────────────────────────
-
-model AnalyticsEvent {
-  id        String   @id @default(cuid())
-  path      String
-  referrer  String?
-  userId    String?
-  ipHash    String?
-  userAgent String?  @db.Text
-  createdAt DateTime @default(now())
-
-  @@index([path])
-  @@index([createdAt])
-  @@index([userId])
 }
