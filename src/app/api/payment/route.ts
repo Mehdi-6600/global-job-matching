@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { PLAN_PRICES } from "@/lib/payment/plans";
 import { z } from "zod";
+import { getRequestIp } from "@/lib/client-ip";
 
 const paymentSchema = z
   .object({
@@ -18,8 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `payment_${session.user.id}_${ip}`
     );
