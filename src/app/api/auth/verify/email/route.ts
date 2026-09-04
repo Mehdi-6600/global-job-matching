@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { Resend } from "resend";
 import { emailRatelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -13,8 +14,7 @@ const resend = process.env.RESEND_API_KEY
 
 /** GET ?token=&email=  or POST { token, email } */
 export async function GET(req: NextRequest) {
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getRequestIp(req);
   const { success } = await authRatelimit.limit(`verify_email_${ip}`);
   if (!success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
@@ -49,7 +49,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const action = body.action as string | undefined;
 
-    // Resend verification for logged-in user
     if (action === "resend") {
       const session = await auth();
       if (!session?.user?.id || !session.user.email) {
@@ -97,7 +96,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Confirm via POST body
     const token = typeof body.token === "string" ? body.token : "";
     const email = typeof body.email === "string" ? body.email : "";
     if (!token || !email) {
