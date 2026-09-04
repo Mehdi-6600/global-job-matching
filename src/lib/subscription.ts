@@ -1,13 +1,13 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { normalizePlan, isPlanExpired } from "@/lib/plan-limits";
 import type { PlanId } from "@/lib/payment/plans";
 
 export type BillingCycle = "monthly" | "yearly";
 
-export function computePlanExpiry(
-  from: Date,
-  billing: BillingCycle
-): Date {
+type DbClient = Prisma.TransactionClient | PrismaClient;
+
+export function computePlanExpiry(from: Date, billing: BillingCycle): Date {
   const d = new Date(from);
   if (billing === "yearly") {
     d.setFullYear(d.getFullYear() + 1);
@@ -17,9 +17,7 @@ export function computePlanExpiry(
   return d;
 }
 
-/**
- * Pure helper — safe inside Prisma transactions (no DB calls).
- */
+/** Pure — safe inside transactions */
 export function resolveEffectivePlan(user: {
   plan: string | null | undefined;
   planExpiresAt?: Date | null;
@@ -34,10 +32,6 @@ export function resolveEffectivePlan(user: {
   return { plan: normalized, expired: false };
 }
 
-/**
- * Effective plan: if paid plan is past planExpiresAt → treat as free.
- * Optional persistDowngrade writes plan=free when expired.
- */
 export async function getEffectivePlan(
   userId: string,
   options?: { persistDowngrade?: boolean }
@@ -89,15 +83,21 @@ export async function getEffectivePlan(
   };
 }
 
-/** Activate plan after admin confirms payment. */
-export async function activatePlanForUser(params: {
-  userId: string;
-  planId: string;
-  billingCycle: BillingCycle;
-}) {
+/**
+ * Activate plan after admin confirms payment.
+ * Pass `tx` when inside db.$transaction so plan + payment stay atomic.
+ */
+export async function activatePlanForUser(
+  params: {
+    userId: string;
+    planId: string;
+    billingCycle: BillingCycle;
+  },
+  client: DbClient = db
+) {
   const plan = normalizePlan(params.planId);
   if (plan === "free") {
-    return db.user.update({
+    return client.user.update({
       where: { id: params.userId },
       data: {
         plan: "free",
@@ -111,7 +111,7 @@ export async function activatePlanForUser(params: {
   const started = new Date();
   const expires = computePlanExpiry(started, params.billingCycle);
 
-  return db.user.update({
+  return client.user.update({
     where: { id: params.userId },
     data: {
       plan,
