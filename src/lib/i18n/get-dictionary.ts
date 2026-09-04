@@ -8,10 +8,32 @@ import fa from "../../../messages/fa.json";
 import hi from "../../../messages/hi.json";
 import fr from "../../../messages/fr.json";
 
-/** Loose type so all locale files can differ slightly */
 export type Dictionary = Record<string, unknown>;
 
-const dictionaries: Record<Locale, Dictionary> = {
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** Deep-merge overlay onto base (base fills missing keys). */
+export function deepMergeDictionary(
+  base: Dictionary,
+  overlay: Dictionary
+): Dictionary {
+  const out: Dictionary = { ...base };
+  for (const [key, value] of Object.entries(overlay)) {
+    if (isObject(value) && isObject(out[key])) {
+      out[key] = deepMergeDictionary(
+        out[key] as Dictionary,
+        value as Dictionary
+      );
+    } else if (value !== undefined) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+const raw: Record<Locale, Dictionary> = {
   en: en as Dictionary,
   es: es as Dictionary,
   ar: ar as Dictionary,
@@ -21,7 +43,12 @@ const dictionaries: Record<Locale, Dictionary> = {
 };
 
 export function getDictionary(locale: Locale): Dictionary {
-  return dictionaries[locale] || dictionaries[defaultLocale];
+  const primary = raw[locale] || raw[defaultLocale];
+  if (locale === "en") {
+    return primary;
+  }
+  // Missing keys always fall back to English
+  return deepMergeDictionary(raw.en, primary);
 }
 
 /** Nested key: "Nav.jobs" */
