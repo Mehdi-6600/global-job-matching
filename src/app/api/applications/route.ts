@@ -5,6 +5,7 @@ import { ratelimit } from "@/lib/ratelimit";
 import { applicationCreateSchema } from "@/lib/validation/application";
 import { normalizeLocation } from "@/lib/location";
 import { getPlanLimits } from "@/lib/plan-limits";
+import { getEffectivePlan } from "@/lib/subscription";
 
 export async function GET(req: NextRequest) {
   try {
@@ -145,7 +146,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const limits = getPlanLimits(user.plan);
+    const effective = await getEffectivePlan(user.id);
+    const limits = getPlanLimits(effective.plan);
     const monthStart = new Date();
     monthStart.setUTCDate(1);
     monthStart.setUTCHours(0, 0, 0, 0);
