@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ratelimit } from "@/lib/ratelimit";
 import { buildTemplateResume, chatCompletion } from "@/lib/ai";
 import { getPlanLimits } from "@/lib/plan-limits";
+import { getEffectivePlan } from "@/lib/subscription";
 
 const schema = z.object({
   fullName: z.string().min(2).max(120),
@@ -48,7 +49,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const limits = getPlanLimits(user.plan);
+    const effective = await getEffectivePlan(user.id);
+    const limits = getPlanLimits(effective.plan);
     const monthStart = new Date();
     monthStart.setUTCDate(1);
     monthStart.setUTCHours(0, 0, 0, 0);
