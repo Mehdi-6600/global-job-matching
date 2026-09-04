@@ -13,7 +13,6 @@ const patchSchema = z.object({
   status: z.enum(["confirmed", "rejected"]),
 });
 
-/** List pending/recent payments — Admin only */
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id || !isAdminRole(session.user.role)) {
@@ -46,9 +45,8 @@ export async function GET() {
 }
 
 /**
- * Confirm or reject a crypto payment.
- * Confirmed → activates plan with expiry (monthly/yearly from transaction.billingCycle).
- * Hash alone never activates a plan.
+ * Confirm/reject payment.
+ * Atomic: only pending → confirmed once; plan activated on same tx client.
  */
 export async function PATCH(req: NextRequest) {
   const session = await auth();
@@ -77,9 +75,9 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    if (tx.status === "rejected" && status === "confirmed") {
+    if (tx.status === "rejected") {
       return NextResponse.json(
-        { error: "Cannot confirm a rejected transaction" },
+        { error: "Cannot change a rejected transaction" },
         { status: 409 }
       );
     }
@@ -88,46 +86,69 @@ export async function PATCH(req: NextRequest) {
       const billing: BillingCycle =
         tx.billingCycle === "yearly" ? "yearly" : "monthly";
 
-      await db.$transaction(async (prisma) => {
-        await prisma.transaction.update({
-          where: { id },
-          data: { status: "confirmed" },
-        });
+      try {
+        await db.$transaction(async (prisma) => {
+          const claimed = await prisma.transaction.updateMany({
+            where: { id, status: "pending" },
+            data: { status: "confirmed" },
+          });
 
-        // activatePlanForUser uses db; keep activation consistent inside outer flow
-        await activatePlanForUser({
-          userId: tx.userId,
-          planId: tx.planId,
-          billingCycle: billing,
-        });
+          if (claimed.count !== 1) {
+            throw Object.assign(new Error("ALREADY_PROCESSED"), {
+              code: "ALREADY_PROCESSED",
+            });
+          }
 
-        await prisma.notification.create({
-          data: {
-            userId: tx.userId,
-            type: "alert",
-            title: "Payment confirmed",
-            message: `Your ${tx.planId} plan (${billing}) is now active.`,
-            actionUrl: "/pricing",
-          },
+          await activatePlanForUser(
+            {
+              userId: tx.userId,
+              planId: tx.planId,
+              billingCycle: billing,
+            },
+            prisma
+          );
+
+          await prisma.notification.create({
+            data: {
+              userId: tx.userId,
+              type: "alert",
+              title: "Payment confirmed",
+              message: `Your ${tx.planId} plan (${billing}) is now active.`,
+              actionUrl: "/pricing",
+            },
+          });
         });
-      });
+      } catch (e: unknown) {
+        const err = e as { code?: string };
+        if (err.code === "ALREADY_PROCESSED") {
+          return NextResponse.json(
+            { error: "Already confirmed" },
+            { status: 409 }
+          );
+        }
+        throw e;
+      }
     } else {
-      await db.$transaction([
-        db.transaction.update({
-          where: { id },
-          data: { status: "rejected" },
-        }),
-        db.notification.create({
-          data: {
-            userId: tx.userId,
-            type: "alert",
-            title: "Payment not verified",
-            message:
-              "We could not verify your crypto payment. Contact support if you need help.",
-            actionUrl: "/contact",
-          },
-        }),
-      ]);
+      const rejected = await db.transaction.updateMany({
+        where: { id, status: "pending" },
+        data: { status: "rejected" },
+      });
+      if (rejected.count !== 1) {
+        return NextResponse.json(
+          { error: "Already processed" },
+          { status: 409 }
+        );
+      }
+      await db.notification.create({
+        data: {
+          userId: tx.userId,
+          type: "alert",
+          title: "Payment not verified",
+          message:
+            "We could not verify your crypto payment. Contact support if you need help.",
+          actionUrl: "/contact",
+        },
+      });
     }
 
     const updated = await db.transaction.findUnique({ where: { id } });
