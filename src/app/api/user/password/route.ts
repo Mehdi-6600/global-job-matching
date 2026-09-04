@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { db } from "@/lib/db";
+import { authRatelimit } from "@/lib/ratelimit";
+import {
+  validatePassword,
+  hashPassword,
+  verifyPassword,
+} from "@/lib/password";
 
 export async function PUT(req: NextRequest) {
   const session = await auth();
@@ -10,28 +15,47 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
-    const { currentPassword, newPassword } = await req.json();
+    const { success } = await authRatelimit.limit(
+      `change_pw_${session.user.id}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
 
-    if (!currentPassword || !newPassword || newPassword.length < 6) {
+    let body: { currentPassword?: string; newPassword?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const currentPassword =
+      typeof body.currentPassword === "string" ? body.currentPassword : "";
+    const passwordCheck = validatePassword(body.newPassword);
+
+    if (!currentPassword) {
       return NextResponse.json(
-        { error: "Current password and new password (min 6 chars) required" },
+        { error: "Current password is required" },
         { status: 400 }
       );
     }
+    if (!passwordCheck.ok) {
+      return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
+    }
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { password: true },
     });
 
-    if (!user || !user.password) {
+    if (!user?.password) {
       return NextResponse.json(
-        { error: "Cannot change password for social login accounts" },
+        { error: "Cannot change password for this account" },
         { status: 400 }
       );
     }
 
-    const valid = await bcrypt.compare(currentPassword, user.password);
+    const valid = await verifyPassword(currentPassword, user.password);
     if (!valid) {
       return NextResponse.json(
         { error: "Current password is incorrect" },
@@ -39,17 +63,17 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const hashed = await bcrypt.hash(newPassword, 12);
-    await prisma.user.update({
+    const hashed = await hashPassword(passwordCheck.password);
+    await db.user.update({
       where: { id: session.user.id },
       data: { password: hashed },
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Change password error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to change password" },
+      { error: "Failed to change password" },
       { status: 500 }
     );
   }
