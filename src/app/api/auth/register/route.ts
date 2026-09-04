@@ -6,6 +6,7 @@ import { authRatelimit } from "@/lib/ratelimit";
 import { registerSchema } from "@/lib/validation/register";
 import { hashPassword, validatePassword } from "@/lib/password";
 import { issueEmailVerificationToken } from "@/lib/auth/tokens";
+import { getRequestIp } from "@/lib/client-ip";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -13,8 +14,7 @@ const resend = process.env.RESEND_API_KEY
 
 export async function POST(req: NextRequest) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await authRatelimit.limit(`register_${ip}`);
     if (!success) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
@@ -51,58 +51,49 @@ export async function POST(req: NextRequest) {
     const existing = await db.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
-        { error: "Email already exists" },
+        { error: "Email already registered" },
         { status: 409 }
       );
     }
 
-    const hashed = await hashPassword(passwordCheck.password);
+    const hashed = await hashPassword(parsed.data.password);
 
     const user = await db.user.create({
       data: {
-        name,
         email,
+        name,
         password: hashed,
         role,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        emailVerified: true,
-      },
+      select: { id: true, email: true, name: true, role: true },
     });
 
-    // Send verification email (non-blocking for UX; log failures)
     try {
-      const { verifyUrl } = await issueEmailVerificationToken(user.email);
-      if (resend && process.env.RESEND_FROM_EMAIL) {
+      const { rawToken, verifyUrl } = await issueEmailVerificationToken(email);
+      if (resend) {
         await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL,
-          to: user.email,
-          subject: "Verify your email — Global Job Matching",
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#4f46e5;">Verify your email</h2>
-              <p>Welcome${user.name ? `, ${user.name}` : ""}!</p>
-              <p><a href="${verifyUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;">Verify email</a></p>
-              <p style="color:#666;font-size:13px;">Link expires in 24 hours.</p>
-            </div>
-          `,
+          from:
+            process.env.EMAIL_FROM ||
+            "Global Job Matching <onboarding@resend.dev>",
+          to: email,
+          subject: "Verify your email",
+          html: `<p>Hi ${name || "there"},</p><p>Verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
         });
-      } else if (process.env.NODE_ENV !== "production") {
-        console.log("[dev] verify URL:", verifyUrl);
       }
-    } catch (err) {
-      console.error("Verification email failed:", err);
+      void rawToken;
+    } catch (e) {
+      console.error("Verification email failed (non-blocking):", e);
     }
 
     return NextResponse.json(
       {
         success: true,
-        user,
-        message: "Account created. Please verify your email.",
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
       },
       { status: 201 }
     );
