@@ -10,6 +10,7 @@ import {
   parseRiskJson,
 } from "@/lib/career-risk";
 import { getPlanLimits } from "@/lib/plan-limits";
+import { getEffectivePlan } from "@/lib/subscription";
 
 const schema = z.object({
   jobTitle: z.string().min(2).max(120),
@@ -59,8 +60,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const paid = isPaidPlan(user.plan);
-    const limits = getPlanLimits(user.plan);
+    const effective = await getEffectivePlan(user.id);
+    const paid = isPaidPlan(effective.plan);
+    const limits = getPlanLimits(effective.plan);
 
     const monthStart = new Date();
     monthStart.setUTCDate(1);
@@ -141,7 +143,7 @@ Industry: ${industry || "n/a"}`;
       success: true,
       analysis: result,
       alternativesLocked: !paid,
-      plan: user.plan || "free",
+      plan: effective.plan,
       message: paid
         ? "Full analysis including alternative careers"
         : "Risk analysis is free. Upgrade your plan to unlock alternative career suggestions.",
