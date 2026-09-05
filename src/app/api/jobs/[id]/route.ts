@@ -10,6 +10,7 @@ import {
   assertCanCreateOrActivateJob,
   lockUserRow,
 } from "@/services/jobs/active-job-limit";
+import { getRequestIp } from "@/lib/client-ip";
 
 export async function GET(
   req: NextRequest,
@@ -23,10 +24,7 @@ export async function GET(
     }
     const id = parsedId.data;
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      "unknown";
+    const ip = getRequestIp(req);
 
     const { success } = await ratelimit.limit(`job_get_${id}_${ip}`);
     if (!success) {
