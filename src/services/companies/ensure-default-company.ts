@@ -5,6 +5,7 @@ type Tx = Prisma.TransactionClient | PrismaClient;
 /**
  * Ensures the employer has at least one company.
  * Call only after lockUserRow() so concurrent creates don't duplicate.
+ * If companyId is provided, ownership is verified (unless admin).
  */
 export async function ensureDefaultCompany(
   tx: Tx,
@@ -34,6 +35,14 @@ export async function ensureDefaultCompany(
         ok: false,
         status: 403,
         error: "You do not own this company",
+      };
+    }
+
+    if (company.status && company.status !== "active" && !params.isAdmin) {
+      return {
+        ok: false,
+        status: 403,
+        error: "Company is not active",
       };
     }
 
