@@ -9,9 +9,13 @@ import {
   isPaidPlan,
   parseRiskJson,
 } from "@/lib/career-risk";
-import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
+import {
+  assertAndReserveAiUsage,
+  lockUserRow,
+  releaseLatestUsageEvent,
+} from "@/lib/quota";
 
 const schema = z.object({
   jobTitle: z.string().min(2).max(120),
@@ -62,27 +66,24 @@ export async function POST(req: NextRequest) {
 
     const effective = await getEffectivePlan(user.id);
     const paid = isPaidPlan(effective.plan);
-    const limits = getPlanLimits(effective.plan);
 
-    const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
-
-    const usedAi = await db.notification.count({
-      where: {
+    const reserveResult = await db.$transaction(async (tx) => {
+      await lockUserRow(tx, user.id);
+      return assertAndReserveAiUsage(tx, {
         userId: user.id,
-        type: "ai_career_risk",
-        createdAt: { gte: monthStart },
-      },
+        plan: effective.plan,
+        kind: "ai_career_risk",
+        meta: jobTitle,
+      });
     });
 
-    if (usedAi >= limits.maxAiGenerationsPerMonth) {
+    if (!reserveResult.ok) {
       return NextResponse.json(
         {
-          error: `AI analysis limit reached this month (${limits.maxAiGenerationsPerMonth}). Upgrade your plan for more.`,
-          code: "PLAN_LIMIT_AI",
-          limit: limits.maxAiGenerationsPerMonth,
-          used: usedAi,
+          error: reserveResult.error,
+          code: reserveResult.code,
+          limit: reserveResult.limit,
+          used: reserveResult.used,
         },
         { status: 403 }
       );
@@ -120,15 +121,13 @@ Industry: ${industry || "n/a"}`;
 
     const usedAiCall = Boolean(aiRaw && result.source === "ai");
 
-    if (usedAiCall) {
-      await db.notification.create({
-        data: {
+    if (!usedAiCall) {
+      // Heuristic only — do not consume AI quota
+      await db.$transaction(async (tx) => {
+        await releaseLatestUsageEvent(tx, {
           userId: user.id,
-          type: "ai_career_risk",
-          title: "Career risk analysis",
-          message: `AI career risk analysis for "${jobTitle}"`,
-          actionUrl: "/career-risk",
-        },
+          kind: "ai_career_risk",
+        });
       });
     }
 
