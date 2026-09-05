@@ -7,13 +7,12 @@ import {
   buildEmployerEmailHtml,
   sendEmail,
 } from "@/lib/email";
+import { getRequestIp } from "@/lib/client-ip";
 
 const schema = z.object({
-  /** send = actually email employer; draft = only return text for user to copy */
   mode: z.enum(["send", "draft"]),
   subject: z.string().min(5).max(200).optional(),
   message: z.string().min(30).max(5000),
-  /** user must explicitly confirm before send */
   confirmSend: z.boolean().optional(),
 });
 
@@ -32,8 +31,7 @@ export async function POST(
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `contact_employer_${session.user.id}_${ip}`
     );
@@ -150,7 +148,6 @@ ${applicant.name || applicant.email}`;
       });
     }
 
-    // mode === send
     if (!employerEmail) {
       return NextResponse.json(
         {
@@ -186,7 +183,6 @@ ${applicant.name || applicant.email}`;
       );
     }
 
-    // Notify applicant in-app
     await db.notification.create({
       data: {
         userId: session.user.id,
@@ -197,7 +193,6 @@ ${applicant.name || applicant.email}`;
       },
     });
 
-    // Notify employer user if we know their user id
     const employerUserId =
       job.company?.ownerId || job.postedById || null;
     if (employerUserId) {
