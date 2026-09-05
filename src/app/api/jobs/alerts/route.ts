@@ -6,9 +6,9 @@ import {
   jobAlertCreateSchema,
   jobAlertDeleteSchema,
 } from "@/lib/validation/job-alert";
-import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
+import { assertJobAlertQuota, lockUserRow } from "@/lib/quota";
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,31 +52,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, plan: true },
-    });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const effective = await getEffectivePlan(user.id);
-    const limits = getPlanLimits(effective.plan);
-    const alertCount = await db.jobAlert.count({
-      where: { userId: user.id },
-    });
-
-    if (alertCount >= limits.maxJobAlerts) {
-      return NextResponse.json(
-        {
-          error: `Job alert limit reached (${limits.maxJobAlerts}). Upgrade your plan for more.`,
-          code: "PLAN_LIMIT_JOB_ALERTS",
-          limit: limits.maxJobAlerts,
-          used: alertCount,
-        },
-        { status: 403 }
-      );
-    }
+    const effective = await getEffectivePlan(session.user.id);
 
     const body = await req.json();
     const parsed = jobAlertCreateSchema.safeParse(body);
@@ -89,19 +65,42 @@ export async function POST(req: NextRequest) {
 
     const { keywords, location, remote, type, minSalary } = parsed.data;
 
-    const alert = await db.jobAlert.create({
-      data: {
-        userId: session.user.id,
-        keywords: keywords ?? null,
-        location: location ?? null,
-        remote: remote ?? null,
-        type: type ?? null,
-        minSalary: minSalary ?? null,
-        active: true,
-      },
-    });
+    try {
+      const alert = await db.$transaction(async (tx) => {
+        await lockUserRow(tx, session.user.id);
 
-    return NextResponse.json({ alert }, { status: 201 });
+        const quota = await assertJobAlertQuota(tx, {
+          userId: session.user.id,
+          plan: effective.plan,
+        });
+        if (!quota.ok) {
+          throw Object.assign(new Error(quota.code), {
+            status: quota.status,
+            payload: quota,
+          });
+        }
+
+        return tx.jobAlert.create({
+          data: {
+            userId: session.user.id,
+            keywords: keywords ?? null,
+            location: location ?? null,
+            remote: remote ?? null,
+            type: type ?? null,
+            minSalary: minSalary ?? null,
+            active: true,
+          },
+        });
+      });
+
+      return NextResponse.json({ alert }, { status: 201 });
+    } catch (error: unknown) {
+      const e = error as { status?: number; payload?: Record<string, unknown> };
+      if (e.status && e.payload) {
+        return NextResponse.json(e.payload, { status: e.status });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error("Create alert error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
