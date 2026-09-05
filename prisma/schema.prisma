@@ -80,6 +80,7 @@ model User {
   profile          Profile?
   blogPosts        BlogPost[]
   subscribers      Subscriber[]
+  usageEvents      UsageEvent[]
 
   @@index([email])
   @@index([role])
@@ -379,5 +380,24 @@ model AnalyticsEvent {
 
   @@index([path])
   @@index([createdAt])
+  @@index([userId])
+}
+
+// ─── Usage / Quota ledger (NOT notifications) ─────────────────
+
+model UsageEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  /// ai_resume | ai_career_risk | application | saved_job | job_alert
+  kind      String
+  /// e.g. "2026-09" for monthly windows; null for lifetime counters
+  periodKey String?
+  meta      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, createdAt])
+  @@index([userId, kind, periodKey])
   @@index([userId])
 }
