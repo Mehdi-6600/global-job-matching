@@ -33,9 +33,19 @@ function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      setError(
-        t("Auth.errors.invalidCredentials", "Invalid email or password")
-      );
+      const code = String(result.error).toLowerCase();
+      if (code.includes("rate_limited") || code.includes("ratelimit")) {
+        setError(
+          t(
+            "Auth.errors.rateLimited",
+            "Too many login attempts. Please wait a minute and try again."
+          )
+        );
+      } else {
+        setError(
+          t("Auth.errors.invalidCredentials", "Invalid email or password")
+        );
+      }
       return;
     }
 
