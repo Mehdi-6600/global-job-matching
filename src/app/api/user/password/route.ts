@@ -7,6 +7,8 @@ import {
   hashPassword,
   verifyPassword,
 } from "@/lib/password";
+import { getRequestIp } from "@/lib/client-ip";
+import { bumpSessionVersion } from "@/lib/session-version";
 
 export async function PUT(req: NextRequest) {
   const session = await auth();
@@ -15,8 +17,9 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
+    const ip = getRequestIp(req);
     const { success } = await authRatelimit.limit(
-      `change_pw_${session.user.id}`
+      `change_pw_${session.user.id}_${ip}`
     );
     if (!success) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
@@ -64,17 +67,20 @@ export async function PUT(req: NextRequest) {
     }
 
     const hashed = await hashPassword(passwordCheck.password);
-    await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        password: hashed,
-        sessionVersion: { increment: 1 },
-      },
+
+    await db.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: { password: hashed },
+      });
+      await bumpSessionVersion(session.user.id, tx);
     });
 
     return NextResponse.json({
       success: true,
-      message: "Password updated. Please sign in again on other devices.",
+      message:
+        "Password updated. Please sign in again — other sessions are now invalid.",
+      requireReauth: true,
     });
   } catch (error) {
     console.error("Change password error:", error);
