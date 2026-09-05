@@ -6,6 +6,7 @@ import { ratelimit } from "@/lib/ratelimit";
 import { buildTemplateResume, chatCompletion } from "@/lib/ai";
 import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
+import { getRequestIp } from "@/lib/client-ip";
 
 const schema = z.object({
   fullName: z.string().min(2).max(120),
@@ -29,8 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `resume_gen_${session.user.id}_${ip}`
     );
