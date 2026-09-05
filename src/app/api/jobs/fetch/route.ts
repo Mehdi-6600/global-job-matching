@@ -21,15 +21,29 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const title = searchParams.get("title") || undefined;
+    const keyword =
+      searchParams.get("keyword") ||
+      searchParams.get("title") ||
+      undefined;
     const location = searchParams.get("location") || undefined;
+    const pageParam = searchParams.get("page");
+    const perPageParam = searchParams.get("perPage");
 
-    const jobs = await fetchAllJobs({ title, location });
+    const page = pageParam ? Number(pageParam) : undefined;
+    const perPage = perPageParam ? Number(perPageParam) : undefined;
+
+    const result = await fetchAllJobs({
+      keyword,
+      location,
+      page: Number.isFinite(page) ? page : undefined,
+      perPage: Number.isFinite(perPage) ? perPage : undefined,
+    });
 
     return NextResponse.json({
       success: true,
-      count: jobs.length,
-      jobs,
+      count: result.total,
+      sources: result.sources,
+      jobs: result.jobs,
     });
   } catch (error) {
     console.error("Jobs fetch error:", error);
