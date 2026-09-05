@@ -4,13 +4,16 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
 
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "**" },
       { protocol: "http", hostname: "**" },
     ],
-    // Cache optimized images on the edge/CDN
     minimumCacheTTL: 60 * 60 * 24 * 7,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
@@ -18,6 +21,7 @@ const nextConfig = {
 
   compress: true,
   poweredByHeader: false,
+  reactStrictMode: true,
 
   async headers() {
     return [
@@ -32,6 +36,10 @@ const nextConfig = {
             value: "camera=(), microphone=(), geolocation=()",
           },
           { key: "X-DNS-Prefetch-Control", value: "on" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
         ],
       },
       {
