@@ -86,47 +86,45 @@ export async function GET(req: Request) {
     if (company) where.companyId = company;
     if (tag) where.tags = { has: tag };
 
-    // Apply salary filters (previously parsed but ignored)
     if (minSalary != null || maxSalary != null) {
-      const salaryFilter: Record<string, number> = {};
+      const salaryFilter: Record<string, unknown> = {};
       if (minSalary != null) salaryFilter.gte = minSalary;
       if (maxSalary != null) salaryFilter.lte = maxSalary;
-      // Jobs whose max salary is at least min filter, and min salary at most max filter
-      if (minSalary != null && maxSalary != null) {
-        where.AND = [
-          { OR: [{ salaryMax: { gte: minSalary } }, { salaryMin: { gte: minSalary } }] },
-          { OR: [{ salaryMin: { lte: maxSalary } }, { salaryMax: { lte: maxSalary } }] },
-        ];
-      } else if (minSalary != null) {
-        where.OR = [
-          ...(Array.isArray(where.OR) ? (where.OR as object[]) : []),
-          { salaryMax: { gte: minSalary } },
-          { salaryMin: { gte: minSalary } },
-        ];
-      } else if (maxSalary != null) {
-        where.AND = [
-          {
-            OR: [
-              { salaryMin: { lte: maxSalary } },
-              { salaryMax: { lte: maxSalary } },
-              { salaryMin: null, salaryMax: null },
-            ],
-          },
-        ];
-      }
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : []),
+        {
+          OR: [
+            { salaryMin: salaryFilter },
+            { salaryMax: salaryFilter },
+            {
+              AND: [
+                { salaryMin: { lte: maxSalary ?? 999999999 } },
+                { salaryMax: { gte: minSalary ?? 0 } },
+              ],
+            },
+          ],
+        },
+      ];
     }
 
     const [jobs, total] = await Promise.all([
       db.job.findMany({
         where,
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
         include: {
           company: {
-            select: { id: true, name: true, logo: true, location: true },
+            select: {
+              id: true,
+              name: true,
+              logo: true,
+              location: true,
+            },
           },
-          category: { select: { name: true, slug: true } },
+          category: {
+            select: { id: true, name: true, slug: true, color: true },
+          },
         },
       }),
       db.job.count({ where }),
@@ -142,14 +140,17 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error("Jobs fetch error:", error);
+    console.error("Jobs GET error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fetch jobs" },
       { status: 500 }
     );
   }
 }
 
+/**
+ * Create job — same pipeline as /api/employer/jobs (no plan bypass).
+ */
 export async function POST(req: Request) {
   try {
     const session = await auth();
