@@ -4,9 +4,9 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { normalizeLocation } from "@/lib/location";
-import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
+import { assertSavedJobQuota, lockUserRow } from "@/lib/quota";
 
 const savedJobSchema = z
   .object({
@@ -122,31 +122,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, plan: true },
-    });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const effective = await getEffectivePlan(user.id);
-    const limits = getPlanLimits(effective.plan);
-    const savedCount = await db.savedJob.count({
-      where: { userId: user.id },
-    });
-
-    if (savedCount >= limits.maxSavedJobs) {
-      return NextResponse.json(
-        {
-          error: `Saved jobs limit reached (${limits.maxSavedJobs}). Upgrade your plan for more.`,
-          code: "PLAN_LIMIT_SAVED_JOBS",
-          limit: limits.maxSavedJobs,
-          used: savedCount,
-        },
-        { status: 403 }
-      );
-    }
+    const effective = await getEffectivePlan(session.user.id);
 
     let body: unknown;
     try {
@@ -191,39 +167,65 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await db.savedJob.findUnique({
-      where: {
-        userId_jobId: {
+    try {
+      await db.$transaction(async (tx) => {
+        await lockUserRow(tx, session.user.id);
+
+        const existing = await tx.savedJob.findUnique({
+          where: {
+            userId_jobId: {
+              userId: session.user.id,
+              jobId,
+            },
+          },
+          select: { id: true },
+        });
+
+        if (existing) {
+          throw Object.assign(new Error("ALREADY_SAVED"), {
+            status: 200,
+            payload: { success: true, alreadySaved: true },
+          });
+        }
+
+        const quota = await assertSavedJobQuota(tx, {
           userId: session.user.id,
-          jobId,
-        },
-      },
-      select: { id: true },
-    });
+          plan: effective.plan,
+        });
+        if (!quota.ok) {
+          throw Object.assign(new Error(quota.code), {
+            status: quota.status,
+            payload: quota,
+          });
+        }
 
-    if (existing) {
-      return NextResponse.json({
-        success: true,
-        alreadySaved: true,
+        await tx.savedJob.create({
+          data: {
+            userId: session.user.id,
+            jobId,
+          },
+        });
       });
+    } catch (error: unknown) {
+      const e = error as {
+        status?: number;
+        payload?: Record<string, unknown>;
+        code?: string;
+      };
+      if (e.status === 200 && e.payload) {
+        return NextResponse.json(e.payload);
+      }
+      if (e.status && e.payload) {
+        return NextResponse.json(e.payload, { status: e.status });
+      }
+      if (e.code === "P2002") {
+        return NextResponse.json({ success: true, alreadySaved: true });
+      }
+      throw error;
     }
-
-    await db.savedJob.create({
-      data: {
-        userId: session.user.id,
-        jobId,
-      },
-    });
 
     return NextResponse.json({ success: true }, { status: 201 });
-  } catch (error: unknown) {
-    const err = error as { code?: string };
-    if (err.code === "P2002") {
-      return NextResponse.json({
-        success: true,
-        alreadySaved: true,
-      });
-    }
+  } catch (error) {
     console.error("Save job error:", error);
     return NextResponse.json(
       { error: "Failed to save job" },
