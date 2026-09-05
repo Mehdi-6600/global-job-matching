@@ -4,9 +4,12 @@ import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { applicationCreateSchema } from "@/lib/validation/application";
 import { normalizeLocation } from "@/lib/location";
-import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
+import {
+  assertApplicationQuota,
+  lockUserRow,
+} from "@/lib/quota";
 
 export async function GET(req: NextRequest) {
   try {
@@ -90,9 +93,7 @@ export async function GET(req: NextRequest) {
             deadline: application.job.deadline,
             company: application.job.company
               ? {
-                  id: application.job.company.id,
-                  name: application.job.company.name,
-                  logo: application.job.company.logo,
+                  ...application.job.company,
                   location:
                     normalizeLocation(application.job.company.location) ||
                     application.job.company.location,
@@ -146,29 +147,6 @@ export async function POST(req: NextRequest) {
     }
 
     const effective = await getEffectivePlan(user.id);
-    const limits = getPlanLimits(effective.plan);
-    const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
-
-    const appsThisMonth = await db.application.count({
-      where: {
-        userId: user.id,
-        createdAt: { gte: monthStart },
-      },
-    });
-
-    if (appsThisMonth >= limits.maxApplicationsPerMonth) {
-      return NextResponse.json(
-        {
-          error: `Monthly application limit reached (${limits.maxApplicationsPerMonth}). Upgrade your plan for more.`,
-          code: "PLAN_LIMIT_APPLICATIONS",
-          limit: limits.maxApplicationsPerMonth,
-          used: appsThisMonth,
-        },
-        { status: 403 }
-      );
-    }
 
     let body: unknown;
     try {
@@ -220,79 +198,103 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await db.application.findUnique({
-      where: {
-        userId_jobId: {
-          userId: session.user.id,
-          jobId,
-        },
-      },
-      select: { id: true },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "You have already applied for this job." },
-        { status: 409 }
-      );
-    }
-
     const applicantName = user.name || user.email || "A candidate";
     const companyName = job.company?.name;
     const notifyUserId = job.company?.ownerId || job.postedById;
 
-    const result = await db.$transaction(async (tx) => {
-      const application = await tx.application.create({
-        data: {
-          userId: session.user.id,
-          jobId,
-          coverLetter: coverLetter?.trim() || null,
-          status: "pending",
-        },
-        select: {
-          id: true,
-          userId: true,
-          jobId: true,
-          status: true,
-          coverLetter: true,
-          resume: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+    try {
+      const result = await db.$transaction(async (tx) => {
+        await lockUserRow(tx, session.user.id);
 
-      if (notifyUserId && notifyUserId !== session.user.id) {
-        await tx.notification.create({
+        const quota = await assertApplicationQuota(tx, {
+          userId: session.user.id,
+          plan: effective.plan,
+        });
+        if (!quota.ok) {
+          throw Object.assign(new Error(quota.code), {
+            status: quota.status,
+            payload: quota,
+          });
+        }
+
+        const existing = await tx.application.findUnique({
+          where: {
+            userId_jobId: {
+              userId: session.user.id,
+              jobId,
+            },
+          },
+          select: { id: true },
+        });
+
+        if (existing) {
+          throw Object.assign(new Error("ALREADY_APPLIED"), {
+            status: 409,
+            payload: { error: "You have already applied for this job." },
+          });
+        }
+
+        const application = await tx.application.create({
           data: {
-            userId: notifyUserId,
-            type: "application",
-            title: "New application received",
-            message: `${applicantName} applied for "${job.title}"${
-              companyName ? ` at ${companyName}` : ""
-            }.`,
-            actionUrl: "/employer/applications",
+            userId: session.user.id,
+            jobId,
+            coverLetter: coverLetter?.trim() || null,
+            status: "pending",
+          },
+          select: {
+            id: true,
+            userId: true,
+            jobId: true,
+            status: true,
+            coverLetter: true,
+            resume: true,
+            createdAt: true,
+            updatedAt: true,
           },
         });
-      }
 
-      return application;
-    });
+        if (notifyUserId && notifyUserId !== session.user.id) {
+          await tx.notification.create({
+            data: {
+              userId: notifyUserId,
+              type: "application",
+              title: "New application received",
+              message: `${applicantName} applied for "${job.title}"${
+                companyName ? ` at ${companyName}` : ""
+              }.`,
+              actionUrl: "/employer/applications",
+            },
+          });
+        }
 
-    return NextResponse.json(
-      { success: true, application: result },
-      { status: 201 }
-    );
-  } catch (error: unknown) {
-    const err = error as { code?: string };
-    if (err.code === "P2002") {
+        return application;
+      });
+
       return NextResponse.json(
-        { error: "You have already applied for this job." },
-        { status: 409 }
+        { success: true, application: result },
+        { status: 201 }
       );
+    } catch (error: unknown) {
+      const e = error as {
+        status?: number;
+        payload?: Record<string, unknown>;
+        code?: string;
+      };
+      if (e.status && e.payload) {
+        return NextResponse.json(e.payload, { status: e.status });
+      }
+      if (e.code === "P2002") {
+        return NextResponse.json(
+          { error: "You have already applied for this job." },
+          { status: 409 }
+        );
+      }
+      throw error;
     }
-    console.error("Application error:", error);
+  } catch (error) {
+    console.error("Application create error:", error);
     return NextResponse.json(
-      { error: "Failed to submit application." },
+      { error: "Failed to submit application" },
       { status: 500 }
     );
   }
