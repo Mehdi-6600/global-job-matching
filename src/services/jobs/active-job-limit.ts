@@ -51,7 +51,7 @@ export async function assertCanCreateOrActivateJob(
     }
 > {
   const limit = getEmployerActiveJobLimit(params.plan);
-  let used = await countActiveJobsForUser(tx, params.userId);
+  const used = await countActiveJobsForUser(tx, params.userId);
 
   if (params.excludeJobId) {
     const self = await tx.job.findFirst({
@@ -65,7 +65,6 @@ export async function assertCanCreateOrActivateJob(
       },
       select: { id: true },
     });
-    // already active → reactivation is a no-op for quota
     if (self) {
       return null;
     }
