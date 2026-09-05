@@ -4,6 +4,7 @@ import { authRatelimit } from "@/lib/ratelimit";
 import { validatePassword, hashPassword } from "@/lib/password";
 import { consumePasswordResetToken } from "@/lib/auth/tokens";
 import { getRequestIp } from "@/lib/client-ip";
+import { bumpSessionVersionByEmail } from "@/lib/session-version";
 
 /**
  * Confirm password reset with token + new password.
@@ -48,9 +49,11 @@ export async function POST(req: NextRequest) {
         where: { email: consumed.email },
         data: {
           password: hashed,
-          sessionVersion: { increment: 1 },
         },
       });
+
+      await bumpSessionVersionByEmail(consumed.email, tx);
+
       await tx.passwordResetToken.updateMany({
         where: {
           email: consumed.email,
