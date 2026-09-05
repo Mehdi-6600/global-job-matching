@@ -42,45 +42,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const generic = {
-      message: "If this email exists, a reset link has been sent.",
-    };
-
+    // Always return success to avoid email enumeration
     const user = await db.user.findUnique({
       where: { email },
       select: { id: true, email: true, name: true, password: true },
     });
 
-    if (!user || !user.password) {
-      return NextResponse.json(generic, { status: 200 });
-    }
-
-    const { resetUrl } = await issuePasswordResetToken(user.email);
-
-    if (resend && process.env.RESEND_FROM_EMAIL) {
+    if (user?.password) {
       try {
-        await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL,
-          to: user.email,
-          subject: "Reset your password — Global Job Matching",
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color:#4f46e5;">Password reset</h2>
-              <p>Hello ${user.name || "there"},</p>
-              <p>Click the button below to set a new password. This link expires in 1 hour.</p>
-              <p><a href="${resetUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;">Reset password</a></p>
-              <p style="color:#666;font-size:13px;">If you did not request this, ignore this email.</p>
-            </div>
-          `,
-        });
+        const { resetUrl } = await issuePasswordResetToken(email);
+        if (resend) {
+          await resend.emails.send({
+            from:
+              process.env.EMAIL_FROM ||
+              process.env.RESEND_FROM_EMAIL ||
+              "Global Job Matching <onboarding@resend.dev>",
+            to: email,
+            subject: "Reset your password",
+            html: `<p>Hi ${user.name || "there"},</p>
+<p>Reset your password using this link (valid for a limited time):</p>
+<p><a href="${resetUrl}">${resetUrl}</a></p>
+<p>If you did not request this, ignore this email.</p>`,
+          });
+        } else {
+          console.info("[forgot-password] Resend not configured. resetUrl:", resetUrl);
+        }
       } catch (err) {
-        console.error("Forgot password email failed:", err);
+        console.error("Forgot password email error:", err);
       }
-    } else if (process.env.NODE_ENV !== "production") {
-      console.log("[dev] password reset URL:", resetUrl);
     }
 
-    return NextResponse.json(generic, { status: 200 });
+    return NextResponse.json({
+      success: true,
+      message:
+        "If an account exists for that email, a reset link has been sent.",
+    });
   } catch (error) {
     console.error("Forgot password error:", error);
     return NextResponse.json(
