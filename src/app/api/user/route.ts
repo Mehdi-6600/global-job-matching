@@ -3,12 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { userUpdateSchema } from "@/lib/validation/user";
-
-function getClientIp(req: NextRequest) {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
-  );
-}
+import { getRequestIp } from "@/lib/client-ip";
 
 export async function GET() {
   try {
@@ -72,7 +67,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `user_update_${session.user.id}_${ip}`
     );
