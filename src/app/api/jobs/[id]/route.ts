@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
-import { jobUpdateSchema } from "@/lib/validation/job";
 import { jobIdSchema } from "@/lib/validation/job-id";
 import { ratelimit } from "@/lib/ratelimit";
-import {
-  assertCanCreateOrActivateJob,
-  lockUserRow,
-} from "@/services/jobs/active-job-limit";
 import { getRequestIp } from "@/lib/client-ip";
+import {
+  updateJobForUser,
+  deleteJobForUser,
+} from "@/services/jobs/update-job";
 
 export async function GET(
   req: NextRequest,
@@ -25,7 +23,6 @@ export async function GET(
     const id = parsedId.data;
 
     const ip = getRequestIp(req);
-
     const { success } = await ratelimit.limit(`job_get_${id}_${ip}`);
     if (!success) {
       return NextResponse.json(
@@ -95,9 +92,6 @@ export async function GET(
                 updated.company.location,
             }
           : null,
-        postedBy: updated.postedBy
-          ? { id: updated.postedBy.id, name: updated.postedBy.name }
-          : null,
       },
     });
   } catch (error) {
@@ -126,23 +120,6 @@ export async function PATCH(
     }
     const id = parsedId.data;
 
-    const existing = await db.job.findUnique({
-      where: { id },
-      include: { company: { select: { ownerId: true } } },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    const isOwner = existing.company?.ownerId === session.user.id;
-    const isPoster = existing.postedById === session.user.id;
-    const isAdmin = isAdminRole(session.user.role);
-
-    if (!isOwner && !isPoster && !isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     let body: unknown;
     try {
       body = await req.json();
@@ -150,83 +127,34 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const parsed = jobUpdateSchema.safeParse(body);
-    if (!parsed.success) {
+    const result = await updateJobForUser(
+      { id: session.user.id, role: session.user.role },
+      id,
+      body
+    );
+
+    if (!result.ok) {
       return NextResponse.json(
         {
-          error: "Invalid input",
-          details: parsed.error.flatten().fieldErrors,
+          error: result.error,
+          code: result.code,
+          details: result.details,
+          limit: result.limit,
+          used: result.used,
         },
-        { status: 400 }
+        { status: result.status }
       );
     }
-
-    const data = {
-      ...parsed.data,
-      location:
-        parsed.data.location !== undefined
-          ? normalizeLocation(parsed.data.location) ||
-            parsed.data.location.trim()
-          : undefined,
-    };
-
-    const becomingActive =
-      data.status === "active" && existing.status !== "active";
-
-    const updated = await db.$transaction(async (tx) => {
-      if (becomingActive && !isAdmin) {
-        const ownerId =
-          existing.company?.ownerId || existing.postedById || session.user.id;
-
-        await lockUserRow(tx, ownerId);
-
-        const owner = await tx.user.findUnique({
-          where: { id: ownerId },
-          select: { plan: true },
-        });
-
-        const limitError = await assertCanCreateOrActivateJob(tx, {
-          userId: ownerId,
-          plan: owner?.plan,
-          excludeJobId: id,
-        });
-
-        if (limitError) {
-          throw Object.assign(new Error(limitError.code), {
-            status: 403,
-            payload: limitError,
-          });
-        }
-      }
-
-      return tx.job.update({
-        where: { id },
-        data,
-      });
-    });
 
     return NextResponse.json({
       success: true,
       job: {
-        ...updated,
-        location: normalizeLocation(updated.location) || updated.location,
+        ...result.job,
+        location:
+          normalizeLocation(result.job.location) || result.job.location,
       },
     });
-  } catch (error: unknown) {
-    const e = error as {
-      status?: number;
-      payload?: {
-        error: string;
-        code?: string;
-        limit?: number;
-        used?: number;
-      };
-    };
-
-    if (e?.status === 403 && e.payload) {
-      return NextResponse.json(e.payload, { status: 403 });
-    }
-
+  } catch (error) {
     console.error("Job PATCH error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
@@ -252,24 +180,17 @@ export async function DELETE(
     }
     const id = parsedId.data;
 
-    const job = await db.job.findUnique({
-      where: { id },
-      include: { company: { select: { ownerId: true } } },
-    });
+    const result = await deleteJobForUser(
+      { id: session.user.id, role: session.user.role },
+      id
+    );
 
-    if (!job) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.status }
+      );
     }
-
-    const isOwner = job.company?.ownerId === session.user.id;
-    const isPoster = job.postedById === session.user.id;
-    const isAdmin = isAdminRole(session.user.role);
-
-    if (!isOwner && !isPoster && !isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    await db.job.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
