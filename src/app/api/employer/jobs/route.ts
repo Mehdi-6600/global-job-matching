@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
       include: {
-        company: { select: { id: true, name: true } },
+        company: { select: { id: true, name: true, logo: true } },
         _count: { select: { applications: true } },
       },
     });
@@ -51,23 +51,20 @@ export async function GET(req: NextRequest) {
       jobs: jobs.map((j) => ({
         ...j,
         location: normalizeLocation(j.location) || j.location,
-        applicantCount: j._count.applications,
         applicationCount: j._count.applications,
       })),
-      plan: {
-        name: effective.plan,
-        expiresAt: effective.planExpiresAt,
-        billingCycle: effective.billingCycle,
-        expired: effective.expired,
-        maxActiveJobsEmployer: maxActive,
+      plan: effective.plan,
+      limits: {
+        maxActiveJobs: maxActive,
         activeJobs: activeCount,
-        remaining: Math.max(0, maxActive - activeCount),
-        atLimit: activeCount >= maxActive,
       },
     });
   } catch (error) {
     console.error("Employer jobs GET error:", error);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch jobs" },
+      { status: 500 }
+    );
   }
 }
 
