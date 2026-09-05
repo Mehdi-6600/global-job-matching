@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/roles";
 import { ratelimit } from "@/lib/ratelimit";
 import { fetchAllJobs } from "@/lib/jobs/fetcher";
+import { getRequestIp } from "@/lib/client-ip";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,9 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "unknown";
+    const ip = getRequestIp(request);
     const { success } = await ratelimit.limit(
       `jobs_fetch_admin_${session.user.id}_${ip}`
     );
@@ -25,28 +24,18 @@ export async function GET(request: NextRequest) {
     const title = searchParams.get("title") || undefined;
     const location = searchParams.get("location") || undefined;
 
-    const { jobs } = await fetchAllJobs({ page: 1, perPage: 100 });
-
-    let filtered = jobs;
-    if (title) {
-      const t = title.toLowerCase();
-      filtered = filtered.filter((j) => j.title.toLowerCase().includes(t));
-    }
-    if (location) {
-      const l = location.toLowerCase();
-      filtered = filtered.filter((j) =>
-        j.location.toLowerCase().includes(l)
-      );
-    }
+    const jobs = await fetchAllJobs({ title, location });
 
     return NextResponse.json({
-      jobs: filtered,
-      total: filtered.length,
+      success: true,
+      count: jobs.length,
+      jobs,
     });
-  } catch (error: unknown) {
-    console.error("Fetch jobs error:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch jobs";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    console.error("Jobs fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch external jobs" },
+      { status: 500 }
+    );
   }
 }
