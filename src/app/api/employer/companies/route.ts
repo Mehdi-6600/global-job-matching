@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/roles";
 import { ratelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,15 +13,18 @@ export async function GET(req: NextRequest) {
     }
 
     const role = (session.user.role as string) || "jobseeker";
-    if (role !== ROLES.EMPLOYER && role !== ROLES.ADMIN && role !== ROLES.OWNER) {
+    if (
+      role !== ROLES.EMPLOYER &&
+      role !== ROLES.ADMIN &&
+      role !== ROLES.OWNER
+    ) {
       return NextResponse.json(
         { error: "Only employers can access this." },
         { status: 403 }
       );
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `employer_companies_${session.user.id}_${ip}`
     );
@@ -44,7 +48,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ companies, count: companies.length });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Employer companies error:", error);
     return NextResponse.json(
       { error: "Failed to fetch companies" },
