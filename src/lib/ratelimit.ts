@@ -57,6 +57,7 @@ function createMemoryLimiter(
 const memoryGeneral = createMemoryLimiter(10, 60_000);
 const memoryAuth = createMemoryLimiter(5, 60_000);
 const memoryEmail = createMemoryLimiter(2, 60 * 60_000);
+const memoryLogin = createMemoryLimiter(8, 60_000);
 
 if (!redis && process.env.NODE_ENV === "production") {
   console.warn(
@@ -73,6 +74,7 @@ export const ratelimit = redis
     })
   : memoryGeneral;
 
+/** Auth-sensitive actions: register, change password, reset, login */
 export const authRatelimit = redis
   ? new Ratelimit({
       redis,
@@ -81,6 +83,16 @@ export const authRatelimit = redis
       prefix: "rl_auth",
     })
   : memoryAuth;
+
+/** Stricter login attempts (also used as email-scoped key) */
+export const loginRatelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(8, "1 m"),
+      analytics: true,
+      prefix: "rl_login",
+    })
+  : memoryLogin;
 
 export const emailRatelimit = redis
   ? new Ratelimit({
