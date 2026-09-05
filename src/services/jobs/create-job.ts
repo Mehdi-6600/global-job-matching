@@ -112,6 +112,19 @@ export async function createJobForUser(
         });
       }
 
+      if (data.categoryId) {
+        const cat = await tx.category.findUnique({
+          where: { id: data.categoryId },
+          select: { id: true },
+        });
+        if (!cat) {
+          throw Object.assign(new Error("Category not found"), {
+            status: 400,
+            payload: { error: "Category not found" },
+          });
+        }
+      }
+
       const location =
         normalizeLocation(data.location) || data.location.trim();
 
@@ -126,11 +139,13 @@ export async function createJobForUser(
           salaryMin: data.salaryMin ?? null,
           salaryMax: data.salaryMax ?? null,
           currency: data.currency || "USD",
+          salary: data.salary ?? null,
           requirements: data.requirements ?? [],
           responsibilities: data.responsibilities ?? [],
           benefits: data.benefits ?? [],
           tags: data.tags ?? [],
           deadline: data.deadline ? new Date(data.deadline) : null,
+          categoryId: data.categoryId ?? null,
           status: "active",
           companyId: companyResult.companyId,
           postedById: actor.id,
@@ -152,12 +167,31 @@ export async function createJobForUser(
   } catch (err: unknown) {
     const e = err as {
       status?: number;
-      payload?: Extract<CreateJobResult, { ok: false }>;
+      payload?: Extract<CreateJobResult, { ok: false }> | {
+        error?: string;
+        code?: string;
+        limit?: number;
+        used?: number;
+        status?: number;
+      };
       message?: string;
     };
 
-    if (e?.payload && e.payload.ok === false) {
-      return e.payload;
+    if (e?.payload && typeof e.payload === "object") {
+      const p = e.payload as Record<string, unknown>;
+      if (p.ok === false) {
+        return e.payload as Extract<CreateJobResult, { ok: false }>;
+      }
+      if (typeof p.error === "string") {
+        return {
+          ok: false,
+          status: (e.status as number) || 400,
+          error: p.error as string,
+          code: p.code as string | undefined,
+          limit: p.limit as number | undefined,
+          used: p.used as number | undefined,
+        };
+      }
     }
 
     if (e?.status === 404) {
