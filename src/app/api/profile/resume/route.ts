@@ -2,14 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
 
 const MAX_SIZE = 5 * 1024 * 1024;
-
-function getClientIp(req: NextRequest) {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
-  );
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `resume_upload_${session.user.id}_${ip}`
     );
@@ -81,7 +76,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `resume_delete_${session.user.id}_${ip}`
     );
