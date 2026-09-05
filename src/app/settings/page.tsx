@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   Save,
   Trash2,
-  Download,
   ExternalLink,
 } from "lucide-react";
 
@@ -33,6 +32,11 @@ interface Profile {
   resumeUrl: string | null;
 }
 
+function isHttpUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return /^https?:\/\//i.test(value);
+}
+
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,6 +44,7 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeMessage, setResumeMessage] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -110,11 +115,11 @@ export default function SettingsPage() {
     }
   };
 
-  async function handleResumeUpload(e: React.FormEvent<HTMLFormElement>) {
+  const handleResumeUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setResumeUploading(true);
+    setResumeMessage("");
     setError("");
-    setSuccess(false);
+    setResumeUploading(true);
 
     try {
       const formData = new FormData(e.currentTarget);
@@ -122,68 +127,70 @@ export default function SettingsPage() {
         method: "POST",
         body: formData,
       });
-
       const data = await res.json();
+
       if (!res.ok) {
-        setError(data.error || "Upload failed");
-      } else {
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                resumeUrl: data.resumeUrl || data.filename,
-              }
-            : prev
+        setError(
+          data.error ||
+            (data.code === "STORAGE_NOT_CONFIGURED"
+              ? "Cloud storage is not configured on the server."
+              : "Upload failed")
         );
-        setSuccess(true);
-        e.currentTarget.reset();
+        setResumeUploading(false);
+        return;
       }
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              resumeUrl: data.resumeUrl || null,
+            }
+          : prev
+      );
+      setResumeMessage(data.message || "Resume uploaded");
+      e.currentTarget.reset();
     } catch {
-      setError("Upload failed");
+      setError("Network error while uploading resume");
     } finally {
       setResumeUploading(false);
     }
-  }
+  };
 
-  async function handleResumeDelete() {
+  const handleResumeDelete = async () => {
     if (!confirm("Remove your resume?")) return;
+    setError("");
+    setResumeMessage("");
 
     try {
       const res = await fetch("/api/profile/resume", { method: "DELETE" });
       if (res.ok) {
         setProfile((prev) => (prev ? { ...prev, resumeUrl: null } : prev));
-        setSuccess(true);
+        setResumeMessage("Resume removed");
       } else {
-        setError("Failed to remove resume");
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Failed to remove resume");
       }
     } catch {
-      setError("Failed to remove resume");
+      setError("Network error");
     }
-  }
-
-  const resumeIsUrl = !!profile?.resumeUrl?.startsWith("http");
+  };
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading settings...</p>
-        </div>
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
       </main>
     );
   }
 
-  if (error && !profile) {
+  if (!profile) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="text-red-400 font-medium mb-4">{error}</p>
-          <Link
-            href="/login?callbackUrl=/settings"
-            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium"
-          >
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
+          <p className="text-slate-300">{error || "Profile not found"}</p>
+          <Link href="/login" className="text-cyan-400 hover:underline text-sm">
             Sign in
           </Link>
         </div>
@@ -191,159 +198,155 @@ export default function SettingsPage() {
     );
   }
 
-  return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
+  const resumeIsUrl = isHttpUrl(profile.resumeUrl);
 
-        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center">
-              <Settings className="w-5 h-5 text-cyan-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Profile Settings</h1>
-              <p className="text-slate-400 text-sm">
-                Update your personal information
-              </p>
-            </div>
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 px-4">
+      <div className="max-w-2xl mx-auto space-y-8">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Settings className="w-6 h-6 text-cyan-400" />
+              Settings
+            </h1>
+            <p className="text-slate-400 text-sm">Manage your profile and resume</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            Profile saved
+          </div>
+        )}
+        {resumeMessage && (
+          <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            {resumeMessage}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-3xl p-6 sm:p-8 bg-white/5 border border-white/10 space-y-5"
+        >
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <User className="w-5 h-5 text-cyan-400" />
+            Profile
+          </h2>
+
+          <div>
+            <label className="block text-sm text-slate-300 mb-1.5">
+              <Mail className="w-3.5 h-3.5 inline mr-1" />
+              Email
+            </label>
+            <input
+              type="email"
+              value={profile.email || ""}
+              disabled
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-slate-400"
+            />
           </div>
 
-          {success && (
-            <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              Saved successfully!
-            </div>
-          )}
+          <div>
+            <label className="block text-sm text-slate-300 mb-1.5">Name</label>
+            <input
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
+            />
+          </div>
 
-          {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {error}
-            </div>
-          )}
+          <div>
+            <label className="block text-sm text-slate-300 mb-1.5">
+              <Briefcase className="w-3.5 h-3.5 inline mr-1" />
+              Title / Skills headline
+            </label>
+            <input
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
+            />
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm text-slate-300 mb-1.5">Bio</label>
+            <textarea
+              name="bio"
+              rows={4}
+              value={form.bio}
+              onChange={handleChange}
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none resize-y"
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <Mail className="w-3.5 h-3.5 inline mr-1" />
-                Email
-              </label>
-              <input
-                type="email"
-                value={profile?.email || ""}
-                disabled
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-slate-400 text-sm cursor-not-allowed"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <User className="w-3.5 h-3.5 inline mr-1" />
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                required
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <Briefcase className="w-3.5 h-3.5 inline mr-1" />
-                Job Title
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="e.g. Senior Developer"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm text-slate-300 mb-1.5">
                 <MapPin className="w-3.5 h-3.5 inline mr-1" />
                 Location
               </label>
               <input
-                type="text"
                 name="location"
                 value={form.location}
                 onChange={handleChange}
-                placeholder="e.g. Berlin, Germany"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+                className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm text-slate-300 mb-1.5">
                 <Phone className="w-3.5 h-3.5 inline mr-1" />
                 Phone
               </label>
               <input
-                type="tel"
                 name="phone"
                 value={form.phone}
                 onChange={handleChange}
-                placeholder="+1 234 567 890"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+                className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <FileText className="w-3.5 h-3.5 inline mr-1" />
-                Bio
-              </label>
-              <textarea
-                name="bio"
-                value={form.bio}
-                onChange={handleChange}
-                placeholder="Tell us about yourself..."
-                rows={4}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600 resize-none"
-              />
-            </div>
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-500 text-white font-semibold hover:bg-cyan-400 disabled:opacity-60"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Save profile
+              </>
+            )}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl text-sm font-semibold shadow-lg shadow-cyan-500/25 disabled:opacity-60"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-
-        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10 mt-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-cyan-400" /> Resume / CV
+        <section className="rounded-3xl p-6 sm:p-8 bg-white/5 border border-white/10 space-y-4">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-cyan-400" />
+            Resume (PDF)
           </h2>
 
-          {profile?.resumeUrl ? (
+          {profile.resumeUrl ? (
             <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
               <FileText className="w-8 h-8 text-cyan-400 shrink-0" />
               <div className="flex-1 min-w-0">
@@ -353,7 +356,7 @@ export default function SettingsPage() {
                 <p className="text-slate-500 text-xs">
                   {resumeIsUrl
                     ? "Stored in cloud storage"
-                    : "Filename saved (enable Blob for full file storage)"}
+                    : "Legacy filename only — re-upload to store the real PDF"}
                 </p>
               </div>
               {resumeIsUrl && (
@@ -399,15 +402,36 @@ export default function SettingsPage() {
                     Uploading...
                   </>
                 ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Upload Resume
-                  </>
+                  "Upload resume"
                 )}
               </button>
             </form>
           )}
-        </div>
+
+          {profile.resumeUrl && (
+            <form onSubmit={handleResumeUpload} className="pt-2">
+              <label className="block text-xs text-slate-400 mb-2">
+                Replace with a new PDF
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="file"
+                  name="resume"
+                  accept=".pdf,application/pdf"
+                  required
+                  className="flex-1 text-sm text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300"
+                />
+                <button
+                  type="submit"
+                  disabled={resumeUploading}
+                  className="px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-200 text-sm font-medium hover:bg-cyan-500/30 disabled:opacity-60"
+                >
+                  {resumeUploading ? "Uploading..." : "Replace"}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
       </div>
     </main>
   );
