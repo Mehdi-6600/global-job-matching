@@ -9,12 +9,15 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:validate": "prisma validate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:checksums": "node scripts/print-migration-checksums.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
