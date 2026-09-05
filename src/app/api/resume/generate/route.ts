@@ -4,9 +4,13 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { ratelimit } from "@/lib/ratelimit";
 import { buildTemplateResume, chatCompletion } from "@/lib/ai";
-import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
+import {
+  assertAndReserveAiUsage,
+  lockUserRow,
+  releaseLatestUsageEvent,
+} from "@/lib/quota";
 
 const schema = z.object({
   fullName: z.string().min(2).max(120),
@@ -50,30 +54,6 @@ export async function POST(req: NextRequest) {
     }
 
     const effective = await getEffectivePlan(user.id);
-    const limits = getPlanLimits(effective.plan);
-    const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
-
-    const usedAi = await db.notification.count({
-      where: {
-        userId: user.id,
-        type: "ai_resume",
-        createdAt: { gte: monthStart },
-      },
-    });
-
-    if (usedAi >= limits.maxAiGenerationsPerMonth) {
-      return NextResponse.json(
-        {
-          error: `AI resume limit reached this month (${limits.maxAiGenerationsPerMonth}). Upgrade your plan for more.`,
-          code: "PLAN_LIMIT_AI",
-          limit: limits.maxAiGenerationsPerMonth,
-          used: usedAi,
-        },
-        { status: 403 }
-      );
-    }
 
     const body = await req.json();
     const parsed = schema.safeParse(body);
@@ -89,6 +69,10 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
     const tone = data.tone || "professional";
+
+    // Reserve AI quota only if we will call the model path;
+    // template fallback does not consume quota.
+    let reserved = false;
 
     const systemPrompt = `You are an expert resume writer for international job seekers.
 Write a clean, ATS-friendly resume in English (plain text, no markdown tables).
@@ -115,6 +99,30 @@ Experience: ${data.experience || "n/a"}
 Education: ${data.education || "n/a"}
 Languages: ${data.languages || "n/a"}`;
 
+    // Reserve slot before calling AI (race-safe)
+    const reserveResult = await db.$transaction(async (tx) => {
+      await lockUserRow(tx, user.id);
+      return assertAndReserveAiUsage(tx, {
+        userId: user.id,
+        plan: effective.plan,
+        kind: "ai_resume",
+        meta: data.targetRole || data.fullName,
+      });
+    });
+
+    if (!reserveResult.ok) {
+      return NextResponse.json(
+        {
+          error: reserveResult.error,
+          code: reserveResult.code,
+          limit: reserveResult.limit,
+          used: reserveResult.used,
+        },
+        { status: 403 }
+      );
+    }
+    reserved = true;
+
     let resumeText = await chatCompletion(
       [
         { role: "system", content: systemPrompt },
@@ -126,6 +134,16 @@ Languages: ${data.languages || "n/a"}`;
     let source: "ai" | "template" = "ai";
     if (!resumeText) {
       source = "template";
+      // AI failed / no key — release reserved quota
+      if (reserved) {
+        await db.$transaction(async (tx) => {
+          await releaseLatestUsageEvent(tx, {
+            userId: user.id,
+            kind: "ai_resume",
+          });
+        });
+        reserved = false;
+      }
       resumeText = buildTemplateResume({
         fullName: data.fullName,
         email: data.email || undefined,
@@ -137,18 +155,6 @@ Languages: ${data.languages || "n/a"}`;
         experience: data.experience || undefined,
         education: data.education || undefined,
         languages: data.languages || undefined,
-      });
-    }
-
-    if (source === "ai") {
-      await db.notification.create({
-        data: {
-          userId: user.id,
-          type: "ai_resume",
-          title: "AI resume generated",
-          message: "Your AI resume was generated successfully.",
-          actionUrl: "/resume-builder",
-        },
       });
     }
 
