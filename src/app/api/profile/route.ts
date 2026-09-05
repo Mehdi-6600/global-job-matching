@@ -3,12 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { profileUpdateSchema } from "@/lib/validation/profile";
-
-function getClientIp(req: NextRequest) {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
-  );
-}
+import { getRequestIp } from "@/lib/client-ip";
 
 function mapProfile(user: {
   id: string;
@@ -98,7 +93,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip = getClientIp(req);
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `profile_update_${session.user.id}_${ip}`
     );
