@@ -6,6 +6,7 @@ import { ratelimit } from "@/lib/ratelimit";
 import { normalizeLocation } from "@/lib/location";
 import { getPlanLimits } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
+import { getRequestIp } from "@/lib/client-ip";
 
 const savedJobSchema = z
   .object({
@@ -20,8 +21,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `savedjobs_get_${session.user.id}_${ip}`
     );
@@ -114,8 +114,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `savedjobs_post_${session.user.id}_${ip}`
     );
@@ -240,8 +239,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
       `savedjobs_delete_${session.user.id}_${ip}`
     );
