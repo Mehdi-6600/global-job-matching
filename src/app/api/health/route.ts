@@ -13,7 +13,6 @@ export async function GET() {
 
   try {
     const t0 = Date.now();
-    // Lightweight connectivity check
     await db.$queryRaw`SELECT 1`;
     dbMs = Date.now() - t0;
   } catch (err) {
@@ -38,6 +37,7 @@ export async function GET() {
     },
     latencyMs: totalMs,
     version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
+    region: process.env.VERCEL_REGION || null,
   };
 
   return NextResponse.json(body, {
