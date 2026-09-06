@@ -24,6 +24,10 @@ export function isAdminRole(role: string | undefined | null): boolean {
   return role === ROLES.ADMIN || role === ROLES.OWNER;
 }
 
+export function isOwnerRole(role: string | undefined | null): boolean {
+  return role === ROLES.OWNER;
+}
+
 export function isJobSeekerRole(role: string | undefined | null): boolean {
   return role === ROLES.JOB_SEEKER;
 }
