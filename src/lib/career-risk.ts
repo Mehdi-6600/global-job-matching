@@ -1,133 +1,193 @@
-export type RiskLevel = "low" | "medium" | "high";
+import type {
+  CareerRiskAnalysis,
+  CareerRiskLevel,
+  CareerRiskSource,
+} from "@/types/career-risk";
 
-export type CareerRiskResult = {
-  jobTitle: string;
-  riskScore: number;
-  riskLevel: RiskLevel;
-  summary: string;
-  reasons: string[];
-  skillsToBuild: string[];
-  alternatives: string[];
-  source: "ai" | "heuristic";
-};
+export type { CareerRiskAnalysis, CareerRiskLevel, CareerRiskSource };
+export {
+  CAREER_RISK_DISCLAIMER_EN,
+  CAREER_RISK_DISCLAIMER_FA,
+  careerRiskRequestSchema,
+} from "@/types/career-risk";
+
+export function isPaidPlan(plan: string | null | undefined): boolean {
+  const p = String(plan || "free").toLowerCase();
+  return p === "pro" || p === "business" || p === "enterprise";
+}
 
 function clampScore(n: number): number {
   if (!Number.isFinite(n)) return 50;
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-function levelFromScore(score: number): RiskLevel {
-  if (score >= 70) return "high";
-  if (score >= 40) return "medium";
-  return "low";
+function asStringArray(value: unknown, max = 12): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((v) => String(v ?? "").trim())
+    .filter((s) => s.length > 0)
+    .slice(0, max);
 }
 
-/** Offline heuristic when AI is unavailable */
-export function heuristicCareerRisk(
-  jobTitle: string,
-  skills?: string
-): CareerRiskResult {
-  const t = `${jobTitle} ${skills || ""}`.toLowerCase();
-
-  const highHints = [
-    "data entry",
-    "cashier",
-    "telemarketing",
-    "transcription",
-    "bookkeeping",
-    "receptionist",
-    "driver",
-    "assembly",
-    "call center",
-    "proofreader",
-  ];
-  const lowHints = [
-    "nurse",
-    "doctor",
-    "electrician",
-    "plumber",
-    "teacher",
-    "therapist",
-    "manager",
-    "engineer",
-    "designer",
-    "sales",
-    "lawyer",
-    "chef",
-  ];
-
-  let score = 55;
-  if (highHints.some((h) => t.includes(h))) score = 78;
-  if (lowHints.some((h) => t.includes(h))) score = 28;
-  if (t.includes("ai") || t.includes("machine learning")) score = 25;
-  if (t.includes("software") || t.includes("developer")) score = 45;
-
-  const riskLevel = levelFromScore(score);
-
-  return {
-    jobTitle,
-    riskScore: score,
-    riskLevel,
-    summary:
-      riskLevel === "high"
-        ? "This role has relatively high exposure to automation and AI tools over the next 5–10 years. Upskilling toward human-centered and technical hybrid skills is recommended."
-        : riskLevel === "medium"
-          ? "This role faces moderate automation pressure. Parts of the work may be assisted by AI, but human judgment remains important."
-          : "This role currently shows lower automation risk, especially where physical presence, complex judgment, or relationship skills dominate.",
-    reasons: [
-      "Based on common automation patterns for similar job titles",
-      "Routine, repetitive digital tasks are more exposed than creative or care work",
-      "AI is more likely to assist than fully replace roles that need accountability",
-    ],
-    skillsToBuild: [
-      "AI literacy (prompting, reviewing AI output)",
-      "Domain expertise that AI cannot easily verify",
-      "Communication and stakeholder management",
-      "Problem-solving in ambiguous situations",
-    ],
-    alternatives: [
-      "AI-assisted specialist in your current field",
-      "Customer success / client-facing role",
-      "Operations or project coordination",
-      "Technical support with product knowledge",
-    ],
-    source: "heuristic",
-  };
+function normalizeLevel(raw: unknown, score: number): CareerRiskLevel {
+  const s = String(raw || "").toLowerCase();
+  if (s === "low" || s === "medium" || s === "high") return s;
+  if (score < 35) return "low";
+  if (score < 65) return "medium";
+  return "high";
 }
 
 export function parseRiskJson(
-  raw: string,
+  text: string,
   fallbackTitle: string
-): CareerRiskResult | null {
+): CareerRiskAnalysis | null {
+  if (!text || typeof text !== "string") return null;
+
+  let jsonStr = text.trim();
+  const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence?.[1]) jsonStr = fence[1].trim();
+
+  const start = jsonStr.indexOf("{");
+  const end = jsonStr.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+
   try {
-    const start = raw.indexOf("{");
-    const end = raw.lastIndexOf("}");
-    if (start === -1 || end === -1) return null;
-    const obj = JSON.parse(raw.slice(start, end + 1));
+    const obj = JSON.parse(jsonStr.slice(start, end + 1)) as Record<
+      string,
+      unknown
+    >;
     const riskScore = clampScore(Number(obj.riskScore));
-    return {
-      jobTitle: String(obj.jobTitle || fallbackTitle),
+    const analysis: CareerRiskAnalysis = {
+      jobTitle: String(obj.jobTitle || fallbackTitle).slice(0, 120),
       riskScore,
-      riskLevel: (obj.riskLevel as RiskLevel) || levelFromScore(riskScore),
-      summary: String(obj.summary || ""),
-      reasons: Array.isArray(obj.reasons)
-        ? obj.reasons.map(String).slice(0, 6)
-        : [],
-      skillsToBuild: Array.isArray(obj.skillsToBuild)
-        ? obj.skillsToBuild.map(String).slice(0, 8)
-        : [],
-      alternatives: Array.isArray(obj.alternatives)
-        ? obj.alternatives.map(String).slice(0, 8)
-        : [],
+      riskLevel: normalizeLevel(obj.riskLevel, riskScore),
+      summary: String(obj.summary || "").slice(0, 2000),
+      reasons: asStringArray(obj.reasons, 10),
+      skillsToBuild: asStringArray(obj.skillsToBuild, 12),
+      alternatives: asStringArray(obj.alternatives, 10),
       source: "ai",
     };
+    if (!analysis.summary) return null;
+    return analysis;
   } catch {
     return null;
   }
 }
 
-export function isPaidPlan(plan: string | null | undefined): boolean {
-  if (!plan) return false;
-  const p = plan.toLowerCase();
-  return p !== "free" && p !== "";
+export function heuristicCareerRisk(
+  jobTitle: string,
+  skills?: string
+): CareerRiskAnalysis {
+  const title = (jobTitle || "Your role").trim().slice(0, 120);
+  const skillText = (skills || "").toLowerCase();
+  const titleLower = title.toLowerCase();
+
+  let score = 45;
+  const reasons: string[] = [];
+  const skillsToBuild: string[] = [];
+  const alternatives: string[] = [];
+
+  const highRiskHints = [
+    "data entry",
+    "cashier",
+    "telemarketer",
+    "receptionist",
+    "clerk",
+    "transcription",
+  ];
+  const lowRiskHints = [
+    "nurse",
+    "electrician",
+    "plumber",
+    "therapist",
+    "teacher",
+    "manager",
+    "engineer",
+  ];
+
+  if (highRiskHints.some((h) => titleLower.includes(h))) {
+    score += 25;
+    reasons.push(
+      "This role type often includes repetitive tasks that automation can absorb."
+    );
+  }
+  if (lowRiskHints.some((h) => titleLower.includes(h))) {
+    score -= 15;
+    reasons.push(
+      "Roles with high human interaction or physical presence tend to face lower near-term automation pressure."
+    );
+  }
+
+  if (
+    skillText.includes("python") ||
+    skillText.includes("ai") ||
+    skillText.includes("machine learning")
+  ) {
+    score -= 10;
+    reasons.push(
+      "Technical and AI-adjacent skills can reduce exposure to routine automation."
+    );
+    skillsToBuild.push("System design", "Domain expertise", "AI tooling literacy");
+  } else {
+    skillsToBuild.push(
+      "Digital literacy",
+      "Problem solving",
+      "Communication",
+      "Domain specialization"
+    );
+    reasons.push(
+      "Building durable, hard-to-automate skills improves long-term resilience."
+    );
+  }
+
+  score = clampScore(score);
+  alternatives.push(
+    "Adjacent specialist role in the same industry",
+    "Team lead / coordination path",
+    "Hybrid role combining domain knowledge with digital tools"
+  );
+
+  return {
+    jobTitle: title,
+    riskScore: score,
+    riskLevel: normalizeLevel(null, score),
+    summary:
+      score >= 65
+        ? `${title} shows elevated automation exposure over the next 5–10 years. Focus on skills that complement AI rather than compete with it.`
+        : score >= 35
+          ? `${title} faces moderate change from AI and automation. Upskilling in the right areas can keep the role resilient.`
+          : `${title} appears relatively resilient near-term, but continuous learning still matters as tools evolve.`,
+    reasons: reasons.slice(0, 6),
+    skillsToBuild: skillsToBuild.slice(0, 8),
+    alternatives: alternatives.slice(0, 5),
+    source: "heuristic",
+  };
+}
+
+export function toSuccessResponse(params: {
+  analysis: CareerRiskAnalysis;
+  paid: boolean;
+}): import("@/types/career-risk").CareerRiskSuccessResponse {
+  const alternatives = params.paid ? params.analysis.alternatives : [];
+  const analysis: CareerRiskAnalysis = {
+    ...params.analysis,
+    alternatives,
+  };
+  return {
+    success: true,
+    analysis,
+    paid: params.paid,
+    alternativesLocked: !params.paid,
+    message: params.paid
+      ? undefined
+      : "Upgrade to Pro to unlock alternative role recommendations.",
+    jobTitle: analysis.jobTitle,
+    riskScore: analysis.riskScore,
+    riskLevel: analysis.riskLevel,
+    summary: analysis.summary,
+    reasons: analysis.reasons,
+    skillsToBuild: analysis.skillsToBuild,
+    alternatives,
+    source: analysis.source,
+  };
 }
