@@ -1,3 +1,4 @@
+import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
@@ -17,7 +18,7 @@ export type AuthUser = {
 export type AuthOk = {
   ok: true;
   user: AuthUser;
-  session: Awaited<ReturnType<typeof auth>>;
+  session: Session;
 };
 
 export type AuthFail = {
@@ -50,7 +51,7 @@ export async function requireSession(): Promise<AuthResult> {
 
   return {
     ok: true,
-    session,
+    session: session as Session,
     user: {
       id: session.user.id,
       email: session.user.email,
