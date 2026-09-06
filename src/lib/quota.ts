@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
-import { getPlanLimits, type PlanId } from "@/lib/plan-limits";
+import { getPlanLimits } from "@/lib/plan-limits";
+import type { PlanId } from "@/lib/payment/plans";
 
 type Tx = Prisma.TransactionClient;
 
@@ -39,32 +40,9 @@ export async function lockUserRow(tx: Tx, userId: string): Promise<void> {
   await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
 }
 
-function aiLimitForPlan(plan: PlanId | string, kind: UsageKind): number {
+function aiLimitForPlan(plan: PlanId | string, _kind: UsageKind): number {
   const limits = getPlanLimits(plan);
-  // Prefer dedicated fields when present; fall back safely
-  const anyLimits = limits as Record<string, unknown>;
-  if (kind === "ai_career_risk") {
-    if (typeof anyLimits.maxCareerRiskPerMonth === "number") {
-      return anyLimits.maxCareerRiskPerMonth as number;
-    }
-    if (typeof anyLimits.maxAiCareerRiskPerMonth === "number") {
-      return anyLimits.maxAiCareerRiskPerMonth as number;
-    }
-  }
-  if (kind === "ai_resume") {
-    if (typeof anyLimits.maxResumeGenerationsPerMonth === "number") {
-      return anyLimits.maxResumeGenerationsPerMonth as number;
-    }
-  }
-  if (typeof anyLimits.maxAiRequestsPerMonth === "number") {
-    return anyLimits.maxAiRequestsPerMonth as number;
-  }
-  // Sensible defaults
-  const p = String(plan || "free").toLowerCase();
-  if (p === "enterprise") return 200;
-  if (p === "business") return 100;
-  if (p === "pro") return 30;
-  return 3;
+  return limits.maxAiGenerationsPerMonth;
 }
 
 export async function assertAndReserveAiUsage(
