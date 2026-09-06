@@ -3,17 +3,29 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 import { env } from "@/lib/env";
+import { bumpSessionVersion } from "@/lib/session-version";
+import { authRatelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
+import type { NextRequest } from "next/server";
 
 /**
  * One-time bootstrap: if no ADMIN/OWNER exists yet, the logged-in user
  * whose email matches OWNER_EMAIL becomes OWNER.
  * After the first owner exists, this endpoint always returns 403.
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getRequestIp(req);
+    const { success } = await authRatelimit.limit(
+      `admin_bootstrap_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const email = session.user.email.toLowerCase().trim();
@@ -39,10 +51,14 @@ export async function POST() {
       );
     }
 
-    const user = await db.user.update({
-      where: { id: session.user.id },
-      data: { role: ROLES.OWNER },
-      select: { id: true, email: true, role: true, name: true },
+    const user = await db.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: session.user.id },
+        data: { role: ROLES.OWNER },
+        select: { id: true, email: true, role: true, name: true },
+      });
+      await bumpSessionVersion(session.user.id, tx);
+      return updated;
     });
 
     return NextResponse.json({
