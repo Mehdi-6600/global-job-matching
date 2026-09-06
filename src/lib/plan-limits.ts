@@ -1,5 +1,7 @@
 import type { PlanId } from "@/lib/payment/plans";
 
+export type { PlanId };
+
 const PAID = new Set(["pro", "business", "enterprise"]);
 
 export function isPaidPlan(plan: string | null | undefined): boolean {
@@ -79,5 +81,5 @@ export function getPlanLimit(
 /** True if expiresAt is in the past. Null/undefined = not expired. */
 export function isPlanExpired(expiresAt: Date | null | undefined): boolean {
   if (!expiresAt) return false;
-  return new Date() > new Date(expiresAt);
+  return expiresAt.getTime() < Date.now();
 }
