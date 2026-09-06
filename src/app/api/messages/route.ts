@@ -1,17 +1,13 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
-
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { ratelimit } from "@/lib/ratelimit";
-
+import { strictRatelimit } from "@/lib/ratelimit";
 import {
   messageCreateSchema,
   messageQuerySchema,
 } from "@/lib/validation/message";
 import { getRequestIp } from "@/lib/client-ip";
+import { canMessageUser } from "@/lib/ownership";
 
 function serializeUser(user: {
   id: string;
@@ -28,110 +24,51 @@ function serializeUser(user: {
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
-
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const ip = getRequestIp(req);
-
-    const { success } = await ratelimit.limit(
+    const { success } = await strictRatelimit.limit(
       `messages_get_${session.user.id}_${ip}`
     );
-
     if (!success) {
-      return NextResponse.json(
-        {
-          error: "Too many requests. Please try again later.",
-        },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { searchParams } = new URL(req.url);
+    const parsedQuery = messageQuerySchema.safeParse({
+      with: searchParams.get("with") || undefined,
+    });
 
-    const rawWithUserId = searchParams.get("with");
+    if (!parsedQuery.success) {
+      return NextResponse.json({ error: "Invalid query" }, { status: 400 });
+    }
 
-    if (rawWithUserId) {
-      const parsed = messageQuerySchema.safeParse({
-        withUserId: rawWithUserId,
-      });
+    const withUserId = parsedQuery.data.with;
 
-      if (!parsed.success) {
-        return NextResponse.json(
-          {
-            error: "Invalid user ID",
-          },
-          { status: 400 }
-        );
-      }
-
-      const withUserId = parsed.data.withUserId;
-
-      if (withUserId === session.user.id) {
-        return NextResponse.json(
-          {
-            error: "Cannot message yourself",
-          },
-          { status: 400 }
-        );
-      }
-
+    if (withUserId) {
       const otherUser = await db.user.findUnique({
-        where: {
-          id: withUserId,
-        },
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
+        where: { id: withUserId },
+        select: { id: true, name: true, image: true },
       });
 
       if (!otherUser) {
-        return NextResponse.json(
-          {
-            error: "User not found",
-          },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
       const messages = await db.message.findMany({
         where: {
           OR: [
-            {
-              senderId: session.user.id,
-              receiverId: withUserId,
-            },
-            {
-              senderId: withUserId,
-              receiverId: session.user.id,
-            },
+            { senderId: session.user.id, receiverId: withUserId },
+            { senderId: withUserId, receiverId: session.user.id },
           ],
         },
-        orderBy: {
-          createdAt: "asc",
-        },
+        orderBy: { createdAt: "asc" },
         take: 200,
         include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          receiver: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
+          sender: { select: { id: true, name: true, image: true } },
+          receiver: { select: { id: true, name: true, image: true } },
         },
       });
 
@@ -141,9 +78,7 @@ export async function GET(req: NextRequest) {
           receiverId: session.user.id,
           read: false,
         },
-        data: {
-          read: true,
-        },
+        data: { read: true },
       });
 
       return NextResponse.json({
@@ -159,33 +94,15 @@ export async function GET(req: NextRequest) {
     const allMessages = await db.message.findMany({
       where: {
         OR: [
-          {
-            senderId: session.user.id,
-          },
-          {
-            receiverId: session.user.id,
-          },
+          { senderId: session.user.id },
+          { receiverId: session.user.id },
         ],
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
       take: 500,
       include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-        receiver: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
+        sender: { select: { id: true, name: true, image: true } },
+        receiver: { select: { id: true, name: true, image: true } },
       },
     });
 
@@ -204,15 +121,10 @@ export async function GET(req: NextRequest) {
 
     for (const message of allMessages) {
       const isSender = message.senderId === session.user.id;
-      const partnerId = isSender
-        ? message.receiverId
-        : message.senderId;
+      const partnerId = isSender ? message.receiverId : message.senderId;
 
       if (!conversationsMap.has(partnerId)) {
-        const partner = isSender
-          ? message.receiver
-          : message.sender;
-
+        const partner = isSender ? message.receiver : message.sender;
         conversationsMap.set(partnerId, {
           partner: serializeUser(partner),
           lastMessage: {
@@ -226,9 +138,7 @@ export async function GET(req: NextRequest) {
 
       if (message.receiverId === session.user.id && !message.read) {
         const conversation = conversationsMap.get(partnerId);
-        if (conversation) {
-          conversation.unreadCount += 1;
-        }
+        if (conversation) conversation.unreadCount += 1;
       }
     }
 
@@ -237,11 +147,8 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Get messages error:", error);
-
     return NextResponse.json(
-      {
-        error: "Failed to load messages",
-      },
+      { error: "Failed to load messages" },
       { status: 500 }
     );
   }
@@ -250,44 +157,29 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const ip = getRequestIp(req);
-
-    const { success } = await ratelimit.limit(
+    const { success } = await strictRatelimit.limit(
       `messages_post_${session.user.id}_${ip}`
     );
-
     if (!success) {
       return NextResponse.json(
-        {
-          error: "Too many messages. Please slow down.",
-        },
+        { error: "Too many messages. Please slow down." },
         { status: 429 }
       );
     }
 
     let body: unknown;
-
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json(
-        {
-          error: "Invalid JSON body",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
     const parsed = messageCreateSchema.safeParse(body);
-
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -302,31 +194,36 @@ export async function POST(req: NextRequest) {
 
     if (receiverId === session.user.id) {
       return NextResponse.json(
-        {
-          error: "Cannot message yourself",
-        },
+        { error: "Cannot message yourself" },
         { status: 400 }
       );
     }
 
+    const allowed = await canMessageUser(
+      db,
+      session.user.id,
+      receiverId,
+      session.user.role
+    );
+
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error:
+            "You can only message users related to your jobs/applications, or continuing an existing conversation.",
+          code: "MESSAGE_NOT_ALLOWED",
+        },
+        { status: 403 }
+      );
+    }
+
     const receiver = await db.user.findUnique({
-      where: {
-        id: receiverId,
-      },
-      select: {
-        id: true,
-        name: true,
-        image: true,
-      },
+      where: { id: receiverId },
+      select: { id: true, name: true, image: true },
     });
 
     if (!receiver) {
-      return NextResponse.json(
-        {
-          error: "Receiver not found",
-        },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Receiver not found" }, { status: 404 });
     }
 
     const result = await db.$transaction(async (tx) => {
@@ -337,20 +234,8 @@ export async function POST(req: NextRequest) {
           content,
         },
         include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          receiver: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
+          sender: { select: { id: true, name: true, image: true } },
+          receiver: { select: { id: true, name: true, image: true } },
         },
       });
 
@@ -380,11 +265,8 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Send message error:", error);
-
     return NextResponse.json(
-      {
-        error: "Failed to send message",
-      },
+      { error: "Failed to send message" },
       { status: 500 }
     );
   }
