@@ -6,7 +6,6 @@ export type CareerRiskLevel = (typeof CAREER_RISK_LEVELS)[number];
 export const CAREER_RISK_SOURCES = ["ai", "heuristic"] as const;
 export type CareerRiskSource = (typeof CAREER_RISK_SOURCES)[number];
 
-/** Canonical analysis payload (API + UI share this) */
 export type CareerRiskAnalysis = {
   jobTitle: string;
   riskScore: number;
@@ -18,14 +17,15 @@ export type CareerRiskAnalysis = {
   source: CareerRiskSource;
 };
 
-/** Successful API body — always includes nested `analysis` */
 export type CareerRiskSuccessResponse = {
   success: true;
   analysis: CareerRiskAnalysis;
   paid: boolean;
   alternativesLocked: boolean;
   message?: string;
-  /** Flat mirrors for older clients (same values as analysis.*) */
+  assessmentId?: string;
+  shareToken?: string;
+  sharePath?: string;
   jobTitle: string;
   riskScore: number;
   riskLevel: CareerRiskLevel;
