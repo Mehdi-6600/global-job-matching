@@ -1,34 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { z } from "zod";
 import { aiRatelimit } from "@/lib/ratelimit";
 import { chatCompletion } from "@/lib/ai";
 import {
   heuristicCareerRisk,
   isPaidPlan,
   parseRiskJson,
+  toSuccessResponse,
 } from "@/lib/career-risk";
+import { careerRiskRequestSchema } from "@/types/career-risk";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import {
   assertAndReserveAiUsage,
   lockUserRow,
-  releaseLatestUsageEvent,
+  releaseUsageEventById,
 } from "@/lib/quota";
 
-const schema = z.object({
-  jobTitle: z.string().min(2).max(120),
-  skills: z.string().max(1500).optional().or(z.literal("")),
-  experienceYears: z.number().min(0).max(50).optional(),
-  industry: z.string().max(120).optional().or(z.literal("")),
-});
-
 export async function POST(req: NextRequest) {
+  let reservedEventId: string | null = null;
+  let reservedUserId: string | null = null;
+
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      );
     }
 
     const ip = getRequestIp(req);
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const parsed = schema.safeParse(body);
+    const parsed = careerRiskRequestSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { jobTitle, skills, experienceYears, industry } = parsed.data;
+    const { jobTitle, skills, experienceYears, industry, country, location, education } =
+      parsed.data;
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
@@ -72,8 +73,6 @@ export async function POST(req: NextRequest) {
 
     const effective = await getEffectivePlan(user.id);
     const paid = isPaidPlan(effective.plan);
-
-    let reserved = false;
 
     const reserveResult = await db.$transaction(async (tx) => {
       await lockUserRow(tx, user.id);
@@ -96,7 +95,9 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
-    reserved = true;
+
+    reservedEventId = reserveResult.usageEventId ?? null;
+    reservedUserId = user.id;
 
     const systemPrompt = `You are a career risk analyst for the next 5–10 years.
 Reply with ONLY valid JSON (no markdown):
@@ -108,57 +109,63 @@ Reply with ONLY valid JSON (no markdown):
   "reasons": ["string"],
   "skillsToBuild": ["string"],
   "alternatives": ["string"]
-}`;
+}
+Be balanced and avoid absolute claims about unemployment.`;
 
     const userPrompt = `Job title: ${jobTitle}
 Skills: ${skills || "n/a"}
 Experience years: ${experienceYears ?? "n/a"}
-Industry: ${industry || "n/a"}`;
+Industry: ${industry || "n/a"}
+Country: ${country || "n/a"}
+Location: ${location || "n/a"}
+Education: ${education || "n/a"}`;
 
-    const aiText = await chatCompletion(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      { maxTokens: 900, temperature: 0.4 }
-    );
+    let result = null as ReturnType<typeof heuristicCareerRisk> | null;
 
-    let result = aiText ? parseRiskJson(aiText, jobTitle) : null;
+    try {
+      const aiText = await chatCompletion(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        { maxTokens: 900, temperature: 0.4 }
+      );
+      result = aiText ? parseRiskJson(aiText, jobTitle) : null;
+    } catch (aiErr) {
+      console.error("Career risk AI call failed:", aiErr);
+      result = null;
+    }
 
+    // AI failed or malformed → release THIS reservation, then heuristic (no extra charge)
     if (!result) {
-      if (reserved) {
+      if (reservedEventId && reservedUserId) {
         await db.$transaction(async (tx) => {
-          await releaseLatestUsageEvent(tx, {
-            userId: user.id,
-            kind: "ai_career_risk",
+          await releaseUsageEventById(tx, {
+            userId: reservedUserId!,
+            usageEventId: reservedEventId!,
           });
         });
-        reserved = false;
+        reservedEventId = null;
       }
       result = heuristicCareerRisk(jobTitle, skills || undefined);
     }
 
-    // Free plan: hide detailed alternatives
-    const alternatives = paid ? result.alternatives : [];
-
-    return NextResponse.json({
-      success: true,
-      jobTitle: result.jobTitle,
-      riskScore: result.riskScore,
-      riskLevel: result.riskLevel,
-      summary: result.summary,
-      reasons: result.reasons,
-      skillsToBuild: result.skillsToBuild,
-      alternatives,
-      source: result.source,
-      paid,
-      alternativesLocked: !paid,
-      message: paid
-        ? undefined
-        : "Upgrade to Pro to unlock alternative role recommendations.",
-    });
+    const payload = toSuccessResponse({ analysis: result, paid });
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("Career risk error:", error);
+    if (reservedEventId && reservedUserId) {
+      try {
+        await db.$transaction(async (tx) => {
+          await releaseUsageEventById(tx, {
+            userId: reservedUserId!,
+            usageEventId: reservedEventId!,
+          });
+        });
+      } catch (releaseErr) {
+        console.error("Failed to release AI quota reservation:", releaseErr);
+      }
+    }
     return NextResponse.json(
       { error: "Failed to analyze career risk" },
       { status: 500 }
