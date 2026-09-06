@@ -1,25 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { isAdminRole } from "@/lib/roles";
 import { z } from "zod";
+import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/authz";
+import { adminRatelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
 import {
   activatePlanForUser,
   type BillingCycle,
 } from "@/lib/subscription";
 
-const patchSchema = z.object({
-  id: z.string().min(1),
-  status: z.enum(["confirmed", "rejected"]),
-});
+const patchSchema = z
+  .object({
+    id: z.string().min(1),
+    status: z.enum(["confirmed", "rejected"]),
+  })
+  .strict();
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id || !isAdminRole(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+export async function GET(req: NextRequest) {
+  const authz = await requireAdmin();
+  if (!authz.ok) return authz.response;
 
   try {
+    const ip = getRequestIp(req);
+    const { success } = await adminRatelimit.limit(
+      `admin_tx_get_${authz.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const transactions = await db.transaction.findMany({
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -45,17 +54,30 @@ export async function GET() {
 }
 
 /**
- * Confirm/reject payment.
- * Atomic: only pending → confirmed once; plan activated on same tx client.
+ * Confirm/reject crypto (or other) payment.
+ * Atomic: pending → confirmed once; plan activated on same transaction client.
+ * billingCycle is read from the stored Transaction row.
  */
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id || !isAdminRole(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const authz = await requireAdmin();
+  if (!authz.ok) return authz.response;
 
   try {
-    const body = await req.json();
+    const ip = getRequestIp(req);
+    const { success } = await adminRatelimit.limit(
+      `admin_tx_patch_${authz.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const parsed = patchSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
