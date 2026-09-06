@@ -1,15 +1,12 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { getPlanLimits } from "@/lib/plan-limits";
-import type { PlanId } from "@/lib/payment/plans";
+import type { Prisma } from "@prisma/client";
+import { getPlanLimits, type PlanId } from "@/lib/plan-limits";
 
-type Tx = Prisma.TransactionClient | PrismaClient;
+type Tx = Prisma.TransactionClient;
 
 export type UsageKind =
-  | "ai_resume"
   | "ai_career_risk"
-  | "application"
-  | "saved_job"
-  | "job_alert";
+  | "ai_resume"
+  | "ai_other";
 
 export type QuotaDenied = {
   ok: false;
@@ -20,13 +17,15 @@ export type QuotaDenied = {
   used: number;
 };
 
-export type QuotaOk = { ok: true; used: number; limit: number };
+export type QuotaOk = {
+  ok: true;
+  used: number;
+  limit: number;
+  usageEventId?: string;
+};
 
-/** Lock user row — must run inside interactive $transaction on PostgreSQL */
-export async function lockUserRow(tx: Tx, userId: string): Promise<void> {
-  await tx.$queryRaw`
-    SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE
-  `;
+function monthStartUtc(d = new Date()): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
 }
 
 export function monthPeriodKey(d = new Date()): string {
@@ -35,35 +34,56 @@ export function monthPeriodKey(d = new Date()): string {
   return `${y}-${m}`;
 }
 
-export function monthStartUtc(d = new Date()): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
+/** Serialize quota checks per user inside a transaction */
+export async function lockUserRow(tx: Tx, userId: string): Promise<void> {
+  await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
 }
 
-/**
- * Reserve one monthly AI usage slot (ledger-based).
- * Call inside $transaction after lockUserRow.
- * Only count successful AI generations — create UsageEvent when reserving;
- * if AI fails afterward, call releaseUsageEvent.
- */
+function aiLimitForPlan(plan: PlanId | string, kind: UsageKind): number {
+  const limits = getPlanLimits(plan);
+  // Prefer dedicated fields when present; fall back safely
+  const anyLimits = limits as Record<string, unknown>;
+  if (kind === "ai_career_risk") {
+    if (typeof anyLimits.maxCareerRiskPerMonth === "number") {
+      return anyLimits.maxCareerRiskPerMonth as number;
+    }
+    if (typeof anyLimits.maxAiCareerRiskPerMonth === "number") {
+      return anyLimits.maxAiCareerRiskPerMonth as number;
+    }
+  }
+  if (kind === "ai_resume") {
+    if (typeof anyLimits.maxResumeGenerationsPerMonth === "number") {
+      return anyLimits.maxResumeGenerationsPerMonth as number;
+    }
+  }
+  if (typeof anyLimits.maxAiRequestsPerMonth === "number") {
+    return anyLimits.maxAiRequestsPerMonth as number;
+  }
+  // Sensible defaults
+  const p = String(plan || "free").toLowerCase();
+  if (p === "enterprise") return 200;
+  if (p === "business") return 100;
+  if (p === "pro") return 30;
+  return 3;
+}
+
 export async function assertAndReserveAiUsage(
   tx: Tx,
   params: {
     userId: string;
     plan: PlanId | string;
-    kind: "ai_resume" | "ai_career_risk";
-    meta?: string;
+    kind: UsageKind;
+    meta?: string | null;
   }
 ): Promise<QuotaOk | QuotaDenied> {
-  const limits = getPlanLimits(params.plan);
-  const limit = limits.maxAiGenerationsPerMonth;
-  const start = monthStartUtc();
+  const limit = aiLimitForPlan(params.plan, params.kind);
   const periodKey = monthPeriodKey();
 
   const used = await tx.usageEvent.count({
     where: {
       userId: params.userId,
       kind: params.kind,
-      createdAt: { gte: start },
+      periodKey,
     },
   });
 
@@ -71,25 +91,42 @@ export async function assertAndReserveAiUsage(
     return {
       ok: false,
       status: 403,
-      error: `AI limit reached this month (${limit}). Upgrade your plan for more.`,
+      error: `Monthly AI limit reached (${limit}). Upgrade your plan or try next month.`,
       code: "PLAN_LIMIT_AI",
       limit,
       used,
     };
   }
 
-  await tx.usageEvent.create({
+  const event = await tx.usageEvent.create({
     data: {
       userId: params.userId,
       kind: params.kind,
       periodKey,
       meta: params.meta ?? null,
     },
+    select: { id: true },
   });
 
-  return { ok: true, used: used + 1, limit };
+  return { ok: true, used: used + 1, limit, usageEventId: event.id };
 }
 
+/** Release only the reservation created by this request (race-safe) */
+export async function releaseUsageEventById(
+  tx: Tx,
+  params: { userId: string; usageEventId: string }
+): Promise<void> {
+  await tx.usageEvent.deleteMany({
+    where: {
+      id: params.usageEventId,
+      userId: params.userId,
+    },
+  });
+}
+
+/**
+ * @deprecated Prefer releaseUsageEventById — deleting "latest" is racy under concurrency.
+ */
 export async function releaseLatestUsageEvent(
   tx: Tx,
   params: { userId: string; kind: UsageKind }
@@ -104,7 +141,6 @@ export async function releaseLatestUsageEvent(
   }
 }
 
-/** Monthly application quota — count real Application rows */
 export async function assertApplicationQuota(
   tx: Tx,
   params: { userId: string; plan: PlanId | string }
@@ -134,7 +170,6 @@ export async function assertApplicationQuota(
   return { ok: true, used, limit };
 }
 
-/** Lifetime saved-job quota */
 export async function assertSavedJobQuota(
   tx: Tx,
   params: { userId: string; plan: PlanId | string }
@@ -160,7 +195,6 @@ export async function assertSavedJobQuota(
   return { ok: true, used, limit };
 }
 
-/** Lifetime job-alert quota */
 export async function assertJobAlertQuota(
   tx: Tx,
   params: { userId: string; plan: PlanId | string }
