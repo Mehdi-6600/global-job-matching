@@ -16,6 +16,12 @@ const patchSchema = z
   })
   .strict();
 
+function resolveBillingCycle(
+  value: string | null | undefined
+): BillingCycle {
+  return value === "yearly" ? "yearly" : "monthly";
+}
+
 export async function GET(req: NextRequest) {
   const authz = await requireAdmin();
   if (!authz.ok) return authz.response;
@@ -56,7 +62,6 @@ export async function GET(req: NextRequest) {
 /**
  * Confirm/reject crypto (or other) payment.
  * Atomic: pending → confirmed once; plan activated on same transaction client.
- * billingCycle is read from the stored Transaction row.
  */
 export async function PATCH(req: NextRequest) {
   const authz = await requireAdmin();
@@ -105,8 +110,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (status === "confirmed") {
-      const billing: BillingCycle =
-        tx.billingCycle === "yearly" ? "yearly" : "monthly";
+      const billing = resolveBillingCycle(tx.billingCycle);
 
       try {
         await db.$transaction(async (prisma) => {
@@ -136,7 +140,7 @@ export async function PATCH(req: NextRequest) {
               type: "alert",
               title: "Payment confirmed",
               message: `Your ${tx.planId} plan (${billing}) is now active.`,
-              actionUrl: "/pricing",
+              link: "/pricing",
             },
           });
         });
@@ -168,7 +172,7 @@ export async function PATCH(req: NextRequest) {
           title: "Payment not verified",
           message:
             "We could not verify your crypto payment. Contact support if you need help.",
-          actionUrl: "/contact",
+          link: "/contact",
         },
       });
     }
