@@ -54,7 +54,13 @@ export async function POST(req: NextRequest) {
 
     const effective = await getEffectivePlan(session.user.id);
 
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const parsed = jobAlertCreateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -63,7 +69,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { keywords, location, remote, type, minSalary } = parsed.data;
+    // Prisma JobAlert fields: keywords, location, remote, frequency, active
+    const { keywords, location, remote, type, minSalary, frequency } =
+      parsed.data as {
+        keywords?: string | null;
+        location?: string | null;
+        remote?: boolean | null;
+        type?: string | null;
+        minSalary?: number | null;
+        frequency?: string | null;
+      };
+
+    const keywordParts = [
+      keywords?.trim() || null,
+      type?.trim() ? `type:${type.trim()}` : null,
+      minSalary != null ? `minSalary:${minSalary}` : null,
+    ].filter(Boolean);
 
     try {
       const alert = await db.$transaction(async (tx) => {
@@ -83,11 +104,10 @@ export async function POST(req: NextRequest) {
         return tx.jobAlert.create({
           data: {
             userId: session.user.id,
-            keywords: keywords ?? null,
+            keywords: keywordParts.length > 0 ? keywordParts.join(" ") : null,
             location: location ?? null,
             remote: remote ?? null,
-            type: type ?? null,
-            minSalary: minSalary ?? null,
+            frequency: frequency?.trim() || "daily",
             active: true,
           },
         });
