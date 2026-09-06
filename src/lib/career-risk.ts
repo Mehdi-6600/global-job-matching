@@ -2,6 +2,7 @@ import type {
   CareerRiskAnalysis,
   CareerRiskLevel,
   CareerRiskSource,
+  CareerRiskSuccessResponse,
 } from "@/types/career-risk";
 
 export type { CareerRiskAnalysis, CareerRiskLevel, CareerRiskSource };
@@ -167,7 +168,9 @@ export function heuristicCareerRisk(
 export function toSuccessResponse(params: {
   analysis: CareerRiskAnalysis;
   paid: boolean;
-}): import("@/types/career-risk").CareerRiskSuccessResponse {
+  assessmentId?: string;
+  shareToken?: string;
+}): CareerRiskSuccessResponse {
   const alternatives = params.paid ? params.analysis.alternatives : [];
   const analysis: CareerRiskAnalysis = {
     ...params.analysis,
@@ -181,6 +184,11 @@ export function toSuccessResponse(params: {
     message: params.paid
       ? undefined
       : "Upgrade to Pro to unlock alternative role recommendations.",
+    assessmentId: params.assessmentId,
+    shareToken: params.shareToken,
+    sharePath: params.shareToken
+      ? `/career-risk/share/${params.shareToken}`
+      : undefined,
     jobTitle: analysis.jobTitle,
     riskScore: analysis.riskScore,
     riskLevel: analysis.riskLevel,
