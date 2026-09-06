@@ -12,6 +12,7 @@ import {
 } from "@/lib/payment/plans";
 import { getRequestIp } from "@/lib/client-ip";
 import { isPlausibleTxHash } from "@/lib/payment/verify-crypto";
+import { getEffectivePlan } from "@/lib/subscription";
 
 const cryptoPaymentSchema = z
   .object({
@@ -47,9 +48,15 @@ export async function GET() {
     }
 
     const wallets = getCryptoWallets();
+    const effective = await getEffectivePlan(session.user.id, {
+      persistDowngrade: true,
+    });
+
     return NextResponse.json({
       wallets,
       configured: wallets.length > 0,
+      currentPlan: effective,
+      prices: PLAN_PRICES,
     });
   } catch (error) {
     console.error("Crypto wallets GET error:", error);
@@ -79,16 +86,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const result = cryptoPaymentSchema.safeParse(body);
-    if (!result.success) {
+    const parsed = cryptoPaymentSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid data", details: result.error.issues },
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
 
-    const { planId, cryptoType, billing } = result.data;
-    const txHash = normalizeTxHash(result.data.txHash);
+    const { planId, cryptoType, billing } = parsed.data;
+    const txHash = normalizeTxHash(parsed.data.txHash);
 
     if (!isPlausibleTxHash(cryptoType, txHash)) {
       return NextResponse.json(
