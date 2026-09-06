@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
     const effective = await getEffectivePlan(user.id);
     const paid = isPaidPlan(effective.plan);
 
+    let reserved = false;
+
     const reserveResult = await db.$transaction(async (tx) => {
       await lockUserRow(tx, user.id);
       return assertAndReserveAiUsage(tx, {
@@ -94,19 +96,26 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+    reserved = true;
 
-    let reserved = true;
-
-    const systemPrompt = `You are a career risk analyst. Reply with ONLY valid JSON:
-{"riskScore":0-100,"level":"low|medium|high|critical","summary":"...","reasons":["..."],"suggestions":["..."],"alternativeRoles":["..."]}`;
+    const systemPrompt = `You are a career risk analyst for the next 5–10 years.
+Reply with ONLY valid JSON (no markdown):
+{
+  "jobTitle": "string",
+  "riskScore": 0-100,
+  "riskLevel": "low" | "medium" | "high",
+  "summary": "string",
+  "reasons": ["string"],
+  "skillsToBuild": ["string"],
+  "alternatives": ["string"]
+}`;
 
     const userPrompt = `Job title: ${jobTitle}
 Skills: ${skills || "n/a"}
 Experience years: ${experienceYears ?? "n/a"}
-Industry: ${industry || "n/a"}
-Plan paid: ${paid}`;
+Industry: ${industry || "n/a"}`;
 
-    let aiText = await chatCompletion(
+    const aiText = await chatCompletion(
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -114,11 +123,9 @@ Plan paid: ${paid}`;
       { maxTokens: 900, temperature: 0.4 }
     );
 
-    let result = aiText ? parseRiskJson(aiText) : null;
-    let source: "ai" | "heuristic" = "ai";
+    let result = aiText ? parseRiskJson(aiText, jobTitle) : null;
 
     if (!result) {
-      source = "heuristic";
       if (reserved) {
         await db.$transaction(async (tx) => {
           await releaseLatestUsageEvent(tx, {
@@ -128,23 +135,27 @@ Plan paid: ${paid}`;
         });
         reserved = false;
       }
-      result = heuristicCareerRisk({
-        jobTitle,
-        skills,
-        experienceYears,
-        industry,
-      });
+      result = heuristicCareerRisk(jobTitle, skills || undefined);
     }
+
+    // Free plan: hide detailed alternatives
+    const alternatives = paid ? result.alternatives : [];
 
     return NextResponse.json({
       success: true,
-      ...result,
-      source,
+      jobTitle: result.jobTitle,
+      riskScore: result.riskScore,
+      riskLevel: result.riskLevel,
+      summary: result.summary,
+      reasons: result.reasons,
+      skillsToBuild: result.skillsToBuild,
+      alternatives,
+      source: result.source,
       paid,
       alternativesLocked: !paid,
       message: paid
         ? undefined
-        : "Upgrade to Pro to unlock alternative role recommendations detail.",
+        : "Upgrade to Pro to unlock alternative role recommendations.",
     });
   } catch (error) {
     console.error("Career risk error:", error);
