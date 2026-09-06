@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getEffectivePlan } from "@/lib/subscription";
+import { getPlanLimits } from "@/lib/plan-limits";
+import { PLAN_PRICES } from "@/lib/payment/plans";
 
 /**
- * Source of truth for plan is User.plan.
- * Confirmed transactions may upgrade plan (admin/manual), but we do not
- * treat pending crypto as paid.
+ * Returns the effective plan (respects planExpiresAt).
+ * If expired, persists downgrade to free.
  */
 export async function GET() {
   const session = await auth();
@@ -14,15 +15,24 @@ export async function GET() {
   }
 
   try {
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { plan: true },
+    const effective = await getEffectivePlan(session.user.id, {
+      persistDowngrade: true,
     });
 
-    const plan = (user?.plan || "free").toLowerCase();
+    const limits = getPlanLimits(effective.plan);
+    const price =
+      effective.plan in PLAN_PRICES
+        ? PLAN_PRICES[effective.plan as keyof typeof PLAN_PRICES]
+        : 0;
 
     return NextResponse.json({
-      plan: plan || "free",
+      plan: effective.plan,
+      planStartedAt: effective.planStartedAt,
+      planExpiresAt: effective.planExpiresAt,
+      billingCycle: effective.billingCycle,
+      expired: effective.expired,
+      price,
+      limits,
     });
   } catch (error) {
     console.error("Error fetching user plan:", error);
