@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { ratelimit } from "@/lib/ratelimit";
+import { aiRatelimit } from "@/lib/ratelimit";
 import { buildTemplateResume, chatCompletion } from "@/lib/ai";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const { success } = await aiRatelimit.limit(
       `resume_gen_${session.user.id}_${ip}`
     );
     if (!success) {
@@ -55,7 +55,13 @@ export async function POST(req: NextRequest) {
 
     const effective = await getEffectivePlan(user.id);
 
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -70,8 +76,6 @@ export async function POST(req: NextRequest) {
     const data = parsed.data;
     const tone = data.tone || "professional";
 
-    // Reserve AI quota only if we will call the model path;
-    // template fallback does not consume quota.
     let reserved = false;
 
     const systemPrompt = `You are an expert resume writer for international job seekers.
@@ -99,7 +103,6 @@ Experience: ${data.experience || "n/a"}
 Education: ${data.education || "n/a"}
 Languages: ${data.languages || "n/a"}`;
 
-    // Reserve slot before calling AI (race-safe)
     const reserveResult = await db.$transaction(async (tx) => {
       await lockUserRow(tx, user.id);
       return assertAndReserveAiUsage(tx, {
@@ -134,7 +137,6 @@ Languages: ${data.languages || "n/a"}`;
     let source: "ai" | "template" = "ai";
     if (!resumeText) {
       source = "template";
-      // AI failed / no key — release reserved quota
       if (reserved) {
         await db.$transaction(async (tx) => {
           await releaseLatestUsageEvent(tx, {
