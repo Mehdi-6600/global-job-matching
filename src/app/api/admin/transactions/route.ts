@@ -59,10 +59,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/**
- * Confirm/reject crypto (or other) payment.
- * Atomic: pending → confirmed once; plan activated on same transaction client.
- */
 export async function PATCH(req: NextRequest) {
   const authz = await requireAdmin();
   if (!authz.ok) return authz.response;
@@ -140,7 +136,7 @@ export async function PATCH(req: NextRequest) {
               type: "alert",
               title: "Payment confirmed",
               message: `Your ${tx.planId} plan (${billing}) is now active.`,
-              link: "/pricing",
+              actionUrl: "/pricing",
             },
           });
         });
@@ -172,7 +168,7 @@ export async function PATCH(req: NextRequest) {
           title: "Payment not verified",
           message:
             "We could not verify your crypto payment. Contact support if you need help.",
-          link: "/contact",
+          actionUrl: "/contact",
         },
       });
     }
