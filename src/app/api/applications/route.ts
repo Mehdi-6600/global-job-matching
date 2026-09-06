@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
         id: true,
         status: true,
         coverLetter: true,
-        resume: true,
+        resumeUrl: true,
         createdAt: true,
         updatedAt: true,
         job: {
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
       id: application.id,
       status: application.status,
       coverLetter: application.coverLetter,
-      resume: application.resume,
+      resumeUrl: application.resumeUrl,
       createdAt: application.createdAt,
       updatedAt: application.updatedAt,
       job: application.job
@@ -198,9 +198,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const notifyUserId = job.company?.ownerId || job.postedById || null;
+    const companyName = job.company?.name || null;
     const applicantName = user.name || user.email || "A candidate";
-    const companyName = job.company?.name;
-    const notifyUserId = job.company?.ownerId || job.postedById;
 
     try {
       const result = await db.$transaction(async (tx) => {
@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
             jobId: true,
             status: true,
             coverLetter: true,
-            resume: true,
+            resumeUrl: true,
             createdAt: true,
             updatedAt: true,
           },
