@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
-import { PLAN_PRICES } from "@/lib/payment/plans";
+import { PLAN_PRICES, type PlanId } from "@/lib/payment/plans";
+import { activatePlanForUser } from "@/lib/subscription";
 import { z } from "zod";
 import { getRequestIp } from "@/lib/client-ip";
 
@@ -12,6 +12,11 @@ const paymentSchema = z
   })
   .strict();
 
+/**
+ * Card/online payment is not integrated.
+ * Free plan can be activated here.
+ * Paid plans must go through /api/crypto-payment + admin confirm.
+ */
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -40,16 +45,18 @@ export async function POST(req: NextRequest) {
     }
 
     const { planId } = result.data;
-    const amount = PLAN_PRICES[planId];
+    const amount = PLAN_PRICES[planId as PlanId];
 
-    if (amount === 0) {
-      await db.user.update({
-        where: { id: session.user.id },
-        data: { plan: planId },
+    if (amount === 0 || planId === "free") {
+      await activatePlanForUser({
+        userId: session.user.id,
+        planId: "free",
+        billingCycle: "monthly",
       });
       return NextResponse.json({
         success: true,
         message: "Free plan activated",
+        plan: "free",
       });
     }
 
@@ -57,17 +64,14 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         message:
-          "Online payment not configured. Use crypto payment or contact support.",
-        planId,
-        amount,
+          "Online card payment is not available. Use crypto payment on the Pricing page, then wait for admin confirmation.",
+        code: "USE_CRYPTO",
+        redirect: "/pricing",
       },
-      { status: 501 }
+      { status: 400 }
     );
   } catch (error) {
     console.error("Payment error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
