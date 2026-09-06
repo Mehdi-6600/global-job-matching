@@ -1,4 +1,4 @@
-import { put, del } from "@vercel/blob";
+import { put, del, get } from "@vercel/blob";
 
 export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
 export const RESUME_MIME = "application/pdf";
@@ -17,8 +17,8 @@ export function sanitizeResumeFilename(name: string): string {
 }
 
 /**
- * Upload PDF to Vercel Blob (public read URL).
- * Requires BLOB_READ_WRITE_TOKEN.
+ * Upload PDF to Vercel Blob with private access.
+ * Store returned url/pathname in DB; serve only via authenticated download route.
  */
 export async function uploadResumePdf(params: {
   userId: string;
@@ -33,7 +33,7 @@ export async function uploadResumePdf(params: {
   const pathname = `resumes/${params.userId}/${Date.now()}-${safe}`;
 
   const blob = await put(pathname, params.file, {
-    access: "public",
+    access: "private",
     contentType: RESUME_MIME,
     token: process.env.BLOB_READ_WRITE_TOKEN,
     addRandomSuffix: false,
@@ -42,10 +42,6 @@ export async function uploadResumePdf(params: {
   return { url: blob.url, pathname: blob.pathname };
 }
 
-/**
- * Delete previous blob if it looks like a Vercel Blob URL.
- * Failures are logged, not thrown (DB cleanup still proceeds).
- */
 export async function deleteResumeIfBlob(
   resumeUrl: string | null | undefined
 ): Promise<void> {
@@ -59,4 +55,36 @@ export async function deleteResumeIfBlob(
   } catch (error) {
     console.warn("Failed to delete resume blob:", error);
   }
+}
+
+/** Stream private blob for authorized download */
+export async function fetchPrivateResumeBlob(
+  resumeUrl: string
+): Promise<Response> {
+  if (!isBlobStorageConfigured()) {
+    throw new Error("BLOB_NOT_CONFIGURED");
+  }
+
+  const result = await get(resumeUrl, {
+    access: "private",
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+  });
+
+  if (!result) {
+    throw new Error("BLOB_NOT_FOUND");
+  }
+
+  // @vercel/blob get() returns a Blob-like / Response depending on version
+  if (result instanceof Response) {
+    return result;
+  }
+
+  const body = result as Blob;
+  return new Response(body.stream(), {
+    headers: {
+      "Content-Type": RESUME_MIME,
+      "Content-Disposition": 'attachment; filename="resume.pdf"',
+      "Cache-Control": "private, no-store",
+    },
+  });
 }
