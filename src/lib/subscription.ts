@@ -69,6 +69,8 @@ export async function getEffectivePlan(
       where: { id: userId },
       data: {
         plan: "free",
+        planStartedAt: null,
+        planExpiresAt: null,
         billingCycle: null,
       },
     });
@@ -85,7 +87,7 @@ export async function getEffectivePlan(
 
 /**
  * Activate plan after admin confirms payment.
- * Pass `tx` when inside db.$transaction so plan + payment stay atomic.
+ * Pass `client` when inside db.$transaction so plan + payment stay atomic.
  */
 export async function activatePlanForUser(
   params: {
@@ -120,4 +122,42 @@ export async function activatePlanForUser(
       billingCycle: params.billingCycle,
     },
   });
+}
+
+/**
+ * Batch-expire paid users whose planExpiresAt is in the past.
+ * Returns number of users downgraded.
+ */
+export async function expireOverduePlans(
+  client: DbClient = db,
+  limit = 200
+): Promise<{ expiredCount: number; userIds: string[] }> {
+  const now = new Date();
+
+  const overdue = await client.user.findMany({
+    where: {
+      plan: { not: "free" },
+      planExpiresAt: { lt: now },
+    },
+    select: { id: true },
+    take: limit,
+  });
+
+  if (overdue.length === 0) {
+    return { expiredCount: 0, userIds: [] };
+  }
+
+  const ids = overdue.map((u) => u.id);
+
+  await client.user.updateMany({
+    where: { id: { in: ids } },
+    data: {
+      plan: "free",
+      planStartedAt: null,
+      planExpiresAt: null,
+      billingCycle: null,
+    },
+  });
+
+  return { expiredCount: ids.length, userIds: ids };
 }
