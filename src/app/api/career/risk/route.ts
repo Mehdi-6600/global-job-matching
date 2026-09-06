@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { ratelimit } from "@/lib/ratelimit";
+import { aiRatelimit } from "@/lib/ratelimit";
 import { chatCompletion } from "@/lib/ai";
 import {
   heuristicCareerRisk,
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const { success } = await aiRatelimit.limit(
       `career_risk_${session.user.id}_${ip}`
     );
     if (!success) {
@@ -42,7 +42,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -89,66 +95,62 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const system = `You are a careful labor-market analyst. Estimate how exposed a job is to AI/automation in the next 5–10 years.
-Return ONLY valid JSON (no markdown) with this shape:
-{
-  "jobTitle": string,
-  "riskScore": number 0-100,
-  "riskLevel": "low" | "medium" | "high",
-  "summary": string,
-  "reasons": string[],
-  "skillsToBuild": string[],
-  "alternatives": string[]
-}
-Be balanced. Do not claim certainty. alternatives should be realistic career pivots.`;
+    let reserved = true;
 
-    const userMsg = `Job title: ${jobTitle}
+    const systemPrompt = `You are a career risk analyst. Reply with ONLY valid JSON:
+{"riskScore":0-100,"level":"low|medium|high|critical","summary":"...","reasons":["..."],"suggestions":["..."],"alternativeRoles":["..."]}`;
+
+    const userPrompt = `Job title: ${jobTitle}
 Skills: ${skills || "n/a"}
-Years of experience: ${experienceYears ?? "n/a"}
-Industry: ${industry || "n/a"}`;
+Experience years: ${experienceYears ?? "n/a"}
+Industry: ${industry || "n/a"}
+Plan paid: ${paid}`;
 
-    const aiRaw = await chatCompletion(
+    let aiText = await chatCompletion(
       [
-        { role: "system", content: system },
-        { role: "user", content: userMsg },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
       ],
-      { maxTokens: 1200, temperature: 0.4 }
+      { maxTokens: 900, temperature: 0.4 }
     );
 
-    let result =
-      parseRiskJson(aiRaw || "", jobTitle) ||
-      heuristicCareerRisk(jobTitle, skills);
+    let result = aiText ? parseRiskJson(aiText) : null;
+    let source: "ai" | "heuristic" = "ai";
 
-    const usedAiCall = Boolean(aiRaw && result.source === "ai");
-
-    if (!usedAiCall) {
-      // Heuristic only — do not consume AI quota
-      await db.$transaction(async (tx) => {
-        await releaseLatestUsageEvent(tx, {
-          userId: user.id,
-          kind: "ai_career_risk",
+    if (!result) {
+      source = "heuristic";
+      if (reserved) {
+        await db.$transaction(async (tx) => {
+          await releaseLatestUsageEvent(tx, {
+            userId: user.id,
+            kind: "ai_career_risk",
+          });
         });
+        reserved = false;
+      }
+      result = heuristicCareerRisk({
+        jobTitle,
+        skills,
+        experienceYears,
+        industry,
       });
-    }
-
-    if (!paid) {
-      result = {
-        ...result,
-        alternatives: [],
-      };
     }
 
     return NextResponse.json({
       success: true,
-      analysis: result,
+      ...result,
+      source,
+      paid,
       alternativesLocked: !paid,
-      plan: effective.plan,
       message: paid
-        ? "Full analysis including alternative careers"
-        : "Risk analysis is free. Upgrade your plan to unlock alternative career suggestions.",
+        ? undefined
+        : "Upgrade to Pro to unlock alternative role recommendations detail.",
     });
   } catch (error) {
-    console.error("career risk error:", error);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    console.error("Career risk error:", error);
+    return NextResponse.json(
+      { error: "Failed to analyze career risk" },
+      { status: 500 }
+    );
   }
 }
