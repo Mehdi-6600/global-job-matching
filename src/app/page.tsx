@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Globe, Zap, Bell, Search } from "lucide-react";
+import { Globe, Zap, Bell, Search, ShieldAlert } from "lucide-react";
 import Newsletter from "./components/Newsletter";
 import { useLocale } from "@/components/locale-provider";
 
@@ -86,6 +86,40 @@ export default function HomePage() {
               className="px-8 py-4 rounded-full font-semibold text-[15px] bg-white/5 text-white border border-white/10 hover:bg-white/10 active:scale-[0.97] transition-all duration-200"
             >
               {t("Home.ctaRegister", "Get Started")}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Career Risk — primary acquisition CTA */}
+      <section className="px-5 pb-14">
+        <div className="max-w-4xl mx-auto rounded-3xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-white/5 to-blue-600/10 p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center shrink-0">
+              <ShieldAlert className="w-7 h-7 text-cyan-300" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300/90 mb-1">
+                AI Career Risk
+              </p>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-1.5">
+                {t(
+                  "Home.careerRiskTitle",
+                  "Is your job safe from AI automation?"
+                )}
+              </h2>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                {t(
+                  "Home.careerRiskDesc",
+                  "Get a clear risk score, skills to build, and smarter next steps — free to start."
+                )}
+              </p>
+            </div>
+            <Link
+              href="/career-risk"
+              className="shrink-0 inline-flex justify-center px-6 py-3.5 rounded-full bg-cyan-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 hover:bg-cyan-400 active:scale-[0.97] transition-all"
+            >
+              {t("Home.careerRiskCta", "Check my risk")}
             </Link>
           </div>
         </div>
