@@ -54,13 +54,11 @@ export async function POST(req: NextRequest) {
 
       await bumpSessionVersionByEmail(consumed.email, tx);
 
-      await tx.passwordResetToken.updateMany({
+      // Clear any remaining reset tokens for this email (VerificationToken table)
+      await tx.verificationToken.deleteMany({
         where: {
-          email: consumed.email,
-          usedAt: null,
-          NOT: { tokenHash: consumed.tokenHash },
+          identifier: `pw-reset:${consumed.email.toLowerCase().trim()}`,
         },
-        data: { usedAt: new Date() },
       });
     });
 
