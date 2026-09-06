@@ -37,17 +37,23 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const parsedQuery = messageQuerySchema.safeParse({
-      with: searchParams.get("with") || undefined,
-    });
+    const rawWith = searchParams.get("with");
 
-    if (!parsedQuery.success) {
-      return NextResponse.json({ error: "Invalid query" }, { status: 400 });
-    }
+    if (rawWith) {
+      const parsed = messageQuerySchema.safeParse({ withUserId: rawWith });
+      if (!parsed.success) {
+        return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+      }
 
-    const withUserId = parsedQuery.data.with;
+      const withUserId = parsed.data.withUserId;
 
-    if (withUserId) {
+      if (withUserId === session.user.id) {
+        return NextResponse.json(
+          { error: "Cannot message yourself" },
+          { status: 400 }
+        );
+      }
+
       const otherUser = await db.user.findUnique({
         where: { id: withUserId },
         select: { id: true, name: true, image: true },
@@ -210,7 +216,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "You can only message users related to your jobs/applications, or continuing an existing conversation.",
+            "You can only message users related to your jobs/applications, or continue an existing conversation.",
           code: "MESSAGE_NOT_ALLOWED",
         },
         { status: 403 }
