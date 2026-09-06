@@ -12,10 +12,7 @@ type LimitResult = {
  * In-memory fallback (per server instance).
  * Better than allowing unlimited traffic when Redis is missing.
  */
-function createMemoryLimiter(
-  max: number,
-  windowMs: number
-): { limit: (key: string) => Promise<LimitResult> } {
+function createMemoryLimiter(max: number, windowMs: number) {
   const hits = new Map<string, { count: number; resetAt: number }>();
 
   return {
@@ -24,12 +21,13 @@ function createMemoryLimiter(
       const row = hits.get(key);
 
       if (!row || now > row.resetAt) {
-        hits.set(key, { count: 1, resetAt: now + windowMs });
+        const resetAt = now + windowMs;
+        hits.set(key, { count: 1, resetAt });
         return {
           success: true,
           limit: max,
           remaining: max - 1,
-          reset: now + windowMs,
+          reset: resetAt,
         };
       }
 
@@ -58,6 +56,9 @@ const memoryGeneral = createMemoryLimiter(10, 60_000);
 const memoryAuth = createMemoryLimiter(5, 60_000);
 const memoryEmail = createMemoryLimiter(2, 60 * 60_000);
 const memoryLogin = createMemoryLimiter(8, 60_000);
+const memoryAi = createMemoryLimiter(3, 60_000);
+const memoryStrict = createMemoryLimiter(20, 60_000);
+const memoryAdmin = createMemoryLimiter(30, 60_000);
 
 if (!redis && process.env.NODE_ENV === "production") {
   console.warn(
@@ -65,6 +66,7 @@ if (!redis && process.env.NODE_ENV === "production") {
   );
 }
 
+/** General API: 10 / minute */
 export const ratelimit = redis
   ? new Ratelimit({
       redis,
@@ -74,7 +76,7 @@ export const ratelimit = redis
     })
   : memoryGeneral;
 
-/** Auth-sensitive actions: register, change password, reset, login */
+/** Auth-sensitive: register, password change, reset */
 export const authRatelimit = redis
   ? new Ratelimit({
       redis,
@@ -84,7 +86,7 @@ export const authRatelimit = redis
     })
   : memoryAuth;
 
-/** Stricter login attempts (also used as email-scoped key) */
+/** Login attempts */
 export const loginRatelimit = redis
   ? new Ratelimit({
       redis,
@@ -94,6 +96,7 @@ export const loginRatelimit = redis
     })
   : memoryLogin;
 
+/** Transactional email */
 export const emailRatelimit = redis
   ? new Ratelimit({
       redis,
@@ -102,3 +105,33 @@ export const emailRatelimit = redis
       prefix: "rl_email",
     })
   : memoryEmail;
+
+/** AI endpoints (resume / career risk) */
+export const aiRatelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, "1 m"),
+      analytics: true,
+      prefix: "rl_ai",
+    })
+  : memoryAi;
+
+/** Public write-ish endpoints (contact, analytics, messages) */
+export const strictRatelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(20, "1 m"),
+      analytics: true,
+      prefix: "rl_strict",
+    })
+  : memoryStrict;
+
+/** Admin panel APIs */
+export const adminRatelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(30, "1 m"),
+      analytics: true,
+      prefix: "rl_admin",
+    })
+  : memoryAdmin;
