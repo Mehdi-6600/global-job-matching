@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { aiRatelimit } from "@/lib/ratelimit";
@@ -17,6 +18,49 @@ import {
   lockUserRow,
   releaseUsageEventById,
 } from "@/lib/quota";
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getRequestIp(req);
+    const { success } = await aiRatelimit.limit(
+      `career_risk_list_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    const items = await db.careerRiskAssessment.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        jobTitle: true,
+        riskScore: true,
+        riskLevel: true,
+        summary: true,
+        paidSnapshot: true,
+        shareToken: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      assessments: items.map((a) => ({
+        ...a,
+        sharePath: `/career-risk/share/${a.shareToken}`,
+      })),
+    });
+  } catch (error) {
+    console.error("Career risk list error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   let reservedEventId: string | null = null;
@@ -60,8 +104,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { jobTitle, skills, experienceYears, industry, country, location, education } =
-      parsed.data;
+    const {
+      jobTitle,
+      skills,
+      experienceYears,
+      industry,
+      country,
+      location,
+      education,
+    } = parsed.data;
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
@@ -136,7 +187,6 @@ Education: ${education || "n/a"}`;
       result = null;
     }
 
-    // AI failed or malformed → release THIS reservation, then heuristic (no extra charge)
     if (!result) {
       if (reservedEventId && reservedUserId) {
         await db.$transaction(async (tx) => {
@@ -150,7 +200,38 @@ Education: ${education || "n/a"}`;
       result = heuristicCareerRisk(jobTitle, skills || undefined);
     }
 
-    const payload = toSuccessResponse({ analysis: result, paid });
+    const shareToken = randomBytes(18).toString("hex");
+
+    const saved = await db.careerRiskAssessment.create({
+      data: {
+        userId: user.id,
+        jobTitle: result.jobTitle,
+        skills: skills || null,
+        industry: industry || null,
+        experienceYears: experienceYears ?? null,
+        country: country || null,
+        location: location || null,
+        education: education || null,
+        riskScore: result.riskScore,
+        riskLevel: result.riskLevel,
+        summary: result.summary,
+        reasons: result.reasons,
+        skillsToBuild: result.skillsToBuild,
+        alternatives: paid ? result.alternatives : [],
+        source: result.source,
+        paidSnapshot: paid,
+        shareToken,
+      },
+      select: { id: true, shareToken: true },
+    });
+
+    const payload = toSuccessResponse({
+      analysis: result,
+      paid,
+      assessmentId: saved.id,
+      shareToken: saved.shareToken,
+    });
+
     return NextResponse.json(payload);
   } catch (error) {
     console.error("Career risk error:", error);
