@@ -9,7 +9,7 @@ import { getRequestIp } from "@/lib/client-ip";
 import {
   assertAndReserveAiUsage,
   lockUserRow,
-  releaseLatestUsageEvent,
+  releaseUsageEventById,
 } from "@/lib/quota";
 
 const schema = z.object({
@@ -19,15 +19,15 @@ const schema = z.object({
   location: z.string().max(120).optional().or(z.literal("")),
   targetRole: z.string().max(120).optional().or(z.literal("")),
   summary: z.string().max(2000).optional().or(z.literal("")),
-  skills: z.string().max(1500).optional().or(z.literal("")),
   experience: z.string().max(8000).optional().or(z.literal("")),
-  education: z.string().max(3000).optional().or(z.literal("")),
-  languages: z.string().max(500).optional().or(z.literal("")),
-  tone: z.enum(["professional", "confident", "concise"]).optional(),
-  saveToProfile: z.boolean().optional(),
+  education: z.string().max(4000).optional().or(z.literal("")),
+  skills: z.string().max(2000).optional().or(z.literal("")),
 });
 
 export async function POST(req: NextRequest) {
+  let reservedEventId: string | null = null;
+  let reservedUserId: string | null = null;
+
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -40,20 +40,10 @@ export async function POST(req: NextRequest) {
     );
     if (!success) {
       return NextResponse.json(
-        { error: "Too many requests. Please wait a moment." },
+        { error: "Too many requests. Please wait." },
         { status: 429 }
       );
     }
-
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, plan: true },
-    });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const effective = await getEffectivePlan(user.id);
 
     let body: unknown;
     try {
@@ -74,39 +64,14 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
-    const tone = data.tone || "professional";
-
-    let reserved = false;
-
-    const systemPrompt = `You are an expert resume writer for international job seekers.
-Write a clean, ATS-friendly resume in English (plain text, no markdown tables).
-Tone: ${tone}.
-Structure:
-1) Name + target role
-2) Contact line
-3) Professional Summary (3–5 sentences)
-4) Skills (comma-separated or short bullets with • )
-5) Experience (reverse chronological, impact-focused bullets)
-6) Education
-7) Languages (if provided)
-Do not invent employers or degrees the user did not mention. Improve wording and clarity only.
-Return ONLY the resume text.`;
-
-    const userPrompt = `Full name: ${data.fullName}
-Email: ${data.email || "n/a"}
-Phone: ${data.phone || "n/a"}
-Location: ${data.location || "n/a"}
-Target role: ${data.targetRole || "n/a"}
-Summary notes: ${data.summary || "n/a"}
-Skills: ${data.skills || "n/a"}
-Experience: ${data.experience || "n/a"}
-Education: ${data.education || "n/a"}
-Languages: ${data.languages || "n/a"}`;
+    const effective = await getEffectivePlan(session.user.id, {
+      persistDowngrade: true,
+    });
 
     const reserveResult = await db.$transaction(async (tx) => {
-      await lockUserRow(tx, user.id);
+      await lockUserRow(tx, session.user.id);
       return assertAndReserveAiUsage(tx, {
-        userId: user.id,
+        userId: session.user.id,
         plan: effective.plan,
         kind: "ai_resume",
         meta: data.targetRole || data.fullName,
@@ -124,79 +89,74 @@ Languages: ${data.languages || "n/a"}`;
         { status: 403 }
       );
     }
-    reserved = true;
 
-    let resumeText = await chatCompletion(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      { maxTokens: 2200, temperature: 0.55 }
-    );
+    reservedEventId = reserveResult.usageEventId ?? null;
+    reservedUserId = session.user.id;
 
-    let source: "ai" | "template" = "ai";
-    if (!resumeText) {
-      source = "template";
-      if (reserved) {
+    const systemPrompt = `You are a professional resume writer.
+Return plain text only (no HTML, no markdown code fences).
+Structure with clear section headings: Summary, Experience, Education, Skills.
+Be concise and truthful; do not invent employers or degrees not implied by the user.`;
+
+    const userPrompt = `Full name: ${data.fullName}
+Email: ${data.email || "n/a"}
+Phone: ${data.phone || "n/a"}
+Location: ${data.location || "n/a"}
+Target role: ${data.targetRole || "n/a"}
+Summary notes: ${data.summary || "n/a"}
+Experience: ${data.experience || "n/a"}
+Education: ${data.education || "n/a"}
+Skills: ${data.skills || "n/a"}`;
+
+    let text: string | null = null;
+    try {
+      text = await chatCompletion(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        { maxTokens: 1800, temperature: 0.4 }
+      );
+    } catch (aiErr) {
+      console.error("Resume AI failed:", aiErr);
+      text = null;
+    }
+
+    if (!text || text.trim().length < 40) {
+      if (reservedEventId && reservedUserId) {
         await db.$transaction(async (tx) => {
-          await releaseLatestUsageEvent(tx, {
-            userId: user.id,
-            kind: "ai_resume",
+          await releaseUsageEventById(tx, {
+            userId: reservedUserId!,
+            usageEventId: reservedEventId!,
           });
         });
-        reserved = false;
+        reservedEventId = null;
       }
-      resumeText = buildTemplateResume({
-        fullName: data.fullName,
-        email: data.email || undefined,
-        phone: data.phone || undefined,
-        location: data.location || undefined,
-        targetRole: data.targetRole || undefined,
-        summary: data.summary || undefined,
-        skills: data.skills || undefined,
-        experience: data.experience || undefined,
-        education: data.education || undefined,
-        languages: data.languages || undefined,
-      });
+      text = buildTemplateResume(data);
     }
 
-    if (data.saveToProfile) {
-      await db.profile.upsert({
-        where: { userId: session.user.id },
-        create: {
-          userId: session.user.id,
-          bio: data.summary || resumeText.slice(0, 500),
-          skills: data.skills || null,
-          experience: data.experience || resumeText,
-          education: data.education || null,
-          phone: data.phone || null,
-          location: data.location || null,
-        },
-        update: {
-          bio: data.summary || undefined,
-          skills: data.skills || undefined,
-          experience: data.experience || resumeText,
-          education: data.education || undefined,
-          phone: data.phone || undefined,
-          location: data.location || undefined,
-        },
-      });
-    }
+    // Strip accidental HTML tags from model output
+    const safeText = text.replace(/<[^>]+>/g, "").trim();
 
     return NextResponse.json({
       success: true,
-      resume: resumeText,
-      source,
-      message:
-        source === "ai"
-          ? "Resume generated with AI"
-          : "AI key not configured — used professional template. Add OPENROUTER_API_KEY or OPENAI_API_KEY for AI generation.",
+      resume: safeText,
+      source: text === safeText && text.length > 40 ? "ai" : "template",
     });
   } catch (error) {
     console.error("Resume generate error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate resume" },
-      { status: 500 }
-    );
+    if (reservedEventId && reservedUserId) {
+      try {
+        await db.$transaction(async (tx) => {
+          await releaseUsageEventById(tx, {
+            userId: reservedUserId!,
+            usageEventId: reservedEventId!,
+          });
+        });
+      } catch (releaseErr) {
+        console.error("Failed to release resume AI quota:", releaseErr);
+      }
+    }
+    return NextResponse.json({ error: "Failed to generate resume" }, { status: 500 });
   }
 }
