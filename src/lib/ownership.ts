@@ -34,7 +34,6 @@ export function canManageCompany(
 
 /**
  * Load a job and verify the caller can manage it.
- * Returns the job or null if not found / not allowed.
  */
 export async function getManagedJob(
   tx: Tx,
@@ -55,7 +54,7 @@ export async function getManagedJob(
 }
 
 /**
- * Load an application with job ownership fields.
+ * Load an application the employer/admin can manage.
  */
 export async function getManagedApplication(
   tx: Tx,
@@ -88,6 +87,28 @@ export async function getManagedApplication(
 }
 
 /**
+ * Applicant can only read/update their own application row (limited fields).
+ */
+export async function getOwnApplication(
+  tx: Tx,
+  applicationId: string,
+  userId: string
+) {
+  return tx.application.findFirst({
+    where: { id: applicationId, userId },
+    include: {
+      job: {
+        select: {
+          id: true,
+          title: true,
+          company: { select: { name: true } },
+        },
+      },
+    },
+  });
+}
+
+/**
  * Whether two users may message each other:
  * - prior conversation exists, OR
  * - they share a job application relationship, OR
@@ -113,7 +134,6 @@ export async function canMessageUser(
   });
   if (prior) return true;
 
-  // Employer of a job the other applied to
   const asEmployer = await tx.application.findFirst({
     where: {
       userId: receiverId,
@@ -128,7 +148,6 @@ export async function canMessageUser(
   });
   if (asEmployer) return true;
 
-  // Applicant messaging employer of a job they applied to
   const asApplicant = await tx.application.findFirst({
     where: {
       userId: senderId,
