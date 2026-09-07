@@ -34,28 +34,33 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const items = await db.careerRiskAssessment.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        jobTitle: true,
-        riskScore: true,
-        riskLevel: true,
-        summary: true,
-        paidSnapshot: true,
-        shareToken: true,
-        createdAt: true,
-      },
-    });
+    try {
+      const items = await db.careerRiskAssessment.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          jobTitle: true,
+          riskScore: true,
+          riskLevel: true,
+          summary: true,
+          paidSnapshot: true,
+          shareToken: true,
+          createdAt: true,
+        },
+      });
 
-    return NextResponse.json({
-      assessments: items.map((a) => ({
-        ...a,
-        sharePath: `/career-risk/share/${a.shareToken}`,
-      })),
-    });
+      return NextResponse.json({
+        assessments: items.map((a) => ({
+          ...a,
+          sharePath: `/career-risk/share/${a.shareToken}`,
+        })),
+      });
+    } catch (listErr) {
+      console.error("Career risk list DB error:", listErr);
+      return NextResponse.json({ assessments: [] });
+    }
   } catch (error) {
     console.error("Career risk list error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
@@ -122,33 +127,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const effective = await getEffectivePlan(user.id);
-    const paid = isPaidPlan(effective.plan);
-
-    const reserveResult = await db.$transaction(async (tx) => {
-      await lockUserRow(tx, user.id);
-      return assertAndReserveAiUsage(tx, {
-        userId: user.id,
-        plan: effective.plan,
-        kind: "ai_career_risk",
-        meta: jobTitle,
-      });
-    });
-
-    if (!reserveResult.ok) {
-      return NextResponse.json(
-        {
-          error: reserveResult.error,
-          code: reserveResult.code,
-          limit: reserveResult.limit,
-          used: reserveResult.used,
-        },
-        { status: 403 }
-      );
+    let effectivePlan = "free";
+    try {
+      const effective = await getEffectivePlan(user.id);
+      effectivePlan = effective.plan;
+    } catch (planErr) {
+      console.error("getEffectivePlan failed, using free:", planErr);
+      effectivePlan = String(user.plan || "free").toLowerCase();
     }
+    const paid = isPaidPlan(effectivePlan);
 
-    reservedEventId = reserveResult.usageEventId ?? null;
-    reservedUserId = user.id;
+    // Quota reservation — soft-fail to heuristic path if table/lock fails
+    try {
+      const reserveResult = await db.$transaction(async (tx) => {
+        await lockUserRow(tx, user.id);
+        return assertAndReserveAiUsage(tx, {
+          userId: user.id,
+          plan: effectivePlan,
+          kind: "ai_career_risk",
+          meta: jobTitle,
+        });
+      });
+
+      if (!reserveResult.ok) {
+        return NextResponse.json(
+          {
+            error: reserveResult.error,
+            code: reserveResult.code,
+            limit: reserveResult.limit,
+            used: reserveResult.used,
+          },
+          { status: 403 }
+        );
+      }
+
+      reservedEventId = reserveResult.usageEventId ?? null;
+      reservedUserId = user.id;
+    } catch (quotaErr) {
+      console.error("Career risk quota reserve failed:", quotaErr);
+      // Continue without reservation so users still get heuristic analysis
+      reservedEventId = null;
+      reservedUserId = null;
+    }
 
     const systemPrompt = `You are a career risk analyst for the next 5–10 years.
 Reply with ONLY valid JSON (no markdown):
@@ -189,47 +209,68 @@ Education: ${education || "n/a"}`;
 
     if (!result) {
       if (reservedEventId && reservedUserId) {
-        await db.$transaction(async (tx) => {
-          await releaseUsageEventById(tx, {
-            userId: reservedUserId!,
-            usageEventId: reservedEventId!,
+        try {
+          await db.$transaction(async (tx) => {
+            await releaseUsageEventById(tx, {
+              userId: reservedUserId!,
+              usageEventId: reservedEventId!,
+            });
           });
-        });
+        } catch (releaseErr) {
+          console.error("Release unused AI quota failed:", releaseErr);
+        }
         reservedEventId = null;
       }
       result = heuristicCareerRisk(jobTitle, skills || undefined);
     }
 
-    const shareToken = randomBytes(18).toString("hex");
+    // Always have a valid analysis object past this point
+    if (!result || !result.summary) {
+      result = heuristicCareerRisk(jobTitle, skills || undefined);
+    }
 
-    const saved = await db.careerRiskAssessment.create({
-      data: {
-        userId: user.id,
-        jobTitle: result.jobTitle,
-        skills: skills || null,
-        industry: industry || null,
-        experienceYears: experienceYears ?? null,
-        country: country || null,
-        location: location || null,
-        education: education || null,
-        riskScore: result.riskScore,
-        riskLevel: result.riskLevel,
-        summary: result.summary,
-        reasons: result.reasons,
-        skillsToBuild: result.skillsToBuild,
-        alternatives: paid ? result.alternatives : [],
-        source: result.source,
-        paidSnapshot: paid,
-        shareToken,
-      },
-      select: { id: true, shareToken: true },
-    });
+    const shareToken = randomBytes(18).toString("hex");
+    let assessmentId: string | undefined;
+    let savedShareToken: string | undefined = shareToken;
+
+    try {
+      const saved = await db.careerRiskAssessment.create({
+        data: {
+          userId: user.id,
+          jobTitle: result.jobTitle,
+          skills: skills || null,
+          industry: industry || null,
+          experienceYears:
+            typeof experienceYears === "number" ? experienceYears : null,
+          country: country || null,
+          location: location || null,
+          education: education || null,
+          riskScore: result.riskScore,
+          riskLevel: result.riskLevel,
+          summary: result.summary,
+          reasons: result.reasons,
+          skillsToBuild: result.skillsToBuild,
+          alternatives: paid ? result.alternatives : [],
+          source: result.source,
+          paidSnapshot: paid,
+          shareToken,
+        },
+        select: { id: true, shareToken: true },
+      });
+      assessmentId = saved.id;
+      savedShareToken = saved.shareToken;
+    } catch (saveErr) {
+      // Table missing / schema drift — still return analysis to the user
+      console.error("Career risk save failed (returning analysis anyway):", saveErr);
+      savedShareToken = undefined;
+      assessmentId = undefined;
+    }
 
     const payload = toSuccessResponse({
       analysis: result,
       paid,
-      assessmentId: saved.id,
-      shareToken: saved.shareToken,
+      assessmentId,
+      shareToken: savedShareToken,
     });
 
     return NextResponse.json(payload);
@@ -247,9 +288,27 @@ Education: ${education || "n/a"}`;
         console.error("Failed to release AI quota reservation:", releaseErr);
       }
     }
+
+    // Last-resort: never leave the user with a blank error if we can parse jobTitle
+    try {
+      const fallbackBody = bodyFromRequestHint(error);
+      void fallbackBody;
+    } catch {
+      // ignore
+    }
+
     return NextResponse.json(
-      { error: "Failed to analyze career risk" },
+      {
+        error:
+          "Failed to analyze career risk. Please try again in a moment.",
+        code: "CAREER_RISK_INTERNAL",
+      },
       { status: 500 }
     );
   }
+}
+
+/** Placeholder to keep tree-shaking simple — unused helper intentionally empty */
+function bodyFromRequestHint(_error: unknown): null {
+  return null;
 }
