@@ -14,7 +14,6 @@ export async function GET() {
 
   let database: "ok" | "error" = "ok";
   let dbMs = 0;
-  let errorMessage: string | null = null;
 
   try {
     const t0 = Date.now();
@@ -22,48 +21,45 @@ export async function GET() {
     dbMs = Date.now() - t0;
   } catch (err) {
     database = "error";
-    errorMessage =
-      err instanceof Error ? err.message.slice(0, 200) : "database error";
+    // Internal detail only in server logs — never in response body
+    console.error("Health DB check failed:", err);
   }
 
   const totalMs = Date.now() - started;
   const healthy = database === "ok";
 
-  // Presence only — never expose secret values
   const config = {
     databaseUrl: envPresent("DATABASE_URL"),
     authSecret: envPresent("AUTH_SECRET"),
-    appUrl: envPresent("NEXT_PUBLIC_APP_URL") || envPresent("NEXT_PUBLIC_SITE_URL"),
+    appUrl:
+      envPresent("NEXT_PUBLIC_APP_URL") || envPresent("NEXT_PUBLIC_SITE_URL"),
     ownerEmail: envPresent("OWNER_EMAIL"),
     resend: envPresent("RESEND_API_KEY"),
     cronSecret: envPresent("CRON_SECRET"),
     blob: envPresent("BLOB_READ_WRITE_TOKEN"),
     upstash:
-      envPresent("UPSTASH_REDIS_REST_URL") ||
-      envPresent("KV_REST_API_URL"),
+      envPresent("UPSTASH_REDIS_REST_URL") || envPresent("KV_REST_API_URL"),
   };
 
-  const body = {
-    status: healthy ? "ok" : "degraded",
-    service: "global-job-matching",
-    time: new Date().toISOString(),
-    checks: {
-      database: {
-        status: database,
-        latencyMs: dbMs,
-        ...(errorMessage ? { error: errorMessage } : {}),
+  return NextResponse.json(
+    {
+      status: healthy ? "ok" : "degraded",
+      service: "global-job-matching",
+      time: new Date().toISOString(),
+      checks: {
+        database: {
+          status: database,
+          latencyMs: dbMs,
+        },
+        config,
       },
-      config,
+      latencyMs: totalMs,
+      version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
+      region: process.env.VERCEL_REGION || null,
     },
-    latencyMs: totalMs,
-    version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
-    region: process.env.VERCEL_REGION || null,
-  };
-
-  return NextResponse.json(body, {
-    status: healthy ? 200 : 503,
-    headers: {
-      "Cache-Control": "no-store",
-    },
-  });
+    {
+      status: healthy ? 200 : 503,
+      headers: { "Cache-Control": "no-store" },
+    }
+  );
 }
