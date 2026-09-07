@@ -66,7 +66,9 @@ export function isSafePublicHttpUrl(
 }
 
 /** Safe internal path only (open-redirect protection) */
-export function isSafeRelativeCallback(path: string | null | undefined): boolean {
+export function isSafeRelativeCallback(
+  path: string | null | undefined
+): boolean {
   if (!path || typeof path !== "string") return false;
   const p = path.trim();
   if (!p.startsWith("/")) return false;
