@@ -1,22 +1,14 @@
-import type { Prisma } from "@prisma/client";
-import { getPlanLimits } from "@/lib/plan-limits";
-import type { PlanId } from "@/lib/payment/plans";
+import type { Prisma, PrismaClient } from "@prisma/client";
+import { getPlanLimits, type PlanId } from "@/lib/plan-limits";
 
-type Tx = Prisma.TransactionClient;
+type Tx = Prisma.TransactionClient | PrismaClient;
 
 export type UsageKind =
-  | "ai_career_risk"
   | "ai_resume"
-  | "ai_other";
-
-export type QuotaDenied = {
-  ok: false;
-  status: 403;
-  error: string;
-  code: string;
-  limit: number;
-  used: number;
-};
+  | "ai_career_risk"
+  | "application"
+  | "saved_job"
+  | "job_alert";
 
 export type QuotaOk = {
   ok: true;
@@ -25,8 +17,18 @@ export type QuotaOk = {
   usageEventId?: string;
 };
 
-function monthStartUtc(d = new Date()): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0));
+export type QuotaDenied = {
+  ok: false;
+  status: number;
+  error: string;
+  code: string;
+  limit: number;
+  used: number;
+};
+
+function monthStartUtc(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
 export function monthPeriodKey(d = new Date()): string {
@@ -100,23 +102,6 @@ export async function releaseUsageEventById(
       userId: params.userId,
     },
   });
-}
-
-/**
- * @deprecated Prefer releaseUsageEventById — deleting "latest" is racy under concurrency.
- */
-export async function releaseLatestUsageEvent(
-  tx: Tx,
-  params: { userId: string; kind: UsageKind }
-): Promise<void> {
-  const latest = await tx.usageEvent.findFirst({
-    where: { userId: params.userId, kind: params.kind },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-  if (latest) {
-    await tx.usageEvent.delete({ where: { id: latest.id } });
-  }
 }
 
 export async function assertApplicationQuota(
