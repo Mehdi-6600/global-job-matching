@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, Calendar } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { sanitizeBlogHtml } from "@/lib/sanitize-html";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -16,6 +17,8 @@ export default async function BlogPostPage({ params }: Props) {
 
   if (!post) return notFound();
 
+  const safeHtml = sanitizeBlogHtml(post.content || "");
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
@@ -27,7 +30,7 @@ export default async function BlogPostPage({ params }: Props) {
         </Link>
 
         <article className="glass rounded-2xl p-8 sm:p-10 border border-white/10">
-          {post.coverImage && (
+          {post.coverImage && /^https:\/\//i.test(post.coverImage) && (
             <div
               className="h-64 rounded-xl bg-cover bg-center mb-8"
               style={{ backgroundImage: `url(${post.coverImage})` }}
@@ -49,7 +52,7 @@ export default async function BlogPostPage({ params }: Props) {
 
           <div
             className="prose prose-invert prose-lg max-w-none text-slate-300 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
         </article>
       </div>
