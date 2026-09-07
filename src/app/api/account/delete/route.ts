@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
+import { isOwnerRole } from "@/lib/roles";
 import { z } from "zod";
 
 const deleteSchema = z
@@ -13,14 +14,16 @@ const deleteSchema = z
 
 /**
  * Permanently delete the current user account.
- * Requires JSON body: { "confirm": "DELETE" }
- * Owner account (OWNER_EMAIL) cannot be deleted.
+ * Body: { "confirm": "DELETE" }
+ *
+ * Owner protection is ROLE-based (User.role === OWNER), not email.
+ * Last remaining OWNER cannot be deleted (race-safe inside transaction).
  */
 export async function DELETE(req: NextRequest) {
   try {
     const session = await auth();
 
-    if (!session?.user?.id || !session.user.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -51,34 +54,30 @@ export async function DELETE(req: NextRequest) {
     }
 
     const userId = session.user.id;
-    const userEmail = session.user.email;
-    const ownerEmail = process.env.OWNER_EMAIL?.trim();
 
-    if (
-      ownerEmail &&
-      userEmail.toLowerCase() === ownerEmail.toLowerCase()
-    ) {
-      return NextResponse.json(
-        { error: "Owner account cannot be deleted." },
-        { status: 403 }
-      );
-    }
-
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    /**
-     * Explicit child cleanup then user.
-     * Application relation is `user` (userId), not `applicant`.
-     * Most relations use onDelete: Cascade — extra deletes are safe.
-     */
     await db.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true },
+      });
+
+      if (!user) {
+        throw Object.assign(new Error("NOT_FOUND"), { code: "NOT_FOUND" });
+      }
+
+      if (isOwnerRole(user.role)) {
+        // Serialize owner-count check
+        await tx.$executeRaw`SELECT id FROM "User" WHERE role = 'OWNER' FOR UPDATE`;
+        const ownerCount = await tx.user.count({
+          where: { role: "OWNER" },
+        });
+        if (ownerCount <= 1) {
+          throw Object.assign(new Error("LAST_OWNER"), {
+            code: "LAST_OWNER",
+          });
+        }
+      }
+
       await tx.jobAlert.deleteMany({ where: { userId } });
       await tx.application.deleteMany({ where: { userId } });
       await tx.savedJob.deleteMany({ where: { userId } });
@@ -101,7 +100,21 @@ export async function DELETE(req: NextRequest) {
       success: true,
       message: "Account deleted",
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error as { code?: string };
+    if (err.code === "NOT_FOUND") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    if (err.code === "LAST_OWNER") {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete the last OWNER account. Promote another owner first.",
+          code: "LAST_OWNER",
+        },
+        { status: 403 }
+      );
+    }
     console.error("Account delete error:", error);
     return NextResponse.json(
       { error: "Failed to delete account" },
