@@ -5,6 +5,10 @@ import { ratelimit } from "@/lib/ratelimit";
 import { fetchAllJobs } from "@/lib/jobs/fetcher";
 import { getRequestIp } from "@/lib/client-ip";
 
+/**
+ * Admin-only external job fetch (expensive).
+ * Never public.
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -36,7 +40,9 @@ export async function GET(request: NextRequest) {
       keyword,
       location,
       page: Number.isFinite(page) ? page : undefined,
-      perPage: Number.isFinite(perPage) ? perPage : undefined,
+      perPage: Number.isFinite(perPage)
+        ? Math.min(50, Math.max(1, perPage as number))
+        : undefined,
     });
 
     return NextResponse.json({
