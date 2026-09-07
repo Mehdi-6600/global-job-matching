@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
-import { normalizePlan, isPlanExpired } from "@/lib/plan-limits";
+import { normalizePlan, isPlanExpired, getPlanLimits } from "@/lib/plan-limits";
 import type { PlanId } from "@/lib/payment/plans";
 
 export type BillingCycle = "monthly" | "yearly";
@@ -32,6 +32,15 @@ export function resolveEffectivePlan(user: {
   return { plan: normalized, expired: false };
 }
 
+export function daysUntilExpiry(
+  planExpiresAt: Date | null | undefined
+): number | null {
+  if (!planExpiresAt) return null;
+  const ms = planExpiresAt.getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
 export async function getEffectivePlan(
   userId: string,
   options?: { persistDowngrade?: boolean }
@@ -41,6 +50,8 @@ export async function getEffectivePlan(
   planExpiresAt: Date | null;
   billingCycle: string | null;
   expired: boolean;
+  daysRemaining: number | null;
+  limits: ReturnType<typeof getPlanLimits>;
 }> {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -59,6 +70,8 @@ export async function getEffectivePlan(
       planExpiresAt: null,
       billingCycle: null,
       expired: false,
+      daysRemaining: null,
+      limits: getPlanLimits("free"),
     };
   }
 
@@ -79,9 +92,11 @@ export async function getEffectivePlan(
   return {
     plan,
     planStartedAt: user.planStartedAt,
-    planExpiresAt: user.planExpiresAt,
-    billingCycle: user.billingCycle,
+    planExpiresAt: expired ? null : user.planExpiresAt,
+    billingCycle: expired ? null : user.billingCycle,
     expired,
+    daysRemaining: expired ? 0 : daysUntilExpiry(user.planExpiresAt),
+    limits: getPlanLimits(plan),
   };
 }
 
@@ -126,7 +141,6 @@ export async function activatePlanForUser(
 
 /**
  * Batch-expire paid users whose planExpiresAt is in the past.
- * Returns number of users downgraded.
  */
 export async function expireOverduePlans(
   client: DbClient = db,
