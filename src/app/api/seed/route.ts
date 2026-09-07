@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedBearerSecret } from "@/lib/api-auth";
 
 /**
- * Seed is disabled in production always.
- * In development requires Authorization: Bearer <SEED_SECRET>
- * Never uses a hardcoded fallback secret in production paths.
+ * Seed is always disabled in production.
+ * Development requires Authorization: Bearer <SEED_SECRET>
  */
 export async function GET(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
@@ -11,15 +11,14 @@ export async function GET(req: NextRequest) {
   }
 
   const secret = process.env.SEED_SECRET;
-  if (!secret) {
+  if (!secret || secret.length < 16) {
     return NextResponse.json(
       { error: "SEED_SECRET is not configured" },
       { status: 503 }
     );
   }
 
-  const authHeader = req.headers.get("authorization") || "";
-  if (authHeader !== `Bearer ${secret}`) {
+  if (!isAuthorizedBearerSecret(req, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
