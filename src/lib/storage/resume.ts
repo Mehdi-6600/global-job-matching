@@ -1,7 +1,21 @@
 import { put, del } from "@vercel/blob";
+import { randomBytes } from "crypto";
 
 export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
 export const RESUME_MIME = "application/pdf";
+
+/** Magic bytes for PDF: %PDF */
+function isPdfMagic(buf: ArrayBuffer | Uint8Array): boolean {
+  const u8 =
+    buf instanceof Uint8Array ? buf : new Uint8Array(buf.slice(0, 5));
+  if (u8.length < 4) return false;
+  return (
+    u8[0] === 0x25 &&
+    u8[1] === 0x50 &&
+    u8[2] === 0x44 &&
+    u8[3] === 0x46
+  );
+}
 
 export function isBlobStorageConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
@@ -13,13 +27,23 @@ export function isHttpUrl(value: string | null | undefined): boolean {
 }
 
 export function sanitizeResumeFilename(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "resume.pdf";
+  const base = name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+  if (!base.toLowerCase().endsWith(".pdf")) {
+    return `${base || "resume"}.pdf`;
+  }
+  return base || "resume.pdf";
 }
 
 /**
- * Upload PDF to Vercel Blob.
- * Store returned url in DB; serve only via authenticated download route.
- * @vercel/blob@0.27 supports access: "public" (URL is not exposed to clients).
+ * Upload resume PDF.
+ *
+ * @vercel/blob@0.27 only types `access: "public"`.
+ * True ACL privacy is enforced by:
+ * 1) Never returning the blob URL to clients
+ * 2) Serving only via authenticated download route after ownership check
+ * 3) Unpredictable pathname (userId + random)
+ *
+ * When upgrading @vercel/blob to a version with private ACL, set access: "private".
  */
 export async function uploadResumePdf(params: {
   userId: string;
@@ -30,10 +54,19 @@ export async function uploadResumePdf(params: {
     throw new Error("BLOB_NOT_CONFIGURED");
   }
 
-  const safe = sanitizeResumeFilename(params.filename);
-  const pathname = `resumes/${params.userId}/${Date.now()}-${safe}`;
+  const ab = await params.file.arrayBuffer();
+  if (ab.byteLength > RESUME_MAX_BYTES) {
+    throw new Error("FILE_TOO_LARGE");
+  }
+  if (ab.byteLength < 8 || !isPdfMagic(ab)) {
+    throw new Error("INVALID_PDF");
+  }
 
-  const blob = await put(pathname, params.file, {
+  const safe = sanitizeResumeFilename(params.filename);
+  const nonce = randomBytes(16).toString("hex");
+  const pathname = `resumes/${params.userId}/${nonce}-${safe}`;
+
+  const blob = await put(pathname, ab, {
     access: "public",
     contentType: RESUME_MIME,
     token: process.env.BLOB_READ_WRITE_TOKEN,
@@ -59,8 +92,7 @@ export async function deleteResumeIfBlob(
 }
 
 /**
- * Fetch blob bytes for an authorized download response.
- * Does not use a non-existent `get` export from @vercel/blob@0.27.
+ * Server-side fetch of stored PDF bytes (never expose URL to browser).
  */
 export async function fetchPrivateResumeBlob(
   resumeUrl: string
@@ -82,6 +114,7 @@ export async function fetchPrivateResumeBlob(
         }
       : undefined,
     cache: "no-store",
+    redirect: "error",
   });
 
   if (res.status === 404) {
@@ -89,18 +122,18 @@ export async function fetchPrivateResumeBlob(
   }
 
   if (!res.ok) {
-    throw new Error(`BLOB_FETCH_FAILED:${res.status}`);
+    throw new Error("BLOB_FETCH_FAILED");
   }
 
   const contentType = res.headers.get("content-type") || RESUME_MIME;
-  const body = res.body;
 
-  return new Response(body, {
+  return new Response(res.body, {
     status: 200,
     headers: {
       "Content-Type": contentType,
       "Content-Disposition": 'attachment; filename="resume.pdf"',
       "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
