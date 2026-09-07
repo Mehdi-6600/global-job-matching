@@ -32,13 +32,13 @@ export async function GET(req: NextRequest) {
       select: { resumeUrl: true },
     });
 
-    const resumeUrl = profile?.resumeUrl || null;
+    const hasResume = Boolean(profile?.resumeUrl);
 
     return NextResponse.json({
-      resumeUrl,
-      hasResume: Boolean(resumeUrl),
-      storedInBlob: isHttpUrl(resumeUrl),
+      hasResume,
+      storedInBlob: isHttpUrl(profile?.resumeUrl),
       storageConfigured: isBlobStorageConfigured(),
+      downloadPath: hasResume ? "/api/profile/resume/download" : null,
     });
   } catch (error) {
     console.error("Resume GET error:", error);
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "File storage is not configured. Set BLOB_READ_WRITE_TOKEN in Vercel environment variables.",
+            "File storage is not configured. Set BLOB_READ_WRITE_TOKEN in Vercel.",
           code: "STORAGE_NOT_CONFIGURED",
         },
         { status: 503 }
@@ -79,14 +79,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    if (file.type !== RESUME_MIME && !file.name.toLowerCase().endsWith(".pdf")) {
+    if (
+      file.type !== RESUME_MIME &&
+      !file.name.toLowerCase().endsWith(".pdf")
+    ) {
       return NextResponse.json(
         { error: "Only PDF files are allowed" },
         { status: 400 }
       );
     }
 
-    if (file.size <= 0 || file.size > RESUME_MAX_BYTES) {
+    if (file.size > RESUME_MAX_BYTES) {
       return NextResponse.json(
         { error: "File too large (max 5MB)" },
         { status: 400 }
@@ -127,14 +130,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Best-effort cleanup of previous blob
     if (existing?.resumeUrl && existing.resumeUrl !== uploaded.url) {
       await deleteResumeIfBlob(existing.resumeUrl);
     }
 
     return NextResponse.json({
       success: true,
-      resumeUrl: uploaded.url,
+      hasResume: true,
+      downloadPath: "/api/profile/resume/download",
       storedInBlob: true,
       message: "Resume uploaded successfully",
     });
