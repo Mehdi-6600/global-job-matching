@@ -1,8 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ratelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
+import { z } from "zod";
 
-export async function DELETE() {
+const deleteSchema = z
+  .object({
+    confirm: z.literal("DELETE"),
+  })
+  .strict();
+
+/**
+ * Permanently delete the current user account.
+ * Requires JSON body: { "confirm": "DELETE" }
+ * Owner account (OWNER_EMAIL) cannot be deleted.
+ */
+export async function DELETE(req: NextRequest) {
   try {
     const session = await auth();
 
@@ -10,11 +24,36 @@ export async function DELETE() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const ip = getRequestIp(req);
+    const { success } = await ratelimit.limit(
+      `account_delete_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Body required: { "confirm": "DELETE" }' },
+        { status: 400 }
+      );
+    }
+
+    const parsed = deleteSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Confirm deletion with { "confirm": "DELETE" }' },
+        { status: 400 }
+      );
+    }
+
     const userId = session.user.id;
     const userEmail = session.user.email;
     const ownerEmail = process.env.OWNER_EMAIL?.trim();
 
-    // Prevent deleting the system owner account
     if (
       ownerEmail &&
       userEmail.toLowerCase() === ownerEmail.toLowerCase()
@@ -35,28 +74,37 @@ export async function DELETE() {
     }
 
     /**
-     * Application / JobAlert / Profile / etc. use onDelete: Cascade from User.
-     * We still delete explicit children first where helpful, then the user.
-     * Relation name on Application is `user` (userId), NOT `applicant`.
+     * Explicit child cleanup then user.
+     * Application relation is `user` (userId), not `applicant`.
+     * Most relations use onDelete: Cascade — extra deletes are safe.
      */
     await db.$transaction(async (tx) => {
       await tx.jobAlert.deleteMany({ where: { userId } });
       await tx.application.deleteMany({ where: { userId } });
-      await tx.savedJob.deleteMany({ where: { userId } }).catch(() => undefined);
-      await tx.notification.deleteMany({ where: { userId } }).catch(() => undefined);
-      await tx.transaction.deleteMany({ where: { userId } }).catch(() => undefined);
+      await tx.savedJob.deleteMany({ where: { userId } });
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.transaction.deleteMany({ where: { userId } });
+      await tx.interview.deleteMany({ where: { userId } });
+      await tx.usageEvent.deleteMany({ where: { userId } });
+      await tx.careerRiskAssessment.deleteMany({ where: { userId } });
+      await tx.profile.deleteMany({ where: { userId } });
+      await tx.message.deleteMany({
+        where: {
+          OR: [{ senderId: userId }, { receiverId: userId }],
+        },
+      });
 
       await tx.user.delete({ where: { id: userId } });
     });
 
-    return NextResponse.json(
-      { message: "Account deleted successfully" },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: "Account deleted",
+    });
   } catch (error) {
-    console.error("Account deletion error:", error);
+    console.error("Account delete error:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Failed to delete account" },
       { status: 500 }
     );
   }
