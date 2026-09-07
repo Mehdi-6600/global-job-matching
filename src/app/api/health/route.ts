@@ -4,6 +4,11 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+function envPresent(name: string): boolean {
+  const v = process.env[name];
+  return Boolean(v && String(v).trim().length > 0);
+}
+
 export async function GET() {
   const started = Date.now();
 
@@ -24,6 +29,20 @@ export async function GET() {
   const totalMs = Date.now() - started;
   const healthy = database === "ok";
 
+  // Presence only — never expose secret values
+  const config = {
+    databaseUrl: envPresent("DATABASE_URL"),
+    authSecret: envPresent("AUTH_SECRET"),
+    appUrl: envPresent("NEXT_PUBLIC_APP_URL") || envPresent("NEXT_PUBLIC_SITE_URL"),
+    ownerEmail: envPresent("OWNER_EMAIL"),
+    resend: envPresent("RESEND_API_KEY"),
+    cronSecret: envPresent("CRON_SECRET"),
+    blob: envPresent("BLOB_READ_WRITE_TOKEN"),
+    upstash:
+      envPresent("UPSTASH_REDIS_REST_URL") ||
+      envPresent("KV_REST_API_URL"),
+  };
+
   const body = {
     status: healthy ? "ok" : "degraded",
     service: "global-job-matching",
@@ -34,6 +53,7 @@ export async function GET() {
         latencyMs: dbMs,
         ...(errorMessage ? { error: errorMessage } : {}),
       },
+      config,
     },
     latencyMs: totalMs,
     version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
