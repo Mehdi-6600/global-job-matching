@@ -83,7 +83,7 @@ export default function PricingPage() {
           "For job seekers getting started"
         ),
         features: [
-          t("Pricing.freeF1", "Browse and apply to jobs"),
+          t("Pricing.freeF1", "Up to 20 applications / month"),
           t("Pricing.freeF2", "Basic profile"),
           t("Pricing.freeF3", "Email alerts"),
           t("Pricing.freeF4", "Standard support"),
@@ -101,7 +101,7 @@ export default function PricingPage() {
         },
         description: t("Pricing.planProDesc", "For active job seekers"),
         features: [
-          t("Pricing.proF1", "Unlimited applications"),
+          t("Pricing.proF1", "Up to 500 applications / month"),
           t("Pricing.proF2", "AI resume tools"),
           t("Pricing.proF3", "Career risk insights"),
           t("Pricing.proF4", "Priority alerts"),
@@ -123,7 +123,7 @@ export default function PricingPage() {
           "For employers & recruiters"
         ),
         features: [
-          t("Pricing.bizF1", "Post jobs"),
+          t("Pricing.bizF1", "Up to 10 active job posts"),
           t("Pricing.bizF2", "Applicant tracking"),
           t("Pricing.bizF3", "Company profile"),
           t("Pricing.bizF4", "Email outreach tools"),
@@ -145,7 +145,7 @@ export default function PricingPage() {
           "For larger hiring needs"
         ),
         features: [
-          t("Pricing.entF1", "Everything in Business"),
+          t("Pricing.entF1", "Up to 50 active job posts"),
           t("Pricing.entF2", "Advanced analytics"),
           t("Pricing.entF3", "Custom limits"),
           t("Pricing.entF4", "Dedicated support"),
