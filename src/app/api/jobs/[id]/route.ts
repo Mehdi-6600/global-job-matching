@@ -10,6 +10,9 @@ import {
   deleteJobForUser,
 } from "@/services/jobs/update-job";
 
+const VIEW_COOKIE_PREFIX = "jv_";
+const VIEW_COOKIE_MAX_AGE = 60 * 60 * 12; // 12 hours
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -57,43 +60,53 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const updated = await db.job.update({
-      where: { id },
-      data: { viewCount: { increment: 1 } },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            logo: true,
-            description: true,
-            website: true,
-          },
-        },
-        category: {
-          select: { id: true, name: true, slug: true, color: true },
-        },
-        postedBy: {
-          select: { id: true, name: true },
-        },
-      },
-    });
+    const cookieName = `${VIEW_COOKIE_PREFIX}${id}`;
+    const alreadyViewed = req.cookies.get(cookieName)?.value === "1";
 
-    return NextResponse.json({
+    let viewCount = job.viewCount;
+
+    if (!alreadyViewed) {
+      try {
+        const updated = await db.job.update({
+          where: { id },
+          data: { viewCount: { increment: 1 } },
+          select: { viewCount: true },
+        });
+        viewCount = updated.viewCount;
+      } catch {
+        // non-fatal
+      }
+    }
+
+    const payload = {
       job: {
-        ...updated,
-        location: normalizeLocation(updated.location) || updated.location,
-        company: updated.company
+        ...job,
+        viewCount,
+        location: normalizeLocation(job.location) || job.location,
+        company: job.company
           ? {
-              ...updated.company,
+              ...job.company,
               location:
-                normalizeLocation(updated.company.location) ||
-                updated.company.location,
+                normalizeLocation(job.company.location) ||
+                job.company.location,
             }
           : null,
       },
-    });
+    };
+
+    const res = NextResponse.json(payload);
+
+    if (!alreadyViewed) {
+      res.cookies.set(cookieName, "1", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: VIEW_COOKIE_MAX_AGE,
+        path: "/",
+      });
+    }
+
+    return res;
   } catch (error) {
     console.error("Job GET error:", error);
     return NextResponse.json(
