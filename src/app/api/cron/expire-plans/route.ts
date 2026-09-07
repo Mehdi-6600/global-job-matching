@@ -5,10 +5,7 @@ import { db } from "@/lib/db";
 
 /**
  * Daily cron: downgrade users with expired paid plans to free.
- *
  * Auth: Authorization: Bearer <CRON_SECRET>
- * Configure in Vercel → Settings → Environment Variables → CRON_SECRET
- * and vercel.json cron path.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -26,7 +23,6 @@ export async function GET(req: NextRequest) {
 
     const result = await expireOverduePlans(db, 500);
 
-    // Optional: notify users (best-effort, non-blocking failures)
     if (result.userIds.length > 0) {
       try {
         await db.notification.createMany({
@@ -54,7 +50,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** Vercel Cron uses GET; also allow POST with same auth */
 export async function POST(req: NextRequest) {
   return GET(req);
 }
