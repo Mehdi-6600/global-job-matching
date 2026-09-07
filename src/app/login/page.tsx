@@ -1,17 +1,22 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { safeCallbackOr } from "@/lib/url-safety";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const { t } = useLocale();
+
+  const callbackUrl = useMemo(
+    () => safeCallbackOr(searchParams.get("callbackUrl"), "/dashboard"),
+    [searchParams]
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,27 +63,25 @@ function LoginForm() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center py-10 px-4">
       <div className="w-full max-w-md">
-        <div className="rounded-3xl p-8 sm:p-10 bg-white/5 border border-white/10">
-          <div className="flex justify-center mb-8">
-            <Link href="/" className="text-2xl font-bold text-white">
-              G<span className="text-sky-400">JM</span>
-            </Link>
-          </div>
-
-          <h1 className="text-2xl font-bold text-center text-white mb-1">
-            {t("Auth.loginTitle", "Sign In")}
-          </h1>
-          <p className="text-center text-slate-400 text-sm mb-8">
-            {t("Auth.loginSubtitle", "Welcome back to Global Job Matching")}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block">
+            <span className="text-2xl font-bold text-white">
+              Global Job Matching
+            </span>
+          </Link>
+          <p className="mt-2 text-slate-400 text-sm">
+            {t("Auth.loginSubtitle", "Sign in to continue")}
           </p>
+        </div>
 
-          {error && (
-            <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-              {error}
-            </div>
-          )}
-
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm px-4 py-3">
+                {error}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 {t("Auth.email", "Email")}
