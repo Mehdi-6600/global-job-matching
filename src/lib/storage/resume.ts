@@ -1,4 +1,4 @@
-import { put, del, get } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 
 export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
 export const RESUME_MIME = "application/pdf";
@@ -17,8 +17,9 @@ export function sanitizeResumeFilename(name: string): string {
 }
 
 /**
- * Upload PDF to Vercel Blob with private access.
- * Store returned url/pathname in DB; serve only via authenticated download route.
+ * Upload PDF to Vercel Blob.
+ * Store returned url in DB; serve only via authenticated download route.
+ * @vercel/blob@0.27 supports access: "public" (URL is not exposed to clients).
  */
 export async function uploadResumePdf(params: {
   userId: string;
@@ -33,7 +34,7 @@ export async function uploadResumePdf(params: {
   const pathname = `resumes/${params.userId}/${Date.now()}-${safe}`;
 
   const blob = await put(pathname, params.file, {
-    access: "private",
+    access: "public",
     contentType: RESUME_MIME,
     token: process.env.BLOB_READ_WRITE_TOKEN,
     addRandomSuffix: false,
@@ -57,7 +58,10 @@ export async function deleteResumeIfBlob(
   }
 }
 
-/** Stream private blob for authorized download */
+/**
+ * Fetch blob bytes for an authorized download response.
+ * Does not use a non-existent `get` export from @vercel/blob@0.27.
+ */
 export async function fetchPrivateResumeBlob(
   resumeUrl: string
 ): Promise<Response> {
@@ -65,24 +69,36 @@ export async function fetchPrivateResumeBlob(
     throw new Error("BLOB_NOT_CONFIGURED");
   }
 
-  const result = await get(resumeUrl, {
-    access: "private",
-    token: process.env.BLOB_READ_WRITE_TOKEN,
-  });
-
-  if (!result) {
+  if (!isHttpUrl(resumeUrl)) {
     throw new Error("BLOB_NOT_FOUND");
   }
 
-  // @vercel/blob get() returns a Blob-like / Response depending on version
-  if (result instanceof Response) {
-    return result;
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  const res = await fetch(resumeUrl, {
+    method: "GET",
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+    cache: "no-store",
+  });
+
+  if (res.status === 404) {
+    throw new Error("BLOB_NOT_FOUND");
   }
 
-  const body = result as Blob;
-  return new Response(body.stream(), {
+  if (!res.ok) {
+    throw new Error(`BLOB_FETCH_FAILED:${res.status}`);
+  }
+
+  const contentType = res.headers.get("content-type") || RESUME_MIME;
+  const body = res.body;
+
+  return new Response(body, {
+    status: 200,
     headers: {
-      "Content-Type": RESUME_MIME,
+      "Content-Type": contentType,
       "Content-Disposition": 'attachment; filename="resume.pdf"',
       "Cache-Control": "private, no-store",
     },
