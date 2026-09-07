@@ -1,7 +1,6 @@
 /**
  * Single source of truth for plans + crypto wallets.
- * Wallet addresses come from environment variables (not hardcoded secrets,
- * but avoids redeploy mistakes and keeps prod/test separate).
+ * Feature copy MUST match src/lib/plan-limits.ts quotas.
  */
 
 export const PLAN_IDS = ["free", "pro", "business", "enterprise"] as const;
@@ -31,10 +30,11 @@ export const PLANS = [
     price: PLAN_PRICES.free,
     description: "Get started and explore the job board",
     features: [
-      "Browse jobs",
-      "Apply to jobs",
-      "Save jobs",
-      "Basic profile",
+      "Up to 20 applications / month",
+      "Up to 20 saved jobs",
+      "Up to 3 job alerts",
+      "2 AI generations / month",
+      "1 active employer job post",
     ],
   },
   {
@@ -43,10 +43,11 @@ export const PLANS = [
     price: PLAN_PRICES.pro,
     description: "For active job seekers",
     features: [
-      "Everything in Free",
-      "Priority applications",
-      "AI resume tools",
-      "Career risk insights",
+      "Up to 500 applications / month",
+      "Up to 500 saved jobs",
+      "Up to 20 job alerts",
+      "30 AI generations / month",
+      "Career risk + AI resume tools",
     ],
   },
   {
@@ -55,9 +56,10 @@ export const PLANS = [
     price: PLAN_PRICES.business,
     description: "For growing teams",
     features: [
-      "Post more jobs",
+      "Up to 10 active job posts",
       "Applicant management",
       "Company profile",
+      "50 AI generations / month",
       "Email outreach tools",
     ],
   },
@@ -67,10 +69,11 @@ export const PLANS = [
     price: PLAN_PRICES.enterprise,
     description: "For larger hiring needs",
     features: [
+      "Up to 50 active job posts",
       "Everything in Business",
-      "Priority support",
+      "200 AI generations / month",
       "Advanced analytics",
-      "Custom limits",
+      "Priority support",
     ],
   },
 ] as const;
@@ -94,46 +97,28 @@ export type CryptoWallet = {
 };
 
 function readEnvAddress(key: string): string | null {
-  const raw = process.env[key];
-  if (!raw) return null;
-  const address = raw.trim();
-  if (address.length < 8) return null;
-  return address;
+  const raw = process.env[key]?.trim();
+  if (!raw || raw.length < 8) return null;
+  return raw;
 }
 
-/**
- * Only wallets with a non-empty env address are exposed.
- * Safe to call from Server Components / API routes.
- */
 export function getCryptoWallets(): CryptoWallet[] {
   const list: CryptoWallet[] = [];
   for (const def of WALLET_DEFS) {
     const address = readEnvAddress(def.env);
-    if (!address) continue;
-    list.push({
-      type: def.type,
-      name: def.name,
-      address,
-    });
+    if (address) {
+      list.push({ type: def.type, name: def.name, address });
+    }
   }
   return list;
 }
 
-export function getCryptoWallet(
-  type: string
-): CryptoWallet | null {
-  const t = type.toUpperCase();
-  return getCryptoWallets().find((w) => w.type === t) || null;
+export function getCryptoWallet(type: string): CryptoWallet | null {
+  const wallets = getCryptoWallets();
+  return wallets.find((w) => w.type === type) || null;
 }
 
-export function isSupportedCryptoType(type: string): boolean {
-  return getCryptoWallet(type) !== null;
-}
-
-/**
- * @deprecated Prefer getCryptoWallets() so empty env keys are hidden.
- * Kept as a name some UI may still import — resolves at runtime from env.
- */
+/** @deprecated use getCryptoWallets() */
 export const CRYPTO_WALLETS = {
   get list() {
     return getCryptoWallets();
