@@ -1,74 +1,66 @@
 import type { CareerRiskFormInput } from "@/types/career-risk";
 
-const STORAGE_KEY = "gjm_career_risk_draft_v1";
-const MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STORAGE_KEY = "gjm_career_risk_draft_v2";
+const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
-type DraftEnvelope = {
-  v: 1;
-  savedAt: number;
+export type CareerRiskDraft = {
   form: CareerRiskFormInput;
-  autoSubmit?: boolean;
+  autoSubmit: boolean;
+  savedAt: number;
 };
 
-function canUseSessionStorage(): boolean {
+function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof sessionStorage !== "undefined";
 }
 
 export function saveCareerRiskDraft(
   form: CareerRiskFormInput,
-  opts?: { autoSubmit?: boolean }
+  options?: { autoSubmit?: boolean }
 ): void {
-  if (!canUseSessionStorage()) return;
-  const payload: DraftEnvelope = {
-    v: 1,
-    savedAt: Date.now(),
-    form: {
-      jobTitle: String(form.jobTitle || "").slice(0, 120),
-      skills: String(form.skills || "").slice(0, 1500),
-      industry: String(form.industry || "").slice(0, 120),
-      experienceYears:
-        typeof form.experienceYears === "number" &&
-        Number.isFinite(form.experienceYears)
-          ? Math.min(50, Math.max(0, form.experienceYears))
-          : undefined,
-      country: String(form.country || "").slice(0, 120),
-      location: String(form.location || "").slice(0, 200),
-      education: String(form.education || "").slice(0, 200),
-    },
-    autoSubmit: Boolean(opts?.autoSubmit),
-  };
+  if (!canUseStorage()) return;
   try {
+    const payload: CareerRiskDraft = {
+      form: {
+        jobTitle: (form.jobTitle || "").trim(),
+        skills: form.skills || "",
+        industry: form.industry || "",
+        experienceYears:
+          typeof form.experienceYears === "number" &&
+          Number.isFinite(form.experienceYears)
+            ? form.experienceYears
+            : undefined,
+        country: form.country || "",
+        location: form.location || "",
+        education: form.education || "",
+      },
+      autoSubmit: Boolean(options?.autoSubmit),
+      savedAt: Date.now(),
+    };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
-    // quota / private mode — ignore
+    // quota / private mode
   }
 }
 
-export function loadCareerRiskDraft(): {
-  form: CareerRiskFormInput;
-  autoSubmit: boolean;
-} | null {
-  if (!canUseSessionStorage()) return null;
+export function loadCareerRiskDraft(): CareerRiskDraft | null {
+  if (!canUseStorage()) return null;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as DraftEnvelope;
-    if (!parsed || parsed.v !== 1 || !parsed.form?.jobTitle) return null;
-    if (Date.now() - (parsed.savedAt || 0) > MAX_AGE_MS) {
+    const parsed = JSON.parse(raw) as CareerRiskDraft;
+    if (!parsed?.form || typeof parsed.savedAt !== "number") return null;
+    if (Date.now() - parsed.savedAt > TTL_MS) {
       sessionStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return {
-      form: parsed.form,
-      autoSubmit: Boolean(parsed.autoSubmit),
-    };
+    return parsed;
   } catch {
     return null;
   }
 }
 
 export function clearCareerRiskDraft(): void {
-  if (!canUseSessionStorage()) return;
+  if (!canUseStorage()) return;
   try {
     sessionStorage.removeItem(STORAGE_KEY);
   } catch {
