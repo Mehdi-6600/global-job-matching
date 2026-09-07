@@ -13,7 +13,7 @@ import {
   AlertCircle,
   X,
 } from "lucide-react";
-import type { CareerRiskAnalysis } from "@/types/career-risk";
+import type { CareerRiskAnalysis, CareerRiskFormInput } from "@/types/career-risk";
 import {
   CAREER_RISK_DISCLAIMER_EN,
   CAREER_RISK_DISCLAIMER_FA,
@@ -23,6 +23,7 @@ import {
   loadCareerRiskDraft,
   saveCareerRiskDraft,
 } from "@/lib/career-risk-draft";
+import { trackEvent } from "@/lib/track";
 
 const levelColor = {
   low: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
@@ -75,6 +76,9 @@ export default function CareerRiskPage() {
   const [skills, setSkills] = useState("");
   const [industry, setIndustry] = useState("");
   const [experienceYears, setExperienceYears] = useState("");
+  const [country, setCountry] = useState("");
+  const [location, setLocation] = useState("");
+  const [education, setEducation] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<CareerRiskAnalysis | null>(null);
@@ -82,12 +86,27 @@ export default function CareerRiskPage() {
   const [info, setInfo] = useState("");
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [sharePath, setSharePath] = useState<string | null>(null);
+
+  function currentForm(): CareerRiskFormInput {
+    return {
+      jobTitle: jobTitle.trim(),
+      skills,
+      industry,
+      experienceYears: experienceYears ? Number(experienceYears) : undefined,
+      country,
+      location,
+      education,
+    };
+  }
 
   const runAnalysis = useCallback(async () => {
     setLoading(true);
     setError("");
     setInfo("");
     setAnalysis(null);
+    setSharePath(null);
+    trackEvent("career_risk_analysis_started");
 
     try {
       const res = await fetch("/api/career/risk", {
@@ -100,30 +119,25 @@ export default function CareerRiskPage() {
           experienceYears: experienceYears
             ? Number(experienceYears)
             : undefined,
+          country,
+          location,
+          education,
         }),
       });
 
       const data = await res.json();
 
       if (res.status === 401) {
-        saveCareerRiskDraft(
-          {
-            jobTitle: jobTitle.trim(),
-            skills,
-            industry,
-            experienceYears: experienceYears
-              ? Number(experienceYears)
-              : undefined,
-          },
-          { autoSubmit: true }
-        );
+        saveCareerRiskDraft(currentForm(), { autoSubmit: true });
         setShowAuthGate(true);
+        trackEvent("career_risk_auth_gate_shown");
         setLoading(false);
         return;
       }
 
       if (!res.ok) {
         setError(data.error || "Analysis failed");
+        trackEvent("career_risk_analysis_failed");
         setLoading(false);
         return;
       }
@@ -131,6 +145,7 @@ export default function CareerRiskPage() {
       const parsed = parseAnalysisPayload(data);
       if (!parsed || !parsed.summary) {
         setError("Unexpected response from server. Please try again.");
+        trackEvent("career_risk_analysis_failed");
         setLoading(false);
         return;
       }
@@ -138,15 +153,31 @@ export default function CareerRiskPage() {
       setAnalysis(parsed);
       setLocked(Boolean(data.alternativesLocked));
       setInfo(typeof data.message === "string" ? data.message : "");
+      if (typeof data.sharePath === "string") setSharePath(data.sharePath);
       clearCareerRiskDraft();
+      trackEvent("career_risk_analysis_completed");
+      trackEvent("career_risk_result_viewed");
     } catch {
-      setError("Network error");
+      setError("Network error. Please try again.");
+      trackEvent("career_risk_analysis_failed");
     } finally {
       setLoading(false);
     }
-  }, [jobTitle, skills, industry, experienceYears]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    jobTitle,
+    skills,
+    industry,
+    experienceYears,
+    country,
+    location,
+    education,
+  ]);
 
-  // Restore draft after login / return
+  useEffect(() => {
+    trackEvent("career_risk_started");
+  }, []);
+
   useEffect(() => {
     if (restored) return;
     const draft = loadCareerRiskDraft();
@@ -162,16 +193,26 @@ export default function CareerRiskPage() {
         ? String(draft.form.experienceYears)
         : ""
     );
+    setCountry(draft.form.country || "");
+    setLocation(draft.form.location || "");
+    setEducation(draft.form.education || "");
     setRestored(true);
   }, [restored]);
 
-  // After session becomes authenticated, auto-run if draft requested it
+  useEffect(() => {
+    if (status === "authenticated") {
+      trackEvent("career_risk_auth_success");
+    }
+  }, [status]);
+
   useEffect(() => {
     if (status !== "authenticated") return;
     if (!restored) return;
     const draft = loadCareerRiskDraft();
-    if (draft?.autoSubmit && (draft.form.jobTitle || jobTitle).trim().length >= 2) {
-      // clear autoSubmit flag so we don't loop
+    if (
+      draft?.autoSubmit &&
+      (draft.form.jobTitle || jobTitle).trim().length >= 2
+    ) {
       saveCareerRiskDraft(
         {
           jobTitle: jobTitle || draft.form.jobTitle,
@@ -180,6 +221,9 @@ export default function CareerRiskPage() {
           experienceYears: experienceYears
             ? Number(experienceYears)
             : draft.form.experienceYears,
+          country: country || draft.form.country,
+          location: location || draft.form.location,
+          education: education || draft.form.education,
         },
         { autoSubmit: false }
       );
@@ -195,20 +239,12 @@ export default function CareerRiskPage() {
       return;
     }
 
-    // Gate before calling AI if logged out
+    trackEvent("career_risk_form_completed");
+
     if (status !== "authenticated") {
-      saveCareerRiskDraft(
-        {
-          jobTitle: jobTitle.trim(),
-          skills,
-          industry,
-          experienceYears: experienceYears
-            ? Number(experienceYears)
-            : undefined,
-        },
-        { autoSubmit: true }
-      );
+      saveCareerRiskDraft(currentForm(), { autoSubmit: true });
       setShowAuthGate(true);
+      trackEvent("career_risk_auth_gate_shown");
       return;
     }
 
@@ -216,32 +252,14 @@ export default function CareerRiskPage() {
   }
 
   function continueWithGoogle() {
-    saveCareerRiskDraft(
-      {
-        jobTitle: jobTitle.trim(),
-        skills,
-        industry,
-        experienceYears: experienceYears
-          ? Number(experienceYears)
-          : undefined,
-      },
-      { autoSubmit: true }
-    );
+    saveCareerRiskDraft(currentForm(), { autoSubmit: true });
+    trackEvent("career_risk_google_login");
     void signIn("google", { callbackUrl: "/career-risk" });
   }
 
   function continueWithEmail() {
-    saveCareerRiskDraft(
-      {
-        jobTitle: jobTitle.trim(),
-        skills,
-        industry,
-        experienceYears: experienceYears
-          ? Number(experienceYears)
-          : undefined,
-      },
-      { autoSubmit: true }
-    );
+    saveCareerRiskDraft(currentForm(), { autoSubmit: true });
+    trackEvent("career_risk_email_login");
     window.location.href = `/login?callbackUrl=${encodeURIComponent("/career-risk")}`;
   }
 
@@ -311,7 +329,7 @@ export default function CareerRiskPage() {
               <input
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                placeholder="e.g. Finance, Healthcare"
+                placeholder="e.g. Finance, Software"
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
                 maxLength={120}
               />
@@ -320,20 +338,59 @@ export default function CareerRiskPage() {
 
           <div>
             <label className="block text-xs text-slate-400 mb-1.5">
-              Skills (comma-separated)
+              Skills
             </label>
             <textarea
               value={skills}
               onChange={(e) => setSkills(e.target.value)}
               placeholder="e.g. Excel, Python, customer service"
-              rows={3}
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 resize-y"
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 min-h-[88px]"
               maxLength={1500}
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1.5">
+                Country
+              </label>
+              <input
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="e.g. Germany"
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
+                maxLength={120}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1.5">
+                Location / city
+              </label>
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Berlin"
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
+                maxLength={200}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">
+              Education
+            </label>
+            <input
+              value={education}
+              onChange={(e) => setEducation(e.target.value)}
+              placeholder="e.g. BSc Computer Science"
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
+              maxLength={200}
+            />
+          </div>
+
           {error && (
-            <div className="flex items-start gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+            <div className="flex items-start gap-2 text-red-300 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -341,8 +398,8 @@ export default function CareerRiskPage() {
 
           <button
             type="submit"
-            disabled={loading || status === "loading"}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold text-sm py-3 disabled:opacity-60"
+            disabled={loading}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm py-3 disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -352,143 +409,121 @@ export default function CareerRiskPage() {
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                Check my career risk
+                Check my risk
               </>
             )}
           </button>
 
-          <p className="text-[11px] text-slate-500 leading-relaxed text-center">
+          <p className="text-[11px] text-slate-500 text-center">
             {CAREER_RISK_DISCLAIMER_EN}
-            <br />
-            <span dir="rtl" className="inline-block mt-1">
-              {CAREER_RISK_DISCLAIMER_FA}
-            </span>
+          </p>
+          <p className="text-[11px] text-slate-500 text-center" dir="rtl">
+            {CAREER_RISK_DISCLAIMER_FA}
           </p>
         </form>
 
         {analysis && (
-          <div className="space-y-4">
-            <div
-              className={`glass rounded-2xl p-5 border ${levelColor[analysis.riskLevel]}`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <div>
-                  <p className="text-xs uppercase tracking-wide opacity-80">
-                    Risk score
-                  </p>
-                  <p className="text-3xl font-bold">{analysis.riskScore}</p>
-                </div>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold border border-current/30">
-                  {analysis.riskLevel.toUpperCase()} RISK
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-black/20 overflow-hidden mb-4">
-                <div
-                  className="h-full rounded-full bg-current/80 transition-all"
-                  style={{ width: `${analysis.riskScore}%` }}
-                />
-              </div>
-              <p className="text-sm text-slate-200 leading-relaxed">
-                {analysis.summary}
-              </p>
-              {info && (
-                <p className="mt-3 text-xs text-amber-300/90 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5" />
-                  {info}
+          <div className="glass rounded-2xl p-5 sm:p-6 border border-white/10 space-y-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-sm text-slate-400">Role</p>
+                <p className="text-xl font-semibold text-white">
+                  {analysis.jobTitle}
                 </p>
-              )}
-              <p className="mt-3 text-[11px] text-slate-500">
-                Source: {analysis.source === "ai" ? "AI model" : "Heuristic fallback"}{" "}
-                · {CAREER_RISK_DISCLAIMER_EN}
-              </p>
+              </div>
+              <div
+                className={`rounded-xl border px-3 py-2 text-center ${levelColor[analysis.riskLevel]}`}
+              >
+                <p className="text-2xl font-bold">{analysis.riskScore}</p>
+                <p className="text-xs uppercase tracking-wide">
+                  {analysis.riskLevel}
+                </p>
+              </div>
             </div>
 
+            <p className="text-slate-300 leading-relaxed">{analysis.summary}</p>
+
             {analysis.reasons.length > 0 && (
-              <div className="glass rounded-2xl p-5 border border-white/10">
-                <h2 className="text-white font-semibold text-sm mb-3">
+              <section>
+                <h2 className="text-sm font-semibold text-white mb-2">
                   Why this score
                 </h2>
-                <ul className="space-y-2">
+                <ul className="list-disc pl-5 space-y-1 text-slate-300 text-sm">
                   {analysis.reasons.map((r, i) => (
-                    <li key={i} className="text-slate-300 text-sm flex gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                      {r}
-                    </li>
+                    <li key={i}>{r}</li>
                   ))}
                 </ul>
-              </div>
+              </section>
             )}
 
             {analysis.skillsToBuild.length > 0 && (
-              <div className="glass rounded-2xl p-5 border border-white/10">
-                <h2 className="text-white font-semibold text-sm mb-3">
+              <section>
+                <h2 className="text-sm font-semibold text-white mb-2">
                   Skills to build
                 </h2>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.skillsToBuild.map((s) => (
-                    <span
-                      key={s}
-                      className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs"
-                    >
-                      {s}
-                    </span>
+                <ul className="list-disc pl-5 space-y-1 text-slate-300 text-sm">
+                  {analysis.skillsToBuild.map((s, i) => (
+                    <li key={i}>{s}</li>
                   ))}
-                </div>
-              </div>
+                </ul>
+              </section>
             )}
 
-            <div className="glass rounded-2xl p-5 border border-white/10">
-              <h2 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                Alternative careers
-                {locked && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+            <section>
+              <h2 className="text-sm font-semibold text-white mb-2">
+                Alternative paths
               </h2>
-              {locked ? (
-                <div className="text-center py-6">
-                  <Lock className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm mb-4">
-                    Unlock personalized alternative roles with a paid plan.
-                  </p>
-                  <Link
-                    href="/pricing"
-                    className="inline-flex px-5 py-2.5 rounded-xl bg-cyan-500 text-white text-sm font-semibold"
-                  >
-                    View pricing
-                  </Link>
+              {locked || analysis.alternatives.length === 0 ? (
+                <div className="flex items-start gap-2 text-slate-400 text-sm">
+                  <Lock className="w-4 h-4 mt-0.5" />
+                  <span>
+                    {info ||
+                      "Upgrade to Pro to unlock alternative role recommendations."}{" "}
+                    <Link href="/pricing" className="text-cyan-400 underline">
+                      View pricing
+                    </Link>
+                  </span>
                 </div>
               ) : (
-                <ul className="space-y-2">
+                <ul className="list-disc pl-5 space-y-1 text-slate-300 text-sm">
                   {analysis.alternatives.map((a, i) => (
-                    <li key={i} className="text-slate-300 text-sm flex gap-2">
-                      <span className="text-emerald-400">→</span>
-                      {a}
-                    </li>
+                    <li key={i}>{a}</li>
                   ))}
                 </ul>
               )}
-            </div>
+            </section>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-wrap gap-3 pt-2">
               <Link
                 href="/jobs"
-                className="flex-1 text-center rounded-xl bg-sky-500 text-white text-sm font-semibold py-3"
+                onClick={() => trackEvent("career_risk_cta_clicked")}
+                className="inline-flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm px-4 py-2"
               >
+                <CheckCircle2 className="w-4 h-4 text-cyan-400" />
                 Browse matching jobs
               </Link>
-              <Link
-                href="/resume-builder"
-                className="flex-1 text-center rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold py-3"
-              >
-                Build AI resume
-              </Link>
+              {sharePath && (
+                <button
+                  type="button"
+                  className="text-sm text-cyan-400 underline"
+                  onClick={() => {
+                    trackEvent("career_risk_share_created");
+                    void navigator.clipboard?.writeText(
+                      `${window.location.origin}${sharePath}`
+                    );
+                  }}
+                >
+                  Copy share link
+                </button>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Authentication Gate — no result until signed in */}
       {showAuthGate && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-slate-900 border border-white/10 p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/95 p-6 shadow-2xl relative">
             <button
               type="button"
               onClick={() => setShowAuthGate(false)}
@@ -501,11 +536,11 @@ export default function CareerRiskPage() {
               <Lock className="w-6 h-6 text-cyan-400" />
             </div>
             <h2 className="text-xl font-bold text-white mb-2">
-              Sign in to see your result
+              برای مشاهده نتیجه، ابتدا وارد حساب کاربری خود شوید
             </h2>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Your career risk assessment is ready to run. Sign in to view the
-              full report, save it to your account, and unlock job matches.
+              Sign in to run the AI analysis, save the report, and unlock
+              matches. Your answers stay on this device until you finish.
             </p>
             <div className="space-y-3">
               <button
@@ -526,26 +561,12 @@ export default function CareerRiskPage() {
                 href={`/register?callbackUrl=${encodeURIComponent("/career-risk")}`}
                 className="block w-full text-center rounded-xl border border-white/10 text-slate-300 text-sm py-3"
                 onClick={() =>
-                  saveCareerRiskDraft(
-                    {
-                      jobTitle: jobTitle.trim(),
-                      skills,
-                      industry,
-                      experienceYears: experienceYears
-                        ? Number(experienceYears)
-                        : undefined,
-                    },
-                    { autoSubmit: true }
-                  )
+                  saveCareerRiskDraft(currentForm(), { autoSubmit: true })
                 }
               >
                 Create account
               </Link>
             </div>
-            <p className="text-[11px] text-slate-500 mt-4 text-center">
-              Your form answers stay on this device until you finish sign-in
-              (session storage, expires in 2 hours).
-            </p>
           </div>
         </div>
       )}
