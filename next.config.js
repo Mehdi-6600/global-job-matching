@@ -4,6 +4,7 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
 
+  // Keep false once lint is clean; temporarily true only if build blocked
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,8 +12,12 @@ const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      { protocol: "https", hostname: "**" },
-      { protocol: "http", hostname: "**" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "remoteok.com" },
+      { protocol: "https", hostname: "www.arbeitnow.com" },
     ],
     minimumCacheTTL: 60 * 60 * 24 * 7,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
@@ -57,15 +62,6 @@ const nextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=604800, stale-while-revalidate=86400",
-          },
-        ],
-      },
-      {
-        source: "/sitemap.xml",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=3600, stale-while-revalidate=86400",
           },
         ],
       },
