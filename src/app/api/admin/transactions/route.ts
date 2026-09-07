@@ -35,7 +35,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
+    const status = new URL(req.url).searchParams.get("status");
+
     const transactions = await db.transaction.findMany({
+      where:
+        status === "pending" ||
+        status === "confirmed" ||
+        status === "rejected"
+          ? { status }
+          : undefined,
       orderBy: { createdAt: "desc" },
       take: 100,
       include: {
