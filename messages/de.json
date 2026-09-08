@@ -62,6 +62,8 @@
     "notSpecified": "Nicht angegeben",
     "remote": "Remote",
     "noResults": "Keine Ergebnisse gefunden",
+    "companyFallback": "Unternehmen",
+    "errorNetwork": "Netzwerkfehler. Bitte erneut versuchen.",
     "newsletterTitle": "Bleiben Sie auf dem Laufenden",
     "newsletterSubtitle": "Erhalten Sie die besten Jobs wöchentlich in Ihrem Posteingang",
     "newsletterSuccess": "Sie sind abonniert! Überprüfen Sie bald Ihren Posteingang.",
@@ -70,7 +72,17 @@
     "newsletterSubscribe": "Abonnieren",
     "newsletterFooter": "Kein Spam. Jederzeit abbestellen.",
     "newsletterErrorSubscribe": "Abonnieren fehlgeschlagen",
-    "newsletterErrorNetwork": "Netzwerkfehler. Bitte erneut versuchen."
+    "newsletterErrorNetwork": "Netzwerkfehler. Bitte erneut versuchen.",
+    "timeAgo": {
+      "justNow": "Gerade jetzt",
+      "minutes": "vor {count} Minuten",
+      "minutesAgo": "vor {count}m",
+      "hours": "vor {count} Stunden",
+      "hoursAgo": "vor {count}h",
+      "days": "vor {count} Tagen",
+      "daysAgo": "vor {count}T",
+      "months": "vor {count} Monaten"
+    }
   },
   "Auth": {
     "loginTitle": "Anmelden",
@@ -314,15 +326,54 @@
   },
   "Applications": {
     "title": "Meine Bewerbungen",
-    "empty": "Sie haben sich noch auf keinen Job beworben.",
+    "loading": "Lade Bewerbungen...",
+    "errorLoad": "Fehler beim Laden der Bewerbungen",
+    "count": "{count} Bewerbung{plural}",
+    "empty": "Keine Bewerbungen",
+    "browseJobs": "Jobs durchsuchen",
+    "jobUnavailable": "Job nicht verfügbar",
+    "appliedOn": "Beworben am {date}",
+    "statusPending": "Ausstehend",
+    "statusViewed": "Angesehen",
+    "statusInterview": "Vorstellungsgespräch",
+    "statusRejected": "Abgelehnt",
+    "statusHired": "Eingestellt",
     "status": "Status",
-    "appliedOn": "Beworben am",
     "viewJob": "Job anzeigen"
   },
   "SavedJobs": {
     "title": "Gespeicherte Jobs",
-    "empty": "Noch keine gespeicherten Jobs.",
-    "remove": "Entfernen"
+    "loading": "Lade gespeicherte Jobs...",
+    "errorLoad": "Fehler beim Laden gespeicherter Jobs",
+    "count": "{count} Job{plural} gespeichert",
+    "emptyTitle": "Keine gespeicherten Jobs",
+    "emptyDesc": "Durchsuchen Sie Jobs und speichern Sie, was Ihnen gefällt",
+    "viewJob": "Job anzeigen",
+    "browseJobs": "Jobs durchsuchen",
+    "remove": "Entfernen",
+    "empty": "Keine gespeicherten Jobs."
+  },
+  "Messages": {
+    "title": "Nachrichten",
+    "conversations": "Konversationen",
+    "noMessages": "Keine Nachrichten",
+    "noMessagesDesc": "Öffnen Sie einen Chat mit Bewerbern oder warten Sie auf eine Nachricht",
+    "defaultUser": "Benutzer",
+    "youPrefix": "Sie: ",
+    "messagePlaceholder": "Nachricht schreiben...",
+    "startConversation": "Konversation starten",
+    "selectConversation": "Konversation auswählen"
+  },
+  "Notifications": {
+    "title": "Benachrichtigungen",
+    "unreadCount": "{count} ungelesene Benachrichtigung{plural}",
+    "allCaughtUp": "Alles gelesen!",
+    "markAllRead": "Alle als gelesen markieren",
+    "emptyTitle": "Keine Benachrichtigungen",
+    "emptyDesc": "Wenn etwas passiert, sehen Sie es hier.",
+    "markAsRead": "Als gelesen markieren",
+    "delete": "Löschen",
+    "empty": "Keine Benachrichtigungen"
   },
   "Resume": {
     "title": "Lebenslauf-Generator",
@@ -337,9 +388,57 @@
     "applicants": "Bewerber",
     "company": "Unternehmen"
   },
-  "Notifications": {
-    "title": "Benachrichtigungen",
-    "empty": "Keine Benachrichtigungen",
-    "markAll": "Alle als gelesen markieren"
+  "PlanUsage": {
+    "loading": "Plan wird geladen…",
+    "errorSignIn": "Melden Sie sich an, um die Plan-Nutzung zu sehen.",
+    "errorLoad": "Plan-Nutzung konnte nicht geladen werden.",
+    "errorNetwork": "Netzwerkfehler.",
+    "noData": "Keine Plan-Daten.",
+    "signInLink": "Anmelden",
+    "currentPlan": "Aktueller Plan",
+    "upgrade": "Upgraden",
+    "expired": "abgelaufen",
+    "daysRemaining": "{days} Tag{plural} verbleibend",
+    "applicationsLabel": "Bewerbungen diesen Monat",
+    "savedJobsLabel": "Gespeicherte Jobs",
+    "jobAlertsLabel": "Job-Alerts",
+    "aiGenerationsLabel": "KI-Generierungen diesen Monat",
+    "activeEmployerJobsLabel": "Aktive Stellenangebote (Arbeitgeber)",
+    "pendingPaymentsLabel": "{count} Zahlung{plural} in Prüfung.",
+    "viewPricingLink": "Preise und Zahlungshistorie anzeigen →"
+  },
+  "PaymentHistory": {
+    "loading": "Zahlungen werden geladen…",
+    "errorSignIn": "Melden Sie sich an, um Zahlungen zu sehen.",
+    "errorLoad": "Zahlungen konnten nicht geladen werden.",
+    "errorNetwork": "Netzwerkfehler.",
+    "title": "Zahlungshistorie",
+    "pricingLink": "Preise",
+    "noPayments": "Noch keine Zahlungen.",
+    "upgradePlanLink": "Plan upgraden",
+    "statusConfirmed": "Bestätigt",
+    "statusPending": "Ausstehend",
+    "statusRejected": "Abgelehnt",
+    "statusUnknown": "Unbekannt"
+  },
+  "Profile": {
+    "editProfile": "Profil bearbeiten",
+    "saveChanges": "Änderungen speichern",
+    "about": "Über mich",
+    "bioPlaceholder": "Schreiben Sie etwas über sich...",
+    "links": "Links",
+    "websitePlaceholder": "Webseite",
+    "githubPlaceholder": "GitHub",
+    "linkedinPlaceholder": "LinkedIn",
+    "skills": "Fähigkeiten",
+    "addSkillPlaceholder": "Fähigkeit hinzufügen...",
+    "addSkill": "Hinzufügen",
+    "experience": "Berufserfahrung",
+    "education": "Bildung",
+    "period": "Zeitraum",
+    "company": "Unternehmen",
+    "school": "Bildungseinrichtung",
+    "degree": "Abschluss",
+    "year": "Jahr"
   }
 }
