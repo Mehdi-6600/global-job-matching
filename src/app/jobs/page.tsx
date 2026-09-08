@@ -16,6 +16,7 @@ import {
   Tag,
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
+import { useLocale } from "@/components/locale-provider";
 
 interface Job {
   id: string;
@@ -50,21 +51,8 @@ interface Filters {
   tag: string;
 }
 
-function formatSalary(
-  currency: string | null | undefined,
-  min: number | null | undefined,
-  max: number | null | undefined
-) {
-  const cur = currency || "USD";
-  if (min == null && max == null) return "Salary not specified";
-  if (min != null && max != null) {
-    return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
-  }
-  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
-  return `Up to ${cur} ${max!.toLocaleString()}`;
-}
-
 export default function JobsPage() {
+  const { t, locale } = useLocale();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -81,6 +69,27 @@ export default function JobsPage() {
     tag: "",
   });
 
+  const formatSalary = useCallback(
+    (
+      currency: string | null | undefined,
+      min: number | null | undefined,
+      max: number | null | undefined
+    ) => {
+      const cur = currency || "USD";
+      if (min == null && max == null) {
+        return t("Jobs.salaryNA", t("JobDetail.salaryNA", "Salary not specified"));
+      }
+      if (min != null && max != null) {
+        return `${cur} ${min.toLocaleString(locale)} – ${max.toLocaleString(locale)}`;
+      }
+      if (min != null) {
+        return `${t("Jobs.from", "From")} ${cur} ${min.toLocaleString(locale)}`;
+      }
+      return `${t("Jobs.upTo", "Up to")} ${cur} ${Number(max).toLocaleString(locale)}`;
+    },
+    [t, locale]
+  );
+
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -95,27 +104,28 @@ export default function JobsPage() {
     if (filters.tag) params.set("tag", filters.tag);
 
     try {
-      const res = await fetch(`/api/jobs?${params}`);
+      const res = await fetch(`/api/jobs?${params.toString()}`);
       const data = await res.json();
-      setJobs(data.jobs || []);
-      setTotalPages(data.pagination?.totalPages || 1);
-    } catch (err) {
-      console.error(err);
+      setJobs(data.jobs || data.data || []);
+      setTotalPages(data.totalPages || data.pagination?.totalPages || 1);
+    } catch {
+      setJobs([]);
     } finally {
       setLoading(false);
     }
   }, [page, filters]);
 
   useEffect(() => {
-    fetchJobs();
+    void fetchJobs();
   }, [fetchJobs]);
 
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
-    setFilters((prev) => ({ ...prev, [key]: value }));
     setPage(1);
+    setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
   function clearFilters() {
+    setPage(1);
     setFilters({
       search: "",
       location: "",
@@ -126,28 +136,28 @@ export default function JobsPage() {
       maxSalary: "",
       tag: "",
     });
-    setPage(1);
   }
 
-  const hasFilters =
+  const hasFilters = Boolean(
     filters.search ||
-    filters.location ||
-    filters.type ||
-    filters.experience ||
-    filters.remote ||
-    filters.minSalary ||
-    filters.maxSalary ||
-    filters.tag;
+      filters.location ||
+      filters.type ||
+      filters.experience ||
+      filters.remote ||
+      filters.minSalary ||
+      filters.maxSalary ||
+      filters.tag
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
-            Find Your Dream Job
+            {t("Jobs.title", "Find Your Dream Job")}
           </h1>
           <p className="text-slate-400">
-            Search through thousands of opportunities
+            {t("Jobs.subtitle", "Search through thousands of opportunities")}
           </p>
         </div>
 
@@ -157,7 +167,10 @@ export default function JobsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
                 type="text"
-                placeholder="Job title, keywords, or company..."
+                placeholder={t(
+                  "Jobs.searchPlaceholder",
+                  "Job title, keywords, or company..."
+                )}
                 value={filters.search}
                 onChange={(e) => updateFilter("search", e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -173,7 +186,7 @@ export default function JobsPage() {
               }`}
             >
               <Filter className="w-4 h-4" />
-              Filters
+              {t("Jobs.filters", "Filters")}
               {hasFilters && (
                 <span className="w-2 h-2 rounded-full bg-indigo-400" />
               )}
@@ -184,13 +197,16 @@ export default function JobsPage() {
             <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Location
+                  {t("Jobs.location", "Location")}
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
                     type="text"
-                    placeholder="City or country..."
+                    placeholder={t(
+                      "Jobs.locationPlaceholder",
+                      "City or country..."
+                    )}
                     value={filters.location}
                     onChange={(e) => updateFilter("location", e.target.value)}
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -200,49 +216,74 @@ export default function JobsPage() {
 
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Job Type
+                  {t("Jobs.jobType", "Job Type")}
                 </label>
                 <select
                   value={filters.type}
                   onChange={(e) => updateFilter("type", e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 >
-                  <option value="">All Types</option>
-                  <option value="full-time">Full-time</option>
-                  <option value="part-time">Part-time</option>
-                  <option value="contract">Contract</option>
-                  <option value="freelance">Freelance</option>
-                  <option value="internship">Internship</option>
+                  <option value="">{t("Jobs.allTypes", "All Types")}</option>
+                  <option value="full-time">
+                    {t("Jobs.types.fullTime", "Full-time")}
+                  </option>
+                  <option value="part-time">
+                    {t("Jobs.types.partTime", "Part-time")}
+                  </option>
+                  <option value="contract">
+                    {t("Jobs.types.contract", "Contract")}
+                  </option>
+                  <option value="freelance">
+                    {t("Jobs.types.freelance", "Freelance")}
+                  </option>
+                  <option value="internship">
+                    {t("Jobs.types.internship", "Internship")}
+                  </option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Experience
+                  {t("Jobs.experience", "Experience")}
                 </label>
                 <select
                   value={filters.experience}
                   onChange={(e) => updateFilter("experience", e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 >
-                  <option value="">Any Experience</option>
-                  <option value="entry">Entry Level</option>
-                  <option value="mid">Mid Level</option>
-                  <option value="senior">Senior Level</option>
-                  <option value="lead">Lead / Manager</option>
-                  <option value="executive">Executive</option>
+                  <option value="">
+                    {t("Jobs.anyExperience", "Any Experience")}
+                  </option>
+                  <option value="entry">
+                    {t("Jobs.experienceLevels.entry", "Entry Level")}
+                  </option>
+                  <option value="mid">
+                    {t("Jobs.experienceLevels.mid", "Mid Level")}
+                  </option>
+                  <option value="senior">
+                    {t("Jobs.experienceLevels.senior", "Senior Level")}
+                  </option>
+                  <option value="lead">
+                    {t("Jobs.experienceLevels.lead", "Lead / Manager")}
+                  </option>
+                  <option value="executive">
+                    {t("Jobs.experienceLevels.executive", "Executive")}
+                  </option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Tag
+                  {t("Jobs.tag", "Tag")}
                 </label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
                     type="text"
-                    placeholder="e.g. React, Python..."
+                    placeholder={t(
+                      "Jobs.tagPlaceholder",
+                      "e.g. React, Python..."
+                    )}
                     value={filters.tag}
                     onChange={(e) => updateFilter("tag", e.target.value)}
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -252,13 +293,13 @@ export default function JobsPage() {
 
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Min Salary
+                  {t("Jobs.minSalary", "Min Salary")}
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
                     type="number"
-                    placeholder="0"
+                    placeholder={t("Jobs.noLimit", "No limit")}
                     value={filters.minSalary}
                     onChange={(e) => updateFilter("minSalary", e.target.value)}
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -268,13 +309,13 @@ export default function JobsPage() {
 
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Max Salary
+                  {t("Jobs.maxSalary", "Max Salary")}
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
                     type="number"
-                    placeholder="No limit"
+                    placeholder={t("Jobs.noLimit", "No limit")}
                     value={filters.maxSalary}
                     onChange={(e) => updateFilter("maxSalary", e.target.value)}
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -292,7 +333,9 @@ export default function JobsPage() {
                   />
                   <div className="flex items-center gap-2">
                     <Globe className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm text-slate-300">Remote Only</span>
+                    <span className="text-sm text-slate-300">
+                      {t("Jobs.remoteOnly", "Remote Only")}
+                    </span>
                   </div>
                 </label>
               </div>
@@ -303,7 +346,8 @@ export default function JobsPage() {
                   onClick={clearFilters}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium w-full justify-center"
                 >
-                  <X className="w-4 h-4" /> Clear All
+                  <X className="w-4 h-4" />
+                  {t("Jobs.clearAll", "Clear All")}
                 </button>
               </div>
             </div>
@@ -316,47 +360,65 @@ export default function JobsPage() {
           </div>
         ) : jobs.length === 0 ? (
           <div className="text-center py-20 glass rounded-2xl border border-white/10">
+            <Building2 className="w-12 h-12 text-slate-600 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">
-              No jobs found
+              {t("Jobs.noJobsFound", "No jobs found")}
             </h3>
-            <p className="text-slate-400">
-              Try adjusting your search or filters
+            <p className="text-slate-400 text-sm mb-4">
+              {t(
+                "Jobs.tryAdjusting",
+                "Try adjusting your search or filters"
+              )}
             </p>
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-indigo-400 text-sm hover:underline"
+              >
+                {t("Jobs.clearAll", "Clear All")}
+              </button>
+            )}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
               {jobs.map((job) => (
                 <Link
                   key={job.id}
                   href={`/jobs/${job.id}`}
-                  className="glass rounded-2xl p-6 border border-white/10 hover:border-indigo-500/30 hover:bg-white/5 transition-all group"
+                  className="glass rounded-2xl p-5 border border-white/10 hover:border-indigo-500/30 transition-all block"
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start gap-3 mb-3">
                     <CompanyLogo
-                      name={job.company?.name}
+                      name={job.company?.name || t("Jobs.companyFallback", "Company")}
                       logo={job.company?.logo}
-                      size={48}
+                      size={40}
                     />
-                    {job.remote && (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium">
-                        Remote
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-base font-semibold text-white line-clamp-2">
+                        {job.title}
+                      </h2>
+                      <p className="text-sm text-slate-400 truncate">
+                        {job.company?.name ||
+                          t("Jobs.companyFallback", "Company")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-400 mb-3">
+                    {job.location && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5">
+                        <MapPin className="w-3 h-3" />
+                        {job.location}
                       </span>
                     )}
-                  </div>
-
-                  <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-indigo-300 transition-colors">
-                    {job.title}
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-slate-400 mb-3">
-                    <Building2 className="w-4 h-4" />
-                    <span>{job.company?.name || "Company"}</span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mb-4">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> {job.location}
-                    </span>
+                    {job.remote && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300">
+                        <Globe className="w-3 h-3" />
+                        {t("Common.remote", "Remote")}
+                      </span>
+                    )}
                     {job.type && (
                       <span className="px-2 py-0.5 rounded-md bg-white/5">
                         {job.type}
@@ -378,7 +440,7 @@ export default function JobsPage() {
                       )}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {new Date(job.createdAt).toLocaleDateString()}
+                      {new Date(job.createdAt).toLocaleDateString(locale)}
                     </span>
                   </div>
 
@@ -404,17 +466,21 @@ export default function JobsPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
+                  aria-label={t("Jobs.previousPage", "Previous page")}
                   className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-30 transition-all"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="text-sm text-slate-400 px-4">
-                  Page {page} of {totalPages}
+                  {t("Jobs.pageOf", "Page {current} of {total}")
+                    .replace("{current}", String(page))
+                    .replace("{total}", String(totalPages))}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
+                  aria-label={t("Jobs.nextPage", "Next page")}
                   className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-30 transition-all"
                 >
                   <ChevronRight className="w-5 h-5" />
