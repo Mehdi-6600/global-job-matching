@@ -8,13 +8,17 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   defaultLocale,
   isLocale,
-  rtlLocales,
+  isRtlLocale,
+  LOCALE_COOKIE,
+  LOCALE_STORAGE_KEY,
   type Locale,
 } from "@/lib/i18n/config";
 import { getDictionary, t, type Dictionary } from "@/lib/i18n/get-dictionary";
+import { resolveLocale } from "@/lib/i18n/resolve-locale";
 
 type LocaleContextValue = {
   locale: Locale;
@@ -25,20 +29,25 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-const STORAGE_KEY = "gjm_locale";
+function writeLocaleCookie(locale: Locale) {
+  try {
+    document.cookie = `${LOCALE_COOKIE}=${locale};path=/;max-age=31536000;samesite=lax`;
+  } catch {
+    // ignore
+  }
+}
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && isLocale(saved)) {
-        setLocaleState(saved);
-      }
+      const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+      setLocaleState(resolveLocale(saved));
     } catch {
-      // ignore
+      setLocaleState(defaultLocale);
     }
     setReady(true);
   }, []);
@@ -46,18 +55,32 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     document.documentElement.lang = locale;
-    document.documentElement.dir = rtlLocales.includes(locale) ? "rtl" : "ltr";
+    document.documentElement.dir = isRtlLocale(locale) ? "rtl" : "ltr";
     try {
-      localStorage.setItem(STORAGE_KEY, locale);
-      document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax`;
+      localStorage.setItem(LOCALE_STORAGE_KEY, locale);
     } catch {
       // ignore
     }
+    writeLocaleCookie(locale);
   }, [locale, ready]);
 
-  const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next);
-  }, []);
+  const setLocale = useCallback(
+    (next: Locale) => {
+      if (!isLocale(next)) return;
+      setLocaleState(next);
+      writeLocaleCookie(next);
+      try {
+        localStorage.setItem(LOCALE_STORAGE_KEY, next);
+      } catch {
+        // ignore
+      }
+      document.documentElement.lang = next;
+      document.documentElement.dir = isRtlLocale(next) ? "rtl" : "ltr";
+      // Refresh Server Components so they read the new cookie
+      router.refresh();
+    },
+    [router]
+  );
 
   const dict = useMemo(() => getDictionary(locale), [locale]);
 
