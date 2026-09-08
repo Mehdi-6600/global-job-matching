@@ -62,6 +62,8 @@
     "notSpecified": "مشخص نشده",
     "remote": "دورکاری",
     "noResults": "نتیجه‌ای یافت نشد",
+    "companyFallback": "شرکت",
+    "errorNetwork": "خطای شبکه. دوباره تلاش کنید.",
     "newsletterTitle": "به‌روز بمانید",
     "newsletterSubtitle": "بهترین شغل‌ها را هر هفته در صندوق ورودی خود دریافت کنید",
     "newsletterSuccess": "ثبت‌نام شما انجام شد! به زودی ایمیل خود را بررسی کنید.",
@@ -70,7 +72,17 @@
     "newsletterSubscribe": "ثبت‌نام",
     "newsletterFooter": "هرزنامه نداریم. هر زمان خواستید لغو کنید.",
     "newsletterErrorSubscribe": "ثبت‌نام ناموفق بود",
-    "newsletterErrorNetwork": "خطای شبکه. دوباره تلاش کنید."
+    "newsletterErrorNetwork": "خطای شبکه. دوباره تلاش کنید.",
+    "timeAgo": {
+      "justNow": "همین حالا",
+      "minutes": "{count} دقیقه پیش",
+      "minutesAgo": "{count} دقیقه پیش",
+      "hours": "{count} ساعت پیش",
+      "hoursAgo": "{count} ساعت پیش",
+      "days": "{count} روز پیش",
+      "daysAgo": "{count} روز پیش",
+      "months": "{count} ماه پیش"
+    }
   },
   "Auth": {
     "loginTitle": "ورود",
@@ -314,15 +326,54 @@
   },
   "Applications": {
     "title": "درخواست‌های من",
-    "empty": "هنوز برای هیچ شغلی درخواست نداده‌اید.",
+    "loading": "در حال بارگذاری درخواست‌ها...",
+    "errorLoad": "بارگیری درخواست‌ها ناموفق بود",
+    "count": "{count} درخواست",
+    "empty": "هنوز درخواستی ارسال نکرده‌اید",
+    "browseJobs": "مرور شغل‌ها",
+    "jobUnavailable": "شغل موجود نیست",
+    "appliedOn": "ارسال شده در {date}",
+    "statusPending": "در انتظار",
+    "statusViewed": "مشاهده شده",
+    "statusInterview": "مصاحبه",
+    "statusRejected": "رد شده",
+    "statusHired": "استخدام شده",
     "status": "وضعیت",
-    "appliedOn": "تاریخ درخواست",
     "viewJob": "مشاهده شغل"
   },
   "SavedJobs": {
     "title": "شغل‌های ذخیره‌شده",
-    "empty": "هنوز شغلی ذخیره نشده است.",
-    "remove": "حذف"
+    "loading": "در حال بارگذاری شغل‌های ذخیره‌شده...",
+    "errorLoad": "بارگیری شغل‌های ذخیره‌شده ناموفق بود",
+    "count": "{count} شغل ذخیره شد",
+    "emptyTitle": "هیچ شغلی ذخیره نشده است",
+    "emptyDesc": "شغل‌ها را مرور کنید و موارد مورد علاقه را ذخیره کنید",
+    "viewJob": "مشاهده شغل",
+    "browseJobs": "مرور شغل‌ها",
+    "remove": "حذف",
+    "empty": "هیچ شغلی ذخیره نشده است."
+  },
+  "Messages": {
+    "title": "پیام‌ها",
+    "conversations": "گفتگوها",
+    "noMessages": "هیچ پیامی وجود ندارد",
+    "noMessagesDesc": "یک گفتگو با متقاضیان باز کنید یا منتظر پیام باشید",
+    "defaultUser": "کاربر",
+    "youPrefix": "شما: ",
+    "messagePlaceholder": "پیام خود را بنویسید...",
+    "startConversation": "شروع گفتگو",
+    "selectConversation": "یک گفتگو انتخاب کنید"
+  },
+  "Notifications": {
+    "title": "اعلان‌ها",
+    "unreadCount": "{count} اعلان خوانده‌نشده",
+    "allCaughtUp": "همه خوانده شد!",
+    "markAllRead": "علامت‌گذاری همه به عنوان خوانده‌شده",
+    "emptyTitle": "هیچ اعلانی وجود ندارد",
+    "emptyDesc": "وقتی اتفاقی بیفتد، آن را اینجا خواهید دید.",
+    "markAsRead": "علامت‌گذاری به عنوان خوانده‌شده",
+    "delete": "حذف",
+    "empty": "هیچ اعلانی وجود ندارد"
   },
   "Resume": {
     "title": "سازنده رزومه",
@@ -337,9 +388,57 @@
     "applicants": "متقاضیان",
     "company": "شرکت"
   },
-  "Notifications": {
-    "title": "اعلان‌ها",
-    "empty": "هیچ اعلانی وجود ندارد",
-    "markAll": "علامت‌گذاری همه به عنوان خوانده‌شده"
+  "PlanUsage": {
+    "loading": "در حال بارگذاری طرح…",
+    "errorSignIn": "برای مشاهده مصرف طرح وارد شوید.",
+    "errorLoad": "بارگیری مصرف طرح ممکن نشد.",
+    "errorNetwork": "خطای شبکه.",
+    "noData": "داده‌ای برای طرح وجود ندارد.",
+    "signInLink": "ورود",
+    "currentPlan": "طرح فعلی",
+    "upgrade": "ارتقاء",
+    "expired": "منقضی شده",
+    "daysRemaining": "{days} روز{plural} باقی‌مانده",
+    "applicationsLabel": "درخواست‌های این ماه",
+    "savedJobsLabel": "شغل‌های ذخیره‌شده",
+    "jobAlertsLabel": "هشدارهای شغلی",
+    "aiGenerationsLabel": "تولیدات هوش مصنوعی این ماه",
+    "activeEmployerJobsLabel": "فرصت‌های شغلی فعال (کارفرما)",
+    "pendingPaymentsLabel": "{count} پرداخت{plural} در انتظار بررسی.",
+    "viewPricingLink": "مشاهده قیمت‌ها و تاریخچه پرداخت →"
+  },
+  "PaymentHistory": {
+    "loading": "در حال بارگذاری پرداخت‌ها…",
+    "errorSignIn": "برای مشاهده پرداخت‌ها وارد شوید.",
+    "errorLoad": "بارگیری پرداخت‌ها ممکن نشد.",
+    "errorNetwork": "خطای شبکه.",
+    "title": "تاریخچه پرداخت‌ها",
+    "pricingLink": "قیمت‌ها",
+    "noPayments": "هنوز پرداختی وجود ندارد.",
+    "upgradePlanLink": "ارتقاء طرح",
+    "statusConfirmed": "تأیید شده",
+    "statusPending": "در انتظار",
+    "statusRejected": "رد شده",
+    "statusUnknown": "ناشناخته"
+  },
+  "Profile": {
+    "editProfile": "ویرایش پروفایل",
+    "saveChanges": "ذخیره تغییرات",
+    "about": "درباره من",
+    "bioPlaceholder": "چیزی درباره خود بنویسید...",
+    "links": "لینک‌ها",
+    "websitePlaceholder": "وب‌سایت",
+    "githubPlaceholder": "گیت‌هاب",
+    "linkedinPlaceholder": "لینکدین",
+    "skills": "مهارت‌ها",
+    "addSkillPlaceholder": "مهارتی اضافه کنید...",
+    "addSkill": "افزودن",
+    "experience": "سوابق کاری",
+    "education": "تحصیلات",
+    "period": "دوره",
+    "company": "شرکت",
+    "school": "موسسه آموزشی",
+    "degree": "مدرک تحصیلی",
+    "year": "سال"
   }
 }
