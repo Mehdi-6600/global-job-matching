@@ -61,7 +61,16 @@
     "upgrade": "Upgraden",
     "notSpecified": "Nicht angegeben",
     "remote": "Remote",
-    "noResults": "Keine Ergebnisse gefunden"
+    "noResults": "Keine Ergebnisse gefunden",
+    "newsletterTitle": "Bleiben Sie auf dem Laufenden",
+    "newsletterSubtitle": "Erhalten Sie die besten Jobs wöchentlich in Ihrem Posteingang",
+    "newsletterSuccess": "Sie sind abonniert! Überprüfen Sie bald Ihren Posteingang.",
+    "newsletterNamePlaceholder": "Ihr Name (optional)",
+    "newsletterEmailPlaceholder": "Geben Sie Ihre E-Mail ein",
+    "newsletterSubscribe": "Abonnieren",
+    "newsletterFooter": "Kein Spam. Jederzeit abbestellen.",
+    "newsletterErrorSubscribe": "Abonnieren fehlgeschlagen",
+    "newsletterErrorNetwork": "Netzwerkfehler. Bitte erneut versuchen."
   },
   "Auth": {
     "loginTitle": "Anmelden",
