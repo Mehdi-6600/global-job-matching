@@ -62,6 +62,8 @@
     "notSpecified": "Not specified",
     "remote": "Remote",
     "noResults": "No results found",
+    "companyFallback": "Company",
+    "errorNetwork": "Network error. Please try again.",
     "newsletterTitle": "Stay Updated",
     "newsletterSubtitle": "Get the best jobs delivered to your inbox weekly",
     "newsletterSuccess": "You are subscribed! Check your inbox soon.",
@@ -70,7 +72,17 @@
     "newsletterSubscribe": "Subscribe",
     "newsletterFooter": "No spam. Unsubscribe anytime.",
     "newsletterErrorSubscribe": "Failed to subscribe",
-    "newsletterErrorNetwork": "Network error. Please try again."
+    "newsletterErrorNetwork": "Network error. Please try again.",
+    "timeAgo": {
+      "justNow": "Just now",
+      "minutes": "{count} minutes ago",
+      "minutesAgo": "{count}m ago",
+      "hours": "{count} hours ago",
+      "hoursAgo": "{count}h ago",
+      "days": "{count} days ago",
+      "daysAgo": "{count}d ago",
+      "months": "{count} months ago"
+    }
   },
   "Auth": {
     "loginTitle": "Sign In",
@@ -313,16 +325,55 @@
     "pageOf": "Page {current} of {total}"
   },
   "Applications": {
-    "title": "My applications",
-    "empty": "You have not applied to any jobs yet.",
+    "title": "My Applications",
+    "loading": "Loading applications...",
+    "errorLoad": "Failed to load applications",
+    "count": "{count} application{plural}",
+    "empty": "No applications yet",
+    "browseJobs": "Browse Jobs",
+    "jobUnavailable": "Job unavailable",
+    "appliedOn": "Applied {date}",
+    "statusPending": "Pending",
+    "statusViewed": "Viewed",
+    "statusInterview": "Interview",
+    "statusRejected": "Rejected",
+    "statusHired": "Hired",
     "status": "Status",
-    "appliedOn": "Applied on",
     "viewJob": "View job"
   },
   "SavedJobs": {
-    "title": "Saved jobs",
-    "empty": "No saved jobs yet.",
-    "remove": "Remove"
+    "title": "Saved Jobs",
+    "loading": "Loading saved jobs...",
+    "errorLoad": "Failed to load saved jobs",
+    "count": "{count} job{plural} saved",
+    "emptyTitle": "No saved jobs yet",
+    "emptyDesc": "Browse jobs and save the ones you like",
+    "viewJob": "View Job",
+    "browseJobs": "Browse Jobs",
+    "remove": "Remove",
+    "empty": "No saved jobs yet."
+  },
+  "Messages": {
+    "title": "Messages",
+    "conversations": "Conversations",
+    "noMessages": "No messages yet",
+    "noMessagesDesc": "Open a chat from applicants or wait for a message",
+    "defaultUser": "User",
+    "youPrefix": "You: ",
+    "messagePlaceholder": "Type a message...",
+    "startConversation": "Start the conversation",
+    "selectConversation": "Select a conversation"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "unreadCount": "{count} unread notification{plural}",
+    "allCaughtUp": "All caught up!",
+    "markAllRead": "Mark all read",
+    "emptyTitle": "No notifications yet",
+    "emptyDesc": "When something happens, you will see it here.",
+    "markAsRead": "Mark as read",
+    "delete": "Delete",
+    "empty": "No notifications"
   },
   "Resume": {
     "title": "Resume Builder",
@@ -337,9 +388,57 @@
     "applicants": "Applicants",
     "company": "Company"
   },
-  "Notifications": {
-    "title": "Notifications",
-    "empty": "No notifications",
-    "markAll": "Mark all read"
+  "PlanUsage": {
+    "loading": "Loading plan…",
+    "errorSignIn": "Sign in to see plan usage.",
+    "errorLoad": "Could not load plan usage.",
+    "errorNetwork": "Network error.",
+    "noData": "No plan data.",
+    "signInLink": "Sign in",
+    "currentPlan": "Current plan",
+    "upgrade": "Upgrade",
+    "expired": "expired",
+    "daysRemaining": "{days} day{plural} remaining",
+    "applicationsLabel": "Applications this month",
+    "savedJobsLabel": "Saved jobs",
+    "jobAlertsLabel": "Job alerts",
+    "aiGenerationsLabel": "AI generations this month",
+    "activeEmployerJobsLabel": "Active job posts (employer)",
+    "pendingPaymentsLabel": "{count} payment{plural} pending admin review.",
+    "viewPricingLink": "View pricing & payment history →"
+  },
+  "PaymentHistory": {
+    "loading": "Loading payments…",
+    "errorSignIn": "Sign in to see payments.",
+    "errorLoad": "Could not load payments.",
+    "errorNetwork": "Network error.",
+    "title": "Payment history",
+    "pricingLink": "Pricing",
+    "noPayments": "No payments yet.",
+    "upgradePlanLink": "Upgrade a plan",
+    "statusConfirmed": "Confirmed",
+    "statusPending": "Pending",
+    "statusRejected": "Rejected",
+    "statusUnknown": "Unknown"
+  },
+  "Profile": {
+    "editProfile": "Edit Profile",
+    "saveChanges": "Save Changes",
+    "about": "About",
+    "bioPlaceholder": "Write something about yourself...",
+    "links": "Links",
+    "websitePlaceholder": "Website",
+    "githubPlaceholder": "GitHub",
+    "linkedinPlaceholder": "LinkedIn",
+    "skills": "Skills",
+    "addSkillPlaceholder": "Add a skill...",
+    "addSkill": "Add",
+    "experience": "Experience",
+    "education": "Education",
+    "period": "Period",
+    "company": "Company",
+    "school": "School",
+    "degree": "Degree",
+    "year": "Year"
   }
 }
