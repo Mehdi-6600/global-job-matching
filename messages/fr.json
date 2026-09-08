@@ -62,6 +62,8 @@
     "notSpecified": "Non spécifié",
     "remote": "Distanciel",
     "noResults": "Aucun résultat",
+    "companyFallback": "Entreprise",
+    "errorNetwork": "Erreur réseau. Veuillez réessayer.",
     "newsletterTitle": "Restez informé",
     "newsletterSubtitle": "Recevez les meilleures offres d'emploi chaque semaine dans votre boîte mail",
     "newsletterSuccess": "Vous êtes abonné ! Vérifiez votre boîte mail bientôt.",
@@ -70,7 +72,17 @@
     "newsletterSubscribe": "S'abonner",
     "newsletterFooter": "Pas de spam. Désabonnez-vous à tout moment.",
     "newsletterErrorSubscribe": "Échec de l'abonnement",
-    "newsletterErrorNetwork": "Erreur réseau. Veuillez réessayer."
+    "newsletterErrorNetwork": "Erreur réseau. Veuillez réessayer.",
+    "timeAgo": {
+      "justNow": "À l'instant",
+      "minutes": "il y a {count} minutes",
+      "minutesAgo": "il y a {count}m",
+      "hours": "il y a {count} heures",
+      "hoursAgo": "il y a {count}h",
+      "days": "il y a {count} jours",
+      "daysAgo": "il y a {count}j",
+      "months": "il y a {count} mois"
+    }
   },
   "Auth": {
     "loginTitle": "Connexion",
@@ -314,15 +326,54 @@
   },
   "Applications": {
     "title": "Mes candidatures",
-    "empty": "Vous n'avez encore postulé à aucun emploi.",
+    "loading": "Chargement des candidatures...",
+    "errorLoad": "Échec du chargement des candidatures",
+    "count": "{count} candidature{plural}",
+    "empty": "Aucune candidature",
+    "browseJobs": "Parcourir les emplois",
+    "jobUnavailable": "Emploi indisponible",
+    "appliedOn": "Postulé le {date}",
+    "statusPending": "En attente",
+    "statusViewed": "Vu",
+    "statusInterview": "Entretien",
+    "statusRejected": "Rejeté",
+    "statusHired": "Embauté",
     "status": "Statut",
-    "appliedOn": "Date de candidature",
     "viewJob": "Voir l'emploi"
   },
   "SavedJobs": {
     "title": "Emplois sauvegardés",
-    "empty": "Aucun emploi sauvegardé pour le moment.",
-    "remove": "Supprimer"
+    "loading": "Chargement des emplois sauvegardés...",
+    "errorLoad": "Échec du chargement des emplois sauvegardés",
+    "count": "{count} emploi{plural} sauvegardé",
+    "emptyTitle": "Aucun emploi sauvegardé",
+    "emptyDesc": "Parcourez les emplois et sauvegardez ceux que vous aimez",
+    "viewJob": "Voir l'emploi",
+    "browseJobs": "Parcourir les emplois",
+    "remove": "Supprimer",
+    "empty": "Aucun emploi sauvegardé."
+  },
+  "Messages": {
+    "title": "Messages",
+    "conversations": "Conversations",
+    "noMessages": "Aucun message",
+    "noMessagesDesc": "Ouvrez une discussion avec les candidats ou attendez un message",
+    "defaultUser": "Utilisateur",
+    "youPrefix": "Vous : ",
+    "messagePlaceholder": "Écrivez un message...",
+    "startConversation": "Démarrer la conversation",
+    "selectConversation": "Sélectionnez une conversation"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "unreadCount": "{count} notification{plural} non lue",
+    "allCaughtUp": "Tout est lu !",
+    "markAllRead": "Tout marquer comme lu",
+    "emptyTitle": "Aucune notification",
+    "emptyDesc": "Quand quelque chose se passe, vous le verrez ici.",
+    "markAsRead": "Marquer comme lu",
+    "delete": "Supprimer",
+    "empty": "Aucune notification"
   },
   "Resume": {
     "title": "Créateur de CV",
@@ -337,9 +388,57 @@
     "applicants": "Candidats",
     "company": "Entreprise"
   },
-  "Notifications": {
-    "title": "Notifications",
-    "empty": "Aucune notification",
-    "markAll": "Tout marquer comme lu"
+  "PlanUsage": {
+    "loading": "Chargement du plan…",
+    "errorSignIn": "Connectez-vous pour voir l'utilisation du plan.",
+    "errorLoad": "Impossible de charger l'utilisation du plan.",
+    "errorNetwork": "Erreur réseau.",
+    "noData": "Aucune donnée de plan.",
+    "signInLink": "Se connecter",
+    "currentPlan": "Plan actuel",
+    "upgrade": "Upgrader",
+    "expired": "expiré",
+    "daysRemaining": "{days} jour{plural} restant",
+    "applicationsLabel": "Candidatures ce mois-ci",
+    "savedJobsLabel": "Emplois sauvegardés",
+    "jobAlertsLabel": "Alertes emploi",
+    "aiGenerationsLabel": "Générations IA ce mois-ci",
+    "activeEmployerJobsLabel": "Offres actives (employeur)",
+    "pendingPaymentsLabel": "{count} paiement{plural} en attente de révision.",
+    "viewPricingLink": "Voir les tarifs et l'historique des paiements →"
+  },
+  "PaymentHistory": {
+    "loading": "Chargement des paiements…",
+    "errorSignIn": "Connectez-vous pour voir les paiements.",
+    "errorLoad": "Impossible de charger les paiements.",
+    "errorNetwork": "Erreur réseau.",
+    "title": "Historique des paiements",
+    "pricingLink": "Tarifs",
+    "noPayments": "Aucun paiement pour le moment.",
+    "upgradePlanLink": "Upgrader un plan",
+    "statusConfirmed": "Confirmé",
+    "statusPending": "En attente",
+    "statusRejected": "Rejeté",
+    "statusUnknown": "Inconnu"
+  },
+  "Profile": {
+    "editProfile": "Modifier le profil",
+    "saveChanges": "Enregistrer les modifications",
+    "about": "À propos",
+    "bioPlaceholder": "Écrivez quelque chose sur vous...",
+    "links": "Liens",
+    "websitePlaceholder": "Site web",
+    "githubPlaceholder": "GitHub",
+    "linkedinPlaceholder": "LinkedIn",
+    "skills": "Compétences",
+    "addSkillPlaceholder": "Ajouter une compétence...",
+    "addSkill": "Ajouter",
+    "experience": "Expérience",
+    "education": "Éducation",
+    "period": "Période",
+    "company": "Entreprise",
+    "school": "Établissement",
+    "degree": "Diplôme",
+    "year": "Année"
   }
 }
