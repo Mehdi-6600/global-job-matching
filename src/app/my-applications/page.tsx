@@ -39,6 +39,15 @@ interface ApplicationItem {
   } | null;
 }
 
+// تابع کمکی برای جایگزینی متغیرها
+function interpolate(template: string, replacements: Record<string, string | number>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+  }
+  return result;
+}
+
 function formatSalary(
   currency: string | null | undefined,
   min: number | null | undefined,
@@ -59,44 +68,47 @@ export default function MyApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // statusConfig با ترجمه
-  const statusConfig = {
-    pending: {
-      label: t("Applications.statusPending", "Pending"),
-      icon: <Clock className="w-3.5 h-3.5" />,
-      bg: "bg-amber-500/10 border-amber-500/20",
-      color: "text-amber-400",
-    },
-    applied: {
-      label: t("Applications.statusPending", "Pending"),
-      icon: <Clock className="w-3.5 h-3.5" />,
-      bg: "bg-amber-500/10 border-amber-500/20",
-      color: "text-amber-400",
-    },
-    viewed: {
-      label: t("Applications.statusViewed", "Viewed"),
-      icon: <Eye className="w-3.5 h-3.5" />,
-      bg: "bg-blue-500/10 border-blue-500/20",
-      color: "text-blue-400",
-    },
-    interview: {
-      label: t("Applications.statusInterview", "Interview"),
-      icon: <Users className="w-3.5 h-3.5" />,
-      bg: "bg-cyan-500/10 border-cyan-500/20",
-      color: "text-cyan-400",
-    },
-    rejected: {
-      label: t("Applications.statusRejected", "Rejected"),
-      icon: <XCircle className="w-3.5 h-3.5" />,
-      bg: "bg-red-500/10 border-red-500/20",
-      color: "text-red-400",
-    },
-    hired: {
-      label: t("Applications.statusHired", "Hired"),
-      icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-      bg: "bg-emerald-500/10 border-emerald-500/20",
-      color: "text-emerald-400",
-    },
+  // وضعیت‌ها با ترجمه
+  const getStatusConfig = (status: string) => {
+    const statusMap: Record<string, { label: string; icon: React.ReactNode; bg: string; color: string }> = {
+      pending: {
+        label: t("Applications.statusPending", "Pending"),
+        icon: <Clock className="w-3.5 h-3.5" />,
+        bg: "bg-amber-500/10 border-amber-500/20",
+        color: "text-amber-400",
+      },
+      applied: {
+        label: t("Applications.statusPending", "Pending"),
+        icon: <Clock className="w-3.5 h-3.5" />,
+        bg: "bg-amber-500/10 border-amber-500/20",
+        color: "text-amber-400",
+      },
+      viewed: {
+        label: t("Applications.statusViewed", "Viewed"),
+        icon: <Eye className="w-3.5 h-3.5" />,
+        bg: "bg-blue-500/10 border-blue-500/20",
+        color: "text-blue-400",
+      },
+      interview: {
+        label: t("Applications.statusInterview", "Interview"),
+        icon: <Users className="w-3.5 h-3.5" />,
+        bg: "bg-cyan-500/10 border-cyan-500/20",
+        color: "text-cyan-400",
+      },
+      rejected: {
+        label: t("Applications.statusRejected", "Rejected"),
+        icon: <XCircle className="w-3.5 h-3.5" />,
+        bg: "bg-red-500/10 border-red-500/20",
+        color: "text-red-400",
+      },
+      hired: {
+        label: t("Applications.statusHired", "Hired"),
+        icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+        bg: "bg-emerald-500/10 border-emerald-500/20",
+        color: "text-emerald-400",
+      },
+    };
+    return statusMap[status] || statusMap.pending;
   };
 
   useEffect(() => {
@@ -129,6 +141,13 @@ export default function MyApplicationsPage() {
     );
   }
 
+  // ساخت متن تعداد درخواست‌ها با interpolate
+  const countTemplate = t("Applications.count", "{count} application{plural}");
+  const countLabel = interpolate(countTemplate, {
+    count: applications.length,
+    plural: applications.length !== 1 ? "s" : "",
+  });
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <div className="max-w-3xl mx-auto">
@@ -144,12 +163,7 @@ export default function MyApplicationsPage() {
           <Briefcase className="w-7 h-7 text-cyan-400" />
           <div>
             <h1 className="text-2xl font-bold text-white">{t("Applications.title", "My Applications")}</h1>
-            <p className="text-slate-400 text-sm">
-              {t("Applications.count", "{count} application{plural}", {
-                count: applications.length,
-                plural: applications.length !== 1 ? "s" : "",
-              })}
-            </p>
+            <p className="text-slate-400 text-sm">{countLabel}</p>
           </div>
         </div>
 
@@ -173,12 +187,15 @@ export default function MyApplicationsPage() {
         ) : (
           <div className="space-y-4">
             {applications.map((app) => {
-              const status = statusConfig[app.status] || statusConfig.pending;
+              const status = getStatusConfig(app.status);
               const salary = formatSalary(
                 app.job?.currency,
                 app.job?.salaryMin,
                 app.job?.salaryMax
               );
+              const appliedDate = new Date(app.createdAt).toLocaleDateString(locale);
+              const appliedTemplate = t("Applications.appliedOn", "Applied {date}");
+              const appliedText = interpolate(appliedTemplate, { date: appliedDate });
 
               return (
                 <div
@@ -214,11 +231,7 @@ export default function MyApplicationsPage() {
                         )}
                         {salary && <span>{salary}</span>}
                       </div>
-                      <p className="text-slate-600 text-xs mt-2">
-                        {t("Applications.appliedOn", "Applied {date}", {
-                          date: new Date(app.createdAt).toLocaleDateString(locale),
-                        })}
-                      </p>
+                      <p className="text-slate-600 text-xs mt-2">{appliedText}</p>
                     </div>
 
                     <span
