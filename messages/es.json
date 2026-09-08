@@ -61,7 +61,16 @@
     "upgrade": "Mejorar plan",
     "notSpecified": "No especificado",
     "remote": "Remoto",
-    "noResults": "Sin resultados"
+    "noResults": "Sin resultados",
+    "newsletterTitle": "Mantente actualizado",
+    "newsletterSubtitle": "Recibe los mejores empleos en tu bandeja de entrada cada semana",
+    "newsletterSuccess": "¡Suscrito! Revisa tu bandeja de entrada pronto.",
+    "newsletterNamePlaceholder": "Tu nombre (opcional)",
+    "newsletterEmailPlaceholder": "Introduce tu correo",
+    "newsletterSubscribe": "Suscribirse",
+    "newsletterFooter": "Sin spam. Cancela en cualquier momento.",
+    "newsletterErrorSubscribe": "Error al suscribirse",
+    "newsletterErrorNetwork": "Error de red. Inténtalo de nuevo."
   },
   "Auth": {
     "loginTitle": "Iniciar sesión",
