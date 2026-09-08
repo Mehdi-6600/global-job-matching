@@ -23,6 +23,15 @@ type UsagePayload = {
   };
 };
 
+// تابع کمکی برای جایگزینی متغیرها در متن ترجمه‌شده
+function interpolate(template: string, replacements: Record<string, string | number>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+  }
+  return result;
+}
+
 function Bar({ used, limit, label }: { used: number; limit: number; label: string }) {
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const near = pct >= 85;
@@ -100,6 +109,29 @@ export function PlanUsageCard() {
 
   const u = data.usage;
 
+  // ساخت متن روزهای باقی‌مانده با جایگزینی متغیرها
+  const daysTemplate = t("PlanUsage.daysRemaining", "{days} day{plural} remaining");
+  const daysText =
+    typeof data.daysRemaining === "number" && data.plan !== "free"
+      ? interpolate(daysTemplate, {
+          days: data.daysRemaining,
+          plural: data.daysRemaining === 1 ? "" : "s",
+        })
+      : null;
+
+  // ساخت متن پرداخت‌های در انتظار
+  const pendingTemplate = t(
+    "PlanUsage.pendingPaymentsLabel",
+    "{count} payment{plural} pending admin review."
+  );
+  const pendingText =
+    u.pendingPayments > 0
+      ? interpolate(pendingTemplate, {
+          count: u.pendingPayments,
+          plural: u.pendingPayments > 1 ? "s" : "",
+        })
+      : null;
+
   return (
     <div className="glass rounded-2xl p-5 space-y-4 border border-white/10">
       <div className="flex items-center justify-between gap-3">
@@ -121,15 +153,12 @@ export function PlanUsageCard() {
         </Link>
       </div>
 
-      {typeof data.daysRemaining === "number" && data.plan !== "free" && (
+      {daysText && (
         <p className="text-xs text-slate-400 flex items-center gap-1">
-          {data.daysRemaining <= 7 && (
+          {data.daysRemaining !== null && data.daysRemaining <= 7 && (
             <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
           )}
-          {t("PlanUsage.daysRemaining", "{days} day{plural} remaining", {
-            days: data.daysRemaining,
-            plural: data.daysRemaining === 1 ? "" : "s",
-          })}
+          {daysText}
         </p>
       )}
 
@@ -141,14 +170,7 @@ export function PlanUsageCard() {
         <Bar label={t("PlanUsage.activeEmployerJobsLabel", "Active job posts (employer)")} {...u.activeEmployerJobs} />
       </div>
 
-      {u.pendingPayments > 0 && (
-        <p className="text-xs text-amber-300">
-          {t("PlanUsage.pendingPaymentsLabel", "{count} payment{plural} pending admin review.", {
-            count: u.pendingPayments,
-            plural: u.pendingPayments > 1 ? "s" : "",
-          })}
-        </p>
-      )}
+      {pendingText && <p className="text-xs text-amber-300">{pendingText}</p>}
 
       <Link
         href="/pricing"
