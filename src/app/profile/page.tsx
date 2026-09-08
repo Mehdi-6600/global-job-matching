@@ -20,6 +20,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface UserProfile {
   name: string;
@@ -83,6 +84,7 @@ const initialProfile: UserProfile = {
 };
 
 export default function ProfilePage() {
+  const { t } = useLocale();
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
   const [newSkill, setNewSkill] = useState("");
@@ -110,7 +112,6 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* Profile Header */}
         <div className="glass rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
@@ -175,12 +176,12 @@ export default function ProfilePage() {
               {isEditing ? (
                 <>
                   <Save className="w-4 h-4" />
-                  Save Changes
+                  {t("Profile.saveChanges", "Save Changes")}
                 </>
               ) : (
                 <>
                   <Edit3 className="w-4 h-4" />
-                  Edit Profile
+                  {t("Profile.editProfile", "Edit Profile")}
                 </>
               )}
             </button>
@@ -188,19 +189,18 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
           <div className="space-y-6">
-            {/* Bio */}
             <div className="glass rounded-2xl p-6">
               <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-cyan-400" />
-                About
+                {t("Profile.about", "About")}
               </h3>
               {isEditing ? (
                 <textarea
                   value={profile.bio}
                   onChange={(e) => handleChange("bio", e.target.value)}
                   rows={4}
+                  placeholder={t("Profile.bioPlaceholder", "Write something about yourself...")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-300 text-sm outline-none focus:border-cyan-500/50 resize-none"
                 />
               ) : (
@@ -208,11 +208,10 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Links */}
             <div className="glass rounded-2xl p-6">
               <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <LinkIcon className="w-5 h-5 text-cyan-400" />
-                Links
+                {t("Profile.links", "Links")}
               </h3>
               <div className="space-y-3">
                 {isEditing ? (
@@ -223,7 +222,7 @@ export default function ProfilePage() {
                         type="text"
                         value={profile.website}
                         onChange={(e) => handleChange("website", e.target.value)}
-                        placeholder="Website"
+                        placeholder={t("Profile.websitePlaceholder", "Website")}
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                       />
                     </div>
@@ -233,7 +232,7 @@ export default function ProfilePage() {
                         type="text"
                         value={profile.github}
                         onChange={(e) => handleChange("github", e.target.value)}
-                        placeholder="GitHub"
+                        placeholder={t("Profile.githubPlaceholder", "GitHub")}
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                       />
                     </div>
@@ -243,7 +242,7 @@ export default function ProfilePage() {
                         type="text"
                         value={profile.linkedin}
                         onChange={(e) => handleChange("linkedin", e.target.value)}
-                        placeholder="LinkedIn"
+                        placeholder={t("Profile.linkedinPlaceholder", "LinkedIn")}
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                       />
                     </div>
@@ -282,11 +281,10 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Skills */}
             <div className="glass rounded-2xl p-6">
               <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Award className="w-5 h-5 text-cyan-400" />
-                Skills
+                {t("Profile.skills", "Skills")}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {profile.skills.map((skill) => (
@@ -313,7 +311,7 @@ export default function ProfilePage() {
                     value={newSkill}
                     onChange={(e) => setNewSkill(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSkill())}
-                    placeholder="Add a skill..."
+                    placeholder={t("Profile.addSkillPlaceholder", "Add a skill...")}
                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-cyan-500/50"
                   />
                   <button
@@ -327,13 +325,11 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Right Column */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Experience */}
             <div className="glass rounded-2xl p-6 md:p-8">
               <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-cyan-400" />
-                Experience
+                {t("Profile.experience", "Experience")}
               </h3>
               <div className="space-y-6">
                 {profile.experience.map((exp) => (
@@ -357,11 +353,10 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Education */}
             <div className="glass rounded-2xl p-6 md:p-8">
               <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-cyan-400" />
-                Education
+                {t("Profile.education", "Education")}
               </h3>
               <div className="space-y-6">
                 {profile.education.map((edu) => (
