@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, Crown, AlertTriangle } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 type UsageBucket = { used: number; limit: number };
 
@@ -46,6 +47,7 @@ function Bar({ used, limit, label }: { used: number; limit: number; label: strin
 }
 
 export function PlanUsageCard() {
+  const { t } = useLocale();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -56,17 +58,17 @@ export function PlanUsageCard() {
       try {
         const res = await fetch("/api/me/usage", { credentials: "include" });
         if (res.status === 401) {
-          if (!cancelled) setError("Sign in to see plan usage.");
+          if (!cancelled) setError(t("PlanUsage.errorSignIn", "Sign in to see plan usage."));
           return;
         }
         if (!res.ok) {
-          if (!cancelled) setError("Could not load plan usage.");
+          if (!cancelled) setError(t("PlanUsage.errorLoad", "Could not load plan usage."));
           return;
         }
         const json = await res.json();
         if (!cancelled) setData(json);
       } catch {
-        if (!cancelled) setError("Network error.");
+        if (!cancelled) setError(t("Common.errorNetwork", "Network error."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -74,23 +76,23 @@ export function PlanUsageCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
-      <div className="glass rounded-2xl p-5 flex items-center gap-2 text-slate-400">
+      <div className="glass rounded-2xl p-5 flex items-center gap-2 text-slate-400 border border-white/10">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Loading plan…
+        {t("PlanUsage.loading", "Loading plan…")}
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="glass rounded-2xl p-5 text-sm text-slate-400">
-        {error || "No plan data."}{" "}
+      <div className="glass rounded-2xl p-5 text-sm text-slate-400 border border-white/10">
+        {error || t("PlanUsage.noData", "No plan data.")}{" "}
         <Link href="/login" className="text-cyan-400 underline">
-          Sign in
+          {t("PlanUsage.signInLink", "Sign in")}
         </Link>
       </div>
     );
@@ -104,10 +106,10 @@ export function PlanUsageCard() {
         <div className="flex items-center gap-2">
           <Crown className="h-5 w-5 text-cyan-400" />
           <div>
-            <p className="text-sm text-slate-400">Current plan</p>
+            <p className="text-sm text-slate-400">{t("PlanUsage.currentPlan", "Current plan")}</p>
             <p className="text-lg font-semibold capitalize text-white">
               {data.plan}
-              {data.expired ? " (expired)" : ""}
+              {data.expired ? ` (${t("PlanUsage.expired", "expired")})` : ""}
             </p>
           </div>
         </div>
@@ -115,7 +117,7 @@ export function PlanUsageCard() {
           href="/pricing"
           className="text-xs px-3 py-1.5 rounded-full bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
         >
-          Upgrade
+          {t("PlanUsage.upgrade", "Upgrade")}
         </Link>
       </div>
 
@@ -124,22 +126,27 @@ export function PlanUsageCard() {
           {data.daysRemaining <= 7 && (
             <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
           )}
-          {data.daysRemaining} day{data.daysRemaining === 1 ? "" : "s"} remaining
+          {t("PlanUsage.daysRemaining", "{days} day{plural} remaining", {
+            days: data.daysRemaining,
+            plural: data.daysRemaining === 1 ? "" : "s",
+          })}
         </p>
       )}
 
       <div className="space-y-3">
-        <Bar label="Applications this month" {...u.applications} />
-        <Bar label="Saved jobs" {...u.savedJobs} />
-        <Bar label="Job alerts" {...u.jobAlerts} />
-        <Bar label="AI generations this month" {...u.aiGenerations} />
-        <Bar label="Active job posts (employer)" {...u.activeEmployerJobs} />
+        <Bar label={t("PlanUsage.applicationsLabel", "Applications this month")} {...u.applications} />
+        <Bar label={t("PlanUsage.savedJobsLabel", "Saved jobs")} {...u.savedJobs} />
+        <Bar label={t("PlanUsage.jobAlertsLabel", "Job alerts")} {...u.jobAlerts} />
+        <Bar label={t("PlanUsage.aiGenerationsLabel", "AI generations this month")} {...u.aiGenerations} />
+        <Bar label={t("PlanUsage.activeEmployerJobsLabel", "Active job posts (employer)")} {...u.activeEmployerJobs} />
       </div>
 
       {u.pendingPayments > 0 && (
         <p className="text-xs text-amber-300">
-          {u.pendingPayments} payment{u.pendingPayments > 1 ? "s" : ""} pending
-          admin review.
+          {t("PlanUsage.pendingPaymentsLabel", "{count} payment{plural} pending admin review.", {
+            count: u.pendingPayments,
+            plural: u.pendingPayments > 1 ? "s" : "",
+          })}
         </p>
       )}
 
@@ -147,7 +154,7 @@ export function PlanUsageCard() {
         href="/pricing"
         className="block text-center text-sm text-cyan-400 hover:underline pt-1"
       >
-        View pricing & payment history →
+        {t("PlanUsage.viewPricingLink", "View pricing & payment history →")}
       </Link>
     </div>
   );
