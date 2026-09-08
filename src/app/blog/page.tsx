@@ -3,15 +3,14 @@ import { ArrowRight, Calendar, BookOpen } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { getDictionary, t } from "@/lib/i18n/get-dictionary";
-import { defaultLocale, isLocale } from "@/lib/i18n/config";
+import { LOCALE_COOKIE } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/resolve-locale";
 
 export const revalidate = 60;
 
 export default async function BlogPage() {
-  // خواندن locale از کوکی
   const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const locale = isLocale(localeCookie) ? localeCookie : defaultLocale;
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
   const dict = getDictionary(locale);
 
   let posts: {
@@ -55,14 +54,22 @@ export default async function BlogPage() {
             {t(dict, "Blog.title", "Career Blog")}
           </h1>
           <p className="text-slate-400">
-            {t(dict, "Blog.subtitle", "Tips, guides, and insights for your career journey")}
+            {t(
+              dict,
+              "Blog.subtitle",
+              "Tips, guides, and insights for your career journey"
+            )}
           </p>
         </div>
 
         {posts.length === 0 ? (
           <div className="glass rounded-2xl p-16 text-center border border-white/10">
             <p className="text-slate-400">
-              {t(dict, "Blog.noArticles", "No articles yet. Check back soon!")}
+              {t(
+                dict,
+                "Blog.noArticles",
+                "No articles yet. Check back soon!"
+              )}
             </p>
           </div>
         ) : (
@@ -70,25 +77,32 @@ export default async function BlogPage() {
             {posts.map((post) => (
               <Link
                 key={post.id}
-                href={`/${locale}/blog/${post.slug}`}
+                href={`/blog/${post.slug}`}
                 className="glass rounded-2xl overflow-hidden border border-white/10 hover:border-indigo-500/30 transition-all group"
               >
                 {post.coverImage ? (
-                  <div
-                    className="h-48 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${post.coverImage})` }}
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={post.coverImage}
+                    alt={post.title}
+                    className="w-full h-40 object-cover"
                   />
                 ) : (
-                  <div className="h-48 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
+                  <div className="w-full h-40 bg-gradient-to-br from-indigo-500/20 to-slate-800 flex items-center justify-center">
                     <BookOpen className="w-10 h-10 text-indigo-400/50" />
                   </div>
                 )}
                 <div className="p-5">
                   <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(post.createdAt).toLocaleDateString(locale, dateFormatOptions)}
+                    <Calendar className="w-3.5 h-3.5" />
+                    <time dateTime={post.createdAt.toISOString()}>
+                      {new Intl.DateTimeFormat(
+                        locale,
+                        dateFormatOptions
+                      ).format(post.createdAt)}
+                    </time>
                   </div>
-                  <h2 className="text-lg font-semibold text-white mb-2 group-hover:text-indigo-300 transition-colors">
+                  <h2 className="text-lg font-semibold text-white mb-2 group-hover:text-indigo-300 transition-colors line-clamp-2">
                     {post.title}
                   </h2>
                   {post.excerpt && (
