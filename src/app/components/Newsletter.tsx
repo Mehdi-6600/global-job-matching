@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Mail, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 export default function Newsletter() {
+  const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,14 +27,14 @@ export default function Newsletter() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to subscribe");
+        setError(data.error || t("Common.newsletterErrorSubscribe", "Failed to subscribe"));
       } else {
         setSuccess(true);
         setEmail("");
         setName("");
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("Common.newsletterErrorNetwork", "Network error. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -45,9 +47,9 @@ export default function Newsletter() {
           <Sparkles className="w-5 h-5 text-sky-400" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-white">Stay Updated</h3>
+          <h3 className="text-xl font-bold text-white">{t("Common.newsletterTitle", "Stay Updated")}</h3>
           <p className="text-slate-400 text-sm">
-            Get the best jobs delivered to your inbox weekly
+            {t("Common.newsletterSubtitle", "Get the best jobs delivered to your inbox weekly")}
           </p>
         </div>
       </div>
@@ -56,7 +58,7 @@ export default function Newsletter() {
         <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <p className="text-emerald-400 text-sm font-medium">
-            You are subscribed! Check your inbox soon.
+            {t("Common.newsletterSuccess", "You are subscribed! Check your inbox soon.")}
           </p>
         </div>
       ) : (
@@ -66,7 +68,7 @@ export default function Newsletter() {
         >
           <input
             type="text"
-            placeholder="Your name (optional)"
+            placeholder={t("Common.newsletterNamePlaceholder", "Your name (optional)")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm sm:w-40"
@@ -76,7 +78,7 @@ export default function Newsletter() {
             <input
               type="email"
               required
-              placeholder="Enter your email"
+              placeholder={t("Common.newsletterEmailPlaceholder", "Enter your email")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
@@ -90,7 +92,7 @@ export default function Newsletter() {
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              "Subscribe"
+              t("Common.newsletterSubscribe", "Subscribe")
             )}
           </button>
         </form>
@@ -99,7 +101,7 @@ export default function Newsletter() {
       {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
 
       <p className="text-slate-500 text-xs mt-4">
-        No spam. Unsubscribe anytime.
+        {t("Common.newsletterFooter", "No spam. Unsubscribe anytime.")}
       </p>
     </div>
   );
