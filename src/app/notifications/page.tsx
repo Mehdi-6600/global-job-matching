@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Inbox,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface NotificationItem {
   id: string;
@@ -27,67 +28,87 @@ interface NotificationItem {
   createdAt: string;
 }
 
-const typeConfig: Record<
-  string,
-  { icon: React.ReactNode; color: string; bg: string }
-> = {
-  job: {
-    icon: <Briefcase className="w-5 h-5" />,
-    color: "text-cyan-400",
-    bg: "bg-cyan-500/10 border-cyan-500/20",
-  },
-  message: {
-    icon: <MessageSquare className="w-5 h-5" />,
-    color: "text-indigo-400",
-    bg: "bg-indigo-500/10 border-indigo-500/20",
-  },
-  application: {
-    icon: <CheckCircle2 className="w-5 h-5" />,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10 border-emerald-500/20",
-  },
-  profile: {
-    icon: <User className="w-5 h-5" />,
-    color: "text-amber-400",
-    bg: "bg-amber-500/10 border-amber-500/20",
-  },
-  alert: {
-    icon: <AlertCircle className="w-5 h-5" />,
-    color: "text-red-400",
-    bg: "bg-red-500/10 border-red-500/20",
-  },
-};
-
-function getTypeStyle(type: string) {
-  return (
-    typeConfig[type] || {
-      icon: <Bell className="w-5 h-5" />,
-      color: "text-slate-400",
-      bg: "bg-white/5 border-white/10",
-    }
-  );
-}
-
-function formatTime(dateStr: string) {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
+// تابع کمکی برای جایگزینی متغیرها
+function interpolate(template: string, replacements: Record<string, string | number>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+  }
+  return result;
 }
 
 export default function NotificationsPage() {
+  const { t, locale } = useLocale();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // تابع formatTime مشابه messages
+  function formatTime(dateStr: string) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return t("Common.timeAgo.justNow", "Just now");
+    if (minutes < 60) {
+      const template = t("Common.timeAgo.minutesAgo", "{count}m ago");
+      return interpolate(template, { count: minutes });
+    }
+    if (hours < 24) {
+      const template = t("Common.timeAgo.hoursAgo", "{count}h ago");
+      return interpolate(template, { count: hours });
+    }
+    if (days < 7) {
+      const template = t("Common.timeAgo.daysAgo", "{count}d ago");
+      return interpolate(template, { count: days });
+    }
+    return date.toLocaleDateString(locale);
+  }
+
+  const typeConfig: Record<
+    string,
+    { icon: React.ReactNode; color: string; bg: string }
+  > = {
+    job: {
+      icon: <Briefcase className="w-5 h-5" />,
+      color: "text-cyan-400",
+      bg: "bg-cyan-500/10 border-cyan-500/20",
+    },
+    message: {
+      icon: <MessageSquare className="w-5 h-5" />,
+      color: "text-indigo-400",
+      bg: "bg-indigo-500/10 border-indigo-500/20",
+    },
+    application: {
+      icon: <CheckCircle2 className="w-5 h-5" />,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10 border-emerald-500/20",
+    },
+    profile: {
+      icon: <User className="w-5 h-5" />,
+      color: "text-amber-400",
+      bg: "bg-amber-500/10 border-amber-500/20",
+    },
+    alert: {
+      icon: <AlertCircle className="w-5 h-5" />,
+      color: "text-red-400",
+      bg: "bg-red-500/10 border-red-500/20",
+    },
+  };
+
+  function getTypeStyle(type: string) {
+    return (
+      typeConfig[type] || {
+        icon: <Bell className="w-5 h-5" />,
+        color: "text-slate-400",
+        bg: "bg-white/5 border-white/10",
+      }
+    );
+  }
 
   useEffect(() => {
     fetchNotifications();
@@ -182,6 +203,16 @@ export default function NotificationsPage() {
     );
   }
 
+  // ساخت متن تعداد اعلان‌های خوانده‌نشده با interpolate
+  let unreadLabel = t("Notifications.allCaughtUp", "All caught up!");
+  if (unreadCount > 0) {
+    const template = t("Notifications.unreadCount", "{count} unread notification{plural}");
+    unreadLabel = interpolate(template, {
+      count: unreadCount,
+      plural: unreadCount > 1 ? "s" : "",
+    });
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
@@ -197,14 +228,8 @@ export default function NotificationsPage() {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Notifications</h1>
-                <p className="text-slate-400 text-sm">
-                  {unreadCount > 0
-                    ? `${unreadCount} unread notification${
-                        unreadCount > 1 ? "s" : ""
-                      }`
-                    : "All caught up!"}
-                </p>
+                <h1 className="text-2xl font-bold text-white">{t("Notifications.title", "Notifications")}</h1>
+                <p className="text-slate-400 text-sm">{unreadLabel}</p>
               </div>
             </div>
 
@@ -220,7 +245,7 @@ export default function NotificationsPage() {
                   ) : (
                     <CheckCheck className="w-4 h-4" />
                   )}
-                  Mark all read
+                  {t("Notifications.markAllRead", "Mark all read")}
                 </button>
               )}
               <Link
@@ -228,7 +253,7 @@ export default function NotificationsPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                {t("Common.back", "Back")}
               </Link>
             </div>
           </div>
@@ -239,10 +264,10 @@ export default function NotificationsPage() {
             <div className="glass rounded-2xl p-12 text-center border border-white/10">
               <Inbox className="w-14 h-14 text-slate-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-white mb-1">
-                No notifications yet
+                {t("Notifications.emptyTitle", "No notifications yet")}
               </h3>
               <p className="text-slate-400 text-sm">
-                When something happens, you will see it here.
+                {t("Notifications.emptyDesc", "When something happens, you will see it here.")}
               </p>
             </div>
           ) : (
@@ -298,7 +323,7 @@ export default function NotificationsPage() {
                               }}
                               disabled={actionLoading === notification.id}
                               className="p-2 rounded-lg hover:bg-white/10 text-indigo-400 transition-colors"
-                              title="Mark as read"
+                              title={t("Notifications.markAsRead", "Mark as read")}
                             >
                               {actionLoading === notification.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -314,7 +339,7 @@ export default function NotificationsPage() {
                             }
                             disabled={actionLoading === notification.id}
                             className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors"
-                            title="Delete"
+                            title={t("Notifications.delete", "Delete")}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -345,6 +370,6 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
