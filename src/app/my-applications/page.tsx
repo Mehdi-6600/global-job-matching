@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ArrowLeft,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface ApplicationItem {
   id: string;
@@ -38,48 +39,6 @@ interface ApplicationItem {
   } | null;
 }
 
-const statusConfig: Record<
-  string,
-  { label: string; icon: React.ReactNode; bg: string; color: string }
-> = {
-  pending: {
-    label: "Pending",
-    icon: <Clock className="w-3.5 h-3.5" />,
-    bg: "bg-amber-500/10 border-amber-500/20",
-    color: "text-amber-400",
-  },
-  applied: {
-    label: "Pending",
-    icon: <Clock className="w-3.5 h-3.5" />,
-    bg: "bg-amber-500/10 border-amber-500/20",
-    color: "text-amber-400",
-  },
-  viewed: {
-    label: "Viewed",
-    icon: <Eye className="w-3.5 h-3.5" />,
-    bg: "bg-blue-500/10 border-blue-500/20",
-    color: "text-blue-400",
-  },
-  interview: {
-    label: "Interview",
-    icon: <Users className="w-3.5 h-3.5" />,
-    bg: "bg-cyan-500/10 border-cyan-500/20",
-    color: "text-cyan-400",
-  },
-  rejected: {
-    label: "Rejected",
-    icon: <XCircle className="w-3.5 h-3.5" />,
-    bg: "bg-red-500/10 border-red-500/20",
-    color: "text-red-400",
-  },
-  hired: {
-    label: "Hired",
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-    bg: "bg-emerald-500/10 border-emerald-500/20",
-    color: "text-emerald-400",
-  },
-};
-
 function formatSalary(
   currency: string | null | undefined,
   min: number | null | undefined,
@@ -95,9 +54,50 @@ function formatSalary(
 }
 
 export default function MyApplicationsPage() {
+  const { t, locale } = useLocale();
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // statusConfig با ترجمه
+  const statusConfig = {
+    pending: {
+      label: t("Applications.statusPending", "Pending"),
+      icon: <Clock className="w-3.5 h-3.5" />,
+      bg: "bg-amber-500/10 border-amber-500/20",
+      color: "text-amber-400",
+    },
+    applied: {
+      label: t("Applications.statusPending", "Pending"),
+      icon: <Clock className="w-3.5 h-3.5" />,
+      bg: "bg-amber-500/10 border-amber-500/20",
+      color: "text-amber-400",
+    },
+    viewed: {
+      label: t("Applications.statusViewed", "Viewed"),
+      icon: <Eye className="w-3.5 h-3.5" />,
+      bg: "bg-blue-500/10 border-blue-500/20",
+      color: "text-blue-400",
+    },
+    interview: {
+      label: t("Applications.statusInterview", "Interview"),
+      icon: <Users className="w-3.5 h-3.5" />,
+      bg: "bg-cyan-500/10 border-cyan-500/20",
+      color: "text-cyan-400",
+    },
+    rejected: {
+      label: t("Applications.statusRejected", "Rejected"),
+      icon: <XCircle className="w-3.5 h-3.5" />,
+      bg: "bg-red-500/10 border-red-500/20",
+      color: "text-red-400",
+    },
+    hired: {
+      label: t("Applications.statusHired", "Hired"),
+      icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+      bg: "bg-emerald-500/10 border-emerald-500/20",
+      color: "text-emerald-400",
+    },
+  };
 
   useEffect(() => {
     fetch("/api/applications")
@@ -108,7 +108,7 @@ export default function MyApplicationsPage() {
         }
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Failed to load");
+          setError(data.error || t("Applications.errorLoad", "Failed to load"));
           setLoading(false);
           return;
         }
@@ -116,10 +116,10 @@ export default function MyApplicationsPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError("Network error");
+        setError(t("Common.errorNetwork", "Network error"));
         setLoading(false);
       });
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
@@ -137,16 +137,18 @@ export default function MyApplicationsPage() {
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          {t("Common.back", "Back to Dashboard")}
         </Link>
 
         <div className="flex items-center gap-3 mb-8">
           <Briefcase className="w-7 h-7 text-cyan-400" />
           <div>
-            <h1 className="text-2xl font-bold text-white">My Applications</h1>
+            <h1 className="text-2xl font-bold text-white">{t("Applications.title", "My Applications")}</h1>
             <p className="text-slate-400 text-sm">
-              {applications.length} application
-              {applications.length !== 1 ? "s" : ""}
+              {t("Applications.count", "{count} application{plural}", {
+                count: applications.length,
+                plural: applications.length !== 1 ? "s" : "",
+              })}
             </p>
           </div>
         </div>
@@ -160,19 +162,18 @@ export default function MyApplicationsPage() {
         {applications.length === 0 && !error ? (
           <div className="glass rounded-2xl p-12 text-center border border-white/10">
             <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 mb-4">No applications yet</p>
+            <p className="text-slate-400 mb-4">{t("Applications.empty", "No applications yet")}</p>
             <Link
               href="/jobs"
               className="inline-flex px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-semibold"
             >
-              Browse Jobs
+              {t("Applications.browseJobs", "Browse Jobs")}
             </Link>
           </div>
         ) : (
           <div className="space-y-4">
             {applications.map((app) => {
-              const status =
-                statusConfig[app.status] || statusConfig.pending;
+              const status = statusConfig[app.status] || statusConfig.pending;
               const salary = formatSalary(
                 app.job?.currency,
                 app.job?.salaryMin,
@@ -188,14 +189,14 @@ export default function MyApplicationsPage() {
                     <div className="min-w-0">
                       {app.job ? (
                         <Link
-                          href={`/jobs/${app.job.id}`}
+                          href={`/${locale}/jobs/${app.job.id}`}
                           className="text-white font-semibold hover:text-cyan-300 transition-colors"
                         >
                           {app.job.title}
                         </Link>
                       ) : (
                         <span className="text-white font-semibold">
-                          Job unavailable
+                          {t("Applications.jobUnavailable", "Job unavailable")}
                         </span>
                       )}
                       <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
@@ -214,7 +215,9 @@ export default function MyApplicationsPage() {
                         {salary && <span>{salary}</span>}
                       </div>
                       <p className="text-slate-600 text-xs mt-2">
-                        Applied {new Date(app.createdAt).toLocaleDateString()}
+                        {t("Applications.appliedOn", "Applied {date}", {
+                          date: new Date(app.createdAt).toLocaleDateString(locale),
+                        })}
                       </p>
                     </div>
 
