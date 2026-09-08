@@ -12,6 +12,7 @@ import {
   Loader2,
   Clock,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface Partner {
   id: string;
@@ -36,22 +37,17 @@ interface Conversation {
   unreadCount: number;
 }
 
-function formatTime(dateStr: string) {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
+// تابع کمکی برای جایگزینی متغیرها
+function interpolate(template: string, replacements: Record<string, string | number>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+  }
+  return result;
 }
 
 function MessagesInner() {
+  const { t, locale } = useLocale();
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const withParam = searchParams.get("with");
@@ -68,6 +64,31 @@ function MessagesInner() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
+  // تابع formatTime با ترجمه و interpolate
+  function formatTime(dateStr: string) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return t("Common.timeAgo.justNow", "Just now");
+    if (minutes < 60) {
+      const template = t("Common.timeAgo.minutesAgo", "{count}m ago");
+      return interpolate(template, { count: minutes });
+    }
+    if (hours < 24) {
+      const template = t("Common.timeAgo.hoursAgo", "{count}h ago");
+      return interpolate(template, { count: hours });
+    }
+    if (days < 7) {
+      const template = t("Common.timeAgo.daysAgo", "{count}d ago");
+      return interpolate(template, { count: days });
+    }
+    return date.toLocaleDateString(locale);
+  }
+
   useEffect(() => {
     if (status === "unauthenticated") {
       window.location.href = "/login?callbackUrl=/messages";
@@ -80,13 +101,13 @@ function MessagesInner() {
           setMobileView("chat");
           setPartnerOverride({
             id: withParam,
-            name: "User",
+            name: t("Messages.defaultUser", "User"),
             avatar: null,
           });
         }
       });
     }
-  }, [status, withParam, currentUserId]);
+  }, [status, withParam, currentUserId, t]);
 
   useEffect(() => {
     if (!selectedUserId) return;
@@ -204,13 +225,13 @@ function MessagesInner() {
               </button>
             )}
             <MessageCircle className="w-6 h-6 text-indigo-400" />
-            <h1 className="text-xl font-bold text-white">Messages</h1>
+            <h1 className="text-xl font-bold text-white">{t("Messages.title", "Messages")}</h1>
           </div>
           <Link
             href="/dashboard"
             className="text-sm text-slate-400 hover:text-white transition-colors"
           >
-            Dashboard
+            {t("Dashboard.navDashboard", "Dashboard")}
           </Link>
         </div>
 
@@ -222,7 +243,7 @@ function MessagesInner() {
           >
             <div className="p-4 border-b border-white/10">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                Conversations
+                {t("Messages.conversations", "Conversations")}
               </h2>
             </div>
 
@@ -230,9 +251,9 @@ function MessagesInner() {
               {conversations.length === 0 ? (
                 <div className="p-8 text-center">
                   <MessageCircle className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">No messages yet</p>
+                  <p className="text-slate-400 text-sm">{t("Messages.noMessages", "No messages yet")}</p>
                   <p className="text-slate-500 text-xs mt-1">
-                    Open a chat from applicants or wait for a message
+                    {t("Messages.noMessagesDesc", "Open a chat from applicants or wait for a message")}
                   </p>
                 </div>
               ) : (
@@ -262,7 +283,7 @@ function MessagesInner() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium text-white truncate">
-                          {conv.partner.name || "User"}
+                          {conv.partner.name || t("Messages.defaultUser", "User")}
                         </h3>
                         <span className="text-xs text-slate-500 shrink-0 ml-2">
                           {formatTime(conv.lastMessage.createdAt)}
@@ -270,7 +291,7 @@ function MessagesInner() {
                       </div>
                       <p className="text-sm text-slate-400 truncate mt-0.5">
                         {conv.lastMessage.senderId === currentUserId
-                          ? "You: "
+                          ? `${t("Messages.youPrefix", "You: ")}`
                           : ""}
                         {conv.lastMessage.content}
                       </p>
@@ -307,7 +328,7 @@ function MessagesInner() {
                     )}
                   </div>
                   <h3 className="font-medium text-white">
-                    {selectedPartner.name || "User"}
+                    {selectedPartner.name || t("Messages.defaultUser", "User")}
                   </h3>
                 </div>
 
@@ -320,7 +341,7 @@ function MessagesInner() {
                     <div className="text-center py-12">
                       <Clock className="w-10 h-10 text-slate-600 mx-auto mb-2" />
                       <p className="text-slate-400 text-sm">
-                        Start the conversation
+                        {t("Messages.startConversation", "Start the conversation")}
                       </p>
                     </div>
                   ) : (
@@ -366,7 +387,7 @@ function MessagesInner() {
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
+                    placeholder={t("Messages.messagePlaceholder", "Type a message...")}
                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500/50"
                   />
                   <button
@@ -384,7 +405,7 @@ function MessagesInner() {
               </>
             ) : (
               <div className="flex-1 hidden lg:flex items-center justify-center text-slate-500 text-sm">
-                Select a conversation
+                {t("Messages.selectConversation", "Select a conversation")}
               </div>
             )}
           </div>
