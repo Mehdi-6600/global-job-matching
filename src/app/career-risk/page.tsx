@@ -68,8 +68,8 @@ function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
 }
 
 export default function CareerRiskPage() {
-  const { t, locale } = useLocale();
-  const { data: session, status } = useSession();
+  const { t } = useLocale();
+  const { status } = useSession();
   const [jobTitle, setJobTitle] = useState("");
   const [skills, setSkills] = useState("");
   const [industry, setIndustry] = useState("");
@@ -165,16 +165,17 @@ export default function CareerRiskPage() {
 
   useEffect(() => {
     const draft = loadCareerRiskDraft();
-    if (!draft) return;
-    setJobTitle(draft.jobTitle || "");
-    setSkills(draft.skills || "");
-    setIndustry(draft.industry || "");
+    if (!draft?.form) return;
+    const f = draft.form;
+    setJobTitle(f.jobTitle || "");
+    setSkills(f.skills || "");
+    setIndustry(f.industry || "");
     setExperienceYears(
-      draft.experienceYears != null ? String(draft.experienceYears) : ""
+      f.experienceYears != null ? String(f.experienceYears) : ""
     );
-    setCountry(draft.country || "");
-    setLocation(draft.location || "");
-    setEducation(draft.education || "");
+    setCountry(f.country || "");
+    setLocation(f.location || "");
+    setEducation(f.education || "");
 
     if (draft.autoSubmit && status === "authenticated") {
       clearCareerRiskDraft();
