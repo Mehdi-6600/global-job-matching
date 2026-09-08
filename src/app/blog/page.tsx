@@ -1,10 +1,19 @@
 import Link from "next/link";
 import { ArrowRight, Calendar, BookOpen } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+import { getDictionary, t } from "@/lib/i18n/dict";
+import { defaultLocale, isLocale } from "@/lib/i18n/config";
 
 export const revalidate = 60;
 
 export default async function BlogPage() {
+  // خواندن locale از کوکی
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("locale")?.value;
+  const locale = isLocale(localeCookie) ? localeCookie : defaultLocale;
+  const dict = getDictionary(locale);
+
   let posts: {
     id: string;
     title: string;
@@ -31,27 +40,37 @@ export default async function BlogPage() {
     console.error("Blog fetch error:", error);
   }
 
+  const dateFormatOptions: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
           <BookOpen className="w-10 h-10 text-indigo-400 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-white mb-3">Career Blog</h1>
+          <h1 className="text-3xl font-bold text-white mb-3">
+            {t(dict, "Blog.title", "Career Blog")}
+          </h1>
           <p className="text-slate-400">
-            Tips, guides, and insights for your career journey
+            {t(dict, "Blog.subtitle", "Tips, guides, and insights for your career journey")}
           </p>
         </div>
 
         {posts.length === 0 ? (
           <div className="glass rounded-2xl p-16 text-center border border-white/10">
-            <p className="text-slate-400">No articles yet. Check back soon!</p>
+            <p className="text-slate-400">
+              {t(dict, "Blog.noArticles", "No articles yet. Check back soon!")}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post) => (
               <Link
                 key={post.id}
-                href={`/blog/${post.slug}`}
+                href={`/${locale}/blog/${post.slug}`}
                 className="glass rounded-2xl overflow-hidden border border-white/10 hover:border-indigo-500/30 transition-all group"
               >
                 {post.coverImage ? (
@@ -67,7 +86,7 @@ export default async function BlogPage() {
                 <div className="p-5">
                   <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
                     <Calendar className="w-3 h-3" />
-                    {new Date(post.createdAt).toLocaleDateString()}
+                    {new Date(post.createdAt).toLocaleDateString(locale, dateFormatOptions)}
                   </div>
                   <h2 className="text-lg font-semibold text-white mb-2 group-hover:text-indigo-300 transition-colors">
                     {post.title}
@@ -78,7 +97,8 @@ export default async function BlogPage() {
                     </p>
                   )}
                   <span className="inline-flex items-center gap-1 text-indigo-400 text-sm mt-4 group-hover:gap-2 transition-all">
-                    Read more <ArrowRight className="w-3 h-3" />
+                    {t(dict, "Blog.readMore", "Read more")}{" "}
+                    <ArrowRight className="w-3 h-3" />
                   </span>
                 </div>
               </Link>
