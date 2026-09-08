@@ -44,7 +44,7 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // تابع formatTime مشابه messages
+  // تابع formatTime
   function formatTime(dateStr: string) {
     const date = new Date(dateStr);
     const now = new Date();
@@ -203,7 +203,7 @@ export default function NotificationsPage() {
     );
   }
 
-  // ساخت متن تعداد اعلان‌های خوانده‌نشده با interpolate
+  // ساخت متن تعداد اعلان‌های خوانده‌نشده
   let unreadLabel = t("Notifications.allCaughtUp", "All caught up!");
   if (unreadCount > 0) {
     const template = t("Notifications.unreadCount", "{count} unread notification{plural}");
@@ -370,6 +370,6 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }
