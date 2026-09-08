@@ -29,6 +29,7 @@ import {
   getPlanLimitFromResponse,
 } from "@/components/plan-limit-banner";
 import { CompanyLogo } from "@/components/company-logo";
+import { useLocale } from "@/components/locale-provider";
 
 interface JobDetail {
   id: string;
@@ -92,19 +93,24 @@ function timeAgo(dateString: string): string {
   if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
   return "Just now";
 }
-
 function formatSalary(
+  t: (key: string, fallback?: string) => string,
+  locale: string,
   currency: string | null | undefined,
   min: number | null | undefined,
   max: number | null | undefined
 ) {
   const cur = currency || "USD";
-  if (min == null && max == null) return "Salary not specified";
-  if (min != null && max != null) {
-    return `${cur} ${min.toLocaleString()} – ${max.toLocaleString()}`;
+  if (min == null && max == null) {
+    return t("JobDetail.salaryNA", "Salary not specified");
   }
-  if (min != null) return `From ${cur} ${min.toLocaleString()}`;
-  return `Up to ${cur} ${max!.toLocaleString()}`;
+  if (min != null && max != null) {
+    return `${cur} ${min.toLocaleString(locale)} – ${max.toLocaleString(locale)}`;
+  }
+  if (min != null) {
+    return `${t("Jobs.from", "From")} ${cur} ${min.toLocaleString(locale)}`;
+  }
+  return `${t("Jobs.upTo", "Up to")} ${cur} ${max!.toLocaleString(locale)}`;
 }
 
 function scoreColor(score: number): string {
@@ -120,6 +126,7 @@ function scoreBar(score: number): string {
 }
 
 export default function JobDetailPage() {
+  const { t, locale } = useLocale();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -151,7 +158,7 @@ export default function JobDetailPage() {
 
   useEffect(() => {
     if (!id) {
-      setError("Invalid job ID");
+      setError(t("JobDetail.notFound", "Invalid job ID"));
       setLoading(false);
       return;
     }
@@ -170,17 +177,16 @@ export default function JobDetailPage() {
             viewCount: data.job.viewCount ?? 0,
           });
         } else {
-          setError(data.error || "Job not found");
+          setError(data.error || t("JobDetail.notFound", "Job not found"));
         }
         setLoading(false);
       })
       .catch((err) => {
         console.error(err);
-        setError("Failed to load job details");
+        setError(t("Common.error", "Failed to load job details"));
         setLoading(false);
       });
   }, [id]);
-
   useEffect(() => {
     if (!id) return;
 
@@ -191,12 +197,19 @@ export default function JobDetailPage() {
         const data = await res.json().catch(() => ({}));
         if (res.status === 401) {
           setMatch(null);
-          setMatchMessage("Sign in to see your match score for this job.");
+          setMatchMessage(
+            t(
+              "JobDetail.loginToApply",
+              "Sign in to see your match score for this job."
+            )
+          );
           return;
         }
         if (!res.ok) {
           setMatch(null);
-          setMatchMessage(data.error || "Could not load match score");
+          setMatchMessage(
+            data.error || t("Common.error", "Could not load match score")
+          );
           return;
         }
         if (data.match) {
@@ -206,13 +219,16 @@ export default function JobDetailPage() {
           setMatch(null);
           setMatchMessage(
             data.message ||
-              "Complete your profile to see a match score for this job."
+              t(
+                "JobDetail.loginToApply",
+                "Complete your profile to see a match score for this job."
+              )
           );
         }
       })
       .catch(() => {
         setMatch(null);
-        setMatchMessage("Could not load match score");
+        setMatchMessage(t("Common.error", "Could not load match score"));
       })
       .finally(() => setMatchLoading(false));
   }, [id]);
@@ -269,7 +285,9 @@ export default function JobDetailPage() {
           return;
         }
         if (res.status === 409) {
-          setApplyError("You have already applied for this job.");
+          setApplyError(
+            t("JobDetail.applied", "You have already applied for this job.")
+          );
           return;
         }
 
@@ -279,7 +297,9 @@ export default function JobDetailPage() {
           return;
         }
 
-        setApplyError(data.error || "Failed to submit application");
+        setApplyError(
+          data.error || t("Common.error", "Failed to submit application")
+        );
         return;
       }
 
@@ -289,18 +309,19 @@ export default function JobDetailPage() {
         setJob({ ...job, applicantCount: (job.applicantCount || 0) + 1 });
       }
     } catch {
-      setApplyError("Network error. Please try again.");
+      setApplyError(
+        t("Common.errorNetwork", "Network error. Please try again.")
+      );
     } finally {
       setApplying(false);
     }
   };
-
-  if (loading) {
+    if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading job details...</p>
+          <p className="text-slate-400">{t("Common.loading", "Loading...")}</p>
         </div>
       </main>
     );
@@ -312,21 +333,21 @@ export default function JobDetailPage() {
         <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <p className="text-red-400 font-medium mb-4">
-            {error || "Job not found"}
+            {error || t("JobDetail.notFound", "Job not found")}
           </p>
           <Link
             href="/jobs"
             className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Jobs
+            {t("JobDetail.backToJobs", "Back to Jobs")}
           </Link>
         </div>
       </main>
     );
   }
 
-  const companyName = job.company?.name || "Company";
+  const companyName = job.company?.name || t("JobDetail.company", "Company");
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
@@ -336,7 +357,7 @@ export default function JobDetailPage() {
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to all jobs
+          {t("JobDetail.backToJobs", "Back to all jobs")}
         </Link>
 
         {planLimit && (
@@ -377,8 +398,7 @@ export default function JobDetailPage() {
                     </div>
                   </div>
                 </div>
-
-                <button
+                                <button
                   type="button"
                   onClick={handleSave}
                   className={`p-2.5 rounded-xl border transition-all ${
@@ -386,7 +406,11 @@ export default function JobDetailPage() {
                       ? "bg-pink-500/10 border-pink-500/30 text-pink-400"
                       : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                   }`}
-                  title={saved ? "Unsave" : "Save job"}
+                  title={
+                    saved
+                      ? t("JobDetail.unsave", "Unsave")
+                      : t("JobDetail.save", "Save job")
+                  }
                 >
                   <Heart
                     className={`w-5 h-5 ${saved ? "fill-current" : ""}`}
@@ -402,7 +426,7 @@ export default function JobDetailPage() {
                 {job.remote && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300">
                     <Wifi className="w-3.5 h-3.5" />
-                    Remote
+                    {t("JobDetail.remote", "Remote")}
                   </span>
                 )}
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
@@ -411,7 +435,13 @@ export default function JobDetailPage() {
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
                   <DollarSign className="w-3.5 h-3.5 text-amber-400" />
-                  {formatSalary(job.currency, job.salaryMin, job.salaryMax)}
+                  {formatSalary(
+                    t,
+                    locale,
+                    job.currency,
+                    job.salaryMin,
+                    job.salaryMax
+                  )}
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -420,7 +450,8 @@ export default function JobDetailPage() {
                 {job.deadline && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
                     <Calendar className="w-3.5 h-3.5 text-rose-400" />
-                    Deadline {new Date(job.deadline).toLocaleDateString()}
+                    Deadline{" "}
+                    {new Date(job.deadline).toLocaleDateString(locale)}
                   </span>
                 )}
               </div>
@@ -432,7 +463,7 @@ export default function JobDetailPage() {
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/20"
                 >
                   <Send className="w-4 h-4" />
-                  Apply now
+                  {t("JobDetail.apply", "Apply now")}
                 </button>
                 {job.company?.website && (
                   <a
@@ -442,13 +473,12 @@ export default function JobDetailPage() {
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10"
                   >
                     <Globe className="w-4 h-4" />
-                    Company site
+                    {t("Companies.website", "Website")}
                   </a>
                 )}
               </div>
             </div>
-
-            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Target className="w-5 h-5 text-cyan-400" />
                 Your match score
@@ -457,7 +487,7 @@ export default function JobDetailPage() {
               {matchLoading ? (
                 <div className="flex items-center gap-2 text-slate-400 text-sm">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Calculating match...
+                  {t("Common.loading", "Loading...")}
                 </div>
               ) : match ? (
                 <div className="space-y-4">
@@ -514,13 +544,16 @@ export default function JobDetailPage() {
                 </div>
               ) : (
                 <div className="text-sm text-slate-400 space-y-3">
-                  <p>{matchMessage || "Match score unavailable."}</p>
+                  <p>
+                    {matchMessage ||
+                      t("Common.error", "Match score unavailable.")}
+                  </p>
                   {matchMessage.toLowerCase().includes("sign in") && (
                     <Link
                       href={`/login?callbackUrl=/jobs/${id}`}
                       className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
                     >
-                      Sign in
+                      {t("Common.signIn", "Sign in")}
                     </Link>
                   )}
                   {matchMessage.toLowerCase().includes("profile") && (
@@ -528,17 +561,16 @@ export default function JobDetailPage() {
                       href="/profile"
                       className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
                     >
-                      Complete profile
+                      {t("Nav.settings", "Settings")}
                     </Link>
                   )}
                 </div>
               )}
             </div>
-
-            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-cyan-400" />
-                About the Role
+                {t("JobDetail.description", "Description")}
               </h2>
               <div className="text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-line">
                 {job.description}
@@ -549,7 +581,7 @@ export default function JobDetailPage() {
               <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
                 <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-purple-400" />
-                  Requirements
+                  {t("JobDetail.requirements", "Requirements")}
                 </h2>
                 <ul className="space-y-3">
                   {job.requirements.map((req, i) => (
@@ -595,7 +627,9 @@ export default function JobDetailPage() {
 
             {job.benefits.length > 0 && (
               <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
-                <h2 className="text-lg font-bold text-white mb-4">Benefits</h2>
+                <h2 className="text-lg font-bold text-white mb-4">
+                  {t("JobDetail.benefits", "Benefits")}
+                </h2>
                 <ul className="grid sm:grid-cols-2 gap-2">
                   {job.benefits.map((b, i) => (
                     <li
@@ -610,8 +644,7 @@ export default function JobDetailPage() {
               </div>
             )}
           </div>
-
-          <aside className="w-full lg:w-80 shrink-0 space-y-4">
+                    <aside className="w-full lg:w-80 shrink-0 space-y-4">
             <div className="glass rounded-2xl p-5 border border-white/10 space-y-3">
               <p className="text-xs text-slate-500">
                 {job.viewCount} views · {job.applicantCount} applicants
@@ -621,7 +654,7 @@ export default function JobDetailPage() {
                 onClick={() => setApplyOpen(true)}
                 className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold"
               >
-                Apply now
+                {t("JobDetail.apply", "Apply now")}
               </button>
               <ContactEmployer jobId={job.id} jobTitle={job.title} />
               {shareUrl && (
@@ -655,23 +688,23 @@ export default function JobDetailPage() {
               <div className="text-center py-6">
                 <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
                 <h3 className="text-lg font-semibold text-white mb-2">
-                  Application submitted
+                  {t("JobDetail.applied", "Applied")}
                 </h3>
                 <p className="text-slate-400 text-sm mb-4">
-                  Good luck with {job.title}!
+                  {job.title}
                 </p>
                 <button
                   type="button"
                   onClick={() => setApplyOpen(false)}
                   className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm"
                 >
-                  Close
+                  {t("Common.cancel", "Cancel")}
                 </button>
               </div>
             ) : (
               <>
                 <h3 className="text-lg font-semibold text-white mb-1">
-                  Apply for {job.title}
+                  {t("JobDetail.apply", "Apply now")} — {job.title}
                 </h3>
                 <p className="text-slate-400 text-sm mb-6">at {companyName}</p>
 
@@ -690,8 +723,7 @@ export default function JobDetailPage() {
                     {applyError}
                   </div>
                 )}
-
-                <form onSubmit={handleApply} className="space-y-4">
+                                <form onSubmit={handleApply} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Cover Letter (Optional)
@@ -699,7 +731,10 @@ export default function JobDetailPage() {
                     <textarea
                       value={coverLetter}
                       onChange={(e) => setCoverLetter(e.target.value)}
-                      placeholder="Tell us why you are a great fit for this role..."
+                      placeholder={t(
+                        "JobDetail.apply",
+                        "Tell us why you are a great fit for this role..."
+                      )}
                       rows={5}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600 resize-none"
                     />
@@ -711,7 +746,7 @@ export default function JobDetailPage() {
                       onClick={() => setApplyOpen(false)}
                       className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm font-medium transition-all"
                     >
-                      Cancel
+                      {t("Common.cancel", "Cancel")}
                     </button>
                     <button
                       type="submit"
@@ -721,12 +756,12 @@ export default function JobDetailPage() {
                       {applying ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Submitting...
+                          {t("JobDetail.applying", "Applying...")}
                         </>
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          Submit Application
+                          {t("JobDetail.apply", "Apply now")}
                         </>
                       )}
                     </button>
