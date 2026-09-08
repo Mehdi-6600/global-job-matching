@@ -61,7 +61,16 @@
     "upgrade": "अपग्रेड",
     "notSpecified": "निर्दिष्ट नहीं",
     "remote": "रिमोट",
-    "noResults": "कोई परिणाम नहीं"
+    "noResults": "कोई परिणाम नहीं",
+    "newsletterTitle": "अपडेट रहें",
+    "newsletterSubtitle": "सर्वोत्तम नौकरियाँ साप्ताहिक रूप से अपने इनबॉक्स में पाएँ",
+    "newsletterSuccess": "आप सब्सक्राइब हो गए! जल्द ही अपना इनबॉक्स चेक करें।",
+    "newsletterNamePlaceholder": "आपका नाम (वैकल्पिक)",
+    "newsletterEmailPlaceholder": "अपना ईमेल दर्ज करें",
+    "newsletterSubscribe": "सब्सक्राइब",
+    "newsletterFooter": "कोई स्पैम नहीं। कभी भी अनसब्सक्राइब करें।",
+    "newsletterErrorSubscribe": "सब्सक्राइब करने में विफल",
+    "newsletterErrorNetwork": "नेटवर्क त्रुटि। फिर से प्रयास करें।"
   },
   "Auth": {
     "loginTitle": "साइन इन",
@@ -326,7 +335,7 @@
     "postJob": "नौकरी पोस्ट करें",
     "myJobs": "मेरी नौकरियाँ",
     "applicants": "आवेदक",
-    "company": "कंपنی"
+    "company": "कंपनी"
   },
   "Notifications": {
     "title": "सूचनाएँ",
