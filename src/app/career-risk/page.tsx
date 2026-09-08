@@ -15,15 +15,12 @@ import {
 } from "lucide-react";
 import type { CareerRiskAnalysis, CareerRiskFormInput } from "@/types/career-risk";
 import {
-  CAREER_RISK_DISCLAIMER_EN,
-  CAREER_RISK_DISCLAIMER_FA,
-} from "@/types/career-risk";
-import {
   clearCareerRiskDraft,
   loadCareerRiskDraft,
   saveCareerRiskDraft,
 } from "@/lib/career-risk-draft";
 import { trackEvent } from "@/lib/track";
+import { useLocale } from "@/components/locale-provider";
 
 const levelColor = {
   low: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
@@ -71,6 +68,7 @@ function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
 }
 
 export default function CareerRiskPage() {
+  const { t, locale } = useLocale();
   const { data: session, status } = useSession();
   const [jobTitle, setJobTitle] = useState("");
   const [skills, setSkills] = useState("");
@@ -82,88 +80,25 @@ export default function CareerRiskPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<CareerRiskAnalysis | null>(null);
-  const [locked, setLocked] = useState(false);
-  const [info, setInfo] = useState("");
-  const [showAuthGate, setShowAuthGate] = useState(false);
-  const [restored, setRestored] = useState(false);
+  const [paid, setPaid] = useState(false);
   const [sharePath, setSharePath] = useState<string | null>(null);
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState<string | null>(null);
 
-  function currentForm(): CareerRiskFormInput {
+  const currentForm = useCallback((): CareerRiskFormInput => {
+    const years = experienceYears.trim()
+      ? Number(experienceYears)
+      : undefined;
     return {
       jobTitle: jobTitle.trim(),
-      skills,
-      industry,
-      experienceYears: experienceYears ? Number(experienceYears) : undefined,
-      country,
-      location,
-      education,
+      skills: skills.trim() || undefined,
+      industry: industry.trim() || undefined,
+      experienceYears:
+        years !== undefined && Number.isFinite(years) ? years : undefined,
+      country: country.trim() || undefined,
+      location: location.trim() || undefined,
+      education: education.trim() || undefined,
     };
-  }
-
-  const runAnalysis = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    setInfo("");
-    setAnalysis(null);
-    setSharePath(null);
-    trackEvent("career_risk_analysis_started");
-
-    try {
-      const res = await fetch("/api/career/risk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobTitle: jobTitle.trim(),
-          skills,
-          industry,
-          experienceYears: experienceYears
-            ? Number(experienceYears)
-            : undefined,
-          country,
-          location,
-          education,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.status === 401) {
-        saveCareerRiskDraft(currentForm(), { autoSubmit: true });
-        setShowAuthGate(true);
-        trackEvent("career_risk_auth_gate_shown");
-        setLoading(false);
-        return;
-      }
-
-      if (!res.ok) {
-        setError(data.error || "Analysis failed");
-        trackEvent("career_risk_analysis_failed");
-        setLoading(false);
-        return;
-      }
-
-      const parsed = parseAnalysisPayload(data);
-      if (!parsed || !parsed.summary) {
-        setError("Unexpected response from server. Please try again.");
-        trackEvent("career_risk_analysis_failed");
-        setLoading(false);
-        return;
-      }
-
-      setAnalysis(parsed);
-      setLocked(Boolean(data.alternativesLocked));
-      setInfo(typeof data.message === "string" ? data.message : "");
-      if (typeof data.sharePath === "string") setSharePath(data.sharePath);
-      clearCareerRiskDraft();
-      trackEvent("career_risk_analysis_completed");
-      trackEvent("career_risk_result_viewed");
-    } catch {
-      setError("Network error. Please try again.");
-      trackEvent("career_risk_analysis_failed");
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     jobTitle,
     skills,
@@ -174,81 +109,96 @@ export default function CareerRiskPage() {
     education,
   ]);
 
-  useEffect(() => {
-    trackEvent("career_risk_started");
-  }, []);
+  const runAnalysis = useCallback(async () => {
+    setError("");
+    setLoading(true);
+    setAnalysis(null);
+    setSharePath(null);
+    setUpgradeMessage(null);
+    trackEvent("career_risk_submit");
+
+    try {
+      const res = await fetch("/api/career/risk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(currentForm()),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 401) {
+        setShowAuthGate(true);
+        setLoading(false);
+        return;
+      }
+
+      if (!res.ok) {
+        setError(
+          (data as { error?: string }).error ||
+            t("CareerRisk.failed", "Failed to analyze career risk")
+        );
+        setLoading(false);
+        return;
+      }
+
+      const parsed = parseAnalysisPayload(data);
+      if (!parsed) {
+        setError(t("Common.error", "Something went wrong"));
+        setLoading(false);
+        return;
+      }
+
+      setAnalysis(parsed);
+      setPaid(Boolean((data as { paid?: boolean }).paid));
+      const path = (data as { sharePath?: string }).sharePath;
+      if (path) setSharePath(path);
+      const msg = (data as { message?: string }).message;
+      if (msg) setUpgradeMessage(msg);
+      clearCareerRiskDraft();
+      trackEvent("career_risk_success");
+    } catch {
+      setError(t("Auth.errors.network", "Network error. Please try again."));
+    } finally {
+      setLoading(false);
+    }
+  }, [currentForm, t]);
 
   useEffect(() => {
-    if (restored) return;
     const draft = loadCareerRiskDraft();
-    if (!draft) {
-      setRestored(true);
-      return;
-    }
-    setJobTitle(draft.form.jobTitle || "");
-    setSkills(draft.form.skills || "");
-    setIndustry(draft.form.industry || "");
+    if (!draft) return;
+    setJobTitle(draft.jobTitle || "");
+    setSkills(draft.skills || "");
+    setIndustry(draft.industry || "");
     setExperienceYears(
-      draft.form.experienceYears != null
-        ? String(draft.form.experienceYears)
-        : ""
+      draft.experienceYears != null ? String(draft.experienceYears) : ""
     );
-    setCountry(draft.form.country || "");
-    setLocation(draft.form.location || "");
-    setEducation(draft.form.education || "");
-    setRestored(true);
-  }, [restored]);
+    setCountry(draft.country || "");
+    setLocation(draft.location || "");
+    setEducation(draft.education || "");
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      trackEvent("career_risk_auth_success");
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    if (!restored) return;
-    const draft = loadCareerRiskDraft();
-    if (
-      draft?.autoSubmit &&
-      (draft.form.jobTitle || jobTitle).trim().length >= 2
-    ) {
-      saveCareerRiskDraft(
-        {
-          jobTitle: jobTitle || draft.form.jobTitle,
-          skills: skills || draft.form.skills,
-          industry: industry || draft.form.industry,
-          experienceYears: experienceYears
-            ? Number(experienceYears)
-            : draft.form.experienceYears,
-          country: country || draft.form.country,
-          location: location || draft.form.location,
-          education: education || draft.form.education,
-        },
-        { autoSubmit: false }
-      );
+    if (draft.autoSubmit && status === "authenticated") {
+      clearCareerRiskDraft();
       void runAnalysis();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, restored]);
+  }, [status, runAnalysis]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (jobTitle.trim().length < 2) {
-      setError("Please enter a job title (at least 2 characters).");
+      setError(
+        t(
+          "CareerRisk.needTitle",
+          "Please enter a job title (at least 2 characters)."
+        )
+      );
       return;
     }
-
-    trackEvent("career_risk_form_completed");
-
     if (status !== "authenticated") {
       saveCareerRiskDraft(currentForm(), { autoSubmit: true });
       setShowAuthGate(true);
-      trackEvent("career_risk_auth_gate_shown");
       return;
     }
-
-    await runAnalysis();
+    void runAnalysis();
   }
 
   function continueWithGoogle() {
@@ -271,7 +221,7 @@ export default function CareerRiskPage() {
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Home
+          {t("Nav.home", "Home")}
         </Link>
 
         <div className="flex items-start gap-3 mb-8">
@@ -280,11 +230,13 @@ export default function CareerRiskPage() {
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-              AI Career Risk
+              {t("CareerRisk.title", "AI Career Risk")}
             </h1>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Is your role exposed to AI and automation? Get a clear score and a
-              practical upskilling plan.
+              {t(
+                "CareerRisk.subtitle",
+                "Estimate how automation may affect your role over the next 5–10 years."
+              )}
             </p>
           </div>
         </div>
@@ -295,12 +247,15 @@ export default function CareerRiskPage() {
         >
           <div>
             <label className="block text-xs text-slate-400 mb-1.5">
-              Job title *
+              {t("CareerRisk.jobTitle", "Job title")} *
             </label>
             <input
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
-              placeholder="e.g. Accountant, Frontend Developer"
+              placeholder={t(
+                "CareerRisk.jobTitlePh",
+                "e.g. Accountant, Frontend Developer"
+              )}
               className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
               maxLength={120}
               required
@@ -310,7 +265,7 @@ export default function CareerRiskPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-slate-400 mb-1.5">
-                Years of experience
+                {t("CareerRisk.years", "Years of experience")}
               </label>
               <input
                 type="number"
@@ -318,18 +273,21 @@ export default function CareerRiskPage() {
                 max={50}
                 value={experienceYears}
                 onChange={(e) => setExperienceYears(e.target.value)}
-                placeholder="e.g. 5"
+                placeholder={t("CareerRisk.yearsPh", "e.g. 5")}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
               />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1.5">
-                Industry
+                {t("CareerRisk.industry", "Industry")}
               </label>
               <input
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                placeholder="e.g. Finance, Software"
+                placeholder={t(
+                  "CareerRisk.industryPh",
+                  "e.g. Finance, Software"
+                )}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
                 maxLength={120}
               />
@@ -338,52 +296,59 @@ export default function CareerRiskPage() {
 
           <div>
             <label className="block text-xs text-slate-400 mb-1.5">
-              Skills
+              {t("CareerRisk.skills", "Skills")}
             </label>
             <textarea
               value={skills}
               onChange={(e) => setSkills(e.target.value)}
-              placeholder="e.g. Excel, Python, customer service"
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 min-h-[88px]"
-              maxLength={1500}
+              placeholder={t(
+                "CareerRisk.skillsPh",
+                "e.g. Excel, Python, customer service"
+              )}
+              rows={3}
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 resize-y"
+              maxLength={2000}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-slate-400 mb-1.5">
-                Country
+                {t("CareerRisk.country", "Country")}
               </label>
               <input
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                placeholder="e.g. Germany"
+                placeholder={t("CareerRisk.countryPh", "e.g. Germany")}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
-                maxLength={120}
+                maxLength={100}
               />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1.5">
-                Location / city
+                {t("CareerRisk.location", "Location / city")}
               </label>
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Berlin"
+                placeholder={t("CareerRisk.locationPh", "e.g. Berlin")}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
-                maxLength={200}
+                maxLength={120}
               />
             </div>
           </div>
 
           <div>
             <label className="block text-xs text-slate-400 mb-1.5">
-              Education
+              {t("CareerRisk.education", "Education")}
             </label>
             <input
               value={education}
               onChange={(e) => setEducation(e.target.value)}
-              placeholder="e.g. BSc Computer Science"
+              placeholder={t(
+                "CareerRisk.educationPh",
+                "e.g. BSc Computer Science"
+              )}
               className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
               maxLength={200}
             />
@@ -404,21 +369,21 @@ export default function CareerRiskPage() {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Analyzing…
+                {t("CareerRisk.analyzing", "Analyzing...")}
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                Check my risk
+                {t("CareerRisk.submit", "Check my risk")}
               </>
             )}
           </button>
 
           <p className="text-[11px] text-slate-500 text-center">
-            {CAREER_RISK_DISCLAIMER_EN}
-          </p>
-          <p className="text-[11px] text-slate-500 text-center" dir="rtl">
-            {CAREER_RISK_DISCLAIMER_FA}
+            {t(
+              "CareerRisk.disclaimer",
+              "This is an AI-powered estimate based on the information you provided. It is not a definitive prediction of your career future."
+            )}
           </p>
         </form>
 
@@ -426,7 +391,9 @@ export default function CareerRiskPage() {
           <div className="glass rounded-2xl p-5 sm:p-6 border border-white/10 space-y-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-sm text-slate-400">Role</p>
+                <p className="text-sm text-slate-400">
+                  {t("CareerRisk.jobTitle", "Job title")}
+                </p>
                 <p className="text-xl font-semibold text-white">
                   {analysis.jobTitle}
                 </p>
@@ -446,11 +413,17 @@ export default function CareerRiskPage() {
             {analysis.reasons.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-white mb-2">
-                  Why this score
+                  {t("CareerRisk.why", "Why this score")}
                 </h2>
-                <ul className="list-disc pl-5 space-y-1 text-slate-300 text-sm">
+                <ul className="space-y-2">
                   {analysis.reasons.map((r, i) => (
-                    <li key={i}>{r}</li>
+                    <li
+                      key={i}
+                      className="flex gap-2 text-sm text-slate-300"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                      <span>{r}</span>
+                    </li>
                   ))}
                 </ul>
               </section>
@@ -459,64 +432,63 @@ export default function CareerRiskPage() {
             {analysis.skillsToBuild.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-white mb-2">
-                  Skills to build
+                  {t("CareerRisk.skillsToBuild", "Skills to build")}
                 </h2>
-                <ul className="list-disc pl-5 space-y-1 text-slate-300 text-sm">
+                <div className="flex flex-wrap gap-2">
                   {analysis.skillsToBuild.map((s, i) => (
-                    <li key={i}>{s}</li>
+                    <span
+                      key={i}
+                      className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-200"
+                    >
+                      {s}
+                    </span>
                   ))}
-                </ul>
+                </div>
               </section>
             )}
 
             <section>
               <h2 className="text-sm font-semibold text-white mb-2">
-                Alternative paths
+                {t("CareerRisk.alternatives", "Alternative paths")}
               </h2>
-              {locked || analysis.alternatives.length === 0 ? (
-                <div className="flex items-start gap-2 text-slate-400 text-sm">
-                  <Lock className="w-4 h-4 mt-0.5" />
-                  <span>
-                    {info ||
-                      "Upgrade to Pro to unlock alternative role recommendations."}{" "}
-                    <Link href="/pricing" className="text-cyan-400 underline">
-                      View pricing
-                    </Link>
-                  </span>
-                </div>
-              ) : (
-                <ul className="list-disc pl-5 space-y-1 text-slate-300 text-sm">
+              {paid && analysis.alternatives.length > 0 ? (
+                <ul className="space-y-2">
                   {analysis.alternatives.map((a, i) => (
-                    <li key={i}>{a}</li>
+                    <li key={i} className="text-sm text-slate-300">
+                      • {a}
+                    </li>
                   ))}
                 </ul>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  {upgradeMessage ||
+                    t(
+                      "CareerRisk.upgradeAlts",
+                      "Upgrade to Pro to unlock alternative role recommendations."
+                    )}{" "}
+                  <Link
+                    href="/pricing"
+                    className="text-cyan-400 hover:underline"
+                  >
+                    {t("CareerRisk.viewPricing", "View pricing")}
+                  </Link>
+                </p>
               )}
             </section>
 
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Link
-                href="/jobs"
-                onClick={() => trackEvent("career_risk_cta_clicked")}
-                className="inline-flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm px-4 py-2"
+            {sharePath && (
+              <button
+                type="button"
+                className="text-xs text-cyan-400 hover:underline"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(
+                    `${window.location.origin}${sharePath}`
+                  );
+                }}
               >
-                <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                Browse matching jobs
-              </Link>
-              {sharePath && (
-                <button
-                  type="button"
-                  className="text-sm text-cyan-400 underline"
-                  onClick={() => {
-                    trackEvent("career_risk_share_created");
-                    void navigator.clipboard?.writeText(
-                      `${window.location.origin}${sharePath}`
-                    );
-                  }}
-                >
-                  Copy share link
-                </button>
-              )}
-            </div>
+                {t("Common.view", "View")} / share link
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -536,11 +508,16 @@ export default function CareerRiskPage() {
               <Lock className="w-6 h-6 text-cyan-400" />
             </div>
             <h2 className="text-xl font-bold text-white mb-2">
-              برای مشاهده نتیجه، ابتدا وارد حساب کاربری خود شوید
+              {t(
+                "CareerRisk.authRequired",
+                "Please sign in to run a career risk analysis."
+              )}
             </h2>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Sign in to run the AI analysis, save the report, and unlock
-              matches. Your answers stay on this device until you finish.
+              {t(
+                "CareerRisk.disclaimer",
+                "This is an AI-powered estimate based on the information you provided."
+              )}
             </p>
             <div className="space-y-3">
               <button
@@ -555,7 +532,7 @@ export default function CareerRiskPage() {
                 onClick={continueWithEmail}
                 className="w-full rounded-xl bg-cyan-500 text-white font-semibold text-sm py-3"
               >
-                Continue with Email
+                {t("Common.signIn", "Sign in")}
               </button>
               <Link
                 href={`/register?callbackUrl=${encodeURIComponent("/career-risk")}`}
@@ -564,7 +541,7 @@ export default function CareerRiskPage() {
                   saveCareerRiskDraft(currentForm(), { autoSubmit: true })
                 }
               >
-                Create account
+                {t("Auth.submitRegister", "Create Account")}
               </Link>
             </div>
           </div>
