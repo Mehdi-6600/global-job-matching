@@ -261,22 +261,45 @@
     "needTitle": "जॉब टाइटल दर्ज करें (कम से कम 2 अक्षर)।"
   },
   "Jobs": {
-    "title": "नौकरियाँ",
-    "subtitle": "दुनिया भर में खुली भूमिकाएँ खोजें",
-    "searchPh": "शीर्षक, कौशल, कंपनी...",
-    "locationPh": "स्थान",
+    "title": "अपनी सपनों की नौकरी खोजें",
+    "subtitle": "हजारों अवसरों में खोजें",
+    "searchPlaceholder": "नौकरी का शीर्षक, कीवर्ड, या कंपनी...",
+    "location": "स्थान",
+    "locationPlaceholder": "शहर या देश...",
     "filters": "फ़िल्टर",
+    "jobType": "नौकरी का प्रकार",
+    "allTypes": "सभी प्रकार",
+    "types": {
+      "fullTime": "पूर्णकालिक",
+      "partTime": "अंशकालिक",
+      "contract": "अनुबंध",
+      "freelance": "फ्रीलांस",
+      "internship": "इंटर्नशिप"
+    },
+    "experience": "अनुभव",
+    "anyExperience": "कोई भी अनुभव",
+    "experienceLevels": {
+      "entry": "प्रवेश स्तर",
+      "mid": "मध्य स्तर",
+      "senior": "वरिष्ठ स्तर",
+      "lead": "लीड / प्रबंधक",
+      "executive": "कार्यकारी"
+    },
+    "tag": "टैग",
+    "tagPlaceholder": "जैसे React, Python...",
+    "minSalary": "न्यूनतम वेतन",
+    "maxSalary": "अधिकतम वेतन",
+    "noLimit": "कोई सीमा नहीं",
     "remoteOnly": "केवल रिमोट",
-    "apply": "आवेदन",
-    "save": "सहेजें",
-    "saved": "सहेजा गया",
-    "details": "विवरण",
-    "noJobs": "कोई नौकरी नहीं मिली",
-    "loadMore": "और लोड करें",
-    "posted": "पोस्ट किया",
-    "type": "प्रकार",
-    "salary": "वेतन",
-    "company": "कंपनी"
+    "clearAll": "सभी साफ़ करें",
+    "noJobsFound": "कोई नौकरी नहीं मिली",
+    "tryAdjusting": "अपनी खोज या फ़िल्टर समायोजित करें",
+    "companyFallback": "कंपनी",
+    "from": "से",
+    "upTo": "तक",
+    "previousPage": "पिछला पृष्ठ",
+    "nextPage": "अगला पृष्ठ",
+    "pageOf": "पृष्ठ {current} का {total}"
   },
   "Applications": {
     "title": "मेरे आवेदन",
@@ -291,7 +314,7 @@
     "remove": "हटाएँ"
   },
   "Resume": {
-    "title": "रिज्यूमे बिल्डر",
+    "title": "रिज्यूमे बिल्डर",
     "subtitle": "AI से पेशेवर रिज्यूमे बनाएँ",
     "generate": "रिज्यूमे बनाएँ",
     "generating": "बन रहा है..."
