@@ -61,7 +61,16 @@
     "upgrade": "ترقية",
     "notSpecified": "غير محدد",
     "remote": "عن بعد",
-    "noResults": "لا توجد نتائج"
+    "noResults": "لا توجد نتائج",
+    "newsletterTitle": "ابق على اطلاع",
+    "newsletterSubtitle": "احصل على أفضل الوظائف في بريدك الوارد أسبوعياً",
+    "newsletterSuccess": "تم الاشتراك! تفقد بريدك قريباً.",
+    "newsletterNamePlaceholder": "اسمك (اختياري)",
+    "newsletterEmailPlaceholder": "أدخل بريدك الإلكتروني",
+    "newsletterSubscribe": "اشتراك",
+    "newsletterFooter": "لا بريد مزعج. إلغاء الاشتراك في أي وقت.",
+    "newsletterErrorSubscribe": "فشل الاشتراك",
+    "newsletterErrorNetwork": "خطأ في الشبكة. حاول مرة أخرى."
   },
   "Auth": {
     "loginTitle": "تسجيل الدخول",
