@@ -62,6 +62,8 @@
     "notSpecified": "निर्दिष्ट नहीं",
     "remote": "रिमोट",
     "noResults": "कोई परिणाम नहीं",
+    "companyFallback": "कंपनी",
+    "errorNetwork": "नेटवर्क त्रुटि। फिर से प्रयास करें।",
     "newsletterTitle": "अपडेट रहें",
     "newsletterSubtitle": "सर्वोत्तम नौकरियाँ साप्ताहिक रूप से अपने इनबॉक्स में पाएँ",
     "newsletterSuccess": "आप सब्सक्राइब हो गए! जल्द ही अपना इनबॉक्स चेक करें।",
@@ -70,7 +72,17 @@
     "newsletterSubscribe": "सब्सक्राइब",
     "newsletterFooter": "कोई स्पैम नहीं। कभी भी अनसब्सक्राइब करें।",
     "newsletterErrorSubscribe": "सब्सक्राइब करने में विफल",
-    "newsletterErrorNetwork": "नेटवर्क त्रुटि। फिर से प्रयास करें।"
+    "newsletterErrorNetwork": "नेटवर्क त्रुटि। फिर से प्रयास करें।",
+    "timeAgo": {
+      "justNow": "अभी",
+      "minutes": "{count} मिनट पहले",
+      "minutesAgo": "{count} मिनट पहले",
+      "hours": "{count} घंटे पहले",
+      "hoursAgo": "{count} घंटे पहले",
+      "days": "{count} दिन पहले",
+      "daysAgo": "{count} दिन पहले",
+      "months": "{count} महीने पहले"
+    }
   },
   "Auth": {
     "loginTitle": "साइन इन",
@@ -314,15 +326,54 @@
   },
   "Applications": {
     "title": "मेरे आवेदन",
-    "empty": "आपने अभी किसी नौकरी के लिए आवेदन नहीं किया।",
+    "loading": "आवेदन लोड हो रहे हैं...",
+    "errorLoad": "आवेदन लोड करने में विफल",
+    "count": "{count} आवेदन",
+    "empty": "अभी कोई आवेदन नहीं",
+    "browseJobs": "नौकरियाँ ब्राउज़ करें",
+    "jobUnavailable": "नौकरी उपलब्ध नहीं",
+    "appliedOn": "{date} को आवेदन किया",
+    "statusPending": "लंबित",
+    "statusViewed": "देखा गया",
+    "statusInterview": "साक्षात्कार",
+    "statusRejected": "अस्वीकृत",
+    "statusHired": "चुने गए",
     "status": "स्थिति",
-    "appliedOn": "आवेदन तिथि",
     "viewJob": "नौकरी देखें"
   },
   "SavedJobs": {
     "title": "सहेजी नौकरियाँ",
-    "empty": "अभी कोई सहेजी नौकरी नहीं।",
-    "remove": "हटाएँ"
+    "loading": "सहेजी नौकरियाँ लोड हो रही हैं...",
+    "errorLoad": "सहेजी नौकरियाँ लोड करने में विफल",
+    "count": "{count} नौकरी{plural} सहेजी गई",
+    "emptyTitle": "अभी कोई सहेजी नौकरी नहीं",
+    "emptyDesc": "नौकरियाँ ब्राउज़ करें और जो पसंद आएं उन्हें सहेजें",
+    "viewJob": "नौकरी देखें",
+    "browseJobs": "नौकरियाँ ब्राउज़ करें",
+    "remove": "हटाएँ",
+    "empty": "अभी कोई सहेजी नौकरी नहीं।"
+  },
+  "Messages": {
+    "title": "संदेश",
+    "conversations": "वार्तालाप",
+    "noMessages": "अभी कोई संदेश नहीं",
+    "noMessagesDesc": "आवेदकों के साथ चैट खोलें या संदेश की प्रतीक्षा करें",
+    "defaultUser": "उपयोगकर्ता",
+    "youPrefix": "आप: ",
+    "messagePlaceholder": "संदेश लिखें...",
+    "startConversation": "बातचीत शुरू करें",
+    "selectConversation": "बातचीत चुनें"
+  },
+  "Notifications": {
+    "title": "सूचनाएँ",
+    "unreadCount": "{count} अपठित सूचना",
+    "allCaughtUp": "सब पढ़ लिया!",
+    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें",
+    "emptyTitle": "अभी कोई सूचना नहीं",
+    "emptyDesc": "जब कुछ होगा, आप इसे यहाँ देखेंगे।",
+    "markAsRead": "पढ़ा हुआ चिह्नित करें",
+    "delete": "हटाएँ",
+    "empty": "कोई सूचना नहीं"
   },
   "Resume": {
     "title": "रिज्यूमे बिल्डर",
@@ -337,9 +388,57 @@
     "applicants": "आवेदक",
     "company": "कंपनी"
   },
-  "Notifications": {
-    "title": "सूचनाएँ",
-    "empty": "कोई सूचना नहीं",
-    "markAll": "सभी पढ़ा हुआ चिह्नित करें"
+  "PlanUsage": {
+    "loading": "प्लान लोड हो रहा है…",
+    "errorSignIn": "प्लान उपयोग देखने के लिए साइन इन करें।",
+    "errorLoad": "प्लान उपयोग लोड नहीं हो सका।",
+    "errorNetwork": "नेटवर्क त्रुटि।",
+    "noData": "प्लान डेटा नहीं।",
+    "signInLink": "साइन इन",
+    "currentPlan": "वर्तमान प्लान",
+    "upgrade": "अपग्रेड",
+    "expired": "समाप्त",
+    "daysRemaining": "{days} दिन{plural} शेष",
+    "applicationsLabel": "इस महीने आवेदन",
+    "savedJobsLabel": "सहेजी नौकरियाँ",
+    "jobAlertsLabel": "जॉब अलर्ट",
+    "aiGenerationsLabel": "इस महीने AI जनरेशन",
+    "activeEmployerJobsLabel": "सक्रिय नौकरी पोस्ट (नियोक्ता)",
+    "pendingPaymentsLabel": "{count} भुगतान{plural} समीक्षा लंबित।",
+    "viewPricingLink": "मूल्य और भुगतान इतिहास देखें →"
+  },
+  "PaymentHistory": {
+    "loading": "भुगतान लोड हो रहे हैं…",
+    "errorSignIn": "भुगतान देखने के लिए साइन इन करें।",
+    "errorLoad": "भुगतान लोड नहीं हो सके।",
+    "errorNetwork": "नेटवर्क त्रुटि।",
+    "title": "भुगतान इतिहास",
+    "pricingLink": "मूल्य",
+    "noPayments": "अभी कोई भुगतान नहीं।",
+    "upgradePlanLink": "प्लान अपग्रेड करें",
+    "statusConfirmed": "पुष्टि हुई",
+    "statusPending": "लंबित",
+    "statusRejected": "अस्वीकृत",
+    "statusUnknown": "अज्ञात"
+  },
+  "Profile": {
+    "editProfile": "प्रोफ़ाइल संपादित करें",
+    "saveChanges": "परिवर्तन सहेजें",
+    "about": "मेरे बारे में",
+    "bioPlaceholder": "अपने बारे में कुछ लिखें...",
+    "links": "लिंक",
+    "websitePlaceholder": "वेबसाइट",
+    "githubPlaceholder": "GitHub",
+    "linkedinPlaceholder": "LinkedIn",
+    "skills": "कौशल",
+    "addSkillPlaceholder": "कौशल जोड़ें...",
+    "addSkill": "जोड़ें",
+    "experience": "अनुभव",
+    "education": "शिक्षा",
+    "period": "अवधि",
+    "company": "कंपनी",
+    "school": "संस्थान",
+    "degree": "डिग्री",
+    "year": "वर्ष"
   }
 }
