@@ -7,6 +7,7 @@ import ar from "../../../messages/ar.json";
 import fa from "../../../messages/fa.json";
 import hi from "../../../messages/hi.json";
 import fr from "../../../messages/fr.json";
+import de from "../../../messages/de.json";
 
 export type Dictionary = Record<string, unknown>;
 
@@ -40,6 +41,7 @@ const raw: Record<Locale, Dictionary> = {
   fa: fa as Dictionary,
   hi: hi as Dictionary,
   fr: fr as Dictionary,
+  de: de as Dictionary,
 };
 
 export function getDictionary(locale: Locale): Dictionary {
@@ -47,7 +49,6 @@ export function getDictionary(locale: Locale): Dictionary {
   if (locale === "en") {
     return primary;
   }
-  // Missing keys always fall back to English
   return deepMergeDictionary(raw.en, primary);
 }
 
