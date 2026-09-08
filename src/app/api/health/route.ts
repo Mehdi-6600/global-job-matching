@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getCryptoWallets } from "@/lib/payment/plans";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,12 +22,18 @@ export async function GET() {
     dbMs = Date.now() - t0;
   } catch (err) {
     database = "error";
-    // Internal detail only in server logs — never in response body
     console.error("Health DB check failed:", err);
   }
 
   const totalMs = Date.now() - started;
   const healthy = database === "ok";
+
+  let walletCount = 0;
+  try {
+    walletCount = getCryptoWallets().length;
+  } catch {
+    walletCount = 0;
+  }
 
   const config = {
     databaseUrl: envPresent("DATABASE_URL"),
@@ -39,6 +46,9 @@ export async function GET() {
     blob: envPresent("BLOB_READ_WRITE_TOKEN"),
     upstash:
       envPresent("UPSTASH_REDIS_REST_URL") || envPresent("KV_REST_API_URL"),
+    openRouter: envPresent("OPENROUTER_API_KEY"),
+    openAi: envPresent("OPENAI_API_KEY"),
+    cryptoWalletsConfigured: walletCount,
   };
 
   return NextResponse.json(
