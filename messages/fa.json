@@ -61,7 +61,16 @@
     "upgrade": "ارتقاء",
     "notSpecified": "مشخص نشده",
     "remote": "دورکاری",
-    "noResults": "نتیجه‌ای یافت نشد"
+    "noResults": "نتیجه‌ای یافت نشد",
+    "newsletterTitle": "به‌روز بمانید",
+    "newsletterSubtitle": "بهترین شغل‌ها را هر هفته در صندوق ورودی خود دریافت کنید",
+    "newsletterSuccess": "ثبت‌نام شما انجام شد! به زودی ایمیل خود را بررسی کنید.",
+    "newsletterNamePlaceholder": "نام شما (اختیاری)",
+    "newsletterEmailPlaceholder": "ایمیل خود را وارد کنید",
+    "newsletterSubscribe": "ثبت‌نام",
+    "newsletterFooter": "هرزنامه نداریم. هر زمان خواستید لغو کنید.",
+    "newsletterErrorSubscribe": "ثبت‌نام ناموفق بود",
+    "newsletterErrorNetwork": "خطای شبکه. دوباره تلاش کنید."
   },
   "Auth": {
     "loginTitle": "ورود",
