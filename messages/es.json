@@ -62,6 +62,8 @@
     "notSpecified": "No especificado",
     "remote": "Remoto",
     "noResults": "Sin resultados",
+    "companyFallback": "Empresa",
+    "errorNetwork": "Error de red. Inténtalo de nuevo.",
     "newsletterTitle": "Mantente actualizado",
     "newsletterSubtitle": "Recibe los mejores empleos en tu bandeja de entrada cada semana",
     "newsletterSuccess": "¡Suscrito! Revisa tu bandeja de entrada pronto.",
@@ -70,7 +72,17 @@
     "newsletterSubscribe": "Suscribirse",
     "newsletterFooter": "Sin spam. Cancela en cualquier momento.",
     "newsletterErrorSubscribe": "Error al suscribirse",
-    "newsletterErrorNetwork": "Error de red. Inténtalo de nuevo."
+    "newsletterErrorNetwork": "Error de red. Inténtalo de nuevo.",
+    "timeAgo": {
+      "justNow": "Ahora mismo",
+      "minutes": "hace {count} minutos",
+      "minutesAgo": "hace {count}m",
+      "hours": "hace {count} horas",
+      "hoursAgo": "hace {count}h",
+      "days": "hace {count} días",
+      "daysAgo": "hace {count}d",
+      "months": "hace {count} meses"
+    }
   },
   "Auth": {
     "loginTitle": "Iniciar sesión",
@@ -314,15 +326,54 @@
   },
   "Applications": {
     "title": "Mis solicitudes",
-    "empty": "Aún no has postulado a ningún empleo.",
+    "loading": "Cargando solicitudes...",
+    "errorLoad": "Error al cargar solicitudes",
+    "count": "{count} solicitud{plural}",
+    "empty": "Aún no hay solicitudes",
+    "browseJobs": "Explorar empleos",
+    "jobUnavailable": "Empleo no disponible",
+    "appliedOn": "Solicitado el {date}",
+    "statusPending": "Pendiente",
+    "statusViewed": "Visto",
+    "statusInterview": "Entrevista",
+    "statusRejected": "Rechazado",
+    "statusHired": "Contratado",
     "status": "Estado",
-    "appliedOn": "Fecha de solicitud",
     "viewJob": "Ver empleo"
   },
   "SavedJobs": {
     "title": "Empleos guardados",
-    "empty": "Aún no hay empleos guardados.",
-    "remove": "Quitar"
+    "loading": "Cargando empleos guardados...",
+    "errorLoad": "Error al cargar empleos guardados",
+    "count": "{count} empleo{plural} guardado",
+    "emptyTitle": "No hay empleos guardados",
+    "emptyDesc": "Explora empleos y guarda los que te gusten",
+    "viewJob": "Ver empleo",
+    "browseJobs": "Explorar empleos",
+    "remove": "Eliminar",
+    "empty": "No hay empleos guardados."
+  },
+  "Messages": {
+    "title": "Mensajes",
+    "conversations": "Conversaciones",
+    "noMessages": "No hay mensajes",
+    "noMessagesDesc": "Abre un chat con los solicitantes o espera un mensaje",
+    "defaultUser": "Usuario",
+    "youPrefix": "Tú: ",
+    "messagePlaceholder": "Escribe un mensaje...",
+    "startConversation": "Iniciar conversación",
+    "selectConversation": "Selecciona una conversación"
+  },
+  "Notifications": {
+    "title": "Notificaciones",
+    "unreadCount": "{count} notificación{plural} sin leer",
+    "allCaughtUp": "¡Todo al día!",
+    "markAllRead": "Marcar todo como leído",
+    "emptyTitle": "Sin notificaciones",
+    "emptyDesc": "Cuando algo suceda, lo verás aquí.",
+    "markAsRead": "Marcar como leído",
+    "delete": "Eliminar",
+    "empty": "No hay notificaciones"
   },
   "Resume": {
     "title": "Creador de CV",
@@ -337,9 +388,57 @@
     "applicants": "Candidatos",
     "company": "Empresa"
   },
-  "Notifications": {
-    "title": "Notificaciones",
-    "empty": "Sin notificaciones",
-    "markAll": "Marcar todo como leído"
+  "PlanUsage": {
+    "loading": "Cargando plan…",
+    "errorSignIn": "Inicia sesión para ver el uso del plan.",
+    "errorLoad": "No se pudo cargar el uso del plan.",
+    "errorNetwork": "Error de red.",
+    "noData": "Sin datos del plan.",
+    "signInLink": "Iniciar sesión",
+    "currentPlan": "Plan actual",
+    "upgrade": "Mejorar",
+    "expired": "expirado",
+    "daysRemaining": "{days} día{plural} restante",
+    "applicationsLabel": "Solicitudes este mes",
+    "savedJobsLabel": "Empleos guardados",
+    "jobAlertsLabel": "Alertas de empleo",
+    "aiGenerationsLabel": "Generaciones IA este mes",
+    "activeEmployerJobsLabel": "Ofertas activas (empleador)",
+    "pendingPaymentsLabel": "{count} pago{plural} pendiente de revisión.",
+    "viewPricingLink": "Ver precios e historial de pagos →"
+  },
+  "PaymentHistory": {
+    "loading": "Cargando pagos…",
+    "errorSignIn": "Inicia sesión para ver los pagos.",
+    "errorLoad": "No se pudieron cargar los pagos.",
+    "errorNetwork": "Error de red.",
+    "title": "Historial de pagos",
+    "pricingLink": "Precios",
+    "noPayments": "Aún no hay pagos.",
+    "upgradePlanLink": "Mejorar un plan",
+    "statusConfirmed": "Confirmado",
+    "statusPending": "Pendiente",
+    "statusRejected": "Rechazado",
+    "statusUnknown": "Desconocido"
+  },
+  "Profile": {
+    "editProfile": "Editar perfil",
+    "saveChanges": "Guardar cambios",
+    "about": "Acerca de",
+    "bioPlaceholder": "Escribe algo sobre ti...",
+    "links": "Enlaces",
+    "websitePlaceholder": "Sitio web",
+    "githubPlaceholder": "GitHub",
+    "linkedinPlaceholder": "LinkedIn",
+    "skills": "Habilidades",
+    "addSkillPlaceholder": "Añadir habilidad...",
+    "addSkill": "Añadir",
+    "experience": "Experiencia",
+    "education": "Educación",
+    "period": "Período",
+    "company": "Empresa",
+    "school": "Institución",
+    "degree": "Título",
+    "year": "Año"
   }
 }
