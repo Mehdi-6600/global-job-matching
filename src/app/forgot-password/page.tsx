@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Mail, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 export default function ForgotPasswordPage() {
+  const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,12 +27,14 @@ export default function ForgotPasswordPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Something went wrong");
+        setError(data.error || t("Common.error", "Something went wrong"));
       } else {
         setSuccess(true);
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError(
+        t("Common.errorNetwork", "Network error. Please try again.")
+      );
     } finally {
       setLoading(false);
     }
@@ -44,32 +48,39 @@ export default function ForgotPasswordPage() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-500/20 mb-4">
               <Mail className="w-6 h-6 text-indigo-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Forgot Password?</h1>
+            <h1 className="text-2xl font-bold text-white">
+              {t("AuthExtra.forgotTitle", "Forgot password")}
+            </h1>
             <p className="text-slate-400 mt-2 text-sm">
-              Enter your email and we will send you a reset link.
+              {t(
+                "AuthExtra.forgotSubtitle",
+                "Enter your email and we will send a reset link"
+              )}
             </p>
           </div>
 
           {success ? (
             <div className="text-center space-y-4">
               <CheckCircle className="w-12 h-12 text-green-400 mx-auto" />
-              <p className="text-green-400 font-medium">Check your email!</p>
-              <p className="text-slate-400 text-sm">
-                If this email exists in our system, you will receive a password reset link.
+              <p className="text-slate-300 text-sm">
+                {t(
+                  "AuthExtra.forgotSubtitle",
+                  "If an account exists, a reset link has been sent."
+                )}
               </p>
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors"
+                className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Login
+                {t("AuthExtra.backToLogin", "Back to login")}
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Email Address
+                  {t("Auth.email", "Email")}
                 </label>
                 <input
                   type="email"
@@ -95,10 +106,10 @@ export default function ForgotPasswordPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Sending...
+                    {t("AuthExtra.sending", "Sending...")}
                   </>
                 ) : (
-                  "Send Reset Link"
+                  t("AuthExtra.sendReset", "Send reset link")
                 )}
               </button>
 
@@ -108,7 +119,7 @@ export default function ForgotPasswordPage() {
                   className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Back to Login
+                  {t("AuthExtra.backToLogin", "Back to login")}
                 </Link>
               </div>
             </form>
