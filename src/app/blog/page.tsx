@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Calendar, BookOpen } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-import { getDictionary, t } from "@/lib/i18n/dict";
+import { getDictionary, t } from "@/lib/i18n";
 import { defaultLocale, isLocale } from "@/lib/i18n/config";
 
 export const revalidate = 60;
