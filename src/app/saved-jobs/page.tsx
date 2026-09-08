@@ -34,7 +34,7 @@ interface SavedJob {
   } | null;
 }
 
-// تابع کمکی برای جایگزینی متغیرها
+// تابع کمکی برای جایگزینی متغیرها در متن ترجمه‌شده
 function interpolate(template: string, replacements: Record<string, string | number>): string {
   let result = template;
   for (const [key, value] of Object.entries(replacements)) {
@@ -174,7 +174,9 @@ export default function SavedJobsPage() {
     );
   }
 
-  const countLabel = t("SavedJobs.count", "{count} job{plural} saved", {
+  // دریافت متن ترجمه‌شده و جایگزینی متغیرها
+  const countTemplate = t("SavedJobs.count", "{count} job{plural} saved");
+  const countLabel = interpolate(countTemplate, {
     count: jobs.length,
     plural: jobs.length !== 1 ? "s" : "",
   });
