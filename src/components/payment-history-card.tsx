@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, Receipt } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 type Tx = {
   id: string;
@@ -25,6 +26,7 @@ function statusClass(status: string) {
 }
 
 export function PaymentHistoryCard() {
+  const { t } = useLocale();
   const [items, setItems] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -37,17 +39,17 @@ export function PaymentHistoryCard() {
           credentials: "include",
         });
         if (res.status === 401) {
-          if (!cancelled) setError("Sign in to see payments.");
+          if (!cancelled) setError(t("PaymentHistory.errorSignIn", "Sign in to see payments."));
           return;
         }
         if (!res.ok) {
-          if (!cancelled) setError("Could not load payments.");
+          if (!cancelled) setError(t("PaymentHistory.errorLoad", "Could not load payments."));
           return;
         }
         const json = await res.json();
         if (!cancelled) setItems(json.transactions || []);
       } catch {
-        if (!cancelled) setError("Network error.");
+        if (!cancelled) setError(t("Common.errorNetwork", "Network error."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -55,13 +57,13 @@ export function PaymentHistoryCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
       <div className="glass rounded-2xl p-5 flex items-center gap-2 text-slate-400 border border-white/10">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Loading payments…
+        {t("PaymentHistory.loading", "Loading payments…")}
       </div>
     );
   }
@@ -71,10 +73,10 @@ export function PaymentHistoryCard() {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Receipt className="h-5 w-5 text-cyan-400" />
-          <h3 className="text-white font-semibold">Payment history</h3>
+          <h3 className="text-white font-semibold">{t("PaymentHistory.title", "Payment history")}</h3>
         </div>
         <Link href="/pricing" className="text-xs text-cyan-400 hover:underline">
-          Pricing
+          {t("PaymentHistory.pricingLink", "Pricing")}
         </Link>
       </div>
 
@@ -82,9 +84,9 @@ export function PaymentHistoryCard() {
 
       {!error && items.length === 0 && (
         <p className="text-sm text-slate-400">
-          No payments yet.{" "}
+          {t("PaymentHistory.noPayments", "No payments yet.")}{" "}
           <Link href="/pricing" className="text-cyan-400 hover:underline">
-            Upgrade a plan
+            {t("PaymentHistory.upgradePlanLink", "Upgrade a plan")}
           </Link>
         </p>
       )}
@@ -106,7 +108,12 @@ export function PaymentHistoryCard() {
                     tx.status
                   )}`}
                 >
-                  {tx.status}
+                  {t(`PaymentHistory.status${tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}`, {
+                    confirmed: "Confirmed",
+                    pending: "Pending",
+                    rejected: "Rejected",
+                    unknown: "Unknown",
+                  }[tx.status.toLowerCase()] || tx.status)}
                 </span>
               </div>
               <div className="mt-1 text-slate-400 text-xs flex flex-wrap gap-x-3 gap-y-1">
