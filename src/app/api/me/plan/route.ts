@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getEffectivePlan } from "@/lib/subscription";
 import { PLAN_PRICES } from "@/lib/payment/plans";
+import { getUsageSnapshot } from "@/lib/usage-snapshot";
 import { ratelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
-import { db } from "@/lib/db";
 
 /**
  * Current user's effective plan + limits + usage snapshot.
@@ -29,27 +29,7 @@ export async function GET(req: NextRequest) {
       persistDowngrade: true,
     });
 
-    const now = new Date();
-    const monthStart = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-    );
-
-    const [applicationsThisMonth, savedJobs, jobAlerts, pendingPayments] =
-      await Promise.all([
-        db.application.count({
-          where: {
-            userId: session.user.id,
-            createdAt: { gte: monthStart },
-          },
-        }),
-        db.savedJob.count({ where: { userId: session.user.id } }),
-        db.jobAlert.count({
-          where: { userId: session.user.id, active: true },
-        }),
-        db.transaction.count({
-          where: { userId: session.user.id, status: "pending" },
-        }),
-      ]);
+    const usage = await getUsageSnapshot(session.user.id, effective.plan);
 
     return NextResponse.json({
       plan: effective.plan,
@@ -60,10 +40,13 @@ export async function GET(req: NextRequest) {
       daysRemaining: effective.daysRemaining,
       limits: effective.limits,
       usage: {
-        applicationsThisMonth,
-        savedJobs,
-        activeJobAlerts: jobAlerts,
-        pendingPayments,
+        applicationsThisMonth: usage.applications.used,
+        savedJobs: usage.savedJobs.used,
+        activeJobAlerts: usage.jobAlerts.used,
+        aiGenerationsThisMonth: usage.aiGenerations.used,
+        activeEmployerJobs: usage.activeEmployerJobs.used,
+        pendingPayments: usage.pendingPayments,
+        detailed: usage,
       },
       prices: PLAN_PRICES,
       upgradePath: "/pricing",
