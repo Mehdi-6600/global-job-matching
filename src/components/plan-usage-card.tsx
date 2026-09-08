@@ -108,14 +108,15 @@ export function PlanUsageCard() {
   }
 
   const u = data.usage;
+  const daysRemaining = data.daysRemaining; // ممکن است undefined یا null یا number باشد
 
-  // ساخت متن روزهای باقی‌مانده با جایگزینی متغیرها
+  // ساخت متن روزهای باقی‌مانده با جایگزینی متغیرها (فقط در صورت عدد بودن)
   const daysTemplate = t("PlanUsage.daysRemaining", "{days} day{plural} remaining");
   const daysText =
-    typeof data.daysRemaining === "number" && data.plan !== "free"
+    typeof daysRemaining === "number" && data.plan !== "free"
       ? interpolate(daysTemplate, {
-          days: data.daysRemaining,
-          plural: data.daysRemaining === 1 ? "" : "s",
+          days: daysRemaining,
+          plural: daysRemaining === 1 ? "" : "s",
         })
       : null;
 
@@ -155,7 +156,7 @@ export function PlanUsageCard() {
 
       {daysText && (
         <p className="text-xs text-slate-400 flex items-center gap-1">
-          {data.daysRemaining !== null && data.daysRemaining <= 7 && (
+          {typeof daysRemaining === "number" && daysRemaining <= 7 && (
             <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
           )}
           {daysText}
