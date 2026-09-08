@@ -61,7 +61,16 @@
     "upgrade": "Upgrader",
     "notSpecified": "Non spécifié",
     "remote": "Distanciel",
-    "noResults": "Aucun résultat"
+    "noResults": "Aucun résultat",
+    "newsletterTitle": "Restez informé",
+    "newsletterSubtitle": "Recevez les meilleures offres d'emploi chaque semaine dans votre boîte mail",
+    "newsletterSuccess": "Vous êtes abonné ! Vérifiez votre boîte mail bientôt.",
+    "newsletterNamePlaceholder": "Votre nom (facultatif)",
+    "newsletterEmailPlaceholder": "Entrez votre email",
+    "newsletterSubscribe": "S'abonner",
+    "newsletterFooter": "Pas de spam. Désabonnez-vous à tout moment.",
+    "newsletterErrorSubscribe": "Échec de l'abonnement",
+    "newsletterErrorNetwork": "Erreur réseau. Veuillez réessayer."
   },
   "Auth": {
     "loginTitle": "Connexion",
