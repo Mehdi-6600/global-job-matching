@@ -62,6 +62,8 @@
     "notSpecified": "غير محدد",
     "remote": "عن بعد",
     "noResults": "لا توجد نتائج",
+    "companyFallback": "شركة",
+    "errorNetwork": "خطأ في الشبكة. حاول مرة أخرى.",
     "newsletterTitle": "ابق على اطلاع",
     "newsletterSubtitle": "احصل على أفضل الوظائف في بريدك الوارد أسبوعياً",
     "newsletterSuccess": "تم الاشتراك! تفقد بريدك قريباً.",
@@ -70,7 +72,17 @@
     "newsletterSubscribe": "اشتراك",
     "newsletterFooter": "لا بريد مزعج. إلغاء الاشتراك في أي وقت.",
     "newsletterErrorSubscribe": "فشل الاشتراك",
-    "newsletterErrorNetwork": "خطأ في الشبكة. حاول مرة أخرى."
+    "newsletterErrorNetwork": "خطأ في الشبكة. حاول مرة أخرى.",
+    "timeAgo": {
+      "justNow": "الآن",
+      "minutes": "منذ {count} دقيقة",
+      "minutesAgo": "منذ {count} د",
+      "hours": "منذ {count} ساعة",
+      "hoursAgo": "منذ {count} س",
+      "days": "منذ {count} يوم",
+      "daysAgo": "منذ {count} ي",
+      "months": "منذ {count} شهر"
+    }
   },
   "Auth": {
     "loginTitle": "تسجيل الدخول",
@@ -314,15 +326,54 @@
   },
   "Applications": {
     "title": "طلباتي",
-    "empty": "لم تتقدم لأي وظيفة بعد.",
+    "loading": "جارٍ تحميل الطلبات...",
+    "errorLoad": "فشل تحميل الطلبات",
+    "count": "{count} طلب{plural}",
+    "empty": "لا توجد طلبات بعد",
+    "browseJobs": "استعراض الوظائف",
+    "jobUnavailable": "الوظيفة غير متوفرة",
+    "appliedOn": "تم التقديم في {date}",
+    "statusPending": "معلق",
+    "statusViewed": "تم المشاهدة",
+    "statusInterview": "مقابلة",
+    "statusRejected": "مرفوض",
+    "statusHired": "تم التعيين",
     "status": "الحالة",
-    "appliedOn": "تاريخ التقديم",
     "viewJob": "عرض الوظيفة"
   },
   "SavedJobs": {
     "title": "الوظائف المحفوظة",
-    "empty": "لا توجد وظائف محفوظة بعد.",
-    "remove": "إزالة"
+    "loading": "جارٍ تحميل الوظائف المحفوظة...",
+    "errorLoad": "فشل تحميل الوظائف المحفوظة",
+    "count": "تم حفظ {count} وظيفة{plural}",
+    "emptyTitle": "لا توجد وظائف محفوظة",
+    "emptyDesc": "تصفح الوظائف واحفظ ما يعجبك",
+    "viewJob": "عرض الوظيفة",
+    "browseJobs": "استعراض الوظائف",
+    "remove": "إزالة",
+    "empty": "لا توجد وظائف محفوظة."
+  },
+  "Messages": {
+    "title": "الرسائل",
+    "conversations": "المحادثات",
+    "noMessages": "لا توجد رسائل",
+    "noMessagesDesc": "افتح محادثة مع المتقدمين أو انتظر رسالة",
+    "defaultUser": "مستخدم",
+    "youPrefix": "أنت: ",
+    "messagePlaceholder": "اكتب رسالة...",
+    "startConversation": "ابدأ المحادثة",
+    "selectConversation": "اختر محادثة"
+  },
+  "Notifications": {
+    "title": "الإشعارات",
+    "unreadCount": "{count} إشعار{plural} غير مقروء",
+    "allCaughtUp": "كل شيء مقروء!",
+    "markAllRead": "تحديد الكل كمقروء",
+    "emptyTitle": "لا توجد إشعارات",
+    "emptyDesc": "عندما يحدث شيء، ستراه هنا.",
+    "markAsRead": "تحديد كمقروء",
+    "delete": "حذف",
+    "empty": "لا توجد إشعارات"
   },
   "Resume": {
     "title": "منشئ السيرة الذاتية",
@@ -337,9 +388,57 @@
     "applicants": "المتقدمون",
     "company": "الشركة"
   },
-  "Notifications": {
-    "title": "الإشعارات",
-    "empty": "لا توجد إشعارات",
-    "markAll": "تحديد الكل كمقروء"
+  "PlanUsage": {
+    "loading": "جارٍ تحميل الخطة…",
+    "errorSignIn": "سجل الدخول لمعرفة استخدام الخطة.",
+    "errorLoad": "تعذر تحميل استخدام الخطة.",
+    "errorNetwork": "خطأ في الشبكة.",
+    "noData": "لا توجد بيانات للخطة.",
+    "signInLink": "تسجيل الدخول",
+    "currentPlan": "الخطة الحالية",
+    "upgrade": "ترقية",
+    "expired": "منتهية الصلاحية",
+    "daysRemaining": "تبقى {days} يوم{plural}",
+    "applicationsLabel": "الطلبات هذا الشهر",
+    "savedJobsLabel": "الوظائف المحفوظة",
+    "jobAlertsLabel": "تنبيهات الوظائف",
+    "aiGenerationsLabel": "توليدات الذكاء الاصطناعي هذا الشهر",
+    "activeEmployerJobsLabel": "الوظائف النشطة (صاحب العمل)",
+    "pendingPaymentsLabel": "{count} دفعة{plural} قيد المراجعة.",
+    "viewPricingLink": "عرض الأسعار وسجل المدفوعات ←"
+  },
+  "PaymentHistory": {
+    "loading": "جارٍ تحميل المدفوعات…",
+    "errorSignIn": "سجل الدخول لعرض المدفوعات.",
+    "errorLoad": "تعذر تحميل المدفوعات.",
+    "errorNetwork": "خطأ في الشبكة.",
+    "title": "سجل المدفوعات",
+    "pricingLink": "الأسعار",
+    "noPayments": "لا توجد مدفوعات بعد.",
+    "upgradePlanLink": "ترقية خطة",
+    "statusConfirmed": "تم التأكيد",
+    "statusPending": "معلق",
+    "statusRejected": "مرفوض",
+    "statusUnknown": "غير معروف"
+  },
+  "Profile": {
+    "editProfile": "تعديل الملف الشخصي",
+    "saveChanges": "حفظ التغييرات",
+    "about": "نبذة",
+    "bioPlaceholder": "اكتب شيئاً عن نفسك...",
+    "links": "الروابط",
+    "websitePlaceholder": "الموقع الإلكتروني",
+    "githubPlaceholder": "GitHub",
+    "linkedinPlaceholder": "LinkedIn",
+    "skills": "المهارات",
+    "addSkillPlaceholder": "أضف مهارة...",
+    "addSkill": "إضافة",
+    "experience": "الخبرات",
+    "education": "التعليم",
+    "period": "الفترة",
+    "company": "الشركة",
+    "school": "المؤسسة التعليمية",
+    "degree": "الشهادة",
+    "year": "السنة"
   }
 }
