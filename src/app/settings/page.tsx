@@ -18,6 +18,8 @@ import {
   Trash2,
   ExternalLink,
 } from "lucide-react";
+import { PlanUsageCard } from "@/components/plan-usage-card";
+import { PaymentHistoryCard } from "@/components/payment-history-card";
 
 interface Profile {
   id: string;
@@ -108,9 +110,9 @@ export default function SettingsPage() {
 
       setProfile(data.profile);
       setSuccess(true);
+      setSaving(false);
     } catch {
       setError("Network error");
-    } finally {
       setSaving(false);
     }
   };
@@ -130,12 +132,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(
-          data.error ||
-            (data.code === "STORAGE_NOT_CONFIGURED"
-              ? "Cloud storage is not configured on the server."
-              : "Upload failed")
-        );
+        setError(data.error || "Upload failed");
         setResumeUploading(false);
         return;
       }
@@ -144,15 +141,15 @@ export default function SettingsPage() {
         prev
           ? {
               ...prev,
-              resumeUrl: data.resumeUrl || null,
+              resumeUrl: data.resumeUrl || data.profile?.resumeUrl || prev.resumeUrl,
             }
           : prev
       );
-      setResumeMessage(data.message || "Resume uploaded");
+      setResumeMessage("Resume uploaded successfully");
+      setResumeUploading(false);
       e.currentTarget.reset();
     } catch {
-      setError("Network error while uploading resume");
-    } finally {
+      setError("Upload failed");
       setResumeUploading(false);
     }
   };
@@ -160,19 +157,17 @@ export default function SettingsPage() {
   const handleResumeDelete = async () => {
     if (!confirm("Remove your resume?")) return;
     setError("");
-    setResumeMessage("");
-
     try {
       const res = await fetch("/api/profile/resume", { method: "DELETE" });
-      if (res.ok) {
-        setProfile((prev) => (prev ? { ...prev, resumeUrl: null } : prev));
-        setResumeMessage("Resume removed");
-      } else {
-        const data = await res.json().catch(() => ({}));
+      const data = await res.json();
+      if (!res.ok) {
         setError(data.error || "Failed to remove resume");
+        return;
       }
+      setProfile((prev) => (prev ? { ...prev, resumeUrl: null } : prev));
+      setResumeMessage("Resume removed");
     } catch {
-      setError("Network error");
+      setError("Failed to remove resume");
     }
   };
 
@@ -215,7 +210,9 @@ export default function SettingsPage() {
               <Settings className="w-6 h-6 text-cyan-400" />
               Settings
             </h1>
-            <p className="text-slate-400 text-sm">Manage your profile and resume</p>
+            <p className="text-slate-400 text-sm">
+              Manage your profile, plan, and resume
+            </p>
           </div>
         </div>
 
@@ -237,6 +234,9 @@ export default function SettingsPage() {
             {resumeMessage}
           </div>
         )}
+
+        <PlanUsageCard />
+        <PaymentHistoryCard />
 
         <form
           onSubmit={handleSubmit}
@@ -287,44 +287,43 @@ export default function SettingsPage() {
             <label className="block text-sm text-slate-300 mb-1.5">Bio</label>
             <textarea
               name="bio"
-              rows={4}
               value={form.bio}
               onChange={handleChange}
+              rows={4}
               className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none resize-y"
             />
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
-                <MapPin className="w-3.5 h-3.5 inline mr-1" />
-                Location
-              </label>
-              <input
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-                className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
-                <Phone className="w-3.5 h-3.5 inline mr-1" />
-                Phone
-              </label>
-              <input
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
-              />
-            </div>
+          <div>
+            <label className="block text-sm text-slate-300 mb-1.5">
+              <MapPin className="w-3.5 h-3.5 inline mr-1" />
+              Location
+            </label>
+            <input
+              name="location"
+              value={form.location}
+              onChange={handleChange}
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-300 mb-1.5">
+              <Phone className="w-3.5 h-3.5 inline mr-1" />
+              Phone
+            </label>
+            <input
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
+            />
           </div>
 
           <button
             type="submit"
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-500 text-white font-semibold hover:bg-cyan-400 disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-60"
           >
             {saving ? (
               <>
@@ -343,37 +342,30 @@ export default function SettingsPage() {
         <section className="rounded-3xl p-6 sm:p-8 bg-white/5 border border-white/10 space-y-4">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <FileText className="w-5 h-5 text-cyan-400" />
-            Resume (PDF)
+            Resume
           </h2>
 
           {profile.resumeUrl ? (
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
-              <FileText className="w-8 h-8 text-cyan-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium text-sm truncate">
-                  {resumeIsUrl ? "Uploaded resume (PDF)" : profile.resumeUrl}
-                </p>
-                <p className="text-slate-500 text-xs">
-                  {resumeIsUrl
-                    ? "Stored in cloud storage"
-                    : "Legacy filename only — re-upload to store the real PDF"}
-                </p>
-              </div>
-              {resumeIsUrl && (
+            <div className="flex flex-wrap items-center gap-3">
+              {resumeIsUrl ? (
                 <a
                   href={profile.resumeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
-                  title="Open"
+                  className="inline-flex items-center gap-2 text-cyan-300 text-sm hover:underline"
                 >
                   <ExternalLink className="w-4 h-4" />
+                  View current resume
                 </a>
+              ) : (
+                <span className="text-sm text-slate-300">
+                  Resume on file: {profile.resumeUrl}
+                </span>
               )}
               <button
                 type="button"
                 onClick={handleResumeDelete}
-                className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                className="p-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/20"
                 title="Remove"
               >
                 <Trash2 className="w-4 h-4" />
