@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Tag,
   Plus,
@@ -10,7 +11,9 @@ import {
   Briefcase,
   Save,
   XCircle,
+  ArrowLeft,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface Category {
   id: string;
@@ -32,12 +35,20 @@ const initialCategories: Category[] = [
 ];
 
 const colorOptions = [
-  "bg-cyan-500", "bg-blue-500", "bg-purple-500", "bg-pink-500",
-  "bg-emerald-500", "bg-teal-500", "bg-amber-500", "bg-red-500",
-  "bg-orange-500", "bg-indigo-500",
+  "bg-cyan-500",
+  "bg-blue-500",
+  "bg-purple-500",
+  "bg-pink-500",
+  "bg-emerald-500",
+  "bg-teal-500",
+  "bg-amber-500",
+  "bg-red-500",
+  "bg-orange-500",
+  "bg-indigo-500",
 ];
 
 export default function AdminCategoriesPage() {
+  const { t } = useLocale();
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [search, setSearch] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -72,7 +83,12 @@ export default function AdminCategoriesPage() {
     setCategories((prev) =>
       prev.map((c) =>
         c.id === editingId
-          ? { ...c, name: form.name.trim(), slug: form.slug.trim(), color: form.color }
+          ? {
+              ...c,
+              name: form.name.trim(),
+              slug: form.slug.trim(),
+              color: form.color,
+            }
           : c
       )
     );
@@ -93,96 +109,119 @@ export default function AdminCategoriesPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
+        <Link
+          href="/admin"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" /> {t("Common.back", "Back")}
+        </Link>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Categories</h1>
-            <p className="text-slate-400 text-sm">Manage job categories and tags</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
+              {t("Jobs.category", "Categories")}
+            </h1>
+            <p className="text-slate-400 text-sm">
+              {t("Dashboard.welcomeSub", "Manage job categories and tags")}
+            </p>
           </div>
           <button
+            type="button"
             onClick={() => setIsAdding(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           >
             <Plus className="w-4 h-4" />
-            Add Category
+            {t("Common.add", "Add Category")}
           </button>
         </div>
 
-        {/* Search */}
-        <div className="glass rounded-2xl p-4 mb-6">
+        <div className="glass rounded-2xl p-4 mb-6 border border-white/10">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search categories..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-500"
+              placeholder={t("Common.search", "Search categories...")}
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-500"
             />
           </div>
         </div>
 
-        {/* Add/Edit Form */}
         {(isAdding || editingId) && (
           <div className="glass rounded-2xl p-5 md:p-6 mb-6 border border-cyan-500/20">
             <h3 className="text-white font-semibold mb-4">
-              {editingId ? "Edit Category" : "New Category"}
+              {editingId
+                ? t("Common.edit", "Edit Category")
+                : t("Common.add", "New Category")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Name</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t("Auth.name", "Name")}
+                </label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. Technology"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-500"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Slug</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  Slug
+                </label>
                 <input
                   type="text"
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  placeholder="e.g. technology"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-500"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Color</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  Color
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {colorOptions.map((c) => (
                     <button
                       key={c}
+                      type="button"
                       onClick={() => setForm({ ...form, color: c })}
                       className={`w-7 h-7 rounded-lg ${c} transition-all ${
-                        form.color === c ? "ring-2 ring-white scale-110" : "opacity-60 hover:opacity-100"
+                        form.color === c
+                          ? "ring-2 ring-white scale-110"
+                          : "opacity-60 hover:opacity-100"
                       }`}
+                      aria-label={c}
                     />
                   ))}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
+                type="button"
                 onClick={editingId ? handleSaveEdit : handleAdd}
-                className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2 rounded-xl text-sm font-medium transition-all"
+                className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2 rounded-xl text-sm"
               >
                 <Save className="w-4 h-4" />
-                {editingId ? "Save Changes" : "Add Category"}
+                {editingId
+                  ? t("Common.save", "Save Changes")
+                  : t("Common.add", "Add Category")}
               </button>
               <button
+                type="button"
                 onClick={cancelEdit}
-                className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm transition-all"
+                className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm"
               >
                 <XCircle className="w-4 h-4" />
-                Cancel
+                {t("Common.cancel", "Cancel")}
               </button>
             </div>
           </div>
         )}
 
-        {/* Categories Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((cat) => (
             <div
@@ -193,14 +232,18 @@ export default function AdminCategoriesPage() {
                 <div className={`w-4 h-4 rounded-full ${cat.color}`} />
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    type="button"
                     onClick={() => handleEdit(cat)}
-                    className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-cyan-400 transition-colors"
+                    className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-cyan-400"
+                    title={t("Common.edit", "Edit")}
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleDelete(cat.id)}
-                    className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 transition-colors"
+                    className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-red-400"
+                    title={t("Common.delete", "Delete")}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -210,7 +253,9 @@ export default function AdminCategoriesPage() {
               <p className="text-slate-400 text-xs mb-3">/{cat.slug}</p>
               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                 <Briefcase className="w-3 h-3" />
-                <span>{cat.jobCount} jobs</span>
+                <span>
+                  {cat.jobCount} {t("Companies.jobs", "jobs")}
+                </span>
               </div>
             </div>
           ))}
@@ -219,7 +264,9 @@ export default function AdminCategoriesPage() {
         {filtered.length === 0 && (
           <div className="text-center py-12">
             <Tag className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm">No categories found.</p>
+            <p className="text-slate-500 text-sm">
+              {t("Common.noResults", "No categories found.")}
+            </p>
           </div>
         )}
       </div>
