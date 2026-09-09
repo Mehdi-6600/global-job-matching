@@ -22,12 +22,18 @@ const eslintConfig = [
   },
   {
     rules: {
-      // Keep production builds from failing on style-only issues
+      // Tighten gradually in later batches; keep warn (not error) for unused.
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
       ],
+      "@typescript-eslint/no-empty-object-type": "off",
+      "prefer-const": "warn",
       "react/no-unescaped-entities": "off",
     },
   },
