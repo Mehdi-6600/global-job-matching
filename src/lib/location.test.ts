@@ -30,4 +30,12 @@ describe("normalizeLocation", () => {
   it("trims whitespace around parts", () => {
     expect(normalizeLocation("  Paris ,  France  ")).toBe("Paris, France");
   });
+
+  it("handles single part", () => {
+    expect(normalizeLocation("Remote")).toBe("Remote");
+  });
+
+  it("drops empty segments from repeated commas", () => {
+    expect(normalizeLocation("Berlin,, Germany")).toBe("Berlin, Germany");
+  });
 });
