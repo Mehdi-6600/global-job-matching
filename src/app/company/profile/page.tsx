@@ -5,11 +5,9 @@ import Link from "next/link";
 import {
   Building2,
   MapPin,
-  Users,
   Globe,
   Linkedin,
   Twitter,
-  Mail,
   Briefcase,
   Heart,
   Clock,
@@ -19,8 +17,8 @@ import {
   Coffee,
   Laptop,
   Plane,
-  ChevronDown,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface OpenJob {
   id: string;
@@ -96,53 +94,48 @@ const openJobs: OpenJob[] = [
 ];
 
 export default function CompanyProfilePage() {
+  const { t } = useLocale();
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
 
-  const toggleSave = (id: string) => {
+  function toggleSave(id: string) {
     setSavedJobs((prev) =>
       prev.includes(id) ? prev.filter((j) => j !== id) : [...prev, id]
     );
-  };
+  }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Hero Card */}
-        <div className="glass rounded-3xl p-6 md:p-10 mb-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          
-          <div className="relative flex flex-col md:flex-row md:items-center gap-6">
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
-              <span className="text-cyan-400 font-bold text-2xl md:text-3xl">{company.logo}</span>
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="glass rounded-2xl p-6 md:p-8 border border-white/10 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-cyan-300 font-bold text-xl shrink-0">
+              {company.logo}
             </div>
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">{company.name}</h1>
-              <p className="text-slate-400 text-sm mb-3">{company.tagline}</p>
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-white">{company.name}</h1>
+              <p className="text-slate-400 text-sm mt-1">{company.tagline}</p>
+              <div className="flex flex-wrap gap-3 mt-3 text-sm text-slate-400">
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5" />
                   {company.location}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" />
-                  {company.size}
-                </span>
-                <span className="flex items-center gap-1">
+                <a
+                  href={`https://${company.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-cyan-400 hover:underline"
+                >
                   <Globe className="w-3.5 h-3.5" />
-                  {company.website}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Mail className="w-3.5 h-3.5" />
-                  {company.email}
-                </span>
+                  {t("Companies.website", "Website")}
+                </a>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2">
               <a
                 href={`https://${company.linkedin}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
+                className="p-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-cyan-400 transition-all"
               >
                 <Linkedin className="w-4 h-4" />
               </a>
@@ -150,7 +143,7 @@ export default function CompanyProfilePage() {
                 href={`https://twitter.com/${company.twitter.replace("@", "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                className="p-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-blue-400 transition-all"
               >
                 <Twitter className="w-4 h-4" />
               </a>
@@ -159,17 +152,20 @@ export default function CompanyProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* About */}
-            <div className="glass rounded-2xl p-6 md:p-8">
-              <h2 className="text-lg font-bold text-white mb-4">About</h2>
-              <p className="text-slate-300 text-sm leading-relaxed">{company.description}</p>
+            <div className="glass rounded-2xl p-6 md:p-8 border border-white/10">
+              <h2 className="text-lg font-bold text-white mb-4">
+                {t("About.title", "About")}
+              </h2>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                {company.description}
+              </p>
             </div>
 
-            {/* Benefits */}
-            <div className="glass rounded-2xl p-6 md:p-8">
-              <h2 className="text-lg font-bold text-white mb-5">Benefits & Perks</h2>
+            <div className="glass rounded-2xl p-6 md:p-8 border border-white/10">
+              <h2 className="text-lg font-bold text-white mb-5">
+                {t("Companies.viewProfile", "Benefits & Perks")}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {benefits.map((b, idx) => {
                   const Icon = b.icon;
@@ -182,8 +178,12 @@ export default function CompanyProfilePage() {
                         <Icon className="w-4 h-4 text-cyan-400" />
                       </div>
                       <div>
-                        <p className="text-white text-sm font-medium">{b.label}</p>
-                        <p className="text-slate-500 text-xs mt-0.5">{b.desc}</p>
+                        <p className="text-white text-sm font-medium">
+                          {b.label}
+                        </p>
+                        <p className="text-slate-500 text-xs mt-0.5">
+                          {b.desc}
+                        </p>
                       </div>
                     </div>
                   );
@@ -191,14 +191,15 @@ export default function CompanyProfilePage() {
               </div>
             </div>
 
-            {/* Open Jobs */}
-            <div className="glass rounded-2xl p-6 md:p-8">
+            <div className="glass rounded-2xl p-6 md:p-8 border border-white/10">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-cyan-400" />
-                  Open Positions
+                  {t("Companies.jobs", "Open Positions")}
                 </h2>
-                <span className="text-xs text-slate-500">{openJobs.length} jobs</span>
+                <span className="text-xs text-slate-500">
+                  {openJobs.length} {t("Companies.jobs", "jobs")}
+                </span>
               </div>
               <div className="space-y-3">
                 {openJobs.map((job) => (
@@ -207,7 +208,9 @@ export default function CompanyProfilePage() {
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all"
                   >
                     <div className="flex-1">
-                      <h3 className="text-white font-medium text-sm mb-2">{job.title}</h3>
+                      <h3 className="text-white font-medium text-sm mb-2">
+                        {job.title}
+                      </h3>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
@@ -240,20 +243,25 @@ export default function CompanyProfilePage() {
                         onClick={() => toggleSave(job.id)}
                         className={`p-2 rounded-xl transition-all ${
                           savedJobs.includes(job.id)
-                            ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                            : "bg-white/5 text-slate-400 hover:text-red-400 border border-transparent"
+                            ? "bg-rose-500/20 text-rose-400"
+                            : "bg-white/5 text-slate-400"
                         }`}
+                        aria-label={t("Common.save", "Save")}
                       >
                         <Heart
                           className="w-4 h-4"
-                          fill={savedJobs.includes(job.id) ? "currentColor" : "none"}
+                          fill={
+                            savedJobs.includes(job.id)
+                              ? "currentColor"
+                              : "none"
+                          }
                         />
                       </button>
                       <Link
                         href={`/jobs/${job.id}`}
                         className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-medium transition-all"
                       >
-                        Apply
+                        {t("JobDetail.apply", "Apply")}
                         <ChevronRight className="w-3 h-3" />
                       </Link>
                     </div>
@@ -263,40 +271,49 @@ export default function CompanyProfilePage() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-white font-semibold text-sm mb-4">Company Info</h3>
+            <div className="glass rounded-2xl p-6 border border-white/10">
+              <h3 className="text-white font-semibold text-sm mb-4 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-cyan-400" />
+                {t("Companies.viewProfile", "Company Info")}
+              </h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Founded</span>
+                  <span className="text-slate-400">
+                    {t("Common.optional", "Founded")}
+                  </span>
                   <span className="text-white">{company.founded}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Size</span>
+                  <span className="text-slate-400">
+                    {t("Common.optional", "Size")}
+                  </span>
                   <span className="text-white">{company.size}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Industry</span>
-                  <span className="text-white">Technology</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Type</span>
-                  <span className="text-white">Private</span>
+                  <span className="text-slate-400">
+                    {t("Companies.location", "Location")}
+                  </span>
+                  <span className="text-white">{company.location}</span>
                 </div>
               </div>
             </div>
 
             <div className="glass rounded-2xl p-6 border border-cyan-500/10">
-              <h3 className="text-white font-semibold text-sm mb-2">Want to work here?</h3>
+              <h3 className="text-white font-semibold text-sm mb-2">
+                {t("Home.ctaRegister", "Want to work here?")}
+              </h3>
               <p className="text-slate-400 text-xs leading-relaxed mb-4">
-                Create a profile and apply to jobs at {company.name} and thousands of other companies.
+                {t(
+                  "Companies.subtitle",
+                  "Create a profile and apply to jobs at this company and thousands of others."
+                )}
               </p>
               <Link
-                href="/signup"
+                href="/register"
                 className="block text-center bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-2.5 rounded-xl text-sm font-medium transition-all"
               >
-                Create Profile
+                {t("Nav.register", "Create Profile")}
               </Link>
             </div>
           </div>
