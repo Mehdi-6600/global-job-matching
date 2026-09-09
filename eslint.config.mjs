@@ -22,7 +22,6 @@ const eslintConfig = [
   },
   {
     rules: {
-      // Tighten gradually in later batches; keep warn (not error) for unused.
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
