@@ -4,9 +4,15 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
 
-  // Keep false once lint is clean; temporarily true only if build blocked
+  // Stay true until CI lint is fully clean across the whole repo.
+  // Goal of later batch: flip to false after zero ESLint errors.
   eslint: {
     ignoreDuringBuilds: true,
+  },
+
+  typescript: {
+    // Keep false so type errors still fail production builds.
+    ignoreBuildErrors: false,
   },
 
   images: {
@@ -14,6 +20,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      { protocol: "https", hostname: "public.blob.vercel-storage.com" },
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "remoteok.com" },
