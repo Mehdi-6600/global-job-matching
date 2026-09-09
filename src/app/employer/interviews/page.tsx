@@ -15,6 +15,7 @@ import {
   ExternalLink,
   MessageSquare,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface Interview {
   id: string;
@@ -37,13 +38,8 @@ interface Interview {
   };
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  scheduled: { label: "Scheduled", color: "text-amber-400 bg-amber-500/10" },
-  completed: { label: "Completed", color: "text-emerald-400 bg-emerald-500/10" },
-  cancelled: { label: "Cancelled", color: "text-red-400 bg-red-500/10" },
-};
-
 export default function EmployerInterviewsPage() {
+  const { t, locale } = useLocale();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -59,8 +55,23 @@ export default function EmployerInterviewsPage() {
     notes: "",
   });
 
+  const statusConfig: Record<string, { label: string; color: string }> = {
+    scheduled: {
+      label: t("Common.loading", "Scheduled"),
+      color: "text-amber-400 bg-amber-500/10",
+    },
+    completed: {
+      label: t("Common.success", "Completed"),
+      color: "text-emerald-400 bg-emerald-500/10",
+    },
+    cancelled: {
+      label: t("Common.cancel", "Cancelled"),
+      color: "text-red-400 bg-red-500/10",
+    },
+  };
+
   useEffect(() => {
-    fetchInterviews();
+    void fetchInterviews();
   }, []);
 
   async function fetchInterviews() {
@@ -80,12 +91,20 @@ export default function EmployerInterviewsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        duration: parseInt(form.duration),
+        duration: parseInt(form.duration, 10),
       }),
     });
     if (res.ok) {
       setShowForm(false);
-      setForm({ jobId: "", userId: "", scheduledAt: "", duration: "30", type: "video", meetLink: "", notes: "" });
+      setForm({
+        jobId: "",
+        userId: "",
+        scheduledAt: "",
+        duration: "30",
+        type: "video",
+        meetLink: "",
+        notes: "",
+      });
       await fetchInterviews();
     }
     setSaving(false);
@@ -116,120 +135,158 @@ export default function EmployerInterviewsPage() {
             <div className="flex items-center gap-3">
               <Calendar className="w-7 h-7 text-indigo-400" />
               <div>
-                <h1 className="text-2xl font-bold text-white">Interviews</h1>
-                <p className="text-slate-400 text-sm">Schedule and manage candidate interviews</p>
+                <h1 className="text-2xl font-bold text-white">
+                  {t("Nav.dashboard", "Interviews")}
+                </h1>
+                <p className="text-slate-400 text-sm">
+                  {t(
+                    "Employer.title",
+                    "Schedule and manage candidate interviews"
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowForm(!showForm)}
+                type="button"
+                onClick={() => setShowForm((v) => !v)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-all"
               >
-                <Plus className="w-4 h-4" /> Schedule New
+                <Plus className="w-4 h-4" />
+                {t("Common.submit", "Schedule New")}
               </button>
               <Link
                 href="/employer/dashboard"
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
               >
-                <ArrowLeft className="w-4 h-4" /> Dashboard
+                <ArrowLeft className="w-4 h-4" />
+                {t("Employer.title", "Dashboard")}
               </Link>
             </div>
           </div>
         </div>
 
         {showForm && (
-          <form onSubmit={createInterview} className="glass rounded-2xl p-6 mb-6 border border-white/10 space-y-4">
-            <h3 className="text-lg font-semibold text-white mb-4">New Interview</h3>
+          <form
+            onSubmit={createInterview}
+            className="glass rounded-2xl p-6 mb-6 border border-white/10 space-y-4"
+          >
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {t("Common.submit", "New Interview")}
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Job ID</label>
+                <label className="block text-xs text-slate-400 mb-1">
+                  Job ID
+                </label>
                 <input
                   required
-                  placeholder="Job ID"
                   value={form.jobId}
-                  onChange={(e) => setForm({ ...form, jobId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) =>
+                    setForm({ ...form, jobId: e.target.value })
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Candidate User ID</label>
+                <label className="block text-xs text-slate-400 mb-1">
+                  Candidate User ID
+                </label>
                 <input
                   required
-                  placeholder="User ID"
                   value={form.userId}
-                  onChange={(e) => setForm({ ...form, userId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) =>
+                    setForm({ ...form, userId: e.target.value })
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Date & Time</label>
+                <label className="block text-xs text-slate-400 mb-1">
+                  <Clock className="w-3 h-3 inline mr-1" />
+                  {t("Common.loading", "Date & time")}
+                </label>
                 <input
                   type="datetime-local"
                   required
                   value={form.scheduledAt}
-                  onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) =>
+                    setForm({ ...form, scheduledAt: e.target.value })
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Duration (min)</label>
-                <select
+                <label className="block text-xs text-slate-400 mb-1">
+                  Duration (min)
+                </label>
+                <input
+                  type="number"
                   value={form.duration}
-                  onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="15">15 min</option>
-                  <option value="30">30 min</option>
-                  <option value="45">45 min</option>
-                  <option value="60">60 min</option>
-                </select>
+                  onChange={(e) =>
+                    setForm({ ...form, duration: e.target.value })
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
+                />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Type</label>
+                <label className="block text-xs text-slate-400 mb-1">
+                  Type
+                </label>
                 <select
                   value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) =>
+                    setForm({ ...form, type: e.target.value })
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
                 >
-                  <option value="video">Video Call</option>
+                  <option value="video">Video</option>
                   <option value="phone">Phone</option>
-                  <option value="in-person">In Person</option>
+                  <option value="onsite">On-site</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Meeting Link</label>
+                <label className="block text-xs text-slate-400 mb-1">
+                  Meet link
+                </label>
                 <input
-                  placeholder="https://meet.google.com/..."
+                  type="url"
                   value={form.meetLink}
-                  onChange={(e) => setForm({ ...form, meetLink: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) =>
+                    setForm({ ...form, meetLink: e.target.value })
+                  }
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Notes</label>
+              <label className="block text-xs text-slate-400 mb-1">
+                Notes
+              </label>
               <textarea
-                rows={2}
-                placeholder="Additional notes..."
                 value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                onChange={(e) =>
+                  setForm({ ...form, notes: e.target.value })
+                }
+                rows={2}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none resize-none"
               />
             </div>
             <div className="flex gap-3">
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-all"
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2"
               >
-                {saving ? "Saving..." : "Schedule Interview"}
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {t("Common.submit", "Save")}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 text-sm font-medium transition-all"
+                className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 text-sm"
               >
-                Cancel
+                {t("Common.cancel", "Cancel")}
               </button>
             </div>
           </form>
@@ -238,53 +295,55 @@ export default function EmployerInterviewsPage() {
         <div className="space-y-4">
           {interviews.length === 0 ? (
             <div className="glass rounded-2xl p-12 text-center border border-white/10">
-              <Calendar className="w-14 h-14 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-1">No interviews scheduled</h3>
-              <p className="text-slate-400 text-sm">Schedule your first interview with a candidate</p>
+              <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">
+                {t("Common.noResults", "No interviews scheduled")}
+              </p>
             </div>
           ) : (
             interviews.map((iv) => {
-              const st = statusConfig[iv.status] || statusConfig.scheduled;
-              const date = new Date(iv.scheduledAt);
-              const isPast = date < new Date();
-
+              const st =
+                statusConfig[iv.status] || statusConfig.scheduled;
               return (
                 <div
                   key={iv.id}
-                  className={`glass rounded-xl p-5 border transition-all ${
-                    isPast ? "border-white/5 opacity-70" : "border-white/10"
-                  }`}
+                  className="glass rounded-2xl p-5 border border-white/10"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold shrink-0">
-                        <User className="w-5 h-5" />
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                        <User className="w-5 h-5 text-indigo-300" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium text-white">{iv.user.name || "Candidate"}</h3>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${st.color}`}>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-white font-medium">
+                            {iv.user.name || iv.user.email}
+                          </p>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${st.color}`}
+                          >
                             {st.label}
                           </span>
                         </div>
-                        <p className="text-slate-400 text-sm">{iv.user.email}</p>
-                        <p className="text-slate-500 text-xs mt-1">
-                          For <Link href={`/jobs/${iv.job.id}`} className="text-indigo-400 hover:text-indigo-300">{iv.job.title}</Link>
+                        <p className="text-slate-400 text-sm truncate">
+                          {iv.job.title} · {iv.job.company?.name}
                         </p>
-                        <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-slate-400">
+                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> {date.toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            <Calendar className="w-3 h-3" />
+                            {new Date(iv.scheduledAt).toLocaleString(locale)}
                           </span>
                           <span className="flex items-center gap-1">
                             <Video className="w-3 h-3" /> {iv.duration} min
                           </span>
-                          <span className="px-2 py-0.5 rounded-md bg-white/5">{iv.type}</span>
+                          <span className="px-2 py-0.5 rounded-md bg-white/5">
+                            {iv.type}
+                          </span>
                         </div>
                         {iv.notes && (
-                          <p className="text-slate-500 text-xs mt-2 italic">{iv.notes}</p>
+                          <p className="text-slate-500 text-xs mt-2 italic">
+                            {iv.notes}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -296,7 +355,8 @@ export default function EmployerInterviewsPage() {
                           rel="noopener noreferrer"
                           className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs font-medium hover:bg-indigo-600/30 transition-all"
                         >
-                          <ExternalLink className="w-3 h-3" /> Join
+                          <ExternalLink className="w-3 h-3" />
+                          {t("Common.view", "Join")}
                         </a>
                       )}
                       <Link
@@ -308,16 +368,18 @@ export default function EmployerInterviewsPage() {
                       {iv.status === "scheduled" && (
                         <>
                           <button
+                            type="button"
                             onClick={() => updateStatus(iv.id, "completed")}
                             className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all"
-                            title="Mark completed"
+                            title={t("Common.success", "Mark completed")}
                           >
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => updateStatus(iv.id, "cancelled")}
                             className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
-                            title="Cancel"
+                            title={t("Common.cancel", "Cancel")}
                           >
                             <XCircle className="w-4 h-4" />
                           </button>
