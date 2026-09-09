@@ -20,4 +20,20 @@ describe("getRequestIp", () => {
   it("falls back to x-real-ip", () => {
     expect(getRequestIp(req({ "x-real-ip": "8.8.8.8" }))).toBe("8.8.8.8");
   });
+
+  it("falls back to first x-forwarded-for hop", () => {
+    expect(getRequestIp(req({ "x-forwarded-for": "10.0.0.1, 10.0.0.2" }))).toBe(
+      "10.0.0.1"
+    );
+  });
+
+  it("returns fallback when headers missing", () => {
+    expect(getRequestIp(req({}), "unknown")).toBe("unknown");
+  });
+
+  it("rejects garbage values", () => {
+    expect(
+      getRequestIp(req({ "x-real-ip": "not an ip with spaces" }), "unknown")
+    ).toBe("unknown");
+  });
 });
