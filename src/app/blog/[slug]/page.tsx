@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar } from "lucide-react";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { sanitizeBlogHtml } from "@/lib/sanitize-html";
+import { getDictionary, t } from "@/lib/i18n/get-dictionary";
+import { LOCALE_COOKIE } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/resolve-locale";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -10,6 +14,9 @@ interface Props {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const dict = getDictionary(locale);
 
   const post = await prisma.blogPost.findUnique({
     where: { slug, published: true },
@@ -26,7 +33,8 @@ export default async function BlogPostPage({ params }: Props) {
           href="/blog"
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Blog
+          <ArrowLeft className="w-4 h-4" />{" "}
+          {t(dict, "Blog.back", "Back to Blog")}
         </Link>
 
         <article className="glass rounded-2xl p-8 sm:p-10 border border-white/10">
@@ -39,7 +47,7 @@ export default async function BlogPostPage({ params }: Props) {
 
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
             <Calendar className="w-4 h-4" />
-            {new Date(post.createdAt).toLocaleDateString()}
+            {new Date(post.createdAt).toLocaleDateString(locale)}
           </div>
 
           <h1 className="text-3xl font-bold text-white mb-6">{post.title}</h1>
