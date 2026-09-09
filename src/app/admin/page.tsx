@@ -14,6 +14,7 @@ import {
   Mail,
   CreditCard,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface Stats {
   totalUsers: number;
@@ -65,6 +66,7 @@ interface TxItem {
 }
 
 export default function AdminPage() {
+  const { t, locale } = useLocale();
   const [activeTab, setActiveTab] = useState<
     "overview" | "users" | "companies" | "jobs" | "payments"
   >("overview");
@@ -85,12 +87,13 @@ export default function AdminPage() {
       fetchJobs(),
       fetchTransactions(),
     ]).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchStats() {
     const res = await fetch("/api/admin/stats");
     if (res.status === 403) {
-      setError("Forbidden — not admin");
+      setError(t("Common.forbidden", "Forbidden — not admin"));
       return;
     }
     if (res.ok) {
@@ -179,6 +182,7 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+        <span className="sr-only">{t("Common.loading", "Loading...")}</span>
       </div>
     );
   }
@@ -186,27 +190,27 @@ export default function AdminPage() {
   const tabs = [
     {
       id: "overview" as const,
-      label: "Overview",
+      label: t("Dashboard.stats", "Overview"),
       icon: <LayoutDashboard className="w-4 h-4" />,
     },
     {
       id: "users" as const,
-      label: "Users",
+      label: t("Nav.profile", "Users"),
       icon: <Users className="w-4 h-4" />,
     },
     {
       id: "companies" as const,
-      label: "Companies",
+      label: t("Nav.companies", "Companies"),
       icon: <Building2 className="w-4 h-4" />,
     },
     {
       id: "jobs" as const,
-      label: "Jobs",
+      label: t("Nav.jobs", "Jobs"),
       icon: <Briefcase className="w-4 h-4" />,
     },
     {
       id: "payments" as const,
-      label: "Payments",
+      label: t("Pricing.title", "Payments"),
       icon: <CreditCard className="w-4 h-4" />,
     },
   ];
@@ -216,15 +220,20 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-            <p className="text-slate-400 text-sm">Manage platform settings</p>
+            <h1 className="text-2xl font-bold text-white">
+              {t("Nav.admin", "Admin Panel")}
+            </h1>
+            <p className="text-slate-400 text-sm">
+              {t("Dashboard.welcomeSub", "Manage platform settings")}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/admin/analytics"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
             >
-              <BarChart3 className="w-4 h-4" /> Analytics
+              <BarChart3 className="w-4 h-4" />{" "}
+              {t("Dashboard.stats", "Analytics")}
             </Link>
             <Link
               href="/admin/newsletter"
@@ -263,37 +272,37 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               {
-                label: "Total Users",
+                label: t("Nav.profile", "Total Users"),
                 value: stats.totalUsers,
                 icon: <Users className="w-5 h-5 text-indigo-400" />,
                 color: "from-indigo-500 to-purple-500",
               },
               {
-                label: "Total Companies",
+                label: t("Nav.companies", "Total Companies"),
                 value: stats.totalCompanies,
                 icon: <Building2 className="w-5 h-5 text-cyan-400" />,
                 color: "from-cyan-500 to-blue-500",
               },
               {
-                label: "Total Jobs",
+                label: t("Nav.jobs", "Total Jobs"),
                 value: stats.totalJobs,
                 icon: <Briefcase className="w-5 h-5 text-emerald-400" />,
                 color: "from-emerald-500 to-teal-500",
               },
               {
-                label: "Total Applications",
+                label: t("Nav.applications", "Total Applications"),
                 value: stats.totalApplications,
                 icon: <CheckCircle2 className="w-5 h-5 text-amber-400" />,
                 color: "from-amber-500 to-orange-500",
               },
               {
-                label: "Pending Companies",
+                label: t("Companies.pending", "Pending Companies"),
                 value: stats.pendingCompanies,
                 icon: <Building2 className="w-5 h-5 text-pink-400" />,
                 color: "from-pink-500 to-rose-500",
               },
               {
-                label: "Pending Jobs",
+                label: t("Jobs.pending", "Pending Jobs"),
                 value: stats.pendingJobs,
                 icon: <Briefcase className="w-5 h-5 text-violet-400" />,
                 color: "from-violet-500 to-purple-500",
@@ -321,11 +330,21 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/10 text-slate-400 text-left">
-                    <th className="p-4 font-medium">Name</th>
-                    <th className="p-4 font-medium">Email</th>
-                    <th className="p-4 font-medium">Role</th>
-                    <th className="p-4 font-medium">Plan</th>
-                    <th className="p-4 font-medium">Joined</th>
+                    <th className="p-4 font-medium">
+                      {t("Auth.name", "Name")}
+                    </th>
+                    <th className="p-4 font-medium">
+                      {t("Auth.email", "Email")}
+                    </th>
+                    <th className="p-4 font-medium">
+                      {t("Profile.role", "Role")}
+                    </th>
+                    <th className="p-4 font-medium">
+                      {t("Pricing.title", "Plan")}
+                    </th>
+                    <th className="p-4 font-medium">
+                      {t("JobDetail.posted", "Joined")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -345,7 +364,7 @@ export default function AdminPage() {
                         {user.plan || "free"}
                       </td>
                       <td className="p-4 text-slate-500">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.createdAt).toLocaleDateString(locale)}
                       </td>
                     </tr>
                   ))}
@@ -358,7 +377,9 @@ export default function AdminPage() {
         {activeTab === "companies" && (
           <div className="space-y-3">
             {companies.length === 0 && (
-              <p className="text-slate-500 text-sm">No companies</p>
+              <p className="text-slate-500 text-sm">
+                {t("Companies.noCompanies", "No companies")}
+              </p>
             )}
             {companies.map((company) => (
               <div
@@ -368,7 +389,7 @@ export default function AdminPage() {
                 <div>
                   <h3 className="font-medium text-white">{company.name}</h3>
                   <p className="text-slate-500 text-sm">
-                    {company.owner?.email || "No owner"}
+                    {company.owner?.email || t("Common.noResults", "No owner")}
                   </p>
                   <span
                     className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -392,6 +413,7 @@ export default function AdminPage() {
                         }
                         disabled={actionLoading === company.id}
                         className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        aria-label={t("Common.confirm", "Approve")}
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
@@ -402,6 +424,7 @@ export default function AdminPage() {
                         }
                         disabled={actionLoading === company.id}
                         className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                        aria-label={t("Common.cancel", "Reject")}
                       >
                         <XCircle className="w-4 h-4" />
                       </button>
@@ -416,7 +439,9 @@ export default function AdminPage() {
         {activeTab === "jobs" && (
           <div className="space-y-3">
             {jobs.length === 0 && (
-              <p className="text-slate-500 text-sm">No jobs</p>
+              <p className="text-slate-500 text-sm">
+                {t("Jobs.noJobs", "No jobs")}
+              </p>
             )}
             {jobs.map((job) => (
               <div
@@ -426,7 +451,7 @@ export default function AdminPage() {
                 <div>
                   <h3 className="font-medium text-white">{job.title}</h3>
                   <p className="text-slate-500 text-sm">
-                    {job.company?.name || "Unknown"}
+                    {job.company?.name || t("Common.noResults", "Unknown")}
                   </p>
                   <span
                     className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -448,6 +473,7 @@ export default function AdminPage() {
                         onClick={() => updateJobStatus(job.id, "active")}
                         disabled={actionLoading === job.id}
                         className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        aria-label={t("Common.confirm", "Approve")}
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
@@ -456,6 +482,7 @@ export default function AdminPage() {
                         onClick={() => updateJobStatus(job.id, "rejected")}
                         disabled={actionLoading === job.id}
                         className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                        aria-label={t("Common.cancel", "Reject")}
                       >
                         <XCircle className="w-4 h-4" />
                       </button>
@@ -470,7 +497,9 @@ export default function AdminPage() {
         {activeTab === "payments" && (
           <div className="space-y-3">
             {transactions.length === 0 && (
-              <p className="text-slate-500 text-sm">No transactions yet</p>
+              <p className="text-slate-500 text-sm">
+                {t("Common.noResults", "No transactions yet")}
+              </p>
             )}
             {transactions.map((tx) => (
               <div
@@ -485,7 +514,7 @@ export default function AdminPage() {
                     {tx.user?.email} ({tx.user?.name || "—"})
                   </p>
                   <p className="text-slate-500 text-xs mt-1 break-all">
-                    {tx.txHash || "no hash"}
+                    {tx.txHash || "—"}
                   </p>
                   <span
                     className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -507,7 +536,7 @@ export default function AdminPage() {
                       disabled={actionLoading === tx.id}
                       className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500 disabled:opacity-50"
                     >
-                      Confirm
+                      {t("Common.confirm", "Confirm")}
                     </button>
                     <button
                       type="button"
@@ -515,7 +544,7 @@ export default function AdminPage() {
                       disabled={actionLoading === tx.id}
                       className="px-3 py-2 rounded-lg bg-red-600/80 text-white text-xs font-medium hover:bg-red-500 disabled:opacity-50"
                     >
-                      Reject
+                      {t("Common.cancel", "Reject")}
                     </button>
                   </div>
                 )}
