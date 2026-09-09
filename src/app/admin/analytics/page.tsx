@@ -10,6 +10,7 @@ import {
   Eye,
   Clock,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 type TopPath = { path: string; views: number };
 type RecentEvent = {
@@ -21,6 +22,7 @@ type RecentEvent = {
 };
 
 export default function AdminAnalyticsPage() {
+  const { t, locale } = useLocale();
   const [days, setDays] = useState(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,7 +42,7 @@ export default function AdminAnalyticsPage() {
 
         if (!res.ok) {
           if (!cancelled) {
-            setError(data.error || "Failed to load analytics");
+            setError(data.error || t("Common.error", "Failed to load analytics"));
             setLoading(false);
           }
           return;
@@ -54,7 +56,7 @@ export default function AdminAnalyticsPage() {
         }
       } catch {
         if (!cancelled) {
-          setError("Network error");
+          setError(t("Common.errorNetwork", "Network error"));
           setLoading(false);
         }
       }
@@ -64,7 +66,7 @@ export default function AdminAnalyticsPage() {
     return () => {
       cancelled = true;
     };
-  }, [days]);
+  }, [days, t]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
@@ -75,14 +77,15 @@ export default function AdminAnalyticsPage() {
               href="/admin"
               className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-2"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to Admin
+              <ArrowLeft className="w-4 h-4" />{" "}
+              {t("Common.back", "Back to Admin")}
             </Link>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <BarChart3 className="w-6 h-6 text-cyan-400" />
-              Analytics
+              {t("Dashboard.stats", "Analytics")}
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              Page views stored in AnalyticsEvent (Owner/Admin only)
+              {t("Dashboard.welcomeSub", "Page views (Owner/Admin only)")}
             </p>
           </div>
 
@@ -94,7 +97,7 @@ export default function AdminAnalyticsPage() {
                 onClick={() => setDays(d)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   days === d
-                    ? "bg-indigo-600 text-white"
+                    ? "bg-cyan-600 text-white"
                     : "bg-white/5 text-slate-400 hover:text-white"
                 }`}
               >
@@ -104,18 +107,20 @@ export default function AdminAnalyticsPage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          </div>
-        ) : error ? (
-          <div className="glass rounded-2xl p-6 border border-red-500/20 text-red-400 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5" />
+        {error && (
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
             {error}
           </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+          </div>
         ) : (
-          <div className="space-y-6">
-            <div className="glass rounded-2xl p-6 border border-white/10">
+          <>
+            <div className="glass rounded-2xl p-6 border border-white/10 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
                   <Eye className="w-6 h-6 text-cyan-400" />
@@ -123,68 +128,60 @@ export default function AdminAnalyticsPage() {
                 <div>
                   <p className="text-3xl font-bold text-white">{totalViews}</p>
                   <p className="text-slate-400 text-sm">
-                    Total page views (last {days} days)
+                    {t("Dashboard.stats", "Total views")} ({days}d)
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="glass rounded-2xl p-6 border border-white/10">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Top paths
-              </h2>
-              {topPaths.length === 0 ? (
-                <p className="text-slate-500 text-sm">No data yet</p>
-              ) : (
-                <ul className="space-y-2">
-                  {topPaths.map((row) => (
-                    <li
-                      key={row.path}
-                      className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5"
-                    >
-                      <code className="text-sm text-cyan-300 break-all">
-                        {row.path}
-                      </code>
-                      <span className="text-sm text-white font-medium tabular-nums">
-                        {row.views}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="glass rounded-2xl p-6 border border-white/10">
+                <h2 className="text-white font-semibold mb-4">
+                  {t("Dashboard.stats", "Top paths")}
+                </h2>
+                {topPaths.length === 0 ? (
+                  <p className="text-slate-500 text-sm">
+                    {t("Common.noResults", "No data")}
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {topPaths.map((p) => (
+                      <li
+                        key={p.path}
+                        className="flex justify-between text-sm gap-4"
+                      >
+                        <span className="text-slate-300 truncate">{p.path}</span>
+                        <span className="text-cyan-400 shrink-0">{p.views}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-            <div className="glass rounded-2xl p-6 border border-white/10">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-amber-400" />
-                Recent events
-              </h2>
-              {recent.length === 0 ? (
-                <p className="text-slate-500 text-sm">No recent events</p>
-              ) : (
-                <ul className="space-y-2">
-                  {recent.map((ev) => (
-                    <li
-                      key={ev.id}
-                      className="p-3 rounded-xl bg-white/5 border border-white/5 text-sm"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <code className="text-cyan-300">{ev.path}</code>
-                        <span className="text-slate-500 text-xs">
-                          {new Date(ev.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                      {ev.referrer && (
-                        <p className="text-slate-500 text-xs mt-1 truncate">
-                          ref: {ev.referrer}
+              <div className="glass rounded-2xl p-6 border border-white/10">
+                <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-slate-400" />
+                  {t("Dashboard.recent", "Recent")}
+                </h2>
+                {recent.length === 0 ? (
+                  <p className="text-slate-500 text-sm">
+                    {t("Common.noResults", "No events")}
+                  </p>
+                ) : (
+                  <ul className="space-y-3 max-h-80 overflow-y-auto">
+                    {recent.map((e) => (
+                      <li key={e.id} className="text-sm border-b border-white/5 pb-2">
+                        <p className="text-slate-200 truncate">{e.path}</p>
+                        <p className="text-slate-500 text-xs">
+                          {new Date(e.createdAt).toLocaleString(locale)}
                         </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
