@@ -4,24 +4,19 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Search,
-  SlidersHorizontal,
-  X,
   MapPin,
   DollarSign,
-  Clock,
   Building2,
   Heart,
   Wifi,
   WifiOff,
-  Briefcase,
-  Calendar,
-  ChevronDown,
   Loader2,
   RotateCcw,
   ArrowRight,
-  TrendingUp,
-  Layers,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface ApiJob {
   id: string;
@@ -49,48 +44,6 @@ interface ApiJob {
   } | null;
 }
 
-const jobTypes = [
-  { value: "", label: "All Types" },
-  { value: "full-time", label: "Full-time" },
-  { value: "part-time", label: "Part-time" },
-  { value: "contract", label: "Contract" },
-  { value: "freelance", label: "Freelance" },
-  { value: "internship", label: "Internship" },
-];
-
-const experiences = [
-  { value: "", label: "All Levels" },
-  { value: "entry", label: "Entry" },
-  { value: "mid", label: "Mid" },
-  { value: "senior", label: "Senior" },
-  { value: "lead", label: "Lead" },
-  { value: "executive", label: "Executive" },
-];
-
-const postedOptions = [
-  { value: "", label: "Any time" },
-  { value: "1", label: "Last 24 hours" },
-  { value: "3", label: "Last 3 days" },
-  { value: "7", label: "Last 7 days" },
-  { value: "30", label: "Last 30 days" },
-];
-
-const sortOptions = [
-  { value: "newest", label: "Newest First" },
-  { value: "oldest", label: "Oldest First" },
-  { value: "salary-high", label: "Salary: High to Low" },
-  { value: "salary-low", label: "Salary: Low to High" },
-];
-
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const days = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  if (days > 30) return `${Math.floor(days / 30)} months ago`;
-  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-  return "Today";
-}
-
 function getLogo(name: string): string {
   return name
     .split(" ")
@@ -100,7 +53,19 @@ function getLogo(name: string): string {
     .toUpperCase();
 }
 
+function interpolate(
+  template: string,
+  replacements: Record<string, string | number>
+): string {
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+  }
+  return result;
+}
+
 export default function AdvancedSearchPage() {
+  const { t, locale } = useLocale();
   const [jobs, setJobs] = useState<ApiJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -114,6 +79,81 @@ export default function AdvancedSearchPage() {
   const [postedWithin, setPostedWithin] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
+
+  const jobTypes = [
+    { value: "", label: t("Jobs.allTypes", "All Types") },
+    { value: "full-time", label: t("Jobs.types.fullTime", "Full-time") },
+    { value: "part-time", label: t("Jobs.types.partTime", "Part-time") },
+    { value: "contract", label: t("Jobs.types.contract", "Contract") },
+    { value: "freelance", label: t("Jobs.types.freelance", "Freelance") },
+    { value: "internship", label: t("Jobs.types.internship", "Internship") },
+  ];
+
+  const experiences = [
+    { value: "", label: t("Search.allLevels", "All levels") },
+    {
+      value: "entry",
+      label: t("Jobs.experienceLevels.entry", "Entry Level"),
+    },
+    { value: "mid", label: t("Jobs.experienceLevels.mid", "Mid Level") },
+    {
+      value: "senior",
+      label: t("Jobs.experienceLevels.senior", "Senior Level"),
+    },
+    {
+      value: "lead",
+      label: t("Jobs.experienceLevels.lead", "Lead / Manager"),
+    },
+    {
+      value: "executive",
+      label: t("Jobs.experienceLevels.executive", "Executive"),
+    },
+  ];
+
+  const postedOptions = [
+    { value: "", label: t("Search.anyTime", "Any time") },
+    { value: "1", label: t("Search.last24h", "Last 24 hours") },
+    { value: "3", label: t("Search.last3d", "Last 3 days") },
+    { value: "7", label: t("Search.last7d", "Last 7 days") },
+    { value: "30", label: t("Search.last30d", "Last 30 days") },
+  ];
+
+  const sortOptions = [
+    { value: "newest", label: t("Search.sortNewest", "Newest first") },
+    { value: "oldest", label: t("Search.sortOldest", "Oldest first") },
+    {
+      value: "salary-high",
+      label: t("Search.sortSalaryHigh", "Salary: high to low"),
+    },
+    {
+      value: "salary-low",
+      label: t("Search.sortSalaryLow", "Salary: low to high"),
+    },
+  ];
+
+  function timeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const days = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (days > 30) {
+      return interpolate(t("Search.monthsAgo", "{count} months ago"), {
+        count: Math.floor(days / 30),
+      });
+    }
+    if (days > 1) {
+      return interpolate(t("Search.daysAgo", "{count} days ago"), {
+        count: days,
+      });
+    }
+    if (days === 1) {
+      return interpolate(t("Search.dayAgo", "{count} day ago"), {
+        count: 1,
+      });
+    }
+    return t("Search.today", "Today");
+  }
 
   const fetchJobs = useCallback(() => {
     setLoading(true);
@@ -134,7 +174,16 @@ export default function AdvancedSearchPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [search, type, experience, remote, salaryMin, salaryMax, postedWithin, sortBy]);
+  }, [
+    search,
+    type,
+    experience,
+    remote,
+    salaryMin,
+    salaryMax,
+    postedWithin,
+    sortBy,
+  ]);
 
   useEffect(() => {
     fetchJobs();
@@ -170,100 +219,120 @@ export default function AdvancedSearchPage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Advanced Search</h1>
-          <p className="text-slate-400 text-sm">Find your perfect job with powerful filters</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
+            {t("Search.title", "Advanced Search")}
+          </h1>
+          <p className="text-slate-400 text-sm">
+            {t(
+              "Search.subtitle",
+              "Find your perfect job with powerful filters"
+            )}
+          </p>
         </div>
 
-        {/* Search Bar */}
-        <div className="glass rounded-2xl p-4 mb-6">
+        <div className="glass rounded-2xl p-4 sm:p-6 border border-white/10 mb-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search jobs, companies, skills..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-500"
+                placeholder={t(
+                  "Jobs.searchPlaceholder",
+                  "Job title, keywords..."
+                )}
+                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-slate-500 outline-none focus:border-cyan-500/50"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
-                >
-                  {sortOptions.map((o) => (
-                    <option key={o.value} value={o.value} className="bg-slate-800">
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-              </div>
-              <button
-                onClick={() => setFiltersOpen(!filtersOpen)}
-                className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 px-4 py-2.5 rounded-xl text-sm transition-all"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Filters
-                {activeFiltersCount > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-cyan-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10 transition-all"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {t("Search.filters", "Filters")}
+              {activeFiltersCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-xs">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={fetchJobs}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium"
+            >
+              <Search className="w-4 h-4" />
+              {t("Common.search", "Search")}
+            </button>
           </div>
 
-          {/* Expandable Filters */}
           {filtersOpen && (
-            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Job Type</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t("Jobs.jobType", "Job Type")}
+                </label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                 >
-                  {jobTypes.map((t) => (
-                    <option key={t.value} value={t.value} className="bg-slate-800">
-                      {t.label}
+                  {jobTypes.map((opt) => (
+                    <option
+                      key={opt.value}
+                      value={opt.value}
+                      className="bg-slate-800"
+                    >
+                      {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Experience</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t("Jobs.experience", "Experience")}
+                </label>
                 <select
                   value={experience}
                   onChange={(e) => setExperience(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                 >
-                  {experiences.map((e) => (
-                    <option key={e.value} value={e.value} className="bg-slate-800">
-                      {e.label}
+                  {experiences.map((opt) => (
+                    <option
+                      key={opt.value}
+                      value={opt.value}
+                      className="bg-slate-800"
+                    >
+                      {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Posted</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t("Search.posted", "Posted")}
+                </label>
                 <select
                   value={postedWithin}
                   onChange={(e) => setPostedWithin(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                 >
-                  {postedOptions.map((o) => (
-                    <option key={o.value} value={o.value} className="bg-slate-800">
-                      {o.label}
+                  {postedOptions.map((opt) => (
+                    <option
+                      key={opt.value}
+                      value={opt.value}
+                      className="bg-slate-800"
+                    >
+                      {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
                 <button
+                  type="button"
                   onClick={() => setRemote(!remote)}
                   className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
                     remote
@@ -271,89 +340,139 @@ export default function AdvancedSearchPage() {
                       : "bg-white/5 text-slate-400 border-white/10"
                   }`}
                 >
-                  {remote ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-                  Remote Only
+                  {remote ? (
+                    <Wifi className="w-4 h-4" />
+                  ) : (
+                    <WifiOff className="w-4 h-4" />
+                  )}
+                  {t("Jobs.remoteOnly", "Remote Only")}
                 </button>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Min Salary</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t("Jobs.minSalary", "Min Salary")}
+                </label>
                 <input
                   type="number"
                   value={salaryMin}
                   onChange={(e) => setSalaryMin(e.target.value)}
-                  placeholder="50000"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                  placeholder={t("Jobs.noLimit", "No limit")}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Max Salary</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t("Jobs.maxSalary", "Max Salary")}
+                </label>
                 <input
                   type="number"
                   value={salaryMax}
                   onChange={(e) => setSalaryMax(e.target.value)}
-                  placeholder="150000"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                  placeholder={t("Jobs.noLimit", "No limit")}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
                 />
               </div>
-              <div className="sm:col-span-2 flex items-end">
-                <button
-                  onClick={clearFilters}
-                  className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white py-2 rounded-xl text-sm transition-all"
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t("Search.sortBy", "Sort by")}
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Clear All Filters
-                </button>
+                  {sortOptions.map((opt) => (
+                    <option
+                      key={opt.value}
+                      value={opt.value}
+                      className="bg-slate-800"
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
+              {activeFiltersCount > 0 && (
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10"
+                  >
+                    <X className="w-4 h-4" />
+                    {t("Search.clearFilters", "Clear filters")}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Results */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <p className="text-slate-400 text-sm">
-            {loading ? "Searching..." : `${jobs.length} result${jobs.length !== 1 ? "s" : ""} found`}
+            {loading
+              ? t("Common.loading", "Loading...")
+              : interpolate(
+                  t("Search.resultsCount", "{count} jobs found"),
+                  { count: jobs.length }
+                )}
           </p>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
           </div>
         ) : jobs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {jobs.map((job) => {
-              const displayTags = job.tags.filter((t) => !t.startsWith("http")).slice(0, 4);
+              const displayTags = (job.tags || []).slice(0, 4);
+              const isSaved = savedJobs.includes(job.id);
               return (
                 <div
                   key={job.id}
-                  className="glass rounded-2xl p-5 border border-transparent hover:border-white/10 transition-all group flex flex-col"
+                  className="glass rounded-2xl p-5 border border-white/10 flex flex-col hover:border-white/20 transition-all"
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center">
-                        <span className="text-cyan-400 font-bold text-xs">
-                          {getLogo(job.company.name)}
-                        </span>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-cyan-300 text-xs font-bold shrink-0">
+                        {job.company?.logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={job.company.logo}
+                            alt=""
+                            className="w-full h-full object-cover rounded-xl"
+                          />
+                        ) : (
+                          getLogo(
+                            job.company?.name ||
+                              t("Jobs.companyFallback", "CO")
+                          )
+                        )}
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold text-sm line-clamp-1">{job.title}</h3>
-                        <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
-                          <Building2 className="w-3 h-3" />
-                          {job.company.name}
+                      <div className="min-w-0">
+                        <h3 className="text-white font-semibold text-sm truncate">
+                          {job.title}
+                        </h3>
+                        <p className="text-slate-400 text-xs flex items-center gap-1 truncate">
+                          <Building2 className="w-3 h-3 shrink-0" />
+                          {job.company?.name ||
+                            t("Jobs.companyFallback", "Company")}
                         </p>
                       </div>
                     </div>
                     <button
+                      type="button"
                       onClick={() => toggleSave(job.id)}
-                      className={`p-2 rounded-lg transition-all ${
-                        savedJobs.includes(job.id)
-                          ? "bg-red-500/10 text-red-400"
-                          : "bg-white/5 text-slate-400 hover:text-red-400"
-                      }`}
+                      className="p-1.5 rounded-lg hover:bg-white/10 transition-all"
+                      aria-label={t("Common.save", "Save")}
                     >
                       <Heart
-                        className="w-4 h-4"
-                        fill={savedJobs.includes(job.id) ? "currentColor" : "none"}
+                        className={`w-4 h-4 ${
+                          isSaved
+                            ? "fill-rose-400 text-rose-400"
+                            : "text-slate-500"
+                        }`}
                       />
                     </button>
                   </div>
@@ -365,8 +484,10 @@ export default function AdvancedSearchPage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <DollarSign className="w-3 h-3" />
-                      {job.currency}
-                      {(job.salaryMin ?? 0).toLocaleString()} - {(job.salaryMax ?? 0).toLocaleString()}
+                      {job.currency}{" "}
+                      {(job.salaryMin ?? 0).toLocaleString(locale)}
+                      {" - "}
+                      {(job.salaryMax ?? 0).toLocaleString(locale)}
                     </span>
                   </div>
 
@@ -382,12 +503,15 @@ export default function AdvancedSearchPage() {
                   </div>
 
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
-                    <span className="text-[10px] text-slate-500">{timeAgo(job.createdAt)}</span>
+                    <span className="text-[10px] text-slate-500">
+                      {timeAgo(job.createdAt)}
+                    </span>
                     <Link
                       href={`/jobs/${job.id}`}
                       className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                     >
-                      View <ArrowRight className="w-3 h-3" />
+                      {t("Search.viewJob", "View")}{" "}
+                      <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
                 </div>
@@ -397,14 +521,19 @@ export default function AdvancedSearchPage() {
         ) : (
           <div className="text-center py-20">
             <Search className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-white font-medium mb-1">No jobs found</p>
-            <p className="text-slate-400 text-sm mb-6">Try adjusting your search criteria</p>
+            <p className="text-white font-medium mb-1">
+              {t("Jobs.noJobsFound", "No jobs found")}
+            </p>
+            <p className="text-slate-400 text-sm mb-6">
+              {t("Jobs.tryAdjusting", "Try adjusting your search criteria")}
+            </p>
             <button
+              type="button"
               onClick={clearFilters}
               className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Clear Filters
+              {t("Search.clearFilters", "Clear filters")}
             </button>
           </div>
         )}
