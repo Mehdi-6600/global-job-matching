@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FileText,
+  ArrowLeft,
   Loader2,
+  AlertCircle,
   Sparkles,
   Copy,
-  CheckCircle2,
-  AlertCircle,
-  ArrowLeft,
   Printer,
+  CheckCircle2,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
-type FormState = {
+interface FormState {
   fullName: string;
   email: string;
   phone: string;
@@ -24,9 +25,9 @@ type FormState = {
   experience: string;
   education: string;
   languages: string;
-  tone: "professional" | "confident" | "concise";
+  tone: string;
   saveToProfile: boolean;
-};
+}
 
 const emptyForm: FormState = {
   fullName: "",
@@ -44,6 +45,7 @@ const emptyForm: FormState = {
 };
 
 export default function ResumeBuilderPage() {
+  const { t } = useLocale();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [resume, setResume] = useState("");
   const [source, setSource] = useState<"ai" | "template" | "">("");
@@ -115,15 +117,15 @@ export default function ResumeBuilderPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Generation failed");
+        setError(data.error || t("Common.error", "Generation failed"));
         setLoading(false);
         return;
       }
       setResume(data.resume || "");
       setSource(data.source || "");
-      setSuccess(data.message || "Resume ready");
+      setSuccess(data.message || t("Common.success", "Resume ready"));
     } catch {
-      setError("Network error");
+      setError(t("Common.errorNetwork", "Network error"));
     } finally {
       setLoading(false);
     }
@@ -136,7 +138,7 @@ export default function ResumeBuilderPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError("Could not copy to clipboard");
+      setError(t("Common.error", "Could not copy to clipboard"));
     }
   }
 
@@ -172,16 +174,20 @@ export default function ResumeBuilderPage() {
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          {t("Common.back", "Back to Dashboard")}
         </Link>
 
         <div className="flex items-center gap-3 mb-8">
           <FileText className="w-7 h-7 text-cyan-400" />
           <div>
-            <h1 className="text-2xl font-bold text-white">AI Resume Builder</h1>
+            <h1 className="text-2xl font-bold text-white">
+              {t("Resume.title", "AI Resume Builder")}
+            </h1>
             <p className="text-slate-400 text-sm">
-              Fill your details — generate a professional resume you can copy or
-              print
+              {t(
+                "Resume.subtitle",
+                "Fill your details — generate a professional resume"
+              )}
             </p>
           </div>
         </div>
@@ -213,14 +219,14 @@ export default function ResumeBuilderPage() {
                 value={form.fullName}
                 onChange={handleChange}
                 required
-                placeholder="Full name *"
+                placeholder={t("Settings.name", "Full name") + " *"}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
               />
               <input
                 name="targetRole"
                 value={form.targetRole}
                 onChange={handleChange}
-                placeholder="Target role"
+                placeholder={t("Settings.headline", "Target role")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
               />
             </div>
@@ -230,14 +236,14 @@ export default function ResumeBuilderPage() {
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="Email"
+                placeholder={t("Settings.email", "Email")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
               />
               <input
                 name="phone"
                 value={form.phone}
                 onChange={handleChange}
-                placeholder="Phone"
+                placeholder={t("Settings.phone", "Phone")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
               />
             </div>
@@ -245,7 +251,7 @@ export default function ResumeBuilderPage() {
               name="location"
               value={form.location}
               onChange={handleChange}
-              placeholder="Location"
+              placeholder={t("Settings.location", "Location")}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
             />
             <textarea
@@ -253,7 +259,7 @@ export default function ResumeBuilderPage() {
               value={form.summary}
               onChange={handleChange}
               rows={3}
-              placeholder="Short summary / career goal"
+              placeholder={t("Settings.bio", "Short summary / career goal")}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
             />
             <textarea
@@ -261,7 +267,7 @@ export default function ResumeBuilderPage() {
               value={form.skills}
               onChange={handleChange}
               rows={2}
-              placeholder="Skills (e.g. React, TypeScript, Project management)"
+              placeholder={t("Jobs.tagPlaceholder", "Skills")}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
             />
             <textarea
@@ -269,7 +275,10 @@ export default function ResumeBuilderPage() {
               value={form.experience}
               onChange={handleChange}
               rows={5}
-              placeholder="Experience (company, role, years, what you did)"
+              placeholder={t(
+                "Profile.experience",
+                "Experience (company, role, years)"
+              )}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
             />
             <textarea
@@ -277,14 +286,14 @@ export default function ResumeBuilderPage() {
               value={form.education}
               onChange={handleChange}
               rows={2}
-              placeholder="Education"
+              placeholder={t("Profile.education", "Education")}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
             />
             <input
               name="languages"
               value={form.languages}
               onChange={handleChange}
-              placeholder="Languages"
+              placeholder={t("Common.optional", "Languages")}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
             />
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -305,7 +314,7 @@ export default function ResumeBuilderPage() {
                   checked={form.saveToProfile}
                   onChange={handleChange}
                 />
-                Save notes to profile
+                {t("Common.save", "Save notes to profile")}
               </label>
             </div>
             <button
@@ -316,12 +325,12 @@ export default function ResumeBuilderPage() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating...
+                  {t("Resume.generating", "Generating...")}
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  Generate Resume
+                  {t("Resume.generate", "Generate Resume")}
                 </>
               )}
             </button>
@@ -329,7 +338,9 @@ export default function ResumeBuilderPage() {
 
           <div className="glass rounded-2xl p-6 border border-white/10 flex flex-col min-h-[420px]">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-white font-semibold text-sm">Preview</h2>
+              <h2 className="text-white font-semibold text-sm">
+                {t("Common.view", "Preview")}
+              </h2>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -342,7 +353,9 @@ export default function ResumeBuilderPage() {
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
-                  {copied ? "Copied" : "Copy"}
+                  {copied
+                    ? t("Common.success", "Copied")
+                    : t("Common.save", "Copy")}
                 </button>
                 <button
                   type="button"
@@ -361,7 +374,7 @@ export default function ResumeBuilderPage() {
               </pre>
             ) : (
               <div className="flex-1 flex items-center justify-center text-slate-500 text-sm text-center px-4">
-                Your generated resume will appear here
+                {t("Resume.subtitle", "Your generated resume will appear here")}
               </div>
             )}
           </div>
