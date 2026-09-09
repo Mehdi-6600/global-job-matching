@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Search,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 interface Application {
   id: string;
@@ -34,56 +35,57 @@ interface Application {
   };
 }
 
-const statusConfig: Record<
-  string,
-  { label: string; color: string; icon: React.ReactNode }
-> = {
-  pending: {
-    label: "Pending",
-    color: "text-amber-400 bg-amber-500/10",
-    icon: <Clock className="w-4 h-4" />,
-  },
-  applied: {
-    label: "Pending",
-    color: "text-amber-400 bg-amber-500/10",
-    icon: <Clock className="w-4 h-4" />,
-  },
-  viewed: {
-    label: "Viewed",
-    color: "text-blue-400 bg-blue-500/10",
-    icon: <Eye className="w-4 h-4" />,
-  },
-  interview: {
-    label: "Interview",
-    color: "text-cyan-400 bg-cyan-500/10",
-    icon: <Users className="w-4 h-4" />,
-  },
-  hired: {
-    label: "Hired",
-    color: "text-emerald-400 bg-emerald-500/10",
-    icon: <CheckCircle2 className="w-4 h-4" />,
-  },
-  rejected: {
-    label: "Rejected",
-    color: "text-red-400 bg-red-500/10",
-    icon: <XCircle className="w-4 h-4" />,
-  },
-};
-
-const STATUS_OPTIONS = [
-  { value: "pending", label: "Pending" },
-  { value: "viewed", label: "Viewed" },
-  { value: "interview", label: "Interview" },
-  { value: "hired", label: "Hired" },
-  { value: "rejected", label: "Rejected" },
-] as const;
-
 export default function EmployerApplicationsPage() {
+  const { t, locale } = useLocale();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
+
+  const statusConfig: Record<
+    string,
+    { label: string; color: string; icon: React.ReactNode }
+  > = {
+    pending: {
+      label: t("Common.loading", "Pending"),
+      color: "text-amber-400 bg-amber-500/10",
+      icon: <Clock className="w-4 h-4" />,
+    },
+    applied: {
+      label: t("Common.loading", "Pending"),
+      color: "text-amber-400 bg-amber-500/10",
+      icon: <Clock className="w-4 h-4" />,
+    },
+    viewed: {
+      label: t("Common.view", "Viewed"),
+      color: "text-blue-400 bg-blue-500/10",
+      icon: <Eye className="w-4 h-4" />,
+    },
+    interview: {
+      label: t("Nav.dashboard", "Interview"),
+      color: "text-cyan-400 bg-cyan-500/10",
+      icon: <Users className="w-4 h-4" />,
+    },
+    hired: {
+      label: t("Common.success", "Hired"),
+      color: "text-emerald-400 bg-emerald-500/10",
+      icon: <CheckCircle2 className="w-4 h-4" />,
+    },
+    rejected: {
+      label: t("Common.cancel", "Rejected"),
+      color: "text-red-400 bg-red-500/10",
+      icon: <XCircle className="w-4 h-4" />,
+    },
+  };
+
+  const STATUS_OPTIONS = [
+    { value: "pending", label: t("Common.loading", "Pending") },
+    { value: "viewed", label: t("Common.view", "Viewed") },
+    { value: "interview", label: t("Nav.dashboard", "Interview") },
+    { value: "hired", label: t("Common.success", "Hired") },
+    { value: "rejected", label: t("Common.cancel", "Rejected") },
+  ] as const;
 
   useEffect(() => {
     fetch("/api/employer/applications")
@@ -97,36 +99,30 @@ export default function EmployerApplicationsPage() {
 
   async function updateStatus(id: string, status: string) {
     setUpdating(id);
-    const res = await fetch(`/api/employer/applications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      const nextStatus = data?.application?.status || status;
-      setApplications((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status: nextStatus } : a))
-      );
+    try {
+      const res = await fetch(`/api/employer/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setApplications((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, status } : a))
+        );
+      }
+    } finally {
+      setUpdating(null);
     }
-    setUpdating(null);
   }
 
-  const filtered = applications.filter((a) => {
-    if (filter !== "all") {
-      if (filter === "pending") {
-        if (a.status !== "pending" && a.status !== "applied") return false;
-      } else if (a.status !== filter) {
-        return false;
-      }
+  const filtered = applications.filter((app) => {
+    if (filter !== "all" && app.status !== filter) {
+      if (!(filter === "pending" && app.status === "applied")) return false;
     }
     if (search) {
       const q = search.toLowerCase();
-      return (
-        a.user.name?.toLowerCase().includes(q) ||
-        a.user.email.toLowerCase().includes(q) ||
-        a.job.title.toLowerCase().includes(q)
-      );
+      const hay = `${app.user.name || ""} ${app.user.email} ${app.job.title}`.toLowerCase();
+      if (!hay.includes(q)) return false;
     }
     return true;
   });
@@ -141,63 +137,54 @@ export default function EmployerApplicationsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="glass rounded-2xl p-6 mb-6 border border-white/10">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-7 h-7 text-indigo-400" />
-              <div>
-                <h1 className="text-2xl font-bold text-white">Applications</h1>
-                <p className="text-slate-400 text-sm">
-                  {applications.length} total
-                </p>
-              </div>
-            </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
             <Link
               href="/employer/dashboard"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
+              className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-2"
             >
-              <ArrowLeft className="w-4 h-4" /> Dashboard
+              <ArrowLeft className="w-4 h-4" />
+              {t("Common.back", "Back")}
             </Link>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Users className="w-6 h-6 text-emerald-400" />
+              {t("Employer.applicants", "Applicants")}
+            </h1>
           </div>
         </div>
 
-        <div className="glass rounded-2xl p-4 mb-6 border border-white/10 flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               type="text"
-              placeholder="Search by name, email, or job..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              placeholder={t("Common.search", "Search...")}
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm outline-none"
           >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="viewed">Viewed</option>
-            <option value="interview">Interview</option>
-            <option value="hired">Hired</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">{t("Jobs.allTypes", "All")}</option>
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="space-y-4">
           {filtered.length === 0 ? (
             <div className="glass rounded-2xl p-12 text-center border border-white/10">
-              <Briefcase className="w-14 h-14 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-1">
-                No applications found
-              </h3>
-              <p className="text-slate-400 text-sm">
-                {applications.length === 0
-                  ? "When candidates apply, they appear here."
-                  : "Adjust your filters."}
+              <Briefcase className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">
+                {t("Common.noResults", "No applications found")}
               </p>
             </div>
           ) : (
@@ -210,29 +197,21 @@ export default function EmployerApplicationsPage() {
               return (
                 <div
                   key={app.id}
-                  className="glass rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all"
+                  className="glass rounded-2xl p-5 border border-white/10"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold text-lg shrink-0">
-                        {app.user.name?.charAt(0) || "?"}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-300 font-semibold text-sm shrink-0">
+                        {(app.user.name || app.user.email || "?")
+                          .charAt(0)
+                          .toUpperCase()}
                       </div>
-                      <div>
-                        <h3 className="font-medium text-white">
-                          {app.user.name || "Anonymous"}
-                        </h3>
-                        <p className="text-slate-400 text-sm">
-                          {app.user.email}
+                      <div className="min-w-0">
+                        <p className="text-white font-medium truncate">
+                          {app.user.name || app.user.email}
                         </p>
-                        <p className="text-slate-500 text-xs mt-1">
-                          Applied for{" "}
-                          <Link
-                            href={`/jobs/${app.job.id}`}
-                            className="text-indigo-400 hover:text-indigo-300"
-                          >
-                            {app.job.title}
-                          </Link>{" "}
-                          at {app.job.company.name}
+                        <p className="text-slate-400 text-sm truncate">
+                          {app.job.title}
                         </p>
                         {app.user.title && (
                           <p className="text-slate-500 text-xs mt-0.5">
@@ -240,6 +219,9 @@ export default function EmployerApplicationsPage() {
                             {app.user.location && ` • ${app.user.location}`}
                           </p>
                         )}
+                        <p className="text-slate-600 text-xs mt-1">
+                          {new Date(app.createdAt).toLocaleDateString(locale)}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
