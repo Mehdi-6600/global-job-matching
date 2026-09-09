@@ -10,6 +10,7 @@ import {
   Send,
   FileText,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 type Props = {
   jobId: string;
@@ -17,9 +18,13 @@ type Props = {
 };
 
 export function ContactEmployer({ jobId, jobTitle }: Props) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState(
-    `I am very interested in the "${jobTitle}" position and would welcome the chance to discuss how my background fits your team.\n\nThank you for your time.`
+    t(
+      "JobDetail.contactDefault",
+      `I am very interested in the "${jobTitle}" position and would welcome the chance to discuss how my background fits your team.\n\nThank you for your time.`
+    ).replace("{title}", jobTitle)
   );
   const [subject, setSubject] = useState("");
   const [loading, setLoading] = useState<"draft" | "send" | null>(null);
@@ -55,156 +60,162 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
       }
 
       if (!res.ok) {
-        setError(data.error || "Request failed");
-        if (data.draft) setDraft(data.draft);
-        setLoading(null);
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : t("Common.error", "Request failed")
+        );
         return;
       }
 
       if (mode === "draft") {
-        setDraft(data.draft || "");
-        setSuccess(
-          data.hasEmployerEmail
-            ? "Draft ready — copy and send from your email, or use Send below."
-            : "Draft ready — no employer email on file; please send this yourself."
+        setDraft(
+          typeof data.draft === "string"
+            ? data.draft
+            : typeof data.message === "string"
+              ? data.message
+              : message
         );
+        setSuccess(t("Common.success", "Draft ready"));
       } else {
-        setSuccess(`Email sent to ${data.sentTo}`);
+        setSuccess(
+          t("Common.success", "Message sent (or queued for the employer)")
+        );
         setConfirmSend(false);
       }
     } catch {
-      setError("Network error");
+      setError(t("Common.errorNetwork", "Network error"));
     } finally {
       setLoading(null);
     }
   }
 
   async function copyDraft() {
-    if (!draft) return;
+    const text = draft || message;
     try {
-      await navigator.clipboard.writeText(draft);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError("Could not copy");
+      setError(t("Common.error", "Could not copy"));
     }
   }
 
   return (
-    <div className="glass rounded-2xl border border-white/10 p-5">
+    <div className="w-full">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-2 text-left"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-200 hover:bg-white/10 transition-colors"
       >
-        <span className="flex items-center gap-2 text-white font-semibold text-sm">
-          <Mail className="w-4 h-4 text-cyan-400" />
-          Contact employer by email
-        </span>
-        <span className="text-slate-500 text-xs">{open ? "Hide" : "Open"}</span>
+        <Mail className="w-4 h-4 text-cyan-400" />
+        {t("JobDetail.contactEmployer", "Contact employer")}
       </button>
 
       {open && (
-        <div className="mt-4 space-y-3">
-          <p className="text-slate-400 text-xs leading-relaxed">
-            Write a short message. You can generate a <strong>draft</strong> to
-            copy, or <strong>send</strong> via the platform (requires your
-            confirmation). The employer can reply to your email.
-          </p>
+        <div className="mt-4 glass rounded-2xl border border-white/10 p-5 space-y-4">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">
+              {t("Contact.subject", "Subject (optional)")}
+            </label>
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50"
+              placeholder={jobTitle}
+            />
+          </div>
 
-          <input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Subject (optional)"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
-          />
-
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={5}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 resize-none"
-          />
+          <div>
+            <label className="block text-xs text-slate-400 mb-1.5">
+              {t("Contact.message", "Message")}
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={5}
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50 resize-y"
+            />
+          </div>
 
           {error && (
-            <div className="text-red-400 text-xs flex items-start gap-2">
-              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              {error}
+            <div className="flex items-start gap-2 text-sm text-red-400">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
           {success && (
-            <div className="text-emerald-400 text-xs flex items-start gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              {success}
+            <div className="flex items-start gap-2 text-sm text-emerald-400">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{success}</span>
             </div>
           )}
 
           {draft && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-xs flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5" /> Draft
+            <div className="rounded-xl bg-black/20 border border-white/10 p-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5" />
+                  {t("Common.view", "Draft")}
                 </span>
                 <button
                   type="button"
                   onClick={copyDraft}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                  className="text-xs text-cyan-400 inline-flex items-center gap-1"
                 >
-                  {copied ? (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
-                  {copied ? "Copied" : "Copy"}
+                  <Copy className="w-3.5 h-3.5" />
+                  {copied
+                    ? t("Common.success", "Copied")
+                    : t("Common.save", "Copy")}
                 </button>
               </div>
-              <pre className="text-xs text-slate-300 whitespace-pre-wrap bg-black/30 rounded-xl p-3 max-h-48 overflow-auto border border-white/5">
+              <pre className="text-xs text-slate-300 whitespace-pre-wrap font-sans">
                 {draft}
               </pre>
             </div>
           )}
 
-          <label className="flex items-start gap-2 text-slate-400 text-xs cursor-pointer">
+          <label className="flex items-start gap-2 text-xs text-slate-400 cursor-pointer">
             <input
               type="checkbox"
               checked={confirmSend}
               onChange={(e) => setConfirmSend(e.target.checked)}
               className="mt-0.5"
             />
-            I confirm I want the platform to email the employer on my behalf
-            (Send only).
+            <span>
+              {t(
+                "JobDetail.contactConfirm",
+                "I confirm I want to send this message to the employer (not only a draft)."
+              )}
+            </span>
           </label>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={loading !== null || message.trim().length < 30}
+              disabled={!!loading}
               onClick={() => run("draft")}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-sm font-medium hover:bg-white/10 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-200 disabled:opacity-50"
             >
               {loading === "draft" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <FileText className="w-4 h-4" />
               )}
-              Draft only
+              {t("Common.view", "Generate draft")}
             </button>
             <button
               type="button"
-              disabled={
-                loading !== null ||
-                message.trim().length < 30 ||
-                !confirmSend
-              }
+              disabled={!!loading || !confirmSend}
               onClick={() => run("send")}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-semibold disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-sm text-white font-medium disabled:opacity-50"
             >
               {loading === "send" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />
               )}
-              Send email
+              {t("Common.submit", "Send")}
             </button>
           </div>
         </div>
