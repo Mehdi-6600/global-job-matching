@@ -4,39 +4,84 @@ import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import { env } from "@/lib/env";
 
-// راه‌اندازی Resend با کلید محیطی
-const resend = new Resend(env.RESEND_API_KEY);
-
-// ✅ فقط کاربران لاگین شده اجازه ارسال ایمیل دارند
 export async function POST(req: NextRequest) {
   try {
-    // 1. بررسی احراز هویت
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "لطفاً وارد حساب کاربری خود شوید" },
+        { error: "Please sign in to continue" },
         { status: 401 }
       );
     }
 
-    const { userId, subject, template } = await req.json();
+    if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+      return NextResponse.json(
+        {
+          error:
+            "Email service is not configured. Set RESEND_API_KEY and RESEND_FROM_EMAIL.",
+          code: "EMAIL_NOT_CONFIGURED",
+        },
+        { status: 503 }
+      );
+    }
 
-    // 2. کاربر فقط می‌تواند برای خودش ایمیل بفرستد (یا ادمین)
+    const resend = new Resend(env.RESEND_API_KEY);
+    const fromEmail = env.RESEND_FROM_EMAIL;
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const userId =
+      typeof body === "object" &&
+      body !== null &&
+      "userId" in body &&
+      typeof (body as { userId: unknown }).userId === "string"
+        ? (body as { userId: string }).userId
+        : "";
+
+    const subject =
+      typeof body === "object" &&
+      body !== null &&
+      "subject" in body &&
+      typeof (body as { subject: unknown }).subject === "string"
+        ? (body as { subject: string }).subject
+        : undefined;
+
+    const template =
+      typeof body === "object" &&
+      body !== null &&
+      "template" in body &&
+      typeof (body as { template: unknown }).template === "string"
+        ? (body as { template: string }).template
+        : "welcome";
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "userId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Users may only email themselves; ADMIN/OWNER may email others
     if (userId !== session.user.id) {
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: { role: true },
       });
-      
-      if (user?.role !== "ADMIN" && user?.role !== "OWNER") {
+
+      const role = (user?.role || "").toUpperCase();
+      if (role !== "ADMIN" && role !== "OWNER") {
         return NextResponse.json(
-          { error: "شما دسترسی ارسال ایمیل برای دیگران را ندارید" },
+          { error: "You are not allowed to send email for other users" },
           { status: 403 }
         );
       }
     }
 
-    // 3. دریافت اطلاعات کاربر گیرنده
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, name: true },
@@ -44,45 +89,47 @@ export async function POST(req: NextRequest) {
 
     if (!targetUser?.email) {
       return NextResponse.json(
-        { error: "کاربر مورد نظر یافت نشد" },
+        { error: "User not found" },
         { status: 404 }
       );
     }
 
-    // 4. قالب‌های از پیش تعیین شده (امن)
+    const appUrl = env.NEXT_PUBLIC_APP_URL;
+    const displayName = targetUser.name || "there";
+
     const templates: Record<string, { subject: string; html: string }> = {
       "job-alert": {
-        subject: "شغل‌های جدید مطابق با سلیقه شما",
-        html: `<h1>سلام ${targetUser.name || "کاربر"}</h1>
-               <p>شغل‌های جدیدی مطابق با جستجوی شما پیدا شده است.</p>
-               <a href="${env.NEXT_PUBLIC_APP_URL}/jobs">مشاهده مشاغل</a>`,
+        subject: "New jobs matching your preferences",
+        html: `<h1>Hi ${displayName}</h1>
+               <p>We found new jobs that match your search.</p>
+               <a href="${appUrl}/jobs">View jobs</a>`,
       },
-      "welcome": {
-        subject: "به Global Job Matching خوش آمدید",
-        html: `<h1>سلام ${targetUser.name || "کاربر"}</h1>
-               <p>از ثبت‌نام شما در پلتفرم Global Job Matching خوشحالیم.</p>
-               <p>برای شروع، پروفایل خود را تکمیل کنید.</p>
-               <a href="${env.NEXT_PUBLIC_APP_URL}/dashboard">ورود به داشبورد</a>`,
+      welcome: {
+        subject: "Welcome to Global Job Matching",
+        html: `<h1>Hi ${displayName}</h1>
+               <p>Thanks for joining Global Job Matching.</p>
+               <p>Complete your profile to get started.</p>
+               <a href="${appUrl}/dashboard">Go to dashboard</a>`,
       },
     };
 
-    // 5. انتخاب قالب (اگر نامعتبر بود، قالب پیش‌فرض)
-    const selectedTemplate = templates[template] || templates["welcome"];
+    const selectedTemplate = templates[template] || templates.welcome;
 
-    // 6. ارسال ایمیل
     await resend.emails.send({
-      from: env.RESEND_FROM_EMAIL,
+      from: fromEmail,
       to: targetUser.email,
       subject: subject || selectedTemplate.subject,
       html: selectedTemplate.html,
     });
 
-    return NextResponse.json({ success: true, message: "ایمیل با موفقیت ارسال شد" });
-
+    return NextResponse.json({
+      success: true,
+      message: "Email sent successfully",
+    });
   } catch (error) {
     console.error("Email sending error:", error);
     return NextResponse.json(
-      { error: "خطا در ارسال ایمیل" },
+      { error: "Failed to send email" },
       { status: 500 }
     );
   }
