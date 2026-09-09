@@ -18,7 +18,9 @@
     "settings": "Settings",
     "savedJobs": "Saved jobs",
     "applications": "Applications",
-    "jobAlerts": "Job alerts"
+    "jobAlerts": "Job alerts",
+    "help": "Help",
+    "profile": "Profile"
   },
   "Home": {
     "title": "Find Your Next Job Anywhere",
@@ -82,7 +84,12 @@
       "days": "{count} days ago",
       "daysAgo": "{count}d ago",
       "months": "{count} months ago"
-    }
+    },
+    "add": "Add",
+    "close": "Close",
+    "confirm": "Confirm",
+    "forbidden": "Access denied",
+    "status": "Status"
   },
   "Auth": {
     "loginTitle": "Sign In",
@@ -108,7 +115,8 @@
       "invalidCredentials": "Invalid email or password",
       "emailExists": "Email already registered",
       "generic": "Something went wrong",
-      "network": "Network error. Please try again."
+      "network": "Network error. Please try again.",
+      "rateLimited": "Too many requests. Please try again later."
     }
   },
   "Contact": {
@@ -189,7 +197,36 @@
     "entF1": "Up to 50 active job posts",
     "entF2": "Everything in Business",
     "entF3": "200 AI generations / month",
-    "entF4": "Priority support"
+    "entF4": "Priority support",
+    "asset": "Asset",
+    "bizF5": "Priority support",
+    "choose": "Choose plan",
+    "confirm": "I confirm I sent the payment",
+    "cta": "Continue with crypto",
+    "faqTitle": "FAQ",
+    "faq1q": "How do crypto payments work?",
+    "faq1a": "Send the exact amount to the wallet shown, then submit your transaction hash for admin verification.",
+    "faq2q": "When is my plan activated?",
+    "faq2a": "After an admin confirms your transaction. This is usually quick during business hours.",
+    "faq3q": "Can I change plans later?",
+    "faq3a": "Yes. Submit a new payment for the plan you want; your active plan updates after confirmation.",
+    "faq4q": "What if I sent the wrong amount?",
+    "faq4a": "Contact support with your transaction hash. We cannot reverse blockchain transfers.",
+    "free": "Free plan",
+    "getStarted": "Get started",
+    "goDashboard": "Go to dashboard",
+    "login": "Sign in to upgrade",
+    "noWallet": "No wallet configured for this asset",
+    "payTitle": "Pay with crypto",
+    "proF5": "AI career insights",
+    "save": "Save",
+    "sendTo": "Send to",
+    "submittedDesc": "Your transaction was submitted and is pending verification.",
+    "submittedTitle": "Payment submitted",
+    "submitting": "Submitting…",
+    "txHash": "Transaction hash",
+    "verifyNote": "Plan activates only after admin verification of the on-chain payment.",
+    "walletsEmpty": "Crypto wallets are not configured yet."
   },
   "Dashboard": {
     "navDashboard": "Dashboard",
@@ -225,7 +262,9 @@
     "company": "Company",
     "salaryNA": "Not specified",
     "remote": "Remote",
-    "noJobs": "No jobs to show yet."
+    "noJobs": "No jobs to show yet.",
+    "recent": "Recent",
+    "stats": "Statistics"
   },
   "Settings": {
     "title": "Settings",
@@ -281,7 +320,10 @@
     "disclaimer": "This is an AI-powered estimate based on the information you provided. It is not a definitive prediction of your career future.",
     "failed": "Failed to analyze career risk",
     "authRequired": "Please sign in to run a career risk analysis.",
-    "needTitle": "Please enter a job title (at least 2 characters)."
+    "needTitle": "Please enter a job title (at least 2 characters).",
+    "cta": "New assessment",
+    "locked": "Alternative roles were locked for this shared free report.",
+    "score": "Risk score"
   },
   "Jobs": {
     "title": "Find Your Dream Job",
@@ -322,7 +364,12 @@
     "upTo": "Up to",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "pageOf": "Page {current} of {total}"
+    "pageOf": "Page {current} of {total}",
+    "active": "Active",
+    "category": "Category",
+    "noJobs": "No jobs found",
+    "pending": "Pending",
+    "salaryNA": "Salary not specified"
   },
   "Applications": {
     "title": "My Applications",
@@ -439,7 +486,8 @@
     "company": "Company",
     "school": "School",
     "degree": "Degree",
-    "year": "Year"
+    "year": "Year",
+    "role": "Role"
   },
   "Blog": {
     "title": "Career Blog",
@@ -447,7 +495,8 @@
     "noArticles": "No articles yet. Check back soon!",
     "readMore": "Read more",
     "backToBlog": "Back to blog",
-    "publishedOn": "Published on"
+    "publishedOn": "Published on",
+    "back": "Back to Blog"
   },
   "Terms": {
     "title": "Terms of Service",
@@ -518,7 +567,8 @@
     "jobs": "Jobs",
     "viewProfile": "View profile",
     "location": "Location",
-    "website": "Website"
+    "website": "Website",
+    "pending": "Pending companies"
   },
   "AuthExtra": {
     "forgotTitle": "Forgot password",
