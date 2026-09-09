@@ -20,6 +20,7 @@ import {
   PlanLimitBanner,
   getPlanLimitFromResponse,
 } from "@/components/plan-limit-banner";
+import { useLocale } from "@/components/locale-provider";
 
 interface Job {
   id: string;
@@ -53,6 +54,7 @@ function jobApplicantCount(job: Job): number {
 }
 
 export default function EmployerDashboardPage() {
+  const { t, locale } = useLocale();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [plan, setPlan] = useState<PlanInfo | null>(null);
@@ -94,24 +96,24 @@ export default function EmployerDashboardPage() {
         total: jobList.length,
         active: jobList.filter((j) => j.status === "active").length,
         pending: jobList.filter((j) => j.status === "pending").length,
-        applicants: jobList.reduce((sum, j) => sum + jobApplicantCount(j), 0),
+        applicants: jobList.reduce(
+          (sum, j) => sum + jobApplicantCount(j),
+          0
+        ),
       });
       setError("");
     } catch {
-      setError("Failed to load dashboard data");
+      setError(t("Common.error", "Something went wrong"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
-    loadDashboard();
+    void loadDashboard();
   }, [loadDashboard]);
 
   async function closeJob(jobId: string) {
-    if (!confirm("Close this job? Candidates will no longer be able to apply.")) {
-      return;
-    }
     setActionId(jobId);
     try {
       const res = await fetch(`/api/jobs/${jobId}`, {
@@ -121,19 +123,26 @@ export default function EmployerDashboardPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || "Failed to close job");
+        alert(data.error || t("Common.error", "Failed to close job"));
         return;
       }
       await loadDashboard();
     } catch {
-      alert("Network error");
+      alert(t("Common.errorNetwork", "Network error"));
     } finally {
       setActionId(null);
     }
   }
 
   async function deleteJob(jobId: string) {
-    if (!confirm("Permanently delete this job? This cannot be undone.")) {
+    if (
+      !confirm(
+        t(
+          "Common.delete",
+          "Permanently delete this job? This cannot be undone."
+        )
+      )
+    ) {
       return;
     }
     setActionId(jobId);
@@ -141,12 +150,12 @@ export default function EmployerDashboardPage() {
       const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || "Failed to delete job");
+        alert(data.error || t("Common.error", "Failed to delete job"));
         return;
       }
       await loadDashboard();
     } catch {
-      alert("Network error");
+      alert(t("Common.errorNetwork", "Network error"));
     } finally {
       setActionId(null);
     }
@@ -160,16 +169,43 @@ export default function EmployerDashboardPage() {
     );
   }
 
+  const statCards = [
+    {
+      label: t("Employer.myJobs", "Total Jobs"),
+      value: stats.total,
+      icon: <Briefcase className="w-5 h-5 text-cyan-400" />,
+      color: "from-cyan-500 to-blue-500",
+    },
+    {
+      label: t("Common.success", "Active"),
+      value: stats.active,
+      icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />,
+      color: "from-emerald-500 to-teal-500",
+    },
+    {
+      label: t("Common.loading", "Pending"),
+      value: stats.pending,
+      icon: <Clock className="w-5 h-5 text-amber-400" />,
+      color: "from-amber-500 to-orange-500",
+    },
+    {
+      label: t("Employer.applicants", "Applicants"),
+      value: stats.applicants,
+      icon: <Users className="w-5 h-5 text-indigo-400" />,
+      color: "from-indigo-500 to-purple-500",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-white">
-              Employer Dashboard
+              {t("Employer.title", "Employer Dashboard")}
             </h1>
             <p className="text-slate-400 text-sm">
-              Manage your jobs and applicants
+              {t("Employer.myJobs", "Manage your jobs and applicants")}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -177,7 +213,8 @@ export default function EmployerDashboardPage() {
               href="/employer/interviews"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
             >
-              <MessageSquare className="w-4 h-4" /> Interviews
+              <MessageSquare className="w-4 h-4" />
+              {t("Nav.dashboard", "Interviews")}
             </Link>
             <Link
               href="/employer/post-job"
@@ -187,64 +224,49 @@ export default function EmployerDashboardPage() {
                   : "bg-indigo-600 hover:bg-indigo-500 text-white"
               }`}
             >
-              <Plus className="w-4 h-4" /> Post New Job
+              <Plus className="w-4 h-4" />
+              {t("Employer.postJob", "Post New Job")}
             </Link>
           </div>
         </div>
 
-        {(planLimit || plan?.atLimit) && (
+        {planLimit && (
           <div className="mb-6">
             <PlanLimitBanner
-              message={
-                planLimit?.message ||
-                `Active job limit reached (${plan?.activeJobs}/${plan?.maxActiveJobsEmployer}). Upgrade to post more jobs.`
-              }
-              code={planLimit?.code || "PLAN_LIMIT_JOBS"}
+              message={planLimit.message}
+              code={planLimit.code}
               onClose={() => setPlanLimit(null)}
             />
           </div>
         )}
 
-        {plan && !plan.atLimit && (
-          <p className="text-xs text-slate-500 mb-4">
-            Plan: {plan.name} · Active jobs {plan.activeJobs}/
-            {plan.maxActiveJobsEmployer} · Remaining {plan.remaining}
-          </p>
+        {plan && (
+          <div className="mb-6 glass rounded-xl p-4 border border-white/10 text-sm text-slate-300 flex flex-wrap gap-4">
+            <span>
+              {t("PlanUsage.activeEmployerJobsLabel", "Active job posts")}:{" "}
+              <strong className="text-white">
+                {plan.activeJobs}
+                {plan.maxActiveJobsEmployer >= 0
+                  ? ` / ${plan.maxActiveJobsEmployer}`
+                  : ""}
+              </strong>
+            </span>
+            <span className="text-slate-500">·</span>
+            <span>
+              {t("Pricing.title", "Plan")}:{" "}
+              <strong className="text-white">{plan.name}</strong>
+            </span>
+          </div>
         )}
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+          <div className="mb-6 flex items-center gap-2 text-red-400 text-sm">
             <AlertCircle className="w-4 h-4" /> {error}
           </div>
         )}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            {
-              label: "Total Jobs",
-              value: stats.total,
-              icon: <Briefcase className="w-5 h-5 text-cyan-400" />,
-              color: "from-cyan-500 to-blue-500",
-            },
-            {
-              label: "Active",
-              value: stats.active,
-              icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />,
-              color: "from-emerald-500 to-teal-500",
-            },
-            {
-              label: "Pending",
-              value: stats.pending,
-              icon: <Clock className="w-5 h-5 text-amber-400" />,
-              color: "from-amber-500 to-orange-500",
-            },
-            {
-              label: "Applicants",
-              value: stats.applicants,
-              icon: <Users className="w-5 h-5 text-indigo-400" />,
-              color: "from-indigo-500 to-purple-500",
-            },
-          ].map((card) => (
+          {statCards.map((card) => (
             <div
               key={card.label}
               className="glass rounded-2xl p-5 border border-white/10"
@@ -265,14 +287,16 @@ export default function EmployerDashboardPage() {
             <div className="glass rounded-2xl p-6 border border-white/10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-cyan-400" /> Posted Jobs
+                  <Briefcase className="w-5 h-5 text-cyan-400" />
+                  {t("Employer.myJobs", "Posted Jobs")}
                 </h2>
                 {!plan?.atLimit && (
                   <Link
                     href="/employer/post-job"
                     className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors flex items-center gap-1"
                   >
-                    <Plus className="w-4 h-4" /> New
+                    <Plus className="w-4 h-4" />
+                    {t("Common.submit", "New")}
                   </Link>
                 )}
               </div>
@@ -280,12 +304,15 @@ export default function EmployerDashboardPage() {
               {jobs.length === 0 ? (
                 <div className="text-center py-8">
                   <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">No jobs posted yet</p>
+                  <p className="text-slate-400 text-sm">
+                    {t("Jobs.noJobsFound", "No jobs posted yet")}
+                  </p>
                   <Link
                     href="/employer/post-job"
                     className="inline-flex items-center gap-2 mt-3 text-indigo-400 text-sm hover:text-indigo-300 transition-colors"
                   >
-                    Post your first job <ArrowRight className="w-3 h-3" />
+                    {t("Employer.postJob", "Post your first job")}{" "}
+                    <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
               ) : (
@@ -329,7 +356,7 @@ export default function EmployerDashboardPage() {
                           href="/employer/applications"
                           className="px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs font-medium hover:bg-indigo-600/30 transition-all"
                         >
-                          Applicants
+                          {t("Employer.applicants", "Applicants")}
                         </Link>
                         {job.status === "active" && (
                           <button
@@ -343,7 +370,7 @@ export default function EmployerDashboardPage() {
                             ) : (
                               <Ban className="w-3 h-3" />
                             )}
-                            Close
+                            {t("Common.cancel", "Close")}
                           </button>
                         )}
                         <button
@@ -357,7 +384,7 @@ export default function EmployerDashboardPage() {
                           ) : (
                             <Trash2 className="w-3 h-3" />
                           )}
-                          Delete
+                          {t("Common.delete", "Delete")}
                         </button>
                       </div>
                     </div>
@@ -368,33 +395,35 @@ export default function EmployerDashboardPage() {
 
             <div className="glass rounded-2xl p-6 border border-white/10">
               <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-400" /> Recent Applicants
+                <Users className="w-5 h-5 text-emerald-400" />
+                {t("Employer.applicants", "Recent applicants")}
               </h2>
               {applications.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-6">
-                  No applications yet
+                <p className="text-slate-400 text-sm text-center py-6">
+                  {t("Common.noResults", "No applications yet")}
                 </p>
               ) : (
                 <div className="space-y-3">
                   {applications.map((app) => (
                     <div
                       key={app.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5"
+                      className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/5"
                     >
-                      <div>
-                        <p className="text-sm text-white font-medium">
-                          {app.user?.name || app.user?.email || "Applicant"}
+                      <div className="min-w-0">
+                        <p className="text-sm text-white font-medium truncate">
+                          {app.user?.name || app.user?.email}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 truncate">
                           {app.job?.title}
                         </p>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                          app.status === "pending" || app.status === "applied"
-                            ? "bg-amber-500/10 text-amber-400"
-                            : app.status === "hired"
-                              ? "bg-emerald-500/10 text-emerald-400"
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${
+                          app.status === "accepted" ||
+                          app.status === "hired"
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : app.status === "rejected"
+                              ? "bg-red-500/10 text-red-400"
                               : "bg-slate-500/10 text-slate-400"
                         }`}
                       >
@@ -408,46 +437,51 @@ export default function EmployerDashboardPage() {
                 href="/employer/applications"
                 className="mt-4 flex items-center justify-center gap-2 text-indigo-400 text-sm hover:text-indigo-300 transition-colors"
               >
-                View All <ArrowRight className="w-3 h-3" />
+                {t("Common.view", "View All")}{" "}
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
           </div>
 
           <div className="glass rounded-2xl p-6 border border-white/10 h-fit">
             <h2 className="text-lg font-semibold text-white mb-3">
-              Quick Actions
+              {t("Dashboard.menu", "Quick Actions")}
             </h2>
             <div className="space-y-2">
               <Link
                 href="/employer/company/new"
                 className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
               >
-                <Plus className="w-4 h-4 text-cyan-400" /> Add Company
+                <Plus className="w-4 h-4 text-cyan-400" />
+                {t("Employer.company", "Add Company")}
               </Link>
               <Link
                 href="/employer/post-job"
                 className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
               >
-                <Briefcase className="w-4 h-4 text-indigo-400" /> Post Job
+                <Briefcase className="w-4 h-4 text-indigo-400" />
+                {t("Employer.postJob", "Post Job")}
               </Link>
               <Link
                 href="/employer/applications"
                 className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
               >
-                <Users className="w-4 h-4 text-emerald-400" /> Review Applicants
+                <Users className="w-4 h-4 text-emerald-400" />
+                {t("Employer.applicants", "Review Applicants")}
               </Link>
               <Link
                 href="/employer/interviews"
                 className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
               >
-                <MessageSquare className="w-4 h-4 text-amber-400" /> Schedule
-                Interviews
+                <MessageSquare className="w-4 h-4 text-amber-400" />
+                {t("Nav.dashboard", "Schedule Interviews")}
               </Link>
               <Link
                 href="/pricing"
                 className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-sm text-slate-300"
               >
-                <CheckCircle2 className="w-4 h-4 text-amber-400" /> Upgrade plan
+                <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                {t("Common.upgrade", "Upgrade plan")}
               </Link>
             </div>
           </div>
