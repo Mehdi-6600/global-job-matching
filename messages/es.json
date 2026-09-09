@@ -18,7 +18,9 @@
     "settings": "Ajustes",
     "savedJobs": "Empleos guardados",
     "applications": "Solicitudes",
-    "jobAlerts": "Alertas de empleo"
+    "jobAlerts": "Alertas de empleo",
+    "help": "Ayuda",
+    "profile": "Perfil"
   },
   "Home": {
     "title": "Encuentra tu próximo empleo en cualquier lugar",
@@ -82,7 +84,12 @@
       "days": "hace {count} días",
       "daysAgo": "hace {count}d",
       "months": "hace {count} meses"
-    }
+    },
+    "add": "Añadir",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "forbidden": "Acceso denegado",
+    "status": "Estado"
   },
   "Auth": {
     "loginTitle": "Iniciar sesión",
@@ -108,7 +115,8 @@
       "invalidCredentials": "Correo o contraseña incorrectos",
       "emailExists": "El correo ya está registrado",
       "generic": "Algo salió mal",
-      "network": "Error de red. Inténtalo de nuevo."
+      "network": "Error de red. Inténtalo de nuevo.",
+      "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo más tarde."
     }
   },
   "Contact": {
@@ -189,7 +197,36 @@
     "entF1": "Hasta 50 vacantes activas",
     "entF2": "Todo de Business",
     "entF3": "200 generaciones IA / mes",
-    "entF4": "Soporte prioritario"
+    "entF4": "Soporte prioritario",
+    "asset": "Activo",
+    "bizF5": "Soporte prioritario",
+    "choose": "Elegir plan",
+    "confirm": "Confirmo que envié el pago",
+    "cta": "Continuar con cripto",
+    "faqTitle": "Preguntas frecuentes",
+    "faq1q": "¿Cómo funcionan los pagos en cripto?",
+    "faq1a": "Envía el importe exacto a la billetera indicada y envía el hash de la transacción para verificación.",
+    "faq2q": "¿Cuándo se activa mi plan?",
+    "faq2a": "Después de que un administrador confirme tu transacción.",
+    "faq3q": "¿Puedo cambiar de plan después?",
+    "faq3a": "Sí. Envía un nuevo pago por el plan deseado; se actualiza tras la confirmación.",
+    "faq4q": "¿Y si envié el importe incorrecto?",
+    "faq4a": "Contacta con soporte con el hash. Las transferencias en blockchain no se pueden revertir.",
+    "free": "Plan gratuito",
+    "getStarted": "Empezar",
+    "goDashboard": "Ir al panel",
+    "login": "Inicia sesión para mejorar",
+    "noWallet": "No hay billetera para este activo",
+    "payTitle": "Pagar con cripto",
+    "proF5": "Insights de carrera con IA",
+    "save": "Guardar",
+    "sendTo": "Enviar a",
+    "submittedDesc": "Tu transacción se envió y está pendiente de verificación.",
+    "submittedTitle": "Pago enviado",
+    "submitting": "Enviando…",
+    "txHash": "Hash de transacción",
+    "verifyNote": "El plan se activa solo tras la verificación del pago en cadena.",
+    "walletsEmpty": "Las billeteras cripto aún no están configuradas."
   },
   "Dashboard": {
     "navDashboard": "Panel",
@@ -225,7 +262,9 @@
     "company": "Empresa",
     "salaryNA": "No especificado",
     "remote": "Remoto",
-    "noJobs": "Aún no hay empleos para mostrar."
+    "noJobs": "Aún no hay empleos para mostrar.",
+    "recent": "Reciente",
+    "stats": "Estadísticas"
   },
   "Settings": {
     "title": "Ajustes",
@@ -281,7 +320,10 @@
     "disclaimer": "Es una estimación con IA según tus datos; no es una predicción definitiva.",
     "failed": "Falló el análisis de riesgo laboral",
     "authRequired": "Inicia sesión para ejecutar el análisis.",
-    "needTitle": "Introduce un título de puesto (al menos 2 caracteres)."
+    "needTitle": "Introduce un título de puesto (al menos 2 caracteres).",
+    "cta": "Nueva evaluación",
+    "locked": "Las rutas alternativas están bloqueadas en este informe gratuito compartido.",
+    "score": "Puntuación de riesgo"
   },
   "Jobs": {
     "title": "Encuentra tu empleo soñado",
@@ -322,7 +364,12 @@
     "upTo": "Hasta",
     "previousPage": "Página anterior",
     "nextPage": "Página siguiente",
-    "pageOf": "Página {current} de {total}"
+    "pageOf": "Página {current} de {total}",
+    "active": "Activo",
+    "category": "Categoría",
+    "noJobs": "No se encontraron empleos",
+    "pending": "Pendiente",
+    "salaryNA": "Salario no especificado"
   },
   "Applications": {
     "title": "Mis solicitudes",
@@ -439,7 +486,8 @@
     "company": "Empresa",
     "school": "Institución",
     "degree": "Título",
-    "year": "Año"
+    "year": "Año",
+    "role": "Rol"
   },
   "Blog": {
     "title": "Blog profesional",
@@ -447,7 +495,8 @@
     "noArticles": "Aún no hay artículos. Vuelve pronto.",
     "readMore": "Leer más",
     "backToBlog": "Volver al blog",
-    "publishedOn": "Publicado el"
+    "publishedOn": "Publicado el",
+    "back": "Volver al blog"
   },
   "Terms": {
     "title": "Términos del servicio",
@@ -518,7 +567,8 @@
     "jobs": "Empleos",
     "viewProfile": "Ver perfil",
     "location": "Ubicación",
-    "website": "Sitio web"
+    "website": "Sitio web",
+    "pending": "Empresas pendientes"
   },
   "AuthExtra": {
     "forgotTitle": "Olvidé la contraseña",
