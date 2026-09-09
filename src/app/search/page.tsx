@@ -13,8 +13,8 @@ import {
   Loader2,
   RotateCcw,
   ArrowRight,
-  SlidersHorizontal,
   X,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 
@@ -90,7 +90,7 @@ export default function AdvancedSearchPage() {
   ];
 
   const experiences = [
-    { value: "", label: t("Search.allLevels", "All levels") },
+    { value: "", label: t("Jobs.anyExperience", "Any experience") },
     {
       value: "entry",
       label: t("Jobs.experienceLevels.entry", "Entry Level"),
@@ -111,23 +111,47 @@ export default function AdvancedSearchPage() {
   ];
 
   const postedOptions = [
-    { value: "", label: t("Search.anyTime", "Any time") },
-    { value: "1", label: t("Search.last24h", "Last 24 hours") },
-    { value: "3", label: t("Search.last3d", "Last 3 days") },
-    { value: "7", label: t("Search.last7d", "Last 7 days") },
-    { value: "30", label: t("Search.last30d", "Last 30 days") },
+    { value: "", label: t("Common.optional", "Any time") },
+    {
+      value: "1",
+      label: t("Common.timeAgo.hoursAgo", "{count}h ago").replace(
+        "{count}",
+        "24"
+      ),
+    },
+    {
+      value: "3",
+      label: t("Common.timeAgo.daysAgo", "{count}d ago").replace(
+        "{count}",
+        "3"
+      ),
+    },
+    {
+      value: "7",
+      label: t("Common.timeAgo.daysAgo", "{count}d ago").replace(
+        "{count}",
+        "7"
+      ),
+    },
+    {
+      value: "30",
+      label: t("Common.timeAgo.daysAgo", "{count}d ago").replace(
+        "{count}",
+        "30"
+      ),
+    },
   ];
 
   const sortOptions = [
-    { value: "newest", label: t("Search.sortNewest", "Newest first") },
-    { value: "oldest", label: t("Search.sortOldest", "Oldest first") },
+    { value: "newest", label: t("JobDetail.posted", "Posted") + " ↓" },
+    { value: "oldest", label: t("JobDetail.posted", "Posted") + " ↑" },
     {
       value: "salary-high",
-      label: t("Search.sortSalaryHigh", "Salary: high to low"),
+      label: t("JobDetail.salary", "Salary") + " ↓",
     },
     {
       value: "salary-low",
-      label: t("Search.sortSalaryLow", "Salary: low to high"),
+      label: t("JobDetail.salary", "Salary") + " ↑",
     },
   ];
 
@@ -138,21 +162,21 @@ export default function AdvancedSearchPage() {
       (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
     );
     if (days > 30) {
-      return interpolate(t("Search.monthsAgo", "{count} months ago"), {
+      return interpolate(t("Common.timeAgo.months", "{count} months ago"), {
         count: Math.floor(days / 30),
       });
     }
     if (days > 1) {
-      return interpolate(t("Search.daysAgo", "{count} days ago"), {
+      return interpolate(t("Common.timeAgo.days", "{count} days ago"), {
         count: days,
       });
     }
     if (days === 1) {
-      return interpolate(t("Search.dayAgo", "{count} day ago"), {
+      return interpolate(t("Common.timeAgo.days", "{count} days ago"), {
         count: 1,
       });
     }
-    return t("Search.today", "Today");
+    return t("Common.timeAgo.justNow", "Just now");
   }
 
   const fetchJobs = useCallback(() => {
@@ -220,13 +244,10 @@ export default function AdvancedSearchPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
-            {t("Search.title", "Advanced Search")}
+            {t("Jobs.title", "Jobs")}
           </h1>
           <p className="text-slate-400 text-sm">
-            {t(
-              "Search.subtitle",
-              "Find your perfect job with powerful filters"
-            )}
+            {t("Jobs.subtitle", "Find roles that match your skills")}
           </p>
         </div>
 
@@ -251,7 +272,7 @@ export default function AdvancedSearchPage() {
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10 transition-all"
             >
               <SlidersHorizontal className="w-4 h-4" />
-              {t("Search.filters", "Filters")}
+              {t("Jobs.filters", "Filters")}
               {activeFiltersCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-xs">
                   {activeFiltersCount}
@@ -312,7 +333,7 @@ export default function AdvancedSearchPage() {
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">
-                  {t("Search.posted", "Posted")}
+                  {t("JobDetail.posted", "Posted")}
                 </label>
                 <select
                   value={postedWithin}
@@ -374,7 +395,7 @@ export default function AdvancedSearchPage() {
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">
-                  {t("Search.sortBy", "Sort by")}
+                  {t("Common.search", "Sort")}
                 </label>
                 <select
                   value={sortBy}
@@ -400,7 +421,7 @@ export default function AdvancedSearchPage() {
                     className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10"
                   >
                     <X className="w-4 h-4" />
-                    {t("Search.clearFilters", "Clear filters")}
+                    {t("Jobs.clearAll", "Clear all")}
                   </button>
                 </div>
               )}
@@ -410,12 +431,7 @@ export default function AdvancedSearchPage() {
 
         <div className="flex items-center justify-between mb-4">
           <p className="text-slate-400 text-sm">
-            {loading
-              ? t("Common.loading", "Loading...")
-              : interpolate(
-                  t("Search.resultsCount", "{count} jobs found"),
-                  { count: jobs.length }
-                )}
+            {loading ? t("Common.loading", "Loading...") : `${jobs.length}`}
           </p>
         </div>
 
@@ -510,7 +526,7 @@ export default function AdvancedSearchPage() {
                       href={`/jobs/${job.id}`}
                       className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                     >
-                      {t("Search.viewJob", "View")}{" "}
+                      {t("Common.view", "View")}{" "}
                       <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
@@ -533,7 +549,7 @@ export default function AdvancedSearchPage() {
               className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              {t("Search.clearFilters", "Clear filters")}
+              {t("Jobs.clearAll", "Clear all")}
             </button>
           </div>
         )}
