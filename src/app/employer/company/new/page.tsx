@@ -12,8 +12,10 @@ import {
   Globe,
   FileText,
 } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 export default function NewCompanyPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -37,7 +39,9 @@ export default function NewCompanyPage() {
     setError("");
 
     if (form.name.trim().length < 2) {
-      setError("Company name must be at least 2 characters.");
+      setError(
+        t("Common.error", "Company name must be at least 2 characters.")
+      );
       return;
     }
 
@@ -57,14 +61,16 @@ export default function NewCompanyPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to create company profile.");
+        setError(
+          data.error || t("Common.error", "Failed to create company profile.")
+        );
         setSubmitting(false);
         return;
       }
 
       router.push("/employer/post-job");
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("Common.errorNetwork", "Network error. Please try again."));
       setSubmitting(false);
     }
   };
@@ -77,7 +83,7 @@ export default function NewCompanyPage() {
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          {t("Common.back", "Back to Dashboard")}
         </Link>
 
         <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
@@ -87,17 +93,20 @@ export default function NewCompanyPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">
-                Create Company Profile
+                {t("Employer.company", "Create Company")}
               </h1>
               <p className="text-slate-400 text-sm">
-                Required before you can post jobs
+                {t(
+                  "Employer.title",
+                  "Add your company profile before posting jobs"
+                )}
               </p>
             </div>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
+            <div className="mb-4 flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               {error}
             </div>
           )}
@@ -106,16 +115,15 @@ export default function NewCompanyPage() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 <Building2 className="w-3.5 h-3.5 inline mr-1" />
-                Company Name *
+                {t("Employer.company", "Company name")} *
               </label>
               <input
                 type="text"
                 name="name"
+                required
                 value={form.name}
                 onChange={handleChange}
-                placeholder="e.g. Acme Inc."
-                required
-                minLength={2}
+                placeholder="Acme Inc."
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
               />
             </div>
@@ -123,13 +131,16 @@ export default function NewCompanyPage() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 <FileText className="w-3.5 h-3.5 inline mr-1" />
-                Description
+                {t("JobDetail.description", "Description")}
               </label>
               <textarea
                 name="description"
                 value={form.description}
                 onChange={handleChange}
-                placeholder="What does your company do?"
+                placeholder={t(
+                  "JobDetail.description",
+                  "What does your company do?"
+                )}
                 rows={4}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600 resize-none"
               />
@@ -138,14 +149,17 @@ export default function NewCompanyPage() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 <MapPin className="w-3.5 h-3.5 inline mr-1" />
-                Location
+                {t("Jobs.location", "Location")}
               </label>
               <input
                 type="text"
                 name="location"
                 value={form.location}
                 onChange={handleChange}
-                placeholder="e.g. Berlin, Germany"
+                placeholder={t(
+                  "Jobs.locationPlaceholder",
+                  "e.g. Berlin, Germany"
+                )}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
               />
             </div>
@@ -153,7 +167,7 @@ export default function NewCompanyPage() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 <Globe className="w-3.5 h-3.5 inline mr-1" />
-                Website
+                {t("Companies.website", "Website")}
               </label>
               <input
                 type="url"
@@ -173,12 +187,12 @@ export default function NewCompanyPage() {
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating...
+                  {t("Common.loading", "Creating...")}
                 </>
               ) : (
                 <>
                   <Building2 className="w-4 h-4" />
-                  Create Company
+                  {t("Employer.company", "Create Company")}
                 </>
               )}
             </button>
