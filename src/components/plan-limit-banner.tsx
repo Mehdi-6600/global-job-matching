@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, X } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 type Props = {
   message: string;
@@ -10,6 +11,8 @@ type Props = {
 };
 
 export function PlanLimitBanner({ message, code, onClose }: Props) {
+  const { t } = useLocale();
+
   return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100 flex gap-3 items-start">
       <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
@@ -22,7 +25,7 @@ export function PlanLimitBanner({ message, code, onClose }: Props) {
           href="/pricing"
           className="inline-flex text-cyan-300 hover:text-cyan-200 font-medium text-sm"
         >
-          View plans & upgrade →
+          {t("Common.upgrade", "View plans & upgrade")} →
         </Link>
       </div>
       {onClose && (
@@ -30,7 +33,7 @@ export function PlanLimitBanner({ message, code, onClose }: Props) {
           type="button"
           onClick={onClose}
           className="text-amber-200/70 hover:text-white shrink-0"
-          aria-label="Dismiss"
+          aria-label={t("Common.cancel", "Dismiss")}
         >
           <X className="w-4 h-4" />
         </button>
