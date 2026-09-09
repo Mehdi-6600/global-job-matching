@@ -2,39 +2,29 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 /**
- * Central env validation.
- * - Required secrets stay required in real production.
- * - Email keys are optional so deploy can succeed before Resend is configured.
- * - SKIP_ENV_VALIDATION=1 skips Zod checks (CI / local typecheck only).
+ * RESEND_FROM_EMAIL accepts plain emails and "Name <email@domain>" forms.
+ * Pure z.string().email() rejects display-name addresses used by Resend.
  */
+const resendFromSchema = z
+  .string()
+  .min(3)
+  .refine((v) => /@/.test(v), { message: "Invalid Resend from address" });
+
 export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
-
     AUTH_SECRET: z.string().min(32),
-
     AUTH_URL: z.string().url().optional(),
-
     RESEND_API_KEY: z.string().min(1).optional(),
-
-    RESEND_FROM_EMAIL: z.string().email().optional(),
-
+    RESEND_FROM_EMAIL: resendFromSchema.optional(),
     KV_URL: z.string().url().optional(),
-
     KV_REST_API_TOKEN: z.string().optional(),
-
     KV_REST_API_READ_ONLY_TOKEN: z.string().optional(),
-
     OWNER_EMAIL: z.string().email(),
-
     SYNC_SECRET: z.string().min(32),
-
     OPENAI_API_KEY: z.string().min(1).optional(),
-
     OPENROUTER_API_KEY: z.string().min(1).optional(),
-
     CRON_SECRET: z.string().min(16).optional(),
-
     BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
   },
 
