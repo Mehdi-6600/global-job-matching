@@ -4,6 +4,9 @@ import {
   isValidRole,
   isEmployerRole,
   isAdminRole,
+  isOwnerRole,
+  isJobSeekerRole,
+  normalizeRole,
 } from "./roles";
 
 describe("roles helpers", () => {
@@ -35,5 +38,22 @@ describe("roles helpers", () => {
     expect(isAdminRole(ROLES.OWNER)).toBe(true);
     expect(isAdminRole(ROLES.EMPLOYER)).toBe(false);
     expect(isAdminRole(ROLES.JOB_SEEKER)).toBe(false);
+  });
+
+  it("isOwnerRole and isJobSeekerRole", () => {
+    expect(isOwnerRole(ROLES.OWNER)).toBe(true);
+    expect(isOwnerRole(ROLES.ADMIN)).toBe(false);
+    expect(isJobSeekerRole(ROLES.JOB_SEEKER)).toBe(true);
+    expect(isJobSeekerRole(ROLES.EMPLOYER)).toBe(false);
+  });
+
+  it("normalizeRole maps legacy forms", () => {
+    expect(normalizeRole("employer")).toBe("EMPLOYER");
+    expect(normalizeRole("job-seeker")).toBe("JOB_SEEKER");
+    expect(normalizeRole("JOBSEEKER")).toBe("JOB_SEEKER");
+    expect(normalizeRole("admin")).toBe("ADMIN");
+    expect(normalizeRole("owner")).toBe("OWNER");
+    expect(normalizeRole("nope")).toBeNull();
+    expect(normalizeRole(null)).toBeNull();
   });
 });
