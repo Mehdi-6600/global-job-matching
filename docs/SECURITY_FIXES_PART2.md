@@ -2,25 +2,29 @@
 
 ## FIX BATCH 1
 - Job public visibility (active-only for strangers)
-- Resume pathname entropy + host allowlist + no URL leak from resume API
+- Resume storage hardening
 - Admin overview rate limit
 
 ## FIX BATCH 2+3
-- Redis env supports UPSTASH_* and KV_*
-- Health rateLimit backend status + production warning
-- CSP Report-Only
-- securityLog for admin role/payment/bootstrap
-- Admin transactions/users/bootstrap + jobs fetch 429 headers
+- Redis env multi-shape support (first pass)
+- Health rateLimit status + CSP Report-Only
+- securityLog + admin 429 consistency
 
 ## FIX BATCH 4
-- **Profile API no longer returns `resumeUrl`** (only hasResume + downloadPath)
-- Account delete: rateLimitedResponse, securityLog, blob cleanup
-- jobs/sync uses pure sync-normalize helpers
-- forgot-password: no reset URL in production logs; consistent 429
-- cron expire-plans: securityLog `plan.expire`
-- seed remains production-blocked
+- Profile API hides resumeUrl
+- Account delete audit + blob cleanup
+- sync helpers / forgot-password / cron
 
-## Optional later
-- Enforce CSP (drop Report-Only) after monitoring
-- On-chain crypto verification
-- DB-backed audit table
+## FIX BATCH 5 (closing)
+- Redis status diagnostics (`hasUrl` / `hasToken` / `source`)
+- Health explains missing token vs missing url
+- `.env.example` documents UPSTASH_* clearly
+- `docs/REDIS_SETUP.md` ops guide
+- `sanitize-text` helpers for XSS defense-in-depth
+
+## Production follow-up (ops, not more code batches)
+1. Set **both** Redis URL + TOKEN on Vercel → recheck `/api/health`
+2. Optional later: enforce CSP (drop Report-Only)
+3. Optional later: on-chain crypto verification
+
+## Part 2 mandatory coding batches remaining: 0
