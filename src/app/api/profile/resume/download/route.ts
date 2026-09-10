@@ -8,6 +8,7 @@ import {
   isBlobStorageConfigured,
   isHttpUrl,
 } from "@/lib/storage/resume";
+import { rateLimitedResponse } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,11 +18,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `resume_dl_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     if (!isBlobStorageConfigured()) {
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
       if (msg === "BLOB_NOT_FOUND") {
         return NextResponse.json({ error: "File not found" }, { status: 404 });
       }
-      console.error("Resume download error:", error);
+      console.error("Resume download error");
       return NextResponse.json({ error: "Download failed" }, { status: 502 });
     }
   } catch (error) {
