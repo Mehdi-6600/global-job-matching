@@ -11,6 +11,7 @@ import {
   isHttpUrl,
   uploadResumePdf,
 } from "@/lib/storage/resume";
+import { rateLimitedResponse } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,11 +21,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `resume_get_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const profile = await db.profile.findUnique({
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
       storedInBlob: isHttpUrl(profile?.resumeUrl),
       storageConfigured: isBlobStorageConfigured(),
       downloadPath: hasResume ? "/api/profile/resume/download" : null,
+      // Never return the raw blob URL to the client
     });
   } catch (error) {
     console.error("Resume GET error:", error);
@@ -65,11 +67,11 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `resume_upload_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const formData = await req.formData();
@@ -109,7 +111,20 @@ export async function POST(req: NextRequest) {
         filename: file.name || "resume.pdf",
       });
     } catch (error) {
-      console.error("Blob upload failed:", error);
+      const msg = error instanceof Error ? error.message : "";
+      if (msg === "INVALID_PDF") {
+        return NextResponse.json(
+          { error: "Only valid PDF files are allowed" },
+          { status: 400 }
+        );
+      }
+      if (msg === "FILE_TOO_LARGE") {
+        return NextResponse.json(
+          { error: "File too large (max 5MB)" },
+          { status: 400 }
+        );
+      }
+      console.error("Blob upload failed");
       return NextResponse.json(
         {
           error: "Failed to store file. Check BLOB_READ_WRITE_TOKEN.",
@@ -155,11 +170,11 @@ export async function DELETE(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `resume_delete_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const profile = await db.profile.findUnique({
