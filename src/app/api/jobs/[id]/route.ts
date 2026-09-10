@@ -9,6 +9,8 @@ import {
   updateJobForUser,
   deleteJobForUser,
 } from "@/services/jobs/update-job";
+import { canViewJobDetail } from "@/lib/jobs/public-visibility";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 const VIEW_COOKIE_PREFIX = "jv_";
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 12; // 12 hours
@@ -26,13 +28,14 @@ export async function GET(
     const id = parsedId.data;
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(`job_get_${id}_${ip}`);
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        { status: 429 }
-      );
+    const limit = await ratelimit.limit(`job_get_${id}_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
+
+    const session = await auth();
+    const viewerId = session?.user?.id ?? null;
+    const viewerRole = session?.user?.role ?? null;
 
     const job = await db.job.findUnique({
       where: { id },
@@ -45,6 +48,7 @@ export async function GET(
             logo: true,
             description: true,
             website: true,
+            ownerId: true,
           },
         },
         category: {
@@ -60,12 +64,25 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    const allowed = canViewJobDetail({
+      jobStatus: job.status,
+      postedById: job.postedById,
+      companyOwnerId: job.company?.ownerId ?? null,
+      viewerId,
+      viewerRole,
+    });
+
+    if (!allowed) {
+      // Same as missing — avoid leaking existence of drafts to strangers
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const cookieName = `${VIEW_COOKIE_PREFIX}${id}`;
     const alreadyViewed = req.cookies.get(cookieName)?.value === "1";
 
     let viewCount = job.viewCount;
 
-    if (!alreadyViewed) {
+    if (!alreadyViewed && job.status === "active") {
       try {
         const updated = await db.job.update({
           where: { id },
@@ -78,6 +95,11 @@ export async function GET(
       }
     }
 
+    // Never expose ownerId on public payloads
+    const { ownerId: _ownerId, ...companyPublic } = job.company || {
+      ownerId: null,
+    };
+
     const payload = {
       job: {
         ...job,
@@ -85,7 +107,7 @@ export async function GET(
         location: normalizeLocation(job.location) || job.location,
         company: job.company
           ? {
-              ...job.company,
+              ...companyPublic,
               location:
                 normalizeLocation(job.company.location) ||
                 job.company.location,
@@ -96,7 +118,7 @@ export async function GET(
 
     const res = NextResponse.json(payload);
 
-    if (!alreadyViewed) {
+    if (!alreadyViewed && job.status === "active") {
       res.cookies.set(cookieName, "1", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -133,10 +155,8 @@ export async function PATCH(
     }
     const id = parsedId.data;
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
