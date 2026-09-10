@@ -10,6 +10,7 @@ import {
   assertApplicationQuota,
   lockUserRow,
 } from "@/lib/quota";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,11 +20,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `applications_get_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const applications = await db.application.findMany({
@@ -128,13 +129,11 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
-      `apply_${session.user.id}_${ip}`
-    );
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many applications. Please try again later." },
-        { status: 429 }
+    const limit = await ratelimit.limit(`apply_${session.user.id}_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(
+        limit,
+        "Too many applications. Please try again later."
       );
     }
 
@@ -148,10 +147,8 @@ export async function POST(req: NextRequest) {
 
     const effective = await getEffectivePlan(user.id);
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
