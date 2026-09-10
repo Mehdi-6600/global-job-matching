@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireAdmin, requireOwner } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { ROLES, isValidRole, isOwnerRole, normalizeRole } from "@/lib/roles";
 import { adminRatelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
 import { bumpSessionVersion } from "@/lib/session-version";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { securityLog } from "@/lib/security-log";
 
 const patchSchema = z
   .object({
@@ -25,11 +27,11 @@ export async function GET(req: NextRequest) {
     if (!authz.ok) return authz.response;
 
     const ip = getRequestIp(req);
-    const { success } = await adminRatelimit.limit(
+    const limit = await adminRatelimit.limit(
       `admin_users_get_${authz.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const [users, total] = await Promise.all([
@@ -73,17 +75,15 @@ export async function PATCH(req: NextRequest) {
     if (!authz.ok) return authz.response;
 
     const ip = getRequestIp(req);
-    const { success } = await adminRatelimit.limit(
+    const limit = await adminRatelimit.limit(
       `admin_users_patch_${authz.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -101,7 +101,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    // Elevating to ADMIN/OWNER requires OWNER
     if (
       (role === ROLES.ADMIN || role === ROLES.OWNER) &&
       !isOwnerRole(authz.user.role)
@@ -121,7 +120,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Prevent removing the last OWNER
     if (
       normalizeRole(target.role) === ROLES.OWNER &&
       role !== ROLES.OWNER
@@ -136,7 +134,6 @@ export async function PATCH(req: NextRequest) {
         );
       }
 
-      // Only OWNER may demote an OWNER
       if (!isOwnerRole(authz.user.role)) {
         return NextResponse.json(
           { error: "Only OWNER can change OWNER roles" },
@@ -144,6 +141,8 @@ export async function PATCH(req: NextRequest) {
         );
       }
     }
+
+    const previousRole = target.role;
 
     const updated = await db.$transaction(async (tx) => {
       const user = await tx.user.update({
@@ -161,6 +160,15 @@ export async function PATCH(req: NextRequest) {
       return user;
     });
 
+    securityLog("admin.role_change", {
+      actorId: authz.user.id,
+      targetId: userId,
+      meta: {
+        from: previousRole,
+        to: role,
+      },
+    });
+
     return NextResponse.json({
       success: true,
       user: updated,
@@ -168,6 +176,9 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (error) {
     console.error("Admin users PATCH error:", error);
-    return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update user" },
+      { status: 500 }
+    );
   }
 }
