@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
@@ -6,7 +6,8 @@ import { env } from "@/lib/env";
 import { bumpSessionVersion } from "@/lib/session-version";
 import { authRatelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
-import type { NextRequest } from "next/server";
+import { rateLimitedResponse } from "@/lib/http";
+import { securityLog } from "@/lib/security-log";
 
 /**
  * One-time bootstrap: if no ADMIN/OWNER exists yet, the logged-in user
@@ -21,11 +22,11 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await authRatelimit.limit(
+    const limit = await authRatelimit.limit(
       `admin_bootstrap_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const email = session.user.email.toLowerCase().trim();
@@ -59,6 +60,12 @@ export async function POST(req: NextRequest) {
       });
       await bumpSessionVersion(session.user.id, tx);
       return updated;
+    });
+
+    securityLog("admin.bootstrap", {
+      actorId: session.user.id,
+      targetId: session.user.id,
+      meta: { role: ROLES.OWNER },
     });
 
     return NextResponse.json({
