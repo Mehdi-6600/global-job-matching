@@ -56,6 +56,7 @@ export async function GET() {
       hasUrl: redisStatus.hasUrl,
       hasToken: redisStatus.hasToken,
       source: redisStatus.source,
+      urlPreview: redisStatus.urlPreview,
     },
     openRouter: envPresent("OPENROUTER_API_KEY"),
     openAi: envPresent("OPENAI_API_KEY"),
@@ -66,15 +67,15 @@ export async function GET() {
   if (production && !redisOk) {
     if (redisStatus.hasUrl && !redisStatus.hasToken) {
       warnings.push(
-        "Redis URL is set but TOKEN is missing. Add UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN."
+        "Redis URL found but TOKEN missing. Add UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN (or UPSTASH_KV_REDIS_TOKEN)."
       );
     } else if (!redisStatus.hasUrl && redisStatus.hasToken) {
       warnings.push(
-        "Redis TOKEN is set but URL is missing. Add UPSTASH_REDIS_REST_URL or KV_REST_API_URL."
+        "Redis TOKEN found but HTTPS REST URL missing. Add UPSTASH_REDIS_REST_URL / KV_REST_API_URL / UPSTASH_KV_REDIS_URL (must start with https://)."
       );
     } else {
       warnings.push(
-        "Rate limiting uses in-memory fallback. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or Vercel KV pair)."
+        "Rate limiting uses in-memory fallback. Set a pair: UPSTASH_REDIS_REST_URL+TOKEN or KV_REST_API_URL+TOKEN or UPSTASH_KV_REDIS_URL+TOKEN."
       );
     }
   }
