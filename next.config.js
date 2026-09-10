@@ -5,13 +5,11 @@ const nextConfig = {
   },
 
   // Stay true until CI lint is fully clean across the whole repo.
-  // Goal of later batch: flip to false after zero ESLint errors.
   eslint: {
     ignoreDuringBuilds: true,
   },
 
   typescript: {
-    // Keep false so type errors still fail production builds.
     ignoreBuildErrors: false,
   },
 
@@ -36,6 +34,20 @@ const nextConfig = {
   reactStrictMode: true,
 
   async headers() {
+    // Report-Only first: does not break the app; monitor in browser console / reports
+    const cspReportOnly = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+    ].join("; ");
+
     return [
       {
         source: "/:path*",
@@ -51,6 +63,10 @@ const nextConfig = {
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: cspReportOnly,
           },
         ],
       },
