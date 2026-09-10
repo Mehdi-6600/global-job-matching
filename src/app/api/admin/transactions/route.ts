@@ -8,6 +8,8 @@ import {
   activatePlanForUser,
   type BillingCycle,
 } from "@/lib/subscription";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { securityLog } from "@/lib/security-log";
 
 const patchSchema = z
   .object({
@@ -28,11 +30,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const ip = getRequestIp(req);
-    const { success } = await adminRatelimit.limit(
+    const limit = await adminRatelimit.limit(
       `admin_tx_get_${authz.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const status = new URL(req.url).searchParams.get("status");
@@ -73,17 +75,15 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const ip = getRequestIp(req);
-    const { success } = await adminRatelimit.limit(
+    const limit = await adminRatelimit.limit(
       `admin_tx_patch_${authz.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -148,6 +148,16 @@ export async function PATCH(req: NextRequest) {
             },
           });
         });
+
+        securityLog("admin.payment_confirm", {
+          actorId: authz.user.id,
+          targetId: tx.userId,
+          meta: {
+            transactionId: id,
+            planId: tx.planId,
+            billing,
+          },
+        });
       } catch (e: unknown) {
         const err = e as { code?: string };
         if (err.code === "ALREADY_PROCESSED") {
@@ -178,6 +188,12 @@ export async function PATCH(req: NextRequest) {
             "We could not verify your crypto payment. Contact support if you need help.",
           actionUrl: "/contact",
         },
+      });
+
+      securityLog("admin.payment_reject", {
+        actorId: authz.user.id,
+        targetId: tx.userId,
+        meta: { transactionId: id, planId: tx.planId },
       });
     }
 
