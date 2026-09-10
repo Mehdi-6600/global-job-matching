@@ -7,6 +7,7 @@ import { registerSchema } from "@/lib/validation/register";
 import { hashPassword, validatePassword } from "@/lib/password";
 import { issueEmailVerificationToken } from "@/lib/auth/tokens";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -15,15 +16,13 @@ const resend = process.env.RESEND_API_KEY
 export async function POST(req: NextRequest) {
   try {
     const ip = getRequestIp(req);
-    const { success } = await authRatelimit.limit(`register_${ip}`);
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    const limit = await authRatelimit.limit(`register_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
@@ -74,6 +73,7 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from:
             process.env.EMAIL_FROM ||
+            process.env.RESEND_FROM_EMAIL ||
             "Global Job Matching <onboarding@resend.dev>",
           to: email,
           subject: "Verify your email",
