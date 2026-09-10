@@ -10,7 +10,7 @@ import {
   assertApplicationQuota,
   lockUserRow,
 } from "@/lib/quota";
-import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { parseListLimit, LIST_LIMITS } from "@/lib/pagination";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,16 +20,23 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await ratelimit.limit(
+    const { success } = await ratelimit.limit(
       `applications_get_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
+
+    const { searchParams } = new URL(req.url);
+    const take = parseListLimit(
+      searchParams.get("limit"),
+      LIST_LIMITS.userList
+    );
 
     const applications = await db.application.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
+      take,
       select: {
         id: true,
         status: true,
@@ -108,6 +115,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       applications: result,
       count: result.length,
+      limit: take,
     });
   } catch (error) {
     console.error("Applications fetch error:", error);
@@ -129,11 +137,13 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await ratelimit.limit(`apply_${session.user.id}_${ip}`);
-    if (!limit.success) {
-      return rateLimitedResponse(
-        limit,
-        "Too many applications. Please try again later."
+    const { success } = await ratelimit.limit(
+      `apply_${session.user.id}_${ip}`
+    );
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many applications. Please try again later." },
+        { status: 429 }
       );
     }
 
@@ -147,8 +157,10 @@ export async function POST(req: NextRequest) {
 
     const effective = await getEffectivePlan(user.id);
 
-    const body = await readJsonBody(req);
-    if (body === null) {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
