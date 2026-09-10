@@ -7,6 +7,7 @@ import { normalizeLocation } from "@/lib/location";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import { assertSavedJobQuota, lockUserRow } from "@/lib/quota";
+import { parseListLimit, LIST_LIMITS } from "@/lib/pagination";
 
 const savedJobSchema = z
   .object({
@@ -29,9 +30,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const take = parseListLimit(
+      searchParams.get("limit"),
+      LIST_LIMITS.userList
+    );
+
     const savedJobs = await db.savedJob.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
+      take,
       select: {
         id: true,
         createdAt: true,
@@ -97,6 +105,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       jobs,
       count: jobs.length,
+      limit: take,
     });
   } catch (error) {
     console.error("Saved jobs fetch error:", error);
