@@ -16,7 +16,6 @@ describe("isAuthorizedBearerSecret", () => {
 
   it("rejects a missing authorization header", () => {
     const request = new Request("https://example.com/api/jobs/sync");
-
     expect(isAuthorizedBearerSecret(request, secret)).toBe(false);
   });
 
@@ -24,7 +23,6 @@ describe("isAuthorizedBearerSecret", () => {
     const request = new Request(
       `https://example.com/api/jobs/sync?secret=${encodeURIComponent(secret)}`
     );
-
     expect(isAuthorizedBearerSecret(request, secret)).toBe(false);
   });
 
@@ -34,7 +32,6 @@ describe("isAuthorizedBearerSecret", () => {
         Authorization: "Bearer wrong-secret",
       },
     });
-
     expect(isAuthorizedBearerSecret(request, secret)).toBe(false);
   });
 
@@ -44,7 +41,6 @@ describe("isAuthorizedBearerSecret", () => {
         Authorization: secret,
       },
     });
-
     expect(isAuthorizedBearerSecret(request, secret)).toBe(false);
   });
 
@@ -54,7 +50,6 @@ describe("isAuthorizedBearerSecret", () => {
         Authorization: "Bearer ",
       },
     });
-
     expect(isAuthorizedBearerSecret(request, secret)).toBe(false);
   });
 
@@ -64,7 +59,24 @@ describe("isAuthorizedBearerSecret", () => {
         Authorization: `Bearer ${secret}`,
       },
     });
-
     expect(isAuthorizedBearerSecret(request, "")).toBe(false);
+  });
+
+  it("rejects secrets of different length without throwing", () => {
+    const request = new Request("https://example.com/api/jobs/sync", {
+      headers: {
+        Authorization: "Bearer short",
+      },
+    });
+    expect(isAuthorizedBearerSecret(request, secret)).toBe(false);
+  });
+
+  it("trims provided bearer token", () => {
+    const request = new Request("https://example.com/api/jobs/sync", {
+      headers: {
+        Authorization: `Bearer ${secret}   `,
+      },
+    });
+    expect(isAuthorizedBearerSecret(request, secret)).toBe(true);
   });
 });
