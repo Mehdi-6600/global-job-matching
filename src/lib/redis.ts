@@ -4,111 +4,114 @@ export type RedisEnvStatus = {
   configured: boolean;
   hasUrl: boolean;
   hasToken: boolean;
-  source: "upstash" | "kv_rest" | "kv_url" | null;
+  source: string | null;
+  urlPreview: string | null;
 };
 
-/**
- * Resolve Redis credentials from any supported Vercel/Upstash shape.
- * Both URL and TOKEN are required.
- */
-export function getRedisEnvStatus(): RedisEnvStatus {
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL?.trim() || "";
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim() || "";
-
-  const kvRestUrl = process.env.KV_REST_API_URL?.trim() || "";
-  const kvToken =
-    process.env.KV_REST_API_TOKEN?.trim() ||
-    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
-    "";
-
-  const kvUrl = process.env.KV_URL?.trim() || "";
-
-  if (upstashUrl && upstashToken) {
-    return {
-      configured: true,
-      hasUrl: true,
-      hasToken: true,
-      source: "upstash",
-    };
-  }
-
-  if (kvRestUrl && kvToken) {
-    return {
-      configured: true,
-      hasUrl: true,
-      hasToken: true,
-      source: "kv_rest",
-    };
-  }
-
-  if (kvUrl && kvToken) {
-    return {
-      configured: true,
-      hasUrl: true,
-      hasToken: true,
-      source: "kv_url",
-    };
-  }
-
-  const hasUrl = Boolean(upstashUrl || kvRestUrl || kvUrl);
-  const hasToken = Boolean(
-    upstashToken ||
-      process.env.KV_REST_API_TOKEN?.trim() ||
-      process.env.UPSTASH_REDIS_REST_TOKEN?.trim()
-  );
-
-  return {
-    configured: false,
-    hasUrl,
-    hasToken,
-    source: null,
-  };
+function trimEnv(name: string): string {
+  return process.env[name]?.trim() || "";
 }
 
-function resolveRedisEnv(): { url: string; token: string } | null {
-  const status = getRedisEnvStatus();
-  if (!status.configured) return null;
+/** @upstash/redis needs HTTPS REST endpoint, not rediss:// TCP */
+function isRestUrl(url: string): boolean {
+  return /^https:\/\//i.test(url);
+}
 
-  if (status.source === "upstash") {
-    return {
-      url: process.env.UPSTASH_REDIS_REST_URL!.trim(),
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!.trim(),
-    };
+function pickUrl(): { url: string; source: string } | null {
+  const candidates: Array<[string, string]> = [
+    ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_URL"],
+    ["KV_REST_API_URL", "KV_REST_API_URL"],
+    ["UPSTASH_KV_REDIS_URL", "UPSTASH_KV_REDIS_URL"],
+    ["UPSTASH_REDIS_URL", "UPSTASH_REDIS_URL"],
+  ];
+
+  for (const [envName, source] of candidates) {
+    const url = trimEnv(envName);
+    if (url && isRestUrl(url)) {
+      return { url, source };
+    }
   }
 
-  if (status.source === "kv_rest") {
-    return {
-      url: process.env.KV_REST_API_URL!.trim(),
-      token: (
-        process.env.KV_REST_API_TOKEN ||
-        process.env.UPSTASH_REDIS_REST_TOKEN ||
-        ""
-      ).trim(),
-    };
-  }
-
-  if (status.source === "kv_url") {
-    return {
-      url: process.env.KV_URL!.trim(),
-      token: (
-        process.env.KV_REST_API_TOKEN ||
-        process.env.UPSTASH_REDIS_REST_TOKEN ||
-        ""
-      ).trim(),
-    };
+  // KV_URL is often rediss:// — only accept if somehow https
+  const kvUrl = trimEnv("KV_URL");
+  if (kvUrl && isRestUrl(kvUrl)) {
+    return { url: kvUrl, source: "KV_URL" };
   }
 
   return null;
 }
 
-const creds = resolveRedisEnv();
+function pickToken(): { token: string; source: string } | null {
+  const candidates: Array<[string, string]> = [
+    ["UPSTASH_REDIS_REST_TOKEN", "UPSTASH_REDIS_REST_TOKEN"],
+    ["KV_REST_API_TOKEN", "KV_REST_API_TOKEN"],
+    ["UPSTASH_KV_REDIS_TOKEN", "UPSTASH_KV_REDIS_TOKEN"],
+    ["UPSTASH_REDIS_TOKEN", "UPSTASH_REDIS_TOKEN"],
+  ];
 
-export const redis: Redis | null = creds
-  ? new Redis({
-      url: creds.url,
-      token: creds.token,
-    })
-  : null;
+  for (const [envName, source] of candidates) {
+    const token = trimEnv(envName);
+    if (token) return { token, source };
+  }
+  return null;
+}
+
+export function getRedisEnvStatus(): RedisEnvStatus {
+  const urlPick = pickUrl();
+  const tokenPick = pickToken();
+
+  // Detect presence even if wrong protocol (for diagnostics)
+  const anyUrlPresent = Boolean(
+    trimEnv("UPSTASH_REDIS_REST_URL") ||
+      trimEnv("KV_REST_API_URL") ||
+      trimEnv("UPSTASH_KV_REDIS_URL") ||
+      trimEnv("UPSTASH_REDIS_URL") ||
+      trimEnv("KV_URL")
+  );
+
+  const configured = Boolean(urlPick && tokenPick);
+
+  return {
+    configured,
+    hasUrl: Boolean(urlPick) || anyUrlPresent,
+    hasToken: Boolean(tokenPick),
+    source:
+      configured && urlPick && tokenPick
+        ? `${urlPick.source}+${tokenPick.source}`
+        : null,
+    urlPreview: urlPick
+      ? urlPick.url.replace(/^(https:\/\/[^/]{0,24}).*$/i, "$1…")
+      : anyUrlPresent
+        ? "(non-https or unsupported protocol — need https REST URL)"
+        : null,
+  };
+}
+
+function createClient(): Redis | null {
+  // Prefer SDK auto-detect for standard names
+  try {
+    if (
+      (trimEnv("UPSTASH_REDIS_REST_URL") &&
+        trimEnv("UPSTASH_REDIS_REST_TOKEN")) ||
+      (trimEnv("KV_REST_API_URL") && trimEnv("KV_REST_API_TOKEN"))
+    ) {
+      return Redis.fromEnv();
+    }
+  } catch {
+    // fall through to manual
+  }
+
+  const urlPick = pickUrl();
+  const tokenPick = pickToken();
+  if (!urlPick || !tokenPick) return null;
+
+  return new Redis({
+    url: urlPick.url,
+    token: tokenPick.token,
+  });
+}
+
+export const redis: Redis | null = createClient();
 
 export function isRedisConfigured(): boolean {
   return redis !== null;
