@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { emailRatelimit } from "@/lib/ratelimit";
 import { issuePasswordResetToken } from "@/lib/auth/tokens";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -11,10 +12,8 @@ const resend = process.env.RESEND_API_KEY
 
 export async function POST(req: NextRequest) {
   try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
@@ -34,11 +33,11 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await emailRatelimit.limit(`forgot_${email}_${ip}`);
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many requests. Try again later." },
-        { status: 429 }
+    const limit = await emailRatelimit.limit(`forgot_${email}_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(
+        limit,
+        "Too many requests. Try again later."
       );
     }
 
@@ -65,7 +64,10 @@ export async function POST(req: NextRequest) {
 <p>If you did not request this, ignore this email.</p>`,
           });
         } else {
-          console.info("[forgot-password] Resend not configured. resetUrl:", resetUrl);
+          console.info(
+            "[forgot-password] Resend not configured. resetUrl:",
+            resetUrl
+          );
         }
       } catch (err) {
         console.error("Forgot password email error:", err);
