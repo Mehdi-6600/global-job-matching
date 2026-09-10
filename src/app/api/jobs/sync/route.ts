@@ -130,3 +130,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Sync failed" }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  return GET(request);
+}
