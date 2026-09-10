@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ratelimit } from "@/lib/ratelimit";
 import { contactSchema } from "@/lib/validation/contact";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 function escapeHtml(input: string) {
   return input
@@ -14,10 +15,8 @@ function escapeHtml(input: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -31,14 +30,13 @@ export async function POST(req: NextRequest) {
 
     const { name, email, subject, message } = parsed.data;
     const emailKey = email.toLowerCase();
-
     const ip = getRequestIp(req);
 
-    const { success } = await ratelimit.limit(`contact_${emailKey}_${ip}`);
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many requests. Please wait a minute." },
-        { status: 429 }
+    const limit = await ratelimit.limit(`contact_${emailKey}_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(
+        limit,
+        "Too many requests. Please wait a minute."
       );
     }
 
