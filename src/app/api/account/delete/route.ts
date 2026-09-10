@@ -5,6 +5,9 @@ import { ratelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
 import { isOwnerRole } from "@/lib/roles";
 import { z } from "zod";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { securityLog } from "@/lib/security-log";
+import { deleteResumeIfBlob } from "@/lib/storage/resume";
 
 const deleteSchema = z
   .object({
@@ -16,7 +19,6 @@ const deleteSchema = z
  * Permanently delete the current user account.
  * Body: { "confirm": "DELETE" }
  *
- * Owner protection is ROLE-based (User.role === OWNER), not email.
  * Last remaining OWNER cannot be deleted (race-safe inside transaction).
  */
 export async function DELETE(req: NextRequest) {
@@ -28,17 +30,15 @@ export async function DELETE(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `account_delete_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json(
         { error: 'Body required: { "confirm": "DELETE" }' },
         { status: 400 }
@@ -54,6 +54,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const userId = session.user.id;
+    let resumeUrl: string | null = null;
 
     await db.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
@@ -66,7 +67,6 @@ export async function DELETE(req: NextRequest) {
       }
 
       if (isOwnerRole(user.role)) {
-        // Serialize owner-count check
         await tx.$executeRaw`SELECT id FROM "User" WHERE role = 'OWNER' FOR UPDATE`;
         const ownerCount = await tx.user.count({
           where: { role: "OWNER" },
@@ -77,6 +77,12 @@ export async function DELETE(req: NextRequest) {
           });
         }
       }
+
+      const profile = await tx.profile.findUnique({
+        where: { userId },
+        select: { resumeUrl: true },
+      });
+      resumeUrl = profile?.resumeUrl ?? null;
 
       await tx.jobAlert.deleteMany({ where: { userId } });
       await tx.application.deleteMany({ where: { userId } });
@@ -94,6 +100,13 @@ export async function DELETE(req: NextRequest) {
       });
 
       await tx.user.delete({ where: { id: userId } });
+    });
+
+    await deleteResumeIfBlob(resumeUrl);
+
+    securityLog("account.delete", {
+      actorId: userId,
+      targetId: userId,
     });
 
     return NextResponse.json({
