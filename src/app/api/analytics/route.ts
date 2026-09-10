@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { isAdminRole } from "@/lib/roles";
 import { ratelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +30,13 @@ export async function POST(req: NextRequest) {
   try {
     const ip = getRequestIp(req);
 
-    const { success } = await ratelimit.limit(`analytics_${ip}`);
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    const limit = await ratelimit.limit(`analytics_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -65,6 +64,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Analytics POST error:", error);
+    // Tracking must not break the UI
     return NextResponse.json({ success: false }, { status: 200 });
   }
 }
