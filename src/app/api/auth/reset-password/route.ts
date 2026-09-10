@@ -5,6 +5,7 @@ import { validatePassword, hashPassword } from "@/lib/password";
 import { consumePasswordResetToken } from "@/lib/auth/tokens";
 import { getRequestIp } from "@/lib/client-ip";
 import { bumpSessionVersionByEmail } from "@/lib/session-version";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 /**
  * Confirm password reset with token + new password.
@@ -13,20 +14,32 @@ import { bumpSessionVersionByEmail } from "@/lib/session-version";
 export async function POST(req: NextRequest) {
   try {
     const ip = getRequestIp(req);
-    const { success } = await authRatelimit.limit(`reset_pw_${ip}`);
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    const limit = await authRatelimit.limit(`reset_pw_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
-    let body: { token?: string; password?: string };
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    const token = typeof body.token === "string" ? body.token.trim() : "";
-    const passwordCheck = validatePassword(body.password);
+    const token =
+      typeof body === "object" &&
+      body !== null &&
+      "token" in body &&
+      typeof (body as { token: unknown }).token === "string"
+        ? (body as { token: string }).token.trim()
+        : "";
+
+    const password =
+      typeof body === "object" &&
+      body !== null &&
+      "password" in body
+        ? (body as { password: unknown }).password
+        : undefined;
+
+    const passwordCheck = validatePassword(password);
     if (!token) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 });
     }
@@ -54,7 +67,6 @@ export async function POST(req: NextRequest) {
 
       await bumpSessionVersionByEmail(consumed.email, tx);
 
-      // Clear any remaining reset tokens for this email (VerificationToken table)
       await tx.verificationToken.deleteMany({
         where: {
           identifier: `pw-reset:${consumed.email.toLowerCase().trim()}`,
