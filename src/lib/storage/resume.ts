@@ -5,7 +5,7 @@ export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
 export const RESUME_MIME = "application/pdf";
 
 /** Magic bytes for PDF: %PDF */
-function isPdfMagic(buf: ArrayBuffer | Uint8Array): boolean {
+export function isPdfMagic(buf: ArrayBuffer | Uint8Array): boolean {
   const u8 =
     buf instanceof Uint8Array ? buf : new Uint8Array(buf.slice(0, 5));
   if (u8.length < 4) return false;
@@ -37,13 +37,14 @@ export function sanitizeResumeFilename(name: string): string {
 /**
  * Upload resume PDF.
  *
- * @vercel/blob@0.27 only types `access: "public"`.
- * True ACL privacy is enforced by:
- * 1) Never returning the blob URL to clients
- * 2) Serving only via authenticated download route after ownership check
- * 3) Unpredictable pathname (userId + random)
+ * @vercel/blob currently types `access: "public"` only.
+ * Hardening layers:
+ * 1) Never return blob URL to browsers (API returns downloadPath only)
+ * 2) Authenticated download route + ownership check
+ * 3) Long random pathname (userId + 32-byte nonce)
+ * 4) PDF magic-byte validation + size cap
  *
- * When upgrading @vercel/blob to a version with private ACL, set access: "private".
+ * When SDK supports private ACL, switch access to "private".
  */
 export async function uploadResumePdf(params: {
   userId: string;
@@ -63,7 +64,7 @@ export async function uploadResumePdf(params: {
   }
 
   const safe = sanitizeResumeFilename(params.filename);
-  const nonce = randomBytes(16).toString("hex");
+  const nonce = randomBytes(32).toString("hex");
   const pathname = `resumes/${params.userId}/${nonce}-${safe}`;
 
   const blob = await put(pathname, ab, {
@@ -87,7 +88,8 @@ export async function deleteResumeIfBlob(
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
   } catch (error) {
-    console.warn("Failed to delete resume blob:", error);
+    console.warn("Failed to delete resume blob");
+    void error;
   }
 }
 
@@ -102,6 +104,23 @@ export async function fetchPrivateResumeBlob(
   }
 
   if (!isHttpUrl(resumeUrl)) {
+    throw new Error("BLOB_NOT_FOUND");
+  }
+
+  // Only allow our Vercel Blob hosts
+  let host = "";
+  try {
+    host = new URL(resumeUrl).hostname.toLowerCase();
+  } catch {
+    throw new Error("BLOB_NOT_FOUND");
+  }
+
+  const allowedHost =
+    host.endsWith(".public.blob.vercel-storage.com") ||
+    host === "public.blob.vercel-storage.com" ||
+    host.endsWith(".blob.vercel-storage.com");
+
+  if (!allowedHost) {
     throw new Error("BLOB_NOT_FOUND");
   }
 
