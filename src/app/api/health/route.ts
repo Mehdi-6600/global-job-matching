@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCryptoWallets } from "@/lib/payment/plans";
-import { isRedisConfigured } from "@/lib/redis";
+import { getRedisEnvStatus, isRedisConfigured } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,10 +27,10 @@ export async function GET() {
   }
 
   const totalMs = Date.now() - started;
+  const redisStatus = getRedisEnvStatus();
   const redisOk = isRedisConfigured();
   const production = process.env.NODE_ENV === "production";
 
-  // Degraded if DB down; in production also warn when rate-limit backend missing
   const healthy = database === "ok";
   const status =
     !healthy ? "degraded" : production && !redisOk ? "degraded" : "ok";
@@ -51,11 +51,12 @@ export async function GET() {
     resend: envPresent("RESEND_API_KEY"),
     cronSecret: envPresent("CRON_SECRET"),
     blob: envPresent("BLOB_READ_WRITE_TOKEN"),
-    upstash:
-      envPresent("UPSTASH_REDIS_REST_URL") ||
-      envPresent("KV_REST_API_URL") ||
-      envPresent("KV_URL"),
-    redisConnected: redisOk,
+    redis: {
+      connected: redisOk,
+      hasUrl: redisStatus.hasUrl,
+      hasToken: redisStatus.hasToken,
+      source: redisStatus.source,
+    },
     openRouter: envPresent("OPENROUTER_API_KEY"),
     openAi: envPresent("OPENAI_API_KEY"),
     cryptoWalletsConfigured: walletCount,
@@ -63,9 +64,19 @@ export async function GET() {
 
   const warnings: string[] = [];
   if (production && !redisOk) {
-    warnings.push(
-      "Rate limiting uses in-memory fallback (not shared across instances). Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN."
-    );
+    if (redisStatus.hasUrl && !redisStatus.hasToken) {
+      warnings.push(
+        "Redis URL is set but TOKEN is missing. Add UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN."
+      );
+    } else if (!redisStatus.hasUrl && redisStatus.hasToken) {
+      warnings.push(
+        "Redis TOKEN is set but URL is missing. Add UPSTASH_REDIS_REST_URL or KV_REST_API_URL."
+      );
+    } else {
+      warnings.push(
+        "Rate limiting uses in-memory fallback. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or Vercel KV pair)."
+      );
+    }
   }
   if (!config.blob) {
     warnings.push("BLOB_READ_WRITE_TOKEN missing — resume upload disabled.");
