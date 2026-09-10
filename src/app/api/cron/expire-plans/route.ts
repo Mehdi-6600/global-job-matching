@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedBearerSecret } from "@/lib/api-auth";
 import { expireOverduePlans } from "@/lib/subscription";
 import { db } from "@/lib/db";
+import { securityLog } from "@/lib/security-log";
 
 /**
  * Daily cron: downgrade users with expired paid plans to free.
@@ -38,6 +39,13 @@ export async function GET(req: NextRequest) {
       } catch (e) {
         console.error("Expire-plans notification error:", e);
       }
+
+      securityLog("admin.payment_reject", {
+        actorId: "cron:expire-plans",
+        meta: {
+          expiredCount: result.expiredCount,
+        },
+      });
     }
 
     return NextResponse.json({
