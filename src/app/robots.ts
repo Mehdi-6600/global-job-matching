@@ -33,6 +33,8 @@ export default function robots(): MetadataRoute.Robots {
           "/resume-builder",
           "/payment",
           "/account",
+          "/verify-email",
+          "/reset-password",
         ],
       },
     ],
