@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Always return success to avoid email enumeration
+    // Always return the same success message (no email enumeration)
     const user = await db.user.findUnique({
       where: { email },
       select: { id: true, email: true, name: true, password: true },
@@ -53,21 +53,18 @@ export async function POST(req: NextRequest) {
         if (resend) {
           await resend.emails.send({
             from:
-              process.env.EMAIL_FROM ||
               process.env.RESEND_FROM_EMAIL ||
+              process.env.EMAIL_FROM ||
               "Global Job Matching <onboarding@resend.dev>",
             to: email,
             subject: "Reset your password",
             html: `<p>Hi ${user.name || "there"},</p>
 <p>Reset your password using this link (valid for a limited time):</p>
-<p><a href="${resetUrl}">${resetUrl}</a></p>
+<p><a href="${resetUrl}">Reset password</a></p>
 <p>If you did not request this, ignore this email.</p>`,
           });
-        } else {
-          console.info(
-            "[forgot-password] Resend not configured. resetUrl:",
-            resetUrl
-          );
+        } else if (process.env.NODE_ENV !== "production") {
+          console.info("[forgot-password] Resend not configured (dev only)");
         }
       } catch (err) {
         console.error("Forgot password email error:", err);
