@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
         console.error("Expire-plans notification error:", e);
       }
 
-      securityLog("admin.payment_reject", {
+      securityLog("plan.expire", {
         actorId: "cron:expire-plans",
         meta: {
           expiredCount: result.expiredCount,
