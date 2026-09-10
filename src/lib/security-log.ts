@@ -5,7 +5,8 @@ export type SecurityEventType =
   | "admin.bootstrap"
   | "auth.password_reset"
   | "auth.session_invalidated"
-  | "account.delete";
+  | "account.delete"
+  | "plan.expire";
 
 export type SecurityEvent = {
   type: SecurityEventType;
@@ -35,6 +36,5 @@ export function securityLog(
     at: new Date().toISOString(),
   };
 
-  // Single-line JSON for log aggregation
   console.info("[security]", JSON.stringify(event));
 }
