@@ -8,6 +8,7 @@ import { createJobForUser } from "@/services/jobs/create-job";
 import { getEmployerActiveJobLimit } from "@/lib/plan-limits";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
+import { parseListLimit, LIST_LIMITS } from "@/lib/pagination";
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,6 +29,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const take = parseListLimit(
+      searchParams.get("limit"),
+      LIST_LIMITS.adminList
+    );
+
     const effective = await getEffectivePlan(session.user.id);
     const maxActive = getEmployerActiveJobLimit(effective.plan);
 
@@ -39,6 +46,7 @@ export async function GET(req: NextRequest) {
         ],
       },
       orderBy: { createdAt: "desc" },
+      take,
       include: {
         company: { select: { id: true, name: true, logo: true } },
         _count: { select: { applications: true } },
@@ -58,6 +66,7 @@ export async function GET(req: NextRequest) {
         maxActiveJobs: maxActive,
         activeJobs: activeCount,
       },
+      limit: take,
     });
   } catch (error) {
     console.error("Employer jobs GET error:", error);
