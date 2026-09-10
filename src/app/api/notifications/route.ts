@@ -1,57 +1,37 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
-
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { ratelimit } from "@/lib/ratelimit";
-
 import {
   notificationPatchSchema,
   notificationDeleteSchema,
 } from "@/lib/validation/notification";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const ip = getRequestIp(req);
-
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `notifications_get_${session.user.id}_${ip}`
     );
-
-    if (!success) {
-      return NextResponse.json(
-        {
-          error: "Too many requests. Please try again later.",
-        },
-        { status: 429 }
-      );
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const notifications = await db.notification.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
       take: 50,
     });
 
-    const unreadCount = notifications.filter(
-      (notification) => !notification.read
-    ).length;
+    const unreadCount = notifications.filter((n) => !n.read).length;
 
     return NextResponse.json({
       notifications,
@@ -59,11 +39,8 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Fetch notifications error:", error);
-
     return NextResponse.json(
-      {
-        error: "Failed to fetch notifications",
-      },
+      { error: "Failed to fetch notifications" },
       { status: 500 }
     );
   }
@@ -73,43 +50,24 @@ export async function PATCH(req: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const ip = getRequestIp(req);
-
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `notifications_patch_${session.user.id}_${ip}`
     );
-
-    if (!success) {
-      return NextResponse.json(
-        {
-          error: "Too many requests. Please try again later.",
-        },
-        { status: 429 }
-      );
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
-    let body: unknown;
-
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        {
-          error: "Invalid JSON body",
-        },
-        { status: 400 }
-      );
+    const body = await readJsonBody(req);
+    if (body === null) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
     const parsed = notificationPatchSchema.safeParse(body);
-
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -128,9 +86,7 @@ export async function PATCH(req: NextRequest) {
           userId: session.user.id,
           read: false,
         },
-        data: {
-          read: true,
-        },
+        data: { read: true },
       });
 
       return NextResponse.json({
@@ -142,9 +98,7 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        {
-          error: "Notification ID required",
-        },
+        { error: "Notification ID required" },
         { status: 400 }
       );
     }
@@ -154,16 +108,12 @@ export async function PATCH(req: NextRequest) {
         id,
         userId: session.user.id,
       },
-      data: {
-        read: true,
-      },
+      data: { read: true },
     });
 
     if (result.count === 0) {
       return NextResponse.json(
-        {
-          error: "Notification not found",
-        },
+        { error: "Notification not found" },
         { status: 404 }
       );
     }
@@ -174,11 +124,8 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (error) {
     console.error("Update notification error:", error);
-
     return NextResponse.json(
-      {
-        error: "Failed to update notification",
-      },
+      { error: "Failed to update notification" },
       { status: 500 }
     );
   }
@@ -188,41 +135,25 @@ export async function DELETE(req: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const ip = getRequestIp(req);
-
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `notifications_delete_${session.user.id}_${ip}`
     );
-
-    if (!success) {
-      return NextResponse.json(
-        {
-          error: "Too many requests. Please try again later.",
-        },
-        { status: 429 }
-      );
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const { searchParams } = new URL(req.url);
-
     const id = searchParams.get("id");
-
-    const parsed = notificationDeleteSchema.safeParse({
-      id,
-    });
+    const parsed = notificationDeleteSchema.safeParse({ id });
 
     if (!parsed.success) {
       return NextResponse.json(
-        {
-          error: "Notification ID required",
-        },
+        { error: "Notification ID required" },
         { status: 400 }
       );
     }
@@ -236,9 +167,7 @@ export async function DELETE(req: NextRequest) {
 
     if (result.count === 0) {
       return NextResponse.json(
-        {
-          error: "Notification not found",
-        },
+        { error: "Notification not found" },
         { status: 404 }
       );
     }
@@ -249,11 +178,8 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (error) {
     console.error("Delete notification error:", error);
-
     return NextResponse.json(
-      {
-        error: "Failed to delete notification",
-      },
+      { error: "Failed to delete notification" },
       { status: 500 }
     );
   }
