@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCryptoWallets } from "@/lib/payment/plans";
+import { isRedisConfigured } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,7 +27,13 @@ export async function GET() {
   }
 
   const totalMs = Date.now() - started;
+  const redisOk = isRedisConfigured();
+  const production = process.env.NODE_ENV === "production";
+
+  // Degraded if DB down; in production also warn when rate-limit backend missing
   const healthy = database === "ok";
+  const status =
+    !healthy ? "degraded" : production && !redisOk ? "degraded" : "ok";
 
   let walletCount = 0;
   try {
@@ -45,15 +52,28 @@ export async function GET() {
     cronSecret: envPresent("CRON_SECRET"),
     blob: envPresent("BLOB_READ_WRITE_TOKEN"),
     upstash:
-      envPresent("UPSTASH_REDIS_REST_URL") || envPresent("KV_REST_API_URL"),
+      envPresent("UPSTASH_REDIS_REST_URL") ||
+      envPresent("KV_REST_API_URL") ||
+      envPresent("KV_URL"),
+    redisConnected: redisOk,
     openRouter: envPresent("OPENROUTER_API_KEY"),
     openAi: envPresent("OPENAI_API_KEY"),
     cryptoWalletsConfigured: walletCount,
   };
 
+  const warnings: string[] = [];
+  if (production && !redisOk) {
+    warnings.push(
+      "Rate limiting uses in-memory fallback (not shared across instances). Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN."
+    );
+  }
+  if (!config.blob) {
+    warnings.push("BLOB_READ_WRITE_TOKEN missing — resume upload disabled.");
+  }
+
   return NextResponse.json(
     {
-      status: healthy ? "ok" : "degraded",
+      status,
       service: "global-job-matching",
       time: new Date().toISOString(),
       checks: {
@@ -61,8 +81,13 @@ export async function GET() {
           status: database,
           latencyMs: dbMs,
         },
+        rateLimit: {
+          status: redisOk ? "redis" : "memory",
+          sharedAcrossInstances: redisOk,
+        },
         config,
       },
+      warnings: warnings.length > 0 ? warnings : undefined,
       latencyMs: totalMs,
       version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
       region: process.env.VERCEL_REGION || null,
