@@ -8,7 +8,7 @@ import {
 } from "@/lib/validation/message";
 import { getRequestIp } from "@/lib/client-ip";
 import { canMessageUser } from "@/lib/ownership";
-import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { parseListLimit, LIST_LIMITS } from "@/lib/pagination";
 
 function serializeUser(user: {
   id: string;
@@ -30,11 +30,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await strictRatelimit.limit(
+    const { success } = await strictRatelimit.limit(
       `messages_get_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -64,6 +64,11 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
+      const take = parseListLimit(
+        searchParams.get("limit"),
+        LIST_LIMITS.messagesThread
+      );
+
       const messages = await db.message.findMany({
         where: {
           OR: [
@@ -72,7 +77,7 @@ export async function GET(req: NextRequest) {
           ],
         },
         orderBy: { createdAt: "asc" },
-        take: 200,
+        take,
         include: {
           sender: { select: { id: true, name: true, image: true } },
           receiver: { select: { id: true, name: true, image: true } },
@@ -95,8 +100,14 @@ export async function GET(req: NextRequest) {
           sender: serializeUser(message.sender),
           receiver: serializeUser(message.receiver),
         })),
+        limit: take,
       });
     }
+
+    const take = parseListLimit(
+      searchParams.get("limit"),
+      LIST_LIMITS.messagesInbox
+    );
 
     const allMessages = await db.message.findMany({
       where: {
@@ -106,7 +117,7 @@ export async function GET(req: NextRequest) {
         ],
       },
       orderBy: { createdAt: "desc" },
-      take: 500,
+      take,
       include: {
         sender: { select: { id: true, name: true, image: true } },
         receiver: { select: { id: true, name: true, image: true } },
@@ -151,6 +162,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       conversations: Array.from(conversationsMap.values()),
+      limit: take,
     });
   } catch (error) {
     console.error("Get messages error:", error);
@@ -169,18 +181,20 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await strictRatelimit.limit(
+    const { success } = await strictRatelimit.limit(
       `messages_post_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(
-        limit,
-        "Too many messages. Please slow down."
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many messages. Please slow down." },
+        { status: 429 }
       );
     }
 
-    const body = await readJsonBody(req);
-    if (body === null) {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
