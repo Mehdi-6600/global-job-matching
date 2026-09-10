@@ -1,13 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/roles";
+import { adminRatelimit } from "@/lib/ratelimit";
+import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse } from "@/lib/http";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id || !isAdminRole(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const ip = getRequestIp(req);
+    const limit = await adminRatelimit.limit(
+      `admin_overview_${session.user.id}_${ip}`
+    );
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const now = new Date();
