@@ -18,6 +18,7 @@ import {
   lockUserRow,
   releaseUsageEventById,
 } from "@/lib/quota";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,11 +28,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await aiRatelimit.limit(
+    const limit = await aiRatelimit.limit(
       `career_risk_list_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     try {
@@ -81,20 +82,15 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await aiRatelimit.limit(
+    const limit = await aiRatelimit.limit(
       `career_risk_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many requests. Please wait." },
-        { status: 429 }
-      );
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests. Please wait.");
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -137,7 +133,6 @@ export async function POST(req: NextRequest) {
     }
     const paid = isPaidPlan(effectivePlan);
 
-    // Quota reservation — soft-fail to heuristic path if table/lock fails
     try {
       const reserveResult = await db.$transaction(async (tx) => {
         await lockUserRow(tx, user.id);
@@ -165,7 +160,6 @@ export async function POST(req: NextRequest) {
       reservedUserId = user.id;
     } catch (quotaErr) {
       console.error("Career risk quota reserve failed:", quotaErr);
-      // Continue without reservation so users still get heuristic analysis
       reservedEventId = null;
       reservedUserId = null;
     }
@@ -224,7 +218,6 @@ Education: ${education || "n/a"}`;
       result = heuristicCareerRisk(jobTitle, skills || undefined);
     }
 
-    // Always have a valid analysis object past this point
     if (!result || !result.summary) {
       result = heuristicCareerRisk(jobTitle, skills || undefined);
     }
@@ -260,8 +253,10 @@ Education: ${education || "n/a"}`;
       assessmentId = saved.id;
       savedShareToken = saved.shareToken;
     } catch (saveErr) {
-      // Table missing / schema drift — still return analysis to the user
-      console.error("Career risk save failed (returning analysis anyway):", saveErr);
+      console.error(
+        "Career risk save failed (returning analysis anyway):",
+        saveErr
+      );
       savedShareToken = undefined;
       assessmentId = undefined;
     }
@@ -289,14 +284,6 @@ Education: ${education || "n/a"}`;
       }
     }
 
-    // Last-resort: never leave the user with a blank error if we can parse jobTitle
-    try {
-      const fallbackBody = bodyFromRequestHint(error);
-      void fallbackBody;
-    } catch {
-      // ignore
-    }
-
     return NextResponse.json(
       {
         error:
@@ -306,9 +293,4 @@ Education: ${education || "n/a"}`;
       { status: 500 }
     );
   }
-}
-
-/** Placeholder to keep tree-shaking simple — unused helper intentionally empty */
-function bodyFromRequestHint(_error: unknown): null {
-  return null;
 }
