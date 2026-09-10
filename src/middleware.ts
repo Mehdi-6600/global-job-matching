@@ -1,14 +1,12 @@
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const response = NextResponse.next();
 
-  // Baseline security headers (API + pages)
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -17,7 +15,6 @@ export default auth((req) => {
     "camera=(), microphone=(), geolocation=()"
   );
 
-  // Do not index authenticated app shells aggressively
   const path = req.nextUrl.pathname;
   if (
     path.startsWith("/dashboard") ||
