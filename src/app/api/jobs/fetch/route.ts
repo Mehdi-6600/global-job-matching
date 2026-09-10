@@ -4,6 +4,7 @@ import { isAdminRole } from "@/lib/roles";
 import { ratelimit } from "@/lib/ratelimit";
 import { fetchAllJobs } from "@/lib/jobs/fetcher";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse } from "@/lib/http";
 
 /**
  * Admin-only external job fetch (expensive).
@@ -17,11 +18,11 @@ export async function GET(request: NextRequest) {
     }
 
     const ip = getRequestIp(request);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `jobs_fetch_admin_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const { searchParams } = new URL(request.url);
