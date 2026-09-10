@@ -9,7 +9,7 @@ import {
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import { assertJobAlertQuota, lockUserRow } from "@/lib/quota";
-import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { parseListLimit, LIST_LIMITS } from "@/lib/pagination";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,19 +19,26 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await ratelimit.limit(
+    const { success } = await ratelimit.limit(
       `job_alerts_get_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
+
+    const { searchParams } = new URL(req.url);
+    const take = parseListLimit(
+      searchParams.get("limit"),
+      LIST_LIMITS.userList
+    );
 
     const alerts = await db.jobAlert.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
+      take,
     });
 
-    return NextResponse.json({ alerts });
+    return NextResponse.json({ alerts, limit: take });
   } catch (error) {
     console.error("Job alerts GET error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
@@ -46,17 +53,19 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await ratelimit.limit(
+    const { success } = await ratelimit.limit(
       `job_alerts_post_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const effective = await getEffectivePlan(session.user.id);
 
-    const body = await readJsonBody(req);
-    if (body === null) {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -133,11 +142,11 @@ export async function DELETE(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await ratelimit.limit(
+    const { success } = await ratelimit.limit(
       `job_alerts_delete_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const id = new URL(req.url).searchParams.get("id");
