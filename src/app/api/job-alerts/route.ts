@@ -9,6 +9,7 @@ import {
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import { assertJobAlertQuota, lockUserRow } from "@/lib/quota";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,11 +19,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `job_alerts_get_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const alerts = await db.jobAlert.findMany({
@@ -45,19 +46,17 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `job_alerts_post_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const effective = await getEffectivePlan(session.user.id);
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -69,8 +68,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Schema only supports: keywords, location, remote, frequency, active
-    // Extra client fields (type, minSalary) are folded into keywords when present.
     const { keywords, location, remote, type, minSalary, frequency } =
       parsed.data as {
         keywords?: string | null;
@@ -136,11 +133,11 @@ export async function DELETE(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `job_alerts_delete_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const id = new URL(req.url).searchParams.get("id");
