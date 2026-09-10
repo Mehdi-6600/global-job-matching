@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { profileUpdateSchema } from "@/lib/validation/profile";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { isHttpUrl } from "@/lib/storage/resume";
 
 function mapProfile(user: {
   id: string;
@@ -23,6 +25,8 @@ function mapProfile(user: {
     portfolio?: string | null;
   } | null;
 }) {
+  const hasResume = Boolean(user.profile?.resumeUrl);
+
   return {
     id: user.id,
     email: user.email,
@@ -33,7 +37,10 @@ function mapProfile(user: {
     phone: user.profile?.phone || null,
     avatar: user.image,
     role: user.role,
-    resumeUrl: user.profile?.resumeUrl || null,
+    // Never expose raw blob URL to the browser
+    hasResume,
+    storedInBlob: isHttpUrl(user.profile?.resumeUrl),
+    downloadPath: hasResume ? "/api/profile/resume/download" : null,
     linkedin: user.profile?.linkedin || null,
     github: user.profile?.github || null,
     portfolio: user.profile?.portfolio || null,
@@ -94,14 +101,18 @@ export async function PUT(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `profile_update_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
-    const body = await req.json();
+    const body = await readJsonBody(req);
+    if (body === null) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const parsed = profileUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
