@@ -1,25 +1,18 @@
 # V42 Part 2 — Security fixes log
 
-## FIX BATCH 1 (applied)
+## FIX BATCH 1
+- Job public visibility (active-only for strangers)
+- Resume pathname entropy + host allowlist + no URL leak to client
+- Admin overview rate limit
 
-### P1 — Job detail IDOR / draft leak
-- Added `src/lib/jobs/public-visibility.ts`
-- `GET /api/jobs/[id]` only returns non-`active` jobs to poster, company owner, or admin
-- Strangers receive `404` (same as missing)
-- `company.ownerId` stripped from JSON response
+## FIX BATCH 2+3
+- **Redis env bugfix**: `src/lib/redis.ts` now accepts `UPSTASH_REDIS_*` and `KV_*`
+- Health reports `rateLimit.status` (`redis` | `memory`) + production warning
+- CSP **Report-Only** baseline in `next.config.js` (does not break UI)
+- `securityLog()` structured lines for role change, payment confirm/reject, bootstrap
+- Admin transactions / users / bootstrap / jobs fetch use `rateLimitedResponse`
 
-### P1 — Resume storage hardening
-- Longer pathname nonce (32 bytes)
-- Host allowlist on server-side blob fetch
-- Never return raw blob URL from API
-- Clearer INVALID_PDF handling
-- Magic-byte + size checks retained
-
-### P2 — Admin overview rate limit
-- `GET /api/admin` uses `adminRatelimit` + `rateLimitedResponse`
-
-## Remaining (next batches)
-- CSP (careful, gradual)
-- Redis required in production (document / health warn)
-- Optional on-chain crypto verification (product decision)
-- Structured audit log for admin payment confirms
+## Still later (optional)
+- Enforce CSP (remove Report-Only) after console is clean
+- On-chain crypto verification
+- Persistent audit table (DB) if log drain is not enough
