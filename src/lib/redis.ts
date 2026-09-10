@@ -19,8 +19,12 @@ function isRestUrl(url: string): boolean {
 
 function pickUrl(): { url: string; source: string } | null {
   const candidates: Array<[string, string]> = [
+    // Standard Upstash
     ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_URL"],
+    // Vercel KV classic
     ["KV_REST_API_URL", "KV_REST_API_URL"],
+    // Vercel + Upstash marketplace (YOUR setup)
+    ["UPSTASH_KV_REST_API_URL", "UPSTASH_KV_REST_API_URL"],
     ["UPSTASH_KV_REDIS_URL", "UPSTASH_KV_REDIS_URL"],
     ["UPSTASH_REDIS_URL", "UPSTASH_REDIS_URL"],
   ];
@@ -32,10 +36,15 @@ function pickUrl(): { url: string; source: string } | null {
     }
   }
 
-  // KV_URL is often rediss:// — only accept if somehow https
-  const kvUrl = trimEnv("KV_URL");
-  if (kvUrl && isRestUrl(kvUrl)) {
-    return { url: kvUrl, source: "KV_URL" };
+  // KV_URL / UPSTASH_KV_KV_URL are often rediss:// — only accept https
+  for (const [envName, source] of [
+    ["KV_URL", "KV_URL"],
+    ["UPSTASH_KV_KV_URL", "UPSTASH_KV_KV_URL"],
+  ] as const) {
+    const url = trimEnv(envName);
+    if (url && isRestUrl(url)) {
+      return { url, source };
+    }
   }
 
   return null;
@@ -45,6 +54,8 @@ function pickToken(): { token: string; source: string } | null {
   const candidates: Array<[string, string]> = [
     ["UPSTASH_REDIS_REST_TOKEN", "UPSTASH_REDIS_REST_TOKEN"],
     ["KV_REST_API_TOKEN", "KV_REST_API_TOKEN"],
+    // Vercel + Upstash marketplace (YOUR setup)
+    ["UPSTASH_KV_REST_API_TOKEN", "UPSTASH_KV_REST_API_TOKEN"],
     ["UPSTASH_KV_REDIS_TOKEN", "UPSTASH_KV_REDIS_TOKEN"],
     ["UPSTASH_REDIS_TOKEN", "UPSTASH_REDIS_TOKEN"],
   ];
@@ -60,13 +71,14 @@ export function getRedisEnvStatus(): RedisEnvStatus {
   const urlPick = pickUrl();
   const tokenPick = pickToken();
 
-  // Detect presence even if wrong protocol (for diagnostics)
   const anyUrlPresent = Boolean(
     trimEnv("UPSTASH_REDIS_REST_URL") ||
       trimEnv("KV_REST_API_URL") ||
+      trimEnv("UPSTASH_KV_REST_API_URL") ||
       trimEnv("UPSTASH_KV_REDIS_URL") ||
       trimEnv("UPSTASH_REDIS_URL") ||
-      trimEnv("KV_URL")
+      trimEnv("KV_URL") ||
+      trimEnv("UPSTASH_KV_KV_URL")
   );
 
   const configured = Boolean(urlPick && tokenPick);
@@ -80,15 +92,14 @@ export function getRedisEnvStatus(): RedisEnvStatus {
         ? `${urlPick.source}+${tokenPick.source}`
         : null,
     urlPreview: urlPick
-      ? urlPick.url.replace(/^(https:\/\/[^/]{0,24}).*$/i, "$1…")
+      ? urlPick.url.replace(/^(https:\/\/[^/]{0,28}).*$/i, "$1…")
       : anyUrlPresent
-        ? "(non-https or unsupported protocol — need https REST URL)"
+        ? "(found env but not https REST — need https://…upstash.io)"
         : null,
   };
 }
 
 function createClient(): Redis | null {
-  // Prefer SDK auto-detect for standard names
   try {
     if (
       (trimEnv("UPSTASH_REDIS_REST_URL") &&
@@ -98,7 +109,7 @@ function createClient(): Redis | null {
       return Redis.fromEnv();
     }
   } catch {
-    // fall through to manual
+    // fall through
   }
 
   const urlPick = pickUrl();
