@@ -2,17 +2,25 @@
 
 ## FIX BATCH 1
 - Job public visibility (active-only for strangers)
-- Resume pathname entropy + host allowlist + no URL leak to client
+- Resume pathname entropy + host allowlist + no URL leak from resume API
 - Admin overview rate limit
 
 ## FIX BATCH 2+3
-- **Redis env bugfix**: `src/lib/redis.ts` now accepts `UPSTASH_REDIS_*` and `KV_*`
-- Health reports `rateLimit.status` (`redis` | `memory`) + production warning
-- CSP **Report-Only** baseline in `next.config.js` (does not break UI)
-- `securityLog()` structured lines for role change, payment confirm/reject, bootstrap
-- Admin transactions / users / bootstrap / jobs fetch use `rateLimitedResponse`
+- Redis env supports UPSTASH_* and KV_*
+- Health rateLimit backend status + production warning
+- CSP Report-Only
+- securityLog for admin role/payment/bootstrap
+- Admin transactions/users/bootstrap + jobs fetch 429 headers
 
-## Still later (optional)
-- Enforce CSP (remove Report-Only) after console is clean
+## FIX BATCH 4
+- **Profile API no longer returns `resumeUrl`** (only hasResume + downloadPath)
+- Account delete: rateLimitedResponse, securityLog, blob cleanup
+- jobs/sync uses pure sync-normalize helpers
+- forgot-password: no reset URL in production logs; consistent 429
+- cron expire-plans: securityLog `plan.expire`
+- seed remains production-blocked
+
+## Optional later
+- Enforce CSP (drop Report-Only) after monitoring
 - On-chain crypto verification
-- Persistent audit table (DB) if log drain is not enough
+- DB-backed audit table
