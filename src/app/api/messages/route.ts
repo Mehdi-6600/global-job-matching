@@ -8,6 +8,7 @@ import {
 } from "@/lib/validation/message";
 import { getRequestIp } from "@/lib/client-ip";
 import { canMessageUser } from "@/lib/ownership";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 function serializeUser(user: {
   id: string;
@@ -29,11 +30,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await strictRatelimit.limit(
+    const limit = await strictRatelimit.limit(
       `messages_get_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit);
     }
 
     const { searchParams } = new URL(req.url);
@@ -168,20 +169,18 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await strictRatelimit.limit(
+    const limit = await strictRatelimit.limit(
       `messages_post_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json(
-        { error: "Too many messages. Please slow down." },
-        { status: 429 }
+    if (!limit.success) {
+      return rateLimitedResponse(
+        limit,
+        "Too many messages. Please slow down."
       );
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
