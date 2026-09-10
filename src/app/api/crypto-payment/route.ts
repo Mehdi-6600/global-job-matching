@@ -13,6 +13,7 @@ import {
 import { getRequestIp } from "@/lib/client-ip";
 import { isPlausibleTxHash } from "@/lib/payment/verify-crypto";
 import { getEffectivePlan } from "@/lib/subscription";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 const cryptoPaymentSchema = z
   .object({
@@ -72,17 +73,15 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(
+    const limit = await ratelimit.limit(
       `crypto_pay_${session.user.id}_${ip}`
     );
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
