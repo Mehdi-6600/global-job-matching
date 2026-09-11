@@ -123,7 +123,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 }
 
 export default function CareerRiskPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { status } = useSession();
   const [jobTitle, setJobTitle] = useState("");
   const [skills, setSkills] = useState("");
@@ -155,6 +155,7 @@ export default function CareerRiskPage() {
       country: country.trim() || undefined,
       location: location.trim() || undefined,
       education: education.trim() || undefined,
+      locale: locale || "en",
     };
   }, [
     jobTitle,
@@ -164,6 +165,7 @@ export default function CareerRiskPage() {
     country,
     location,
     education,
+    locale,
   ]);
 
   const loadHistory = useCallback(async () => {
@@ -508,11 +510,13 @@ export default function CareerRiskPage() {
                 </p>
                 {analysis.timeHorizon && (
                   <p className="text-xs text-slate-500 mt-1">
-                    Horizon: {analysis.timeHorizon}
+                    {analysis.timeHorizon}
                     {analysis.confidence != null
-                      ? ` · Confidence ${analysis.confidence}%`
+                      ? ` · ${analysis.confidence}%`
                       : ""}
-                    {analysis.source === "heuristic" ? " · Offline model" : ""}
+                    {analysis.source === "heuristic"
+                      ? ` · ${t("CareerRisk.offline", "Offline model")}`
+                      : ""}
                   </p>
                 )}
               </div>
@@ -553,19 +557,19 @@ export default function CareerRiskPage() {
                   {t("CareerRisk.breakdown", "Risk breakdown")}
                 </h2>
                 <ScoreBar
-                  label="Task automation"
+                  label={t("CareerRisk.taskAutomation", "Task automation")}
                   value={analysis.subScores.taskAutomation}
                 />
                 <ScoreBar
-                  label="Tool maturity"
+                  label={t("CareerRisk.toolMaturity", "Tool maturity")}
                   value={analysis.subScores.toolMaturity}
                 />
                 <ScoreBar
-                  label="Market adoption"
+                  label={t("CareerRisk.marketAdoption", "Market adoption")}
                   value={analysis.subScores.marketAdoption}
                 />
                 <ScoreBar
-                  label="Agent exposure"
+                  label={t("CareerRisk.agentExposure", "Agent exposure")}
                   value={analysis.subScores.agenticExposure}
                 />
               </section>
@@ -642,13 +646,13 @@ export default function CareerRiskPage() {
                 href="/search"
                 className="text-xs text-cyan-400 hover:underline"
               >
-                Browse matching jobs
+                {t("CareerRisk.browseJobs", "Browse matching jobs")}
               </Link>
               <Link
                 href="/resume-builder"
                 className="text-xs text-cyan-400 hover:underline"
               >
-                Improve resume with AI
+                {t("CareerRisk.improveResume", "Improve resume with AI")}
               </Link>
               {sharePath && (
                 <button
@@ -657,7 +661,9 @@ export default function CareerRiskPage() {
                   onClick={() => void copyShare()}
                 >
                   <Copy className="w-3 h-3" />
-                  {copied ? "Copied" : "Copy share link"}
+                  {copied
+                    ? t("Common.copied", "Copied")
+                    : t("CareerRisk.copyShare", "Copy share link")}
                 </button>
               )}
             </div>
@@ -731,7 +737,7 @@ export default function CareerRiskPage() {
                 onClick={continueWithGoogle}
                 className="w-full rounded-xl bg-white text-slate-900 font-semibold text-sm py-3 hover:bg-slate-100"
               >
-                Continue with Google
+                {t("Auth.continueGoogle", "Continue with Google")}
               </button>
               <button
                 type="button"
