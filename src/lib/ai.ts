@@ -1,9 +1,7 @@
 /**
- * Shared AI helper — OpenRouter primary, OpenAI secondary.
- * Timeout + limited retries. Never logs API keys.
+ * Shared AI helper — OpenRouter first, then OpenAI.
+ * Timeout + limited retries. Failures return null (caller handles fallback).
  */
-
-import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -16,7 +14,7 @@ export type AiCallMeta = {
   latencyMs: number;
   attempt: number;
   success: boolean;
-  failureReason?: string;
+  error?: string;
 };
 
 export type ChatCompletionResult = {
@@ -24,42 +22,50 @@ export type ChatCompletionResult = {
   meta: AiCallMeta;
 };
 
-const DEFAULT_TIMEOUT_MS = 25_000;
-const MAX_PROVIDER_ATTEMPTS = 2;
+const DEFAULT_OPENROUTER_MODELS = [
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "google/gemma-2-9b-it:free",
+  "mistralai/mistral-7b-instruct:free",
+  "microsoft/phi-3-mini-128k-instruct:free",
+  "openrouter/auto",
+];
 
-function openRouterModels(): string[] {
+function openRouterModelList(): string[] {
   const preferred = (process.env.OPENROUTER_MODEL || "").trim();
-  const fallback = (
-    process.env.OPENROUTER_FALLBACK_MODEL || "openrouter/auto"
-  ).trim();
-  const list = preferred
-    ? [preferred, fallback].filter((m, i, a) => m && a.indexOf(m) === i)
-    : [fallback || "openrouter/auto"];
-  return list.slice(0, 2);
+  const fallback = (process.env.OPENROUTER_FALLBACK_MODEL || "").trim();
+  const list = [
+    ...(preferred ? [preferred] : []),
+    ...DEFAULT_OPENROUTER_MODELS,
+    ...(fallback ? [fallback] : []),
+  ];
+  return Array.from(new Set(list.filter(Boolean)));
 }
 
-function withTimeout(
-  ms: number
-): { signal: AbortSignal; clear: () => void } {
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), ms);
-  return {
-    signal: controller.signal,
-    clear: () => clearTimeout(id),
-  };
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-async function callOpenRouterOnce(
+async function callOpenRouter(
   apiKey: string,
   model: string,
   messages: ChatMessage[],
   maxTokens: number,
   temperature: number,
   timeoutMs: number
-): Promise<{ text: string | null; reason?: string }> {
-  const { signal, clear } = withTimeout(timeoutMs);
-  try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+): Promise<string | null> {
+  const res = await fetchWithTimeout(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -75,128 +81,122 @@ async function callOpenRouterOnce(
         max_tokens: maxTokens,
         temperature,
       }),
-      signal,
-    });
+    },
+    timeoutMs
+  );
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.error("OpenRouter error:", model, res.status, errText.slice(0, 200));
-      return {
-        text: null,
-        reason: `openrouter_http_${res.status}`,
-      };
-    }
-
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text = data?.choices?.[0]?.message?.content;
-    if (typeof text !== "string" || !text.trim()) {
-      return { text: null, reason: "empty_content" };
-    }
-    return { text: text.trim() };
-  } catch (err) {
-    const name = err instanceof Error ? err.name : "Error";
-    if (name === "AbortError") {
-      return { text: null, reason: "timeout" };
-    }
-    console.error("OpenRouter threw:", model, name);
-    return { text: null, reason: "network" };
-  } finally {
-    clear();
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error("OpenRouter error:", model, res.status, errText.slice(0, 300));
+    return null;
   }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const text = data?.choices?.[0]?.message?.content;
+  return typeof text === "string" ? text.trim() : null;
 }
 
-async function callOpenAIOnce(
+async function callOpenAI(
   apiKey: string,
   messages: ChatMessage[],
   maxTokens: number,
   temperature: number,
   timeoutMs: number
-): Promise<{ text: string | null; model: string; reason?: string }> {
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  const { signal, clear } = withTimeout(timeoutMs);
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+): Promise<string | null> {
+  const res = await fetchWithTimeout(
+    "https://api.openai.com/v1/chat/completions",
+    {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model,
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
         messages,
         max_tokens: maxTokens,
         temperature,
       }),
-      signal,
-    });
+    },
+    timeoutMs
+  );
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.error("OpenAI error:", res.status, errText.slice(0, 200));
-      return { text: null, model, reason: `openai_http_${res.status}` };
-    }
-
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text = data?.choices?.[0]?.message?.content;
-    if (typeof text !== "string" || !text.trim()) {
-      return { text: null, model, reason: "empty_content" };
-    }
-    return { text: text.trim(), model };
-  } catch (err) {
-    const name = err instanceof Error ? err.name : "Error";
-    if (name === "AbortError") {
-      return { text: null, model, reason: "timeout" };
-    }
-    console.error("OpenAI threw:", name);
-    return { text: null, model, reason: "network" };
-  } finally {
-    clear();
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error("OpenAI error:", res.status, errText.slice(0, 300));
+    return null;
   }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const text = data?.choices?.[0]?.message?.content;
+  return typeof text === "string" ? text.trim() : null;
 }
 
-function scrubMessages(messages: ChatMessage[]): ChatMessage[] {
-  return messages.map((m) => ({
-    role: m.role,
-    content:
-      m.role === "system"
-        ? m.content.slice(0, 12_000)
-        : neutralizeInstructionish(m.content).slice(0, 12_000),
-  }));
-}
-
-/**
- * Full result with metadata (preferred for new code).
- */
 export async function chatCompletionWithMeta(
   messages: ChatMessage[],
   options?: {
     maxTokens?: number;
     temperature?: number;
     timeoutMs?: number;
+    maxAttempts?: number;
   }
 ): Promise<ChatCompletionResult> {
   const maxTokens = options?.maxTokens ?? 2000;
   const temperature = options?.temperature ?? 0.6;
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const safeMessages = scrubMessages(messages);
+  const timeoutMs = options?.timeoutMs ?? 25_000;
+  const maxAttempts = Math.min(Math.max(options?.maxAttempts ?? 2, 1), 3);
 
   const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
   const openAiKey = process.env.OPENAI_API_KEY?.trim();
   const started = Date.now();
   let attempt = 0;
+  let lastError: string | undefined;
 
   if (openRouterKey) {
-    for (const model of openRouterModels()) {
-      for (let i = 0; i < MAX_PROVIDER_ATTEMPTS; i++) {
+    for (const model of openRouterModelList()) {
+      for (let a = 0; a < maxAttempts; a++) {
         attempt += 1;
-        const { text, reason } = await callOpenRouterOnce(
-          openRouterKey,
-          model,
-          safeMessages,
+        try {
+          const text = await callOpenRouter(
+            openRouterKey,
+            model,
+            messages,
+            maxTokens,
+            temperature,
+            timeoutMs
+          );
+          if (text) {
+            return {
+              text,
+              meta: {
+                provider: "openrouter",
+                model,
+                latencyMs: Date.now() - started,
+                attempt,
+                success: true,
+              },
+            };
+          }
+          lastError = `empty_or_http_fail:${model}`;
+        } catch (err) {
+          lastError = err instanceof Error ? err.message : String(err);
+          console.error("OpenRouter call threw:", model, err);
+        }
+      }
+    }
+  }
+
+  if (openAiKey) {
+    for (let a = 0; a < maxAttempts; a++) {
+      attempt += 1;
+      try {
+        const text = await callOpenAI(
+          openAiKey,
+          messages,
           maxTokens,
           temperature,
           timeoutMs
@@ -205,46 +205,18 @@ export async function chatCompletionWithMeta(
           return {
             text,
             meta: {
-              provider: "openrouter",
-              model,
+              provider: "openai",
+              model: process.env.OPENAI_MODEL || "gpt-4o-mini",
               latencyMs: Date.now() - started,
               attempt,
               success: true,
             },
           };
         }
-        // Retry only transient failures
-        if (reason !== "timeout" && reason !== "network") {
-          break;
-        }
-      }
-    }
-  }
-
-  if (openAiKey) {
-    for (let i = 0; i < MAX_PROVIDER_ATTEMPTS; i++) {
-      attempt += 1;
-      const { text, model, reason } = await callOpenAIOnce(
-        openAiKey,
-        safeMessages,
-        maxTokens,
-        temperature,
-        timeoutMs
-      );
-      if (text) {
-        return {
-          text,
-          meta: {
-            provider: "openai",
-            model,
-            latencyMs: Date.now() - started,
-            attempt,
-            success: true,
-          },
-        };
-      }
-      if (reason !== "timeout" && reason !== "network") {
-        break;
+        lastError = "openai_empty_or_http_fail";
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+        console.error("OpenAI call threw:", err);
       }
     }
   }
@@ -257,18 +229,22 @@ export async function chatCompletionWithMeta(
       latencyMs: Date.now() - started,
       attempt,
       success: false,
-      failureReason: !openRouterKey && !openAiKey ? "no_api_key" : "all_failed",
+      error: lastError || "no_provider_or_all_failed",
     },
   };
 }
 
-/** Backward-compatible: returns text only */
 export async function chatCompletion(
   messages: ChatMessage[],
-  options?: { maxTokens?: number; temperature?: number; timeoutMs?: number }
+  options?: {
+    maxTokens?: number;
+    temperature?: number;
+    timeoutMs?: number;
+    maxAttempts?: number;
+  }
 ): Promise<string | null> {
-  const result = await chatCompletionWithMeta(messages, options);
-  return result.text;
+  const { text } = await chatCompletionWithMeta(messages, options);
+  return text;
 }
 
 export function buildTemplateResume(input: {
