@@ -12,8 +12,14 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  History,
+  Copy,
 } from "lucide-react";
-import type { CareerRiskAnalysis, CareerRiskFormInput } from "@/types/career-risk";
+import type {
+  CareerRiskAnalysis,
+  CareerRiskFormInput,
+  CareerRiskSubScores,
+} from "@/types/career-risk";
 import {
   clearCareerRiskDraft,
   loadCareerRiskDraft,
@@ -27,6 +33,29 @@ const levelColor = {
   medium: "text-amber-400 border-amber-500/30 bg-amber-500/10",
   high: "text-red-400 border-red-500/30 bg-red-500/10",
 };
+
+type HistoryItem = {
+  id: string;
+  jobTitle: string;
+  riskScore: number;
+  riskLevel: string;
+  summary: string;
+  sharePath?: string;
+  createdAt: string;
+};
+
+function parseSubScores(raw: unknown): CareerRiskSubScores | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  const n = (v: unknown) =>
+    Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  return {
+    taskAutomation: n(o.taskAutomation),
+    toolMaturity: n(o.toolMaturity),
+    marketAdoption: n(o.marketAdoption),
+    agenticExposure: n(o.agenticExposure),
+  };
+}
 
 function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
   if (!data || typeof data !== "object") return null;
@@ -64,7 +93,33 @@ function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
       ? src.alternatives.map((x) => String(x))
       : [],
     source: src.source === "heuristic" ? "heuristic" : "ai",
+    subScores: parseSubScores(src.subScores),
+    timeHorizon: src.timeHorizon ? String(src.timeHorizon) : undefined,
+    confidence:
+      src.confidence != null
+        ? Math.max(0, Math.min(100, Math.round(Number(src.confidence))))
+        : undefined,
+    industryOutlook: src.industryOutlook
+      ? String(src.industryOutlook)
+      : undefined,
   };
+}
+
+function ScoreBar({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs text-slate-400">
+        <span>{label}</span>
+        <span className="text-slate-300 font-medium">{value}</span>
+      </div>
+      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-cyan-500/80 to-cyan-400"
+          style={{ width: `${Math.max(4, Math.min(100, value))}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function CareerRiskPage() {
@@ -84,6 +139,8 @@ export default function CareerRiskPage() {
   const [sharePath, setSharePath] = useState<string | null>(null);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const currentForm = useCallback((): CareerRiskFormInput => {
     const years = experienceYears.trim()
@@ -108,6 +165,43 @@ export default function CareerRiskPage() {
     location,
     education,
   ]);
+
+  const loadHistory = useCallback(async () => {
+    if (status !== "authenticated") return;
+    try {
+      const res = await fetch("/api/career/risk", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const items = Array.isArray(data.assessments) ? data.assessments : [];
+      setHistory(
+        items.map(
+          (a: {
+            id: string;
+            jobTitle: string;
+            riskScore: number;
+            riskLevel: string;
+            summary: string;
+            sharePath?: string;
+            createdAt: string;
+          }) => ({
+            id: a.id,
+            jobTitle: a.jobTitle,
+            riskScore: a.riskScore,
+            riskLevel: a.riskLevel,
+            summary: a.summary,
+            sharePath: a.sharePath,
+            createdAt: a.createdAt,
+          })
+        )
+      );
+    } catch {
+      // ignore
+    }
+  }, [status]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   const runAnalysis = useCallback(async () => {
     setError("");
@@ -156,12 +250,13 @@ export default function CareerRiskPage() {
       if (msg) setUpgradeMessage(msg);
       clearCareerRiskDraft();
       trackEvent("career_risk_success");
+      void loadHistory();
     } catch {
       setError(t("Auth.errors.network", "Network error. Please try again."));
     } finally {
       setLoading(false);
     }
-  }, [currentForm, t]);
+  }, [currentForm, t, loadHistory]);
 
   useEffect(() => {
     const draft = loadCareerRiskDraft();
@@ -212,6 +307,19 @@ export default function CareerRiskPage() {
     saveCareerRiskDraft(currentForm(), { autoSubmit: true });
     trackEvent("career_risk_email_login");
     window.location.href = `/login?callbackUrl=${encodeURIComponent("/career-risk")}`;
+  }
+
+  async function copyShare() {
+    if (!sharePath) return;
+    try {
+      await navigator.clipboard?.writeText(
+        `${window.location.origin}${sharePath}`
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
   }
 
   return (
@@ -389,7 +497,7 @@ export default function CareerRiskPage() {
         </form>
 
         {analysis && (
-          <div className="glass rounded-2xl p-5 sm:p-6 border border-white/10 space-y-5">
+          <div className="glass rounded-2xl p-5 sm:p-6 border border-white/10 space-y-5 mb-8">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-sm text-slate-400">
@@ -398,9 +506,18 @@ export default function CareerRiskPage() {
                 <p className="text-xl font-semibold text-white">
                   {analysis.jobTitle}
                 </p>
+                {analysis.timeHorizon && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Horizon: {analysis.timeHorizon}
+                    {analysis.confidence != null
+                      ? ` · Confidence ${analysis.confidence}%`
+                      : ""}
+                    {analysis.source === "heuristic" ? " · Offline model" : ""}
+                  </p>
+                )}
               </div>
               <div
-                className={`rounded-xl border px-3 py-2 text-center ${levelColor[analysis.riskLevel]}`}
+                className={`rounded-xl border px-3 py-2 text-center min-w-[88px] ${levelColor[analysis.riskLevel]}`}
               >
                 <p className="text-2xl font-bold">{analysis.riskScore}</p>
                 <p className="text-xs uppercase tracking-wide">
@@ -409,7 +526,50 @@ export default function CareerRiskPage() {
               </div>
             </div>
 
+            <div className="h-3 rounded-full bg-white/5 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${
+                  analysis.riskLevel === "high"
+                    ? "bg-red-500/80"
+                    : analysis.riskLevel === "medium"
+                      ? "bg-amber-500/80"
+                      : "bg-emerald-500/80"
+                }`}
+                style={{ width: `${analysis.riskScore}%` }}
+              />
+            </div>
+
             <p className="text-slate-300 leading-relaxed">{analysis.summary}</p>
+
+            {analysis.industryOutlook && (
+              <p className="text-sm text-slate-400 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]">
+                {analysis.industryOutlook}
+              </p>
+            )}
+
+            {analysis.subScores && (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold text-white">
+                  {t("CareerRisk.breakdown", "Risk breakdown")}
+                </h2>
+                <ScoreBar
+                  label="Task automation"
+                  value={analysis.subScores.taskAutomation}
+                />
+                <ScoreBar
+                  label="Tool maturity"
+                  value={analysis.subScores.toolMaturity}
+                />
+                <ScoreBar
+                  label="Market adoption"
+                  value={analysis.subScores.marketAdoption}
+                />
+                <ScoreBar
+                  label="Agent exposure"
+                  value={analysis.subScores.agenticExposure}
+                />
+              </section>
+            )}
 
             {analysis.reasons.length > 0 && (
               <section>
@@ -477,19 +637,64 @@ export default function CareerRiskPage() {
               )}
             </section>
 
-            {sharePath && (
-              <button
-                type="button"
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Link
+                href="/search"
                 className="text-xs text-cyan-400 hover:underline"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(
-                    `${window.location.origin}${sharePath}`
-                  );
-                }}
               >
-                {t("Common.view", "View")} / share link
-              </button>
-            )}
+                Browse matching jobs
+              </Link>
+              <Link
+                href="/resume-builder"
+                className="text-xs text-cyan-400 hover:underline"
+              >
+                Improve resume with AI
+              </Link>
+              {sharePath && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:underline"
+                  onClick={() => void copyShare()}
+                >
+                  <Copy className="w-3 h-3" />
+                  {copied ? "Copied" : "Copy share link"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {status === "authenticated" && history.length > 0 && (
+          <div className="glass rounded-2xl p-5 border border-white/10">
+            <div className="flex items-center gap-2 mb-4">
+              <History className="w-4 h-4 text-slate-400" />
+              <h2 className="text-sm font-semibold text-white">
+                {t("CareerRisk.history", "Your recent analyses")}
+              </h2>
+            </div>
+            <ul className="space-y-3">
+              {history.slice(0, 8).map((h) => (
+                <li
+                  key={h.id}
+                  className="flex items-start justify-between gap-3 text-sm border-b border-white/5 pb-3 last:border-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-white font-medium truncate">
+                      {h.jobTitle}
+                    </p>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {h.summary}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-semibold text-cyan-300">{h.riskScore}</p>
+                    <p className="text-[10px] uppercase text-slate-500">
+                      {h.riskLevel}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
