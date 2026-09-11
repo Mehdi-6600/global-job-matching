@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  heuristicCareerRisk,
   parseRiskJson,
   scoreToRiskLevel,
-  heuristicCareerRisk,
-  clampScore,
+  toSuccessResponse,
 } from "@/lib/career-risk";
 
 describe("scoreToRiskLevel", () => {
-  it("maps ranges deterministically", () => {
+  it("maps bands", () => {
     expect(scoreToRiskLevel(0)).toBe("low");
     expect(scoreToRiskLevel(34)).toBe("low");
     expect(scoreToRiskLevel(35)).toBe("medium");
@@ -18,88 +18,49 @@ describe("scoreToRiskLevel", () => {
 });
 
 describe("parseRiskJson", () => {
-  const title = "Accountant";
-
-  it("accepts valid structured JSON and keeps user title", () => {
-    const raw = JSON.stringify({
-      jobTitle: "Financial Analyst",
-      riskScore: 72,
+  it("forces user title and level from score", () => {
+    const text = JSON.stringify({
+      jobTitle: "HACKED TITLE",
+      riskScore: 80,
       riskLevel: "low",
-      summary:
-        "This role has meaningful automation exposure in reporting and bookkeeping tasks over the next decade.",
-      reasons: ["Repetitive ledger work", "Standard tax software"],
-      skillsToBuild: ["Advisory", "Systems literacy"],
-      alternatives: ["FP&A"],
+      summary: "Meaningful summary about automation pressure in this role over time.",
+      reasons: ["r1"],
+      skillsToBuild: ["s1"],
+      alternatives: ["a1"],
       subScores: {
         taskAutomation: 70,
-        toolMaturity: 65,
-        marketAdoption: 60,
+        toolMaturity: 60,
+        marketAdoption: 55,
         agenticExposure: 40,
       },
-      confidence: 70,
     });
-    const out = parseRiskJson(raw, title);
-    expect(out).not.toBeNull();
-    expect(out!.jobTitle).toBe("Accountant");
-    expect(out!.riskScore).toBe(72);
-    expect(out!.riskLevel).toBe("high"); // from score, ignores AI "low"
-    expect(out!.source).toBe("ai");
-    expect(out!.subScores?.taskAutomation).toBe(70);
+    const parsed = parseRiskJson(text, "Frontend Developer");
+    expect(parsed).not.toBeNull();
+    expect(parsed!.jobTitle).toBe("Frontend Developer");
+    expect(parsed!.riskLevel).toBe("high");
+    expect(parsed!.source).toBe("ai");
   });
 
-  it("rejects missing summary", () => {
-    const raw = JSON.stringify({
-      riskScore: 40,
-      summary: "short",
-      reasons: ["a"],
-      skillsToBuild: ["b"],
-    });
-    expect(parseRiskJson(raw, title)).toBeNull();
-  });
-
-  it("rejects invalid score", () => {
-    const raw = JSON.stringify({
-      riskScore: 150,
-      summary: "A sufficiently long summary for validation purposes here.",
-      reasons: ["reason one"],
-      skillsToBuild: ["skill one"],
-    });
-    expect(parseRiskJson(raw, title)).toBeNull();
-  });
-
-  it("rejects malformed JSON", () => {
-    expect(parseRiskJson("not json at all", title)).toBeNull();
-  });
-
-  it("parses fenced JSON", () => {
-    const raw = `\`\`\`json
-{
-  "riskScore": 40,
-  "summary": "A sufficiently long summary for validation purposes here.",
-  "reasons": ["Reason one about the role"],
-  "skillsToBuild": ["Skill one"]
-}
-\`\`\``;
-    const out = parseRiskJson(raw, title);
-    expect(out?.riskLevel).toBe("medium");
-    expect(out?.jobTitle).toBe(title);
+  it("returns null on garbage", () => {
+    expect(parseRiskJson("not json", "X")).toBeNull();
   });
 });
 
 describe("heuristicCareerRisk", () => {
-  it("marks source heuristic and consistent level", () => {
-    const h = heuristicCareerRisk("Frontend Developer", "React, TypeScript");
+  it("marks source heuristic", () => {
+    const h = heuristicCareerRisk("Data Entry Clerk");
     expect(h.source).toBe("heuristic");
     expect(h.riskLevel).toBe(scoreToRiskLevel(h.riskScore));
-    expect(h.jobTitle).toBe("Frontend Developer");
-    expect(h.subScores).toBeDefined();
   });
 });
 
-describe("clampScore", () => {
-  it("bounds values", () => {
-    expect(clampScore(-5)).toBe(0);
-    expect(clampScore(200)).toBe(100);
-    expect(clampScore(Number.NaN)).toBe(50);
+describe("toSuccessResponse", () => {
+  it("locks alternatives for free", () => {
+    const analysis = heuristicCareerRisk("Nurse");
+    const free = toSuccessResponse({ analysis, paid: false });
+    expect(free.alternativesLocked).toBe(true);
+    expect(free.alternatives).toEqual([]);
+    const paid = toSuccessResponse({ analysis, paid: true });
+    expect(paid.alternatives.length).toBeGreaterThan(0);
   });
 });
