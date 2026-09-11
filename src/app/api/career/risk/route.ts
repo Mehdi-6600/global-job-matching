@@ -10,6 +10,7 @@ import {
   languageNameForPrompt,
   normalizeCareerLocale,
   parseRiskJson,
+  scoreToRiskLevel,
   toSuccessResponse,
 } from "@/lib/career-risk";
 import { careerRiskRequestSchema } from "@/types/career-risk";
@@ -23,31 +24,25 @@ import {
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 
-async function safeRateLimit(key: string): Promise<{
-  success: boolean;
-  limit?: number;
-  remaining?: number;
-  reset?: number;
-  infraFailed?: boolean;
+/**
+ * Rate limit policy for Career Risk:
+ * - Redis/memory says "too many" → 429
+ * - Rate limiter throws / infra broken → fail-open (continue)
+ *   Cost protection still comes from DB quota reservation.
+ */
+async function checkAiRateLimit(key: string): Promise<{
+  blocked: boolean;
+  limit?: { success: boolean; limit?: number; remaining?: number; reset?: number };
 }> {
   try {
-    const r = await aiRatelimit.limit(key);
-    return {
-      success: r.success,
-      limit: r.limit,
-      remaining: r.remaining,
-      reset: r.reset,
-    };
+    const limit = await aiRatelimit.limit(key);
+    if (!limit.success) {
+      return { blocked: true, limit };
+    }
+    return { blocked: false, limit };
   } catch (err) {
-    console.error("Career risk rate limit infra error:", err);
-    // Fail closed for AI-heavy endpoint: treat as limited rather than unlimited
-    return {
-      success: false,
-      limit: 0,
-      remaining: 0,
-      reset: Date.now() + 60_000,
-      infraFailed: true,
-    };
+    console.error("Career risk rate limit infra error (fail-open):", err);
+    return { blocked: false };
   }
 }
 
@@ -59,11 +54,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await safeRateLimit(
+    const rl = await checkAiRateLimit(
       `career_risk_list_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit, "Too many requests");
+    if (rl.blocked && rl.limit) {
+      return rateLimitedResponse(rl.limit, "Too many requests");
     }
 
     try {
@@ -113,15 +108,13 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await safeRateLimit(
+    const rl = await checkAiRateLimit(
       `career_risk_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
+    if (rl.blocked && rl.limit) {
       return rateLimitedResponse(
-        limit,
-        limit.infraFailed
-          ? "Rate limiter unavailable. Please try again shortly."
-          : "Too many requests. Please wait."
+        rl.limit,
+        "Too many requests. Please wait a minute and try again."
       );
     }
 
@@ -182,7 +175,7 @@ export async function POST(req: NextRequest) {
     }
     const paid = isPaidPlan(effectivePlan);
 
-    // --- Quota: A exceeded → 403, B infra fail → 503, C ok → AI may run ---
+    // Quota: exceeded → 403, infra fail → 503, success → AI may run
     try {
       const reserveResult = await db.$transaction(async (tx) => {
         await lockUserRow(tx, user.id);
@@ -268,7 +261,12 @@ Education: ${education || "n/a"}`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        { maxTokens: 1100, temperature: 0.35, timeoutMs: 20_000, maxAttempts: 3 }
+        {
+          maxTokens: 1100,
+          temperature: 0.35,
+          timeoutMs: 20_000,
+          maxAttempts: 3,
+        }
       );
 
       if (text) {
@@ -317,7 +315,12 @@ Education: ${education || "n/a"}`;
       });
     }
 
-    result = { ...result, jobTitle };
+    result = {
+      ...result,
+      jobTitle,
+      riskScore: result.riskScore,
+      riskLevel: scoreToRiskLevel(result.riskScore),
+    };
 
     const shareToken = randomBytes(18).toString("hex");
     let assessmentId: string | undefined;
