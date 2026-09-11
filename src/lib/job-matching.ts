@@ -100,6 +100,9 @@ function clamp(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
+/**
+ * Score 0–100 from skills overlap, title affinity, location/remote.
+ */
 export function scoreJobMatch(
   profile: MatchProfileInput,
   job: MatchJobInput
@@ -159,7 +162,41 @@ export function scoreJobMatch(
 
   const titleTokens = tokenizeText(job.title);
   const profileTitleTokens = tokenizeText(profile.title || "");
-  let titleHits missingSkills.slice(0, 8),
+  let titleHits = 0;
+  for (const t of profileTitleTokens) {
+    if (titleTokens.has(t)) titleHits += 1;
+  }
+  if (titleHits > 0) {
+    score += Math.min(18, titleHits * 6);
+    reasons.push("Title keywords align with your profile headline.");
+  }
+
+  const userLoc = (profile.location || "").toLowerCase().trim();
+  const jobLoc = (job.location || "").toLowerCase().trim();
+  if (job.remote) {
+    score += 8;
+    reasons.push("Remote-friendly role.");
+  } else if (
+    userLoc &&
+    jobLoc &&
+    (jobLoc.includes(userLoc) || userLoc.includes(jobLoc))
+  ) {
+    score += 10;
+    reasons.push("Location overlap with your profile.");
+  }
+
+  score = clamp(score);
+
+  if (reasons.length === 0) {
+    reasons.push("Limited overlap with current profile data.");
+  }
+
+  return {
+    jobId: job.id,
+    score,
+    reasons: reasons.slice(0, 5),
+    matchedSkills: matchedSkills.slice(0, 12),
+    missingSkills: missingSkills.slice(0, 8),
   };
 }
 
