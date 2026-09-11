@@ -7,7 +7,10 @@ import { chatCompletionWithMeta } from "@/lib/ai";
 import {
   heuristicCareerRisk,
   isPaidPlan,
+  languageNameForPrompt,
+  normalizeCareerLocale,
   parseRiskJson,
+  scoreToRiskLevel,
   toSuccessResponse,
 } from "@/lib/career-risk";
 import { careerRiskRequestSchema } from "@/types/career-risk";
@@ -21,49 +24,6 @@ import {
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 
-const SYSTEM_PROMPT = `You are a careful career-risk analyst focused on the next 5–10 years.
-
-Rules:
-- Analyze THIS specific job title and the user's skills, experience, industry, country, location, and education.
-- Distinguish task automation from total job elimination.
-- Do NOT invent labor-market statistics or claim a job will definitely disappear.
-- Do NOT replace the user's job title with a different title.
-- Provide realistic skills to build and realistic adjacent roles in "alternatives".
-
-Reply with ONLY valid JSON (no markdown fences):
-{
-  "riskScore": 0-100,
-  "summary": "2-4 balanced sentences",
-  "reasons": ["up to 6 concrete reasons"],
-  "skillsToBuild": ["up to 8 skills"],
-  "alternatives": ["up to 6 adjacent roles"],
-  "subScores": {
-    "taskAutomation": 0-100,
-    "toolMaturity": 0-100,
-    "marketAdoption": 0-100,
-    "agenticExposure": 0-100
-  },
-  "timeHorizon": "5–10 years",
-  "confidence": 0-100,
-  "industryOutlook": "optional short string"
-}
-
-riskScore must be consistent with subScores.`;
-
-async function safeRateLimit(key: string): Promise<{
-  success: boolean;
-  limit?: number;
-  remaining?: number;
-  reset?: number;
-}> {
-  try {
-    return await aiRatelimit.limit(key);
-  } catch (err) {
-    console.error("Career risk rate limit failed (fail-open):", err);
-    return { success: true, limit: 3, remaining: 1, reset: Date.now() + 60_000 };
-  }
-}
-
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -72,11 +32,15 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await safeRateLimit(
-      `career_risk_list_${session.user.id}_${ip}`
-    );
-    if (!limit.success) {
-      return rateLimitedResponse(limit);
+    try {
+      const limit = await aiRatelimit.limit(
+        `career_risk_list_${session.user.id}_${ip}`
+      );
+      if (!limit.success) {
+        return rateLimitedResponse(limit, "Too many requests");
+      }
+    } catch (rlErr) {
+      console.error("Career risk list rate limit error:", rlErr);
     }
 
     try {
@@ -126,11 +90,15 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await safeRateLimit(
-      `career_risk_${session.user.id}_${ip}`
-    );
-    if (!limit.success) {
-      return rateLimitedResponse(limit, "Too many requests. Please wait.");
+    try {
+      const limit = await aiRatelimit.limit(
+        `career_risk_${session.user.id}_${ip}`
+      );
+      if (!limit.success) {
+        return rateLimitedResponse(limit, "Too many requests. Please wait.");
+      }
+    } catch (rlErr) {
+      console.error("Career risk rate limit error (continuing):", rlErr);
     }
 
     const body = await readJsonBody(req);
@@ -153,22 +121,28 @@ export async function POST(req: NextRequest) {
       0,
       120
     );
-    const skills = parsed.data.skills
-      ? neutralizeInstructionish(parsed.data.skills).slice(0, 1500)
-      : undefined;
-    const industry = parsed.data.industry
-      ? neutralizeInstructionish(parsed.data.industry).slice(0, 120)
-      : undefined;
-    const country = parsed.data.country
-      ? neutralizeInstructionish(parsed.data.country).slice(0, 120)
-      : undefined;
-    const location = parsed.data.location
-      ? neutralizeInstructionish(parsed.data.location).slice(0, 200)
-      : undefined;
-    const education = parsed.data.education
-      ? neutralizeInstructionish(parsed.data.education).slice(0, 200)
-      : undefined;
+    const skills = neutralizeInstructionish(parsed.data.skills || "").slice(
+      0,
+      1500
+    );
     const experienceYears = parsed.data.experienceYears;
+    const industry = neutralizeInstructionish(parsed.data.industry || "").slice(
+      0,
+      120
+    );
+    const country = neutralizeInstructionish(parsed.data.country || "").slice(
+      0,
+      120
+    );
+    const location = neutralizeInstructionish(parsed.data.location || "").slice(
+      0,
+      200
+    );
+    const education = neutralizeInstructionish(
+      parsed.data.education || ""
+    ).slice(0, 200);
+    const locale = normalizeCareerLocale(parsed.data.locale);
+    const languageName = languageNameForPrompt(locale);
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
@@ -188,8 +162,6 @@ export async function POST(req: NextRequest) {
     }
     const paid = isPaidPlan(effectivePlan);
 
-    // Quota: if infra fails, still allow heuristic (no AI)
-    let quotaOkForAi = false;
     try {
       const reserveResult = await db.$transaction(async (tx) => {
         await lockUserRow(tx, user.id);
@@ -202,79 +174,96 @@ export async function POST(req: NextRequest) {
       });
 
       if (!reserveResult.ok) {
-        // Plan limit hit — still return heuristic without charging AI
-        const heuristic = heuristicCareerRisk(jobTitle, skills, {
-          industry,
-          experienceYears,
-          country,
-        });
         return NextResponse.json(
           {
-            ...toSuccessResponse({
-              analysis: { ...heuristic, jobTitle },
-              paid,
-            }),
-            quota: {
-              limited: true,
-              code: reserveResult.code,
-              limit: reserveResult.limit,
-              used: reserveResult.used,
-            },
-            message:
-              reserveResult.error ||
-              "Monthly AI limit reached. Showing local estimate.",
+            error: reserveResult.error,
+            code: reserveResult.code,
+            limit: reserveResult.limit,
+            used: reserveResult.used,
           },
-          { status: 200 }
+          { status: 403 }
         );
       }
 
       reservedEventId = reserveResult.usageEventId ?? null;
       reservedUserId = user.id;
-      quotaOkForAi = true;
     } catch (quotaErr) {
-      console.error("Career risk quota reserve failed (heuristic only):", quotaErr);
-      quotaOkForAi = false;
+      console.error(
+        "Career risk quota reserve failed (continuing without hard block):",
+        quotaErr
+      );
     }
 
-    let result = null as ReturnType<typeof heuristicCareerRisk> | null;
+    const systemPrompt = `You are a careful career-risk analyst for the next 5–10 years.
 
-    if (quotaOkForAi) {
-      try {
-        const { text, meta } = await chatCompletionWithMeta(
-          [
-            { role: "system", content: SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: `Job title: ${jobTitle}
+CRITICAL LANGUAGE RULE:
+- Write summary, reasons, skillsToBuild, alternatives, and industryOutlook ENTIRELY in ${languageName}.
+- Do NOT mix English into those fields unless the language is English.
+- Keep JSON keys in English exactly as specified.
+
+Reply with ONLY valid JSON (no markdown fences, no commentary):
+{
+  "jobTitle": "string",
+  "riskScore": 0-100,
+  "riskLevel": "low" | "medium" | "high",
+  "summary": "2-4 sentences, balanced, no absolute claims about unemployment",
+  "reasons": ["up to 6 concrete reasons"],
+  "skillsToBuild": ["up to 8 skills"],
+  "alternatives": ["up to 6 alternative or complementary roles"],
+  "subScores": {
+    "taskAutomation": 0-100,
+    "toolMaturity": 0-100,
+    "marketAdoption": 0-100,
+    "agenticExposure": 0-100
+  },
+  "timeHorizon": "5–10 years",
+  "confidence": 0-100,
+  "industryOutlook": "optional short string"
+}
+Scoring guide:
+- taskAutomation: share of core tasks AI could do end-to-end at high reliability today
+- toolMaturity: maturity of tools targeting those tasks
+- marketAdoption: how widely employers already use such tools
+- agenticExposure: exposure to autonomous multi-step agents
+riskScore must be consistent with subScores. Prefer nuanced, role-specific advice.
+Do not invent credentials the user did not provide.
+If the job title is medical/clinical (e.g. physiotherapist, physician, nurse), emphasize hands-on care, regulation, and patient interaction.`;
+
+    const userPrompt = `Response language: ${languageName}
+Job title: ${jobTitle}
 Skills: ${skills || "n/a"}
 Experience years: ${experienceYears ?? "n/a"}
 Industry: ${industry || "n/a"}
 Country: ${country || "n/a"}
 Location: ${location || "n/a"}
-Education: ${education || "n/a"}`,
-            },
-          ],
-          { maxTokens: 1100, temperature: 0.35, timeoutMs: 20_000 }
-        );
+Education: ${education || "n/a"}`;
 
-        if (text) {
-          result = parseRiskJson(text, jobTitle);
-          if (result) {
-            console.info("Career risk AI ok", {
-              provider: meta.provider,
-              model: meta.model,
-              latencyMs: meta.latencyMs,
-            });
-          }
-        } else {
-          console.error("Career risk AI empty", meta);
-        }
-      } catch (aiErr) {
-        console.error("Career risk AI call failed:", aiErr);
-        result = null;
+    let result = null as ReturnType<typeof heuristicCareerRisk> | null;
+
+    try {
+      const { text: aiText, meta } = await chatCompletionWithMeta(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        { maxTokens: 1100, temperature: 0.35, timeoutMs: 25_000 }
+      );
+      result = aiText ? parseRiskJson(aiText, jobTitle) : null;
+      if (result) {
+        console.info("Career risk AI ok", {
+          provider: meta.provider,
+          model: meta.model,
+          latencyMs: meta.latencyMs,
+          locale,
+        });
       }
+    } catch (aiErr) {
+      console.error("Career risk AI call failed:", aiErr);
+      result = null;
+    }
 
-      if (!result && reservedEventId && reservedUserId) {
+    if (!result) {
+      if (reservedEventId && reservedUserId) {
         try {
           await db.$transaction(async (tx) => {
             await releaseUsageEventById(tx, {
@@ -287,17 +276,21 @@ Education: ${education || "n/a"}`,
         }
         reservedEventId = null;
       }
-    }
-
-    if (!result?.summary) {
-      result = heuristicCareerRisk(jobTitle, skills, {
-        industry,
-        experienceYears,
-        country,
+      result = heuristicCareerRisk(jobTitle, skills || undefined, {
+        industry: industry || undefined,
+        experienceYears:
+          typeof experienceYears === "number" ? experienceYears : undefined,
+        country: country || undefined,
+        locale,
       });
     }
 
-    result = { ...result, jobTitle };
+    result = {
+      ...result,
+      jobTitle,
+      riskScore: result.riskScore,
+      riskLevel: scoreToRiskLevel(result.riskScore),
+    };
 
     const shareToken = randomBytes(18).toString("hex");
     let assessmentId: string | undefined;
@@ -344,11 +337,11 @@ Education: ${education || "n/a"}`,
         paid,
         assessmentId,
         shareToken: savedShareToken,
+        locale,
       })
     );
   } catch (error) {
     console.error("Career risk error:", error);
-
     if (reservedEventId && reservedUserId) {
       try {
         await db.$transaction(async (tx) => {
@@ -362,28 +355,22 @@ Education: ${education || "n/a"}`,
       }
     }
 
-    // Last-resort: still try to return a heuristic so the UI is not dead
     try {
-      let title = "Your role";
-      try {
-        const body = await readJsonBody(req).catch(() => null);
-        if (body && typeof body === "object" && "jobTitle" in body) {
-          const t = String((body as { jobTitle?: string }).jobTitle || "").trim();
-          if (t.length >= 2) title = t.slice(0, 120);
-        }
-      } catch {
-        /* ignore */
-      }
-
-      const heuristic = heuristicCareerRisk(title);
+      const fallbackTitle =
+        typeof (error as { message?: string })?.message === "string"
+          ? "Career role"
+          : "Career role";
+      const heuristic = heuristicCareerRisk(fallbackTitle, undefined, {
+        locale: "en",
+      });
       return NextResponse.json(
         toSuccessResponse({
           analysis: heuristic,
           paid: false,
+          locale: "en",
         })
       );
-    } catch (fallbackErr) {
-      console.error("Career risk heuristic fallback failed:", fallbackErr);
+    } catch {
       return NextResponse.json(
         {
           error:
