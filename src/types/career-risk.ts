@@ -6,6 +6,17 @@ export type CareerRiskLevel = (typeof CAREER_RISK_LEVELS)[number];
 export const CAREER_RISK_SOURCES = ["ai", "heuristic"] as const;
 export type CareerRiskSource = (typeof CAREER_RISK_SOURCES)[number];
 
+export const CAREER_RISK_LOCALES = [
+  "en",
+  "fa",
+  "ar",
+  "es",
+  "fr",
+  "hi",
+  "de",
+] as const;
+export type CareerRiskLocale = (typeof CAREER_RISK_LOCALES)[number];
+
 export type CareerRiskSubScores = {
   taskAutomation: number;
   toolMaturity: number;
@@ -64,12 +75,12 @@ export type CareerRiskFormInput = {
   country?: string;
   location?: string;
   education?: string;
+  locale?: string;
 };
 
 export const careerRiskRequestSchema = z.object({
   jobTitle: z.string().trim().min(2).max(120),
   skills: z.string().max(1500).optional().or(z.literal("")),
-  // Accept string numbers from mobile forms
   experienceYears: z.preprocess((v) => {
     if (v === "" || v === null || v === undefined) return undefined;
     const n = typeof v === "number" ? v : Number(v);
@@ -79,6 +90,10 @@ export const careerRiskRequestSchema = z.object({
   country: z.string().max(120).optional().or(z.literal("")),
   location: z.string().max(200).optional().or(z.literal("")),
   education: z.string().max(200).optional().or(z.literal("")),
+  locale: z
+    .enum(["en", "fa", "ar", "es", "fr", "hi", "de"])
+    .optional()
+    .default("en"),
 });
 
 export type CareerRiskRequest = z.infer<typeof careerRiskRequestSchema>;
