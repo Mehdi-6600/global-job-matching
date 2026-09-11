@@ -6,6 +6,18 @@ export type CareerRiskLevel = (typeof CAREER_RISK_LEVELS)[number];
 export const CAREER_RISK_SOURCES = ["ai", "heuristic"] as const;
 export type CareerRiskSource = (typeof CAREER_RISK_SOURCES)[number];
 
+/** 0–100 sub-scores explaining the overall risk */
+export type CareerRiskSubScores = {
+  /** How much of the role’s core work AI could do end-to-end today */
+  taskAutomation: number;
+  /** How mature / available tools are for those tasks */
+  toolMaturity: number;
+  /** How widely employers already use AI for those tasks */
+  marketAdoption: number;
+  /** Exposure to autonomous agents (not just copilots) */
+  agenticExposure: number;
+};
+
 export type CareerRiskAnalysis = {
   jobTitle: string;
   riskScore: number;
@@ -15,6 +27,13 @@ export type CareerRiskAnalysis = {
   skillsToBuild: string[];
   alternatives: string[];
   source: CareerRiskSource;
+  /** Optional richer fields (always preferred when present) */
+  subScores?: CareerRiskSubScores;
+  /** e.g. "5–10 years" */
+  timeHorizon?: string;
+  /** 0–100 confidence in the estimate */
+  confidence?: number;
+  industryOutlook?: string;
 };
 
 export type CareerRiskSuccessResponse = {
