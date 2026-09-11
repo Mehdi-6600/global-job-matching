@@ -14,6 +14,7 @@ import {
   X,
   History,
   Copy,
+  Route,
 } from "lucide-react";
 import type {
   CareerRiskAnalysis,
@@ -42,6 +43,13 @@ type HistoryItem = {
   summary: string;
   sharePath?: string;
   createdAt: string;
+};
+
+type RoadmapResult = {
+  title: string;
+  weeks: Array<{ week: string; focus: string; actions: string[] }>;
+  resources: string[];
+  source: "ai" | "heuristic";
 };
 
 function parseSubScores(raw: unknown): CareerRiskSubScores | undefined {
@@ -108,9 +116,13 @@ function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
 function ScoreBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-slate-400">
-        <span>{label}</span>
-        <span className="text-slate-300 font-medium">{value}</span>
+      <div className="flex justify-between text-xs text-slate-400 gap-2">
+        <span className="text-start" dir="auto">
+          {label}
+        </span>
+        <span className="text-slate-300 font-medium tabular-nums shrink-0">
+          {value}
+        </span>
       </div>
       <div className="h-2 rounded-full bg-white/5 overflow-hidden">
         <div
@@ -141,6 +153,20 @@ export default function CareerRiskPage() {
   const [upgradeMessage, setUpgradeMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const [roadmap, setRoadmap] = useState<RoadmapResult | null>(null);
+  const [roadmapError, setRoadmapError] = useState("");
+
+  const levelLabel = useCallback(
+    (level: string) => {
+      const k = level.toLowerCase();
+      if (k === "low") return t("CareerRisk.levelLow", "LOW");
+      if (k === "medium") return t("CareerRisk.levelMedium", "MEDIUM");
+      if (k === "high") return t("CareerRisk.levelHigh", "HIGH");
+      return level;
+    },
+    [t]
+  );
 
   const currentForm = useCallback((): CareerRiskFormInput => {
     const years = experienceYears.trim()
@@ -155,7 +181,7 @@ export default function CareerRiskPage() {
       country: country.trim() || undefined,
       location: location.trim() || undefined,
       education: education.trim() || undefined,
-      locale: locale || "en",
+      locale,
     };
   }, [
     jobTitle,
@@ -211,6 +237,8 @@ export default function CareerRiskPage() {
     setAnalysis(null);
     setSharePath(null);
     setUpgradeMessage(null);
+    setRoadmap(null);
+    setRoadmapError("");
     trackEvent("career_risk_submit");
 
     try {
@@ -322,6 +350,76 @@ export default function CareerRiskPage() {
     } catch {
       // ignore
     }
+  }
+
+  async function generateRoadmap() {
+    if (!analysis) return;
+    setRoadmapError("");
+    setRoadmapLoading(true);
+    trackEvent("career_roadmap_submit");
+    try {
+      const res = await fetch("/api/career/roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          jobTitle: analysis.jobTitle,
+          skillsToBuild: analysis.skillsToBuild,
+          reasons: analysis.reasons,
+          riskScore: analysis.riskScore,
+          riskLevel: analysis.riskLevel,
+          summary: analysis.summary,
+          country: country.trim() || undefined,
+          location: location.trim() || undefined,
+          experienceYears: experienceYears.trim()
+            ? Number(experienceYears)
+            : undefined,
+          locale,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setShowAuthGate(true);
+        return;
+      }
+      if (!res.ok) {
+        setRoadmapError(
+          (data as { error?: string }).error ||
+            t("CareerRisk.roadmapFailed", "Could not generate roadmap")
+        );
+        return;
+      }
+      const r = data as RoadmapResult;
+      if (!r?.weeks || !Array.isArray(r.weeks)) {
+        setRoadmapError(t("Common.error", "Something went wrong"));
+        return;
+      }
+      setRoadmap(r);
+      trackEvent("career_roadmap_success");
+    } catch {
+      setRoadmapError(
+        t("Auth.errors.network", "Network error. Please try again.")
+      );
+    } finally {
+      setRoadmapLoading(false);
+    }
+  }
+
+  const metaParts: string[] = [];
+  if (analysis?.timeHorizon) {
+    metaParts.push(
+      `${t("CareerRisk.horizon", "Time horizon")}: ${analysis.timeHorizon}`
+    );
+  }
+  if (analysis?.confidence != null) {
+    metaParts.push(
+      `${t("CareerRisk.confidence", "Confidence")}: ${analysis.confidence}%`
+    );
+  }
+  if (analysis?.source === "heuristic") {
+    metaParts.push(t("CareerRisk.offlineModel", "Offline model"));
+  } else if (analysis) {
+    metaParts.push(t("CareerRisk.onlineModel", "Online AI"));
   }
 
   return (
@@ -501,31 +599,30 @@ export default function CareerRiskPage() {
         {analysis && (
           <div className="glass rounded-2xl p-5 sm:p-6 border border-white/10 space-y-5 mb-8">
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm text-slate-400">
                   {t("CareerRisk.jobTitle", "Job title")}
                 </p>
-                <p className="text-xl font-semibold text-white">
+                <p className="text-xl font-semibold text-white" dir="auto">
                   {analysis.jobTitle}
                 </p>
-                {analysis.timeHorizon && (
-                  <p className="text-xs text-slate-500 mt-1">
-                    {analysis.timeHorizon}
-                    {analysis.confidence != null
-                      ? ` · ${analysis.confidence}%`
-                      : ""}
-                    {analysis.source === "heuristic"
-                      ? ` · ${t("CareerRisk.offline", "Offline model")}`
-                      : ""}
+                {metaParts.length > 0 && (
+                  <p
+                    className="text-xs text-slate-500 mt-1 leading-relaxed"
+                    dir="auto"
+                  >
+                    {metaParts.join(" · ")}
                   </p>
                 )}
               </div>
               <div
                 className={`rounded-xl border px-3 py-2 text-center min-w-[88px] ${levelColor[analysis.riskLevel]}`}
               >
-                <p className="text-2xl font-bold">{analysis.riskScore}</p>
+                <p className="text-2xl font-bold tabular-nums">
+                  {analysis.riskScore}
+                </p>
                 <p className="text-xs uppercase tracking-wide">
-                  {analysis.riskLevel}
+                  {levelLabel(analysis.riskLevel)}
                 </p>
               </div>
             </div>
@@ -543,10 +640,15 @@ export default function CareerRiskPage() {
               />
             </div>
 
-            <p className="text-slate-300 leading-relaxed">{analysis.summary}</p>
+            <p className="text-slate-300 leading-relaxed" dir="auto">
+              {analysis.summary}
+            </p>
 
             {analysis.industryOutlook && (
-              <p className="text-sm text-slate-400 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]">
+              <p
+                className="text-sm text-slate-400 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]"
+                dir="auto"
+              >
                 {analysis.industryOutlook}
               </p>
             )}
@@ -557,7 +659,10 @@ export default function CareerRiskPage() {
                   {t("CareerRisk.breakdown", "Risk breakdown")}
                 </h2>
                 <ScoreBar
-                  label={t("CareerRisk.taskAutomation", "Task automation")}
+                  label={t(
+                    "CareerRisk.taskAutomation",
+                    "Task automation"
+                  )}
                   value={analysis.subScores.taskAutomation}
                 />
                 <ScoreBar
@@ -565,11 +670,17 @@ export default function CareerRiskPage() {
                   value={analysis.subScores.toolMaturity}
                 />
                 <ScoreBar
-                  label={t("CareerRisk.marketAdoption", "Market adoption")}
+                  label={t(
+                    "CareerRisk.marketAdoption",
+                    "Market adoption"
+                  )}
                   value={analysis.subScores.marketAdoption}
                 />
                 <ScoreBar
-                  label={t("CareerRisk.agentExposure", "Agent exposure")}
+                  label={t(
+                    "CareerRisk.agentExposure",
+                    "Agent exposure"
+                  )}
                   value={analysis.subScores.agenticExposure}
                 />
               </section>
@@ -587,7 +698,7 @@ export default function CareerRiskPage() {
                       className="flex gap-2 text-sm text-slate-300"
                     >
                       <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                      <span>{r}</span>
+                      <span dir="auto">{r}</span>
                     </li>
                   ))}
                 </ul>
@@ -604,6 +715,7 @@ export default function CareerRiskPage() {
                     <span
                       key={i}
                       className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-200"
+                      dir="auto"
                     >
                       {s}
                     </span>
@@ -619,7 +731,7 @@ export default function CareerRiskPage() {
               {paid && analysis.alternatives.length > 0 ? (
                 <ul className="space-y-2">
                   {analysis.alternatives.map((a, i) => (
-                    <li key={i} className="text-sm text-slate-300">
+                    <li key={i} className="text-sm text-slate-300" dir="auto">
                       • {a}
                     </li>
                   ))}
@@ -640,6 +752,79 @@ export default function CareerRiskPage() {
                 </p>
               )}
             </section>
+
+            <div className="pt-2 border-t border-white/5 space-y-3">
+              <button
+                type="button"
+                onClick={() => void generateRoadmap()}
+                disabled={roadmapLoading}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 font-semibold text-sm py-3 disabled:opacity-60"
+              >
+                {roadmapLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t("CareerRisk.roadmapLoading", "Building roadmap...")}
+                  </>
+                ) : (
+                  <>
+                    <Route className="w-4 h-4" />
+                    {t(
+                      "CareerRisk.roadmapCta",
+                      "Generate 90-day skill roadmap"
+                    )}
+                  </>
+                )}
+              </button>
+              {roadmapError && (
+                <p className="text-sm text-red-300">{roadmapError}</p>
+              )}
+              {roadmap && (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
+                  <h3
+                    className="text-sm font-semibold text-white"
+                    dir="auto"
+                  >
+                    {roadmap.title}
+                  </h3>
+                  {roadmap.weeks.map((w, i) => (
+                    <div key={i} className="space-y-1">
+                      <p className="text-xs text-cyan-300 font-medium" dir="auto">
+                        {w.week} — {w.focus}
+                      </p>
+                      <ul className="space-y-1">
+                        {w.actions.map((a, j) => (
+                          <li
+                            key={j}
+                            className="text-sm text-slate-300 flex gap-2"
+                          >
+                            <span className="text-cyan-500">•</span>
+                            <span dir="auto">{a}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                  {roadmap.resources.length > 0 && (
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">
+                        {t("CareerRisk.resources", "Suggested resources")}
+                      </p>
+                      <ul className="space-y-1">
+                        {roadmap.resources.map((r, i) => (
+                          <li
+                            key={i}
+                            className="text-sm text-slate-300"
+                            dir="auto"
+                          >
+                            • {r}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-wrap gap-3 pt-1">
               <Link
@@ -662,7 +847,7 @@ export default function CareerRiskPage() {
                 >
                   <Copy className="w-3 h-3" />
                   {copied
-                    ? t("Common.copied", "Copied")
+                    ? t("CareerRisk.copied", "Copied")
                     : t("CareerRisk.copyShare", "Copy share link")}
                 </button>
               )}
@@ -685,17 +870,22 @@ export default function CareerRiskPage() {
                   className="flex items-start justify-between gap-3 text-sm border-b border-white/5 pb-3 last:border-0 last:pb-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-white font-medium truncate">
+                    <p className="text-white font-medium truncate" dir="auto">
                       {h.jobTitle}
                     </p>
-                    <p className="text-xs text-slate-500 line-clamp-2">
+                    <p
+                      className="text-xs text-slate-500 line-clamp-2"
+                      dir="auto"
+                    >
                       {h.summary}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-semibold text-cyan-300">{h.riskScore}</p>
+                    <p className="font-semibold text-cyan-300 tabular-nums">
+                      {h.riskScore}
+                    </p>
                     <p className="text-[10px] uppercase text-slate-500">
-                      {h.riskLevel}
+                      {levelLabel(h.riskLevel)}
                     </p>
                   </div>
                 </li>
