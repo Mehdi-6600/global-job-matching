@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { authRatelimit } from "@/lib/ratelimit";
+import { safeLimit } from "@/lib/safe-ratelimit";
 import { validatePassword, hashPassword } from "@/lib/password";
 import { consumePasswordResetToken } from "@/lib/auth/tokens";
 import { getRequestIp } from "@/lib/client-ip";
@@ -9,12 +10,12 @@ import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 /**
  * Confirm password reset with token + new password.
- * Token is consumed atomically; sessionVersion is bumped so old JWTs die.
+ * Works for every user (not only admin).
  */
 export async function POST(req: NextRequest) {
   try {
     const ip = getRequestIp(req);
-    const limit = await authRatelimit.limit(`reset_pw_${ip}`);
+    const limit = await safeLimit(authRatelimit, `reset_pw_${ip}`);
     if (!limit.success) {
       return rateLimitedResponse(limit, "Too many requests");
     }
@@ -33,9 +34,7 @@ export async function POST(req: NextRequest) {
         : "";
 
     const password =
-      typeof body === "object" &&
-      body !== null &&
-      "password" in body
+      typeof body === "object" && body !== null && "password" in body
         ? (body as { password: unknown }).password
         : undefined;
 
