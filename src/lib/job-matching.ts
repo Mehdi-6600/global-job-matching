@@ -67,12 +67,19 @@ const STOP = new Set([
 
 export function tokenizeSkills(raw: string | null | undefined): string[] {
   if (!raw) return [];
-  return raw
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw
     .toLowerCase()
     .split(/[,;/|·•\n]+|\s{2,}/)
     .map((s) => s.trim())
-    .filter((s) => s.length >= 2 && !STOP.has(s))
-    .slice(0, 40);
+    .filter((s) => s.length >= 2 && !STOP.has(s))) {
+    if (seen.has(part)) continue;
+    seen.add(part);
+    out.push(part);
+    if (out.length >= 40) break;
+  }
+  return out;
 }
 
 function tokenizeText(raw: string | null | undefined): Set<string> {
@@ -80,7 +87,7 @@ function tokenizeText(raw: string | null | undefined): Set<string> {
   if (!raw) return out;
   const parts = raw
     .toLowerCase()
-    .replace(/[^a-z0-9+#.\s-]/g, " ")
+    .replace(/[^a-z0-9+#.\u0600-\u06FF\s-]/g, " ")
     .split(/[\s,;/|]+/)
     .map((s) => s.trim())
     .filter((s) => s.length >= 2 && !STOP.has(s));
@@ -93,9 +100,6 @@ function clamp(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-/**
- * Score 0–100 from skills overlap, title affinity, location/remote.
- */
 export function scoreJobMatch(
   profile: MatchProfileInput,
   job: MatchJobInput
@@ -126,7 +130,6 @@ export function scoreJobMatch(
     if (hit) matchedSkills.push(skill);
   }
 
-  // Suggest a few job-side skills user may lack
   for (const t of jobSkillPool.slice(0, 12)) {
     if (
       t.length >= 2 &&
@@ -137,7 +140,7 @@ export function scoreJobMatch(
     }
   }
 
-  let score = 12; // base interest
+  let score = 12;
   const reasons: string[] = [];
 
   if (profileSkills.length === 0) {
@@ -156,37 +159,7 @@ export function scoreJobMatch(
 
   const titleTokens = tokenizeText(job.title);
   const profileTitleTokens = tokenizeText(profile.title || "");
-  let titleHits = 0;
-  for (const t of profileTitleTokens) {
-    if (titleTokens.has(t)) titleHits += 1;
-  }
-  if (titleHits > 0) {
-    score += Math.min(18, titleHits * 6);
-    reasons.push("Title keywords align with your profile headline.");
-  }
-
-  const userLoc = (profile.location || "").toLowerCase().trim();
-  const jobLoc = (job.location || "").toLowerCase().trim();
-  if (job.remote) {
-    score += 8;
-    reasons.push("Remote-friendly role.");
-  } else if (userLoc && jobLoc && (jobLoc.includes(userLoc) || userLoc.includes(jobLoc))) {
-    score += 10;
-    reasons.push("Location overlap with your profile.");
-  }
-
-  score = clamp(score);
-
-  if (reasons.length === 0) {
-    reasons.push("Limited overlap with current profile data.");
-  }
-
-  return {
-    jobId: job.id,
-    score,
-    reasons: reasons.slice(0, 5),
-    matchedSkills: matchedSkills.slice(0, 12),
-    missingSkills: missingSkills.slice(0, 8),
+  let titleHits missingSkills.slice(0, 8),
   };
 }
 
@@ -195,8 +168,9 @@ export function rankJobsByMatch(
   jobs: MatchJobInput[],
   options?: { minScore?: number; limit?: number }
 ): JobMatchResult[] {
-  const minScore = options?.minScore ?? 0;
-  const limit = options?.limit ?? 50;
+  const minScore = Math.max(0, Math.min(100, options?.minScore ?? 0));
+  // Hard clamp — never allow absurd limits like 100000
+  const limit = Math.max(1, Math.min(100, options?.limit ?? 50));
   return jobs
     .map((j) => scoreJobMatch(profile, j))
     .filter((r) => r.score >= minScore)
