@@ -75,7 +75,7 @@ export default function ResumeBuilderPage() {
           location: p.location || "",
           targetRole: p.title || p.headline || "",
           summary: p.bio || "",
-          skills: p.skills || "",
+          skills: typeof p.skills === "string" ? p.skills : prev.skills,
           experience: p.experience || "",
           education: p.education || "",
         }));
@@ -113,6 +113,7 @@ export default function ResumeBuilderPage() {
       const res = await fetch("/api/resume/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(form),
       });
       const data = await res.json();
@@ -202,9 +203,7 @@ export default function ResumeBuilderPage() {
           <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             {success}
-            {source && (
-              <span className="text-slate-500">({source})</span>
-            )}
+            {source && <span className="text-slate-500">({source})</span>}
           </div>
         )}
 
@@ -303,9 +302,15 @@ export default function ResumeBuilderPage() {
                 onChange={handleChange}
                 className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
               >
-                <option value="professional">Professional</option>
-                <option value="confident">Confident</option>
-                <option value="concise">Concise</option>
+                <option value="professional">
+                  {t("Resume.toneProfessional", "Professional")}
+                </option>
+                <option value="confident">
+                  {t("Resume.toneConfident", "Confident")}
+                </option>
+                <option value="concise">
+                  {t("Resume.toneConcise", "Concise")}
+                </option>
               </select>
               <label className="flex items-center gap-2 text-slate-300 text-sm">
                 <input
@@ -364,7 +369,7 @@ export default function ResumeBuilderPage() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs disabled:opacity-40"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  Print
+                  {t("Common.print", "Print")}
                 </button>
               </div>
             </div>
@@ -374,7 +379,10 @@ export default function ResumeBuilderPage() {
               </pre>
             ) : (
               <div className="flex-1 flex items-center justify-center text-slate-500 text-sm text-center px-4">
-                {t("Resume.subtitle", "Your generated resume will appear here")}
+                {t(
+                  "Resume.previewEmpty",
+                  "Your generated resume will appear here"
+                )}
               </div>
             )}
           </div>
