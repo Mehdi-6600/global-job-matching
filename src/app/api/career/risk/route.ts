@@ -18,7 +18,6 @@ import {
   lockUserRow,
   releaseUsageEventById,
 } from "@/lib/quota";
-import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,11 +27,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await aiRatelimit.limit(
+    const { success } = await aiRatelimit.limit(
       `career_risk_list_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     try {
@@ -82,15 +81,20 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await aiRatelimit.limit(
+    const { success } = await aiRatelimit.limit(
       `career_risk_${session.user.id}_${ip}`
     );
-    if (!limit.success) {
-      return rateLimitedResponse(limit, "Too many requests. Please wait.");
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait." },
+        { status: 429 }
+      );
     }
 
-    const body = await readJsonBody(req);
-    if (body === null) {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -164,18 +168,32 @@ export async function POST(req: NextRequest) {
       reservedUserId = null;
     }
 
-    const systemPrompt = `You are a career risk analyst for the next 5–10 years.
-Reply with ONLY valid JSON (no markdown):
+    const systemPrompt = `You are a careful career-risk analyst for the next 5–10 years.
+Reply with ONLY valid JSON (no markdown fences, no commentary):
 {
   "jobTitle": "string",
   "riskScore": 0-100,
   "riskLevel": "low" | "medium" | "high",
-  "summary": "string",
-  "reasons": ["string"],
-  "skillsToBuild": ["string"],
-  "alternatives": ["string"]
+  "summary": "2-4 sentences, balanced, no absolute claims about unemployment",
+  "reasons": ["up to 6 concrete reasons"],
+  "skillsToBuild": ["up to 8 skills"],
+  "alternatives": ["up to 6 alternative or complementary roles"],
+  "subScores": {
+    "taskAutomation": 0-100,
+    "toolMaturity": 0-100,
+    "marketAdoption": 0-100,
+    "agenticExposure": 0-100
+  },
+  "timeHorizon": "5–10 years",
+  "confidence": 0-100,
+  "industryOutlook": "optional short string"
 }
-Be balanced and avoid absolute claims about unemployment.`;
+Scoring guide:
+- taskAutomation: share of core tasks AI could do end-to-end at high reliability today
+- toolMaturity: maturity of tools targeting those tasks
+- marketAdoption: how widely employers already use such tools
+- agenticExposure: exposure to autonomous multi-step agents (not only chat copilots)
+riskScore should be consistent with subScores. Prefer nuanced, role-specific advice.`;
 
     const userPrompt = `Job title: ${jobTitle}
 Skills: ${skills || "n/a"}
@@ -193,7 +211,7 @@ Education: ${education || "n/a"}`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        { maxTokens: 900, temperature: 0.4 }
+        { maxTokens: 1100, temperature: 0.35 }
       );
       result = aiText ? parseRiskJson(aiText, jobTitle) : null;
     } catch (aiErr) {
@@ -215,11 +233,20 @@ Education: ${education || "n/a"}`;
         }
         reservedEventId = null;
       }
-      result = heuristicCareerRisk(jobTitle, skills || undefined);
+      result = heuristicCareerRisk(jobTitle, skills || undefined, {
+        industry: industry || undefined,
+        experienceYears:
+          typeof experienceYears === "number" ? experienceYears : undefined,
+        country: country || undefined,
+      });
     }
 
     if (!result || !result.summary) {
-      result = heuristicCareerRisk(jobTitle, skills || undefined);
+      result = heuristicCareerRisk(jobTitle, skills || undefined, {
+        industry: industry || undefined,
+        experienceYears:
+          typeof experienceYears === "number" ? experienceYears : undefined,
+      });
     }
 
     const shareToken = randomBytes(18).toString("hex");
