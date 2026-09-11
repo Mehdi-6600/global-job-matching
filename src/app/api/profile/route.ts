@@ -17,6 +17,8 @@ function mapProfile(user: {
   profile: {
     bio: string | null;
     skills: string | null;
+    experience: string | null;
+    education: string | null;
     phone: string | null;
     location: string | null;
     resumeUrl: string | null;
@@ -33,11 +35,13 @@ function mapProfile(user: {
     name: user.name,
     title: user.profile?.skills || null,
     bio: user.profile?.bio || null,
+    skills: user.profile?.skills || null,
+    experience: user.profile?.experience || null,
+    education: user.profile?.education || null,
     location: user.profile?.location || null,
     phone: user.profile?.phone || null,
     avatar: user.image,
     role: user.role,
-    // Never expose raw blob URL to the browser
     hasResume,
     storedInBlob: isHttpUrl(user.profile?.resumeUrl),
     downloadPath: hasResume ? "/api/profile/resume/download" : null,
@@ -48,6 +52,29 @@ function mapProfile(user: {
   };
 }
 
+const profileSelect = {
+  id: true,
+  email: true,
+  name: true,
+  image: true,
+  role: true,
+  createdAt: true,
+  profile: {
+    select: {
+      bio: true,
+      skills: true,
+      experience: true,
+      education: true,
+      phone: true,
+      location: true,
+      resumeUrl: true,
+      linkedin: true,
+      github: true,
+      portfolio: true,
+    },
+  },
+} as const;
+
 export async function GET(_req: NextRequest) {
   try {
     const session = await auth();
@@ -57,26 +84,7 @@ export async function GET(_req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        createdAt: true,
-        profile: {
-          select: {
-            bio: true,
-            skills: true,
-            phone: true,
-            location: true,
-            resumeUrl: true,
-            linkedin: true,
-            github: true,
-            portfolio: true,
-          },
-        },
-      },
+      select: profileSelect,
     });
 
     if (!user) {
@@ -153,25 +161,7 @@ export async function PUT(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        profile: {
-          select: {
-            bio: true,
-            skills: true,
-            phone: true,
-            location: true,
-            resumeUrl: true,
-            linkedin: true,
-            github: true,
-            portfolio: true,
-          },
-        },
-      },
+      select: profileSelect,
     });
 
     return NextResponse.json({
