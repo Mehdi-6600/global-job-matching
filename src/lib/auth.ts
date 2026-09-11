@@ -6,6 +6,7 @@ import { CredentialsSignin } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { authRatelimit } from "@/lib/ratelimit";
+import { safeLimit } from "@/lib/safe-ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
 
 class RateLimitedSignin extends CredentialsSignin {
@@ -16,7 +17,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
   session: {
     strategy: "jwt",
-    // Re-run jwt callback often enough that sessionVersion is checked quickly
     maxAge: 30 * 24 * 60 * 60,
     updateAge: 60,
   },
@@ -43,12 +43,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ? getRequestIp(request as Request)
             : "unknown";
 
-        const ipLimit = await authRatelimit.limit(`login_ip_${ip}`);
+        const ipLimit = await safeLimit(authRatelimit, `login_ip_${ip}`);
         if (!ipLimit.success) {
           throw new RateLimitedSignin();
         }
 
-        const emailLimit = await authRatelimit.limit(`login_email_${email}`);
+        const emailLimit = await safeLimit(authRatelimit, `login_email_${email}`);
         if (!emailLimit.success) {
           throw new RateLimitedSignin();
         }
@@ -66,6 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
+        // No user or no password hash → same as wrong password (no enumeration)
         if (!user?.password) {
           return null;
         }
@@ -88,7 +89,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // Fresh login — stamp version from DB user object
       if (user) {
         token.sub = user.id;
         token.role = (user as { role?: string }).role;
@@ -102,7 +102,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // Already invalidated
       if (token.error === "SessionInvalidated") {
         return token;
       }
@@ -139,12 +138,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        // Keep role fresh (admin demote/promote)
         token.role = dbUser.role;
         token.sessionVersion = dbUser.sessionVersion;
       } catch (error) {
         console.error("JWT sessionVersion check failed:", error);
-        // Fail closed on DB errors for security-sensitive paths
         return {
           ...token,
           error: "SessionInvalidated" as const,
