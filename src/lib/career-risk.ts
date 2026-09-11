@@ -2,6 +2,7 @@ import type {
   CareerRiskAnalysis,
   CareerRiskLevel,
   CareerRiskSource,
+  CareerRiskSubScores,
   CareerRiskSuccessResponse,
 } from "@/types/career-risk";
 
@@ -38,6 +39,32 @@ function normalizeLevel(raw: unknown, score: number): CareerRiskLevel {
   return "high";
 }
 
+function parseSubScores(raw: unknown): CareerRiskSubScores | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  const taskAutomation = clampScore(Number(o.taskAutomation));
+  const toolMaturity = clampScore(Number(o.toolMaturity));
+  const marketAdoption = clampScore(Number(o.marketAdoption));
+  const agenticExposure = clampScore(Number(o.agenticExposure));
+  // If all NaN → zeros from clamp of NaN handled; still return structure
+  return {
+    taskAutomation,
+    toolMaturity,
+    marketAdoption,
+    agenticExposure,
+  };
+}
+
+/** Weighted composite if model omitted overall score */
+export function compositeFromSubScores(s: CareerRiskSubScores): number {
+  // Align with public-style formulas: automation dominant, tools & adoption amplify, agents add
+  const base =
+    s.taskAutomation *
+    (0.45 + 0.3 * (s.toolMaturity / 100) + 0.25 * (s.marketAdoption / 100));
+  const withAgents = base + 0.1 * s.agenticExposure;
+  return clampScore(withAgents);
+}
+
 export function parseRiskJson(
   text: string,
   fallbackTitle: string
@@ -57,16 +84,35 @@ export function parseRiskJson(
       string,
       unknown
     >;
-    const riskScore = clampScore(Number(obj.riskScore));
+    const subScores = parseSubScores(obj.subScores);
+    let riskScore = clampScore(Number(obj.riskScore));
+    if (
+      (!Number.isFinite(Number(obj.riskScore)) || Number(obj.riskScore) === 0) &&
+      subScores
+    ) {
+      riskScore = compositeFromSubScores(subScores);
+    }
+    if (subScores && !Number.isFinite(Number(obj.riskScore))) {
+      riskScore = compositeFromSubScores(subScores);
+    }
+
     const analysis: CareerRiskAnalysis = {
       jobTitle: String(obj.jobTitle || fallbackTitle).slice(0, 120),
       riskScore,
       riskLevel: normalizeLevel(obj.riskLevel, riskScore),
-      summary: String(obj.summary || "").slice(0, 2000),
+      summary: String(obj.summary || "").slice(0, 2500),
       reasons: asStringArray(obj.reasons, 10),
       skillsToBuild: asStringArray(obj.skillsToBuild, 12),
       alternatives: asStringArray(obj.alternatives, 10),
       source: "ai",
+      subScores,
+      timeHorizon: obj.timeHorizon
+        ? String(obj.timeHorizon).slice(0, 40)
+        : "5–10 years",
+      confidence: obj.confidence != null ? clampScore(Number(obj.confidence)) : undefined,
+      industryOutlook: obj.industryOutlook
+        ? String(obj.industryOutlook).slice(0, 500)
+        : undefined,
     };
     if (!analysis.summary) return null;
     return analysis;
@@ -77,13 +123,27 @@ export function parseRiskJson(
 
 export function heuristicCareerRisk(
   jobTitle: string,
-  skills?: string
+  skills?: string,
+  extra?: {
+    industry?: string;
+    experienceYears?: number;
+    country?: string;
+  }
 ): CareerRiskAnalysis {
   const title = (jobTitle || "Your role").trim().slice(0, 120);
   const skillText = (skills || "").toLowerCase();
   const titleLower = title.toLowerCase();
+  const industryLower = (extra?.industry || "").toLowerCase();
+  const years =
+    typeof extra?.experienceYears === "number" &&
+    Number.isFinite(extra.experienceYears)
+      ? extra.experienceYears
+      : null;
 
-  let score = 45;
+  let taskAutomation = 40;
+  let toolMaturity = 45;
+  let marketAdoption = 40;
+  let agenticExposure = 35;
   const reasons: string[] = [];
   const skillsToBuild: string[] = [];
   const alternatives: string[] = [];
@@ -96,6 +156,9 @@ export function heuristicCareerRisk(
     "clerk",
     "transcription",
     "call center",
+    "bookkeeper",
+    "proofreader",
+    "translator",
   ];
   const lowRiskHints = [
     "nurse",
@@ -103,8 +166,11 @@ export function heuristicCareerRisk(
     "plumber",
     "therapist",
     "teacher",
-    "manager",
     "surgeon",
+    "caregiver",
+    "physio",
+    "firefighter",
+    "chef",
   ];
   const techHints = [
     "developer",
@@ -117,28 +183,38 @@ export function heuristicCareerRisk(
     "programmer",
     "devops",
     "data scientist",
+    "analyst",
   ];
 
   if (highRiskHints.some((h) => titleLower.includes(h))) {
-    score += 25;
+    taskAutomation += 30;
+    toolMaturity += 20;
+    marketAdoption += 25;
+    agenticExposure += 15;
     reasons.push(
-      "This role type often includes repetitive tasks that automation can absorb."
+      "This role type often includes repetitive, well-specified tasks that automation can absorb."
     );
   }
+
   if (lowRiskHints.some((h) => titleLower.includes(h))) {
-    score -= 15;
+    taskAutomation -= 20;
+    agenticExposure -= 15;
+    marketAdoption -= 10;
     reasons.push(
-      "Roles with high human interaction or physical presence tend to face lower near-term automation pressure."
+      "Roles with high human interaction, physical presence, or regulated care tend to face lower near-term automation pressure."
     );
   }
 
   if (techHints.some((h) => titleLower.includes(h))) {
-    score += 10;
+    taskAutomation += 12;
+    toolMaturity += 25;
+    marketAdoption += 20;
+    agenticExposure += 18;
     reasons.push(
-      "Software roles are being reshaped by AI coding assistants; routine implementation work is under the most pressure."
+      "Software and analytical roles are being reshaped by AI coding and analysis assistants; routine implementation is under the most pressure."
     );
     reasons.push(
-      "Engineers who design systems, own product outcomes, and review AI-generated code stay more resilient."
+      "People who design systems, own outcomes, and critically review AI output stay more resilient."
     );
     skillsToBuild.push(
       "System design & architecture",
@@ -161,7 +237,8 @@ export function heuristicCareerRisk(
     titleLower.includes("react") ||
     titleLower.includes("ui engineer")
   ) {
-    score = clampScore(score + 5);
+    taskAutomation += 8;
+    toolMaturity += 10;
     reasons.push(
       "UI scaffolding and boilerplate are increasingly generated by AI; differentiation shifts to UX judgment, accessibility, and performance."
     );
@@ -177,10 +254,42 @@ export function heuristicCareerRisk(
     );
   }
 
+  if (
+    titleLower.includes("accountant") ||
+    titleLower.includes("bookkeep") ||
+    industryLower.includes("accounting")
+  ) {
+    taskAutomation += 18;
+    toolMaturity += 15;
+    marketAdoption += 12;
+    reasons.push(
+      "Transaction processing and standard reporting are strong automation targets; advisory and judgment work remains more defensible."
+    );
+    skillsToBuild.push(
+      "Financial analysis & advisory",
+      "Systems / ERP literacy",
+      "Data storytelling"
+    );
+    alternatives.push("Financial analyst", "FP&A specialist", "Audit technology specialist");
+  }
+
   if (skillText.includes("excel") && !techHints.some((h) => titleLower.includes(h))) {
-    score += 8;
+    taskAutomation += 8;
+    toolMaturity += 5;
     reasons.push(
       "Spreadsheet-heavy workflows are a common target for automation and AI copilots."
+    );
+  }
+
+  if (years != null && years >= 8) {
+    taskAutomation -= 5;
+    reasons.push(
+      "Longer experience often correlates with judgment, mentoring, and ownership that are harder to automate."
+    );
+  } else if (years != null && years <= 2) {
+    taskAutomation += 5;
+    reasons.push(
+      "Early-career roles often include more standardized tasks that tools can partially cover."
     );
   }
 
@@ -204,7 +313,13 @@ export function heuristicCareerRisk(
     );
   }
 
-  score = clampScore(score);
+  const subScores: CareerRiskSubScores = {
+    taskAutomation: clampScore(taskAutomation),
+    toolMaturity: clampScore(toolMaturity),
+    marketAdoption: clampScore(marketAdoption),
+    agenticExposure: clampScore(agenticExposure),
+  };
+  const score = compositeFromSubScores(subScores);
 
   const summary =
     score >= 65
@@ -222,6 +337,12 @@ export function heuristicCareerRisk(
     skillsToBuild: Array.from(new Set(skillsToBuild)).slice(0, 8),
     alternatives: Array.from(new Set(alternatives)).slice(0, 5),
     source: "heuristic",
+    subScores,
+    timeHorizon: "5–10 years",
+    confidence: 55,
+    industryOutlook: extra?.industry
+      ? `Industry context: ${extra.industry}. Local market conditions may shift the score.`
+      : undefined,
   };
 }
 
