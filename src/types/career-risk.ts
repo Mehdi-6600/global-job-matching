@@ -78,31 +78,27 @@ export const careerRiskRequestSchema = z.object({
 
 export type CareerRiskRequest = z.infer<typeof careerRiskRequestSchema>;
 
-const score01_100 = z.coerce.number().min(0).max(100);
-
-/** Strict schema for model output (before we force jobTitle / riskLevel). */
+/** Structured AI output (validated before use) */
 export const careerRiskAiOutputSchema = z.object({
-  jobTitle: z.string().min(1).max(120).optional(),
-  riskScore: score01_100,
+  jobTitle: z.string().optional(),
+  riskScore: z.number().min(0).max(100),
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
-  summary: z.string().min(20).max(2500),
-  reasons: z.array(z.string().min(1).max(400)).min(1).max(10),
-  skillsToBuild: z.array(z.string().min(1).max(200)).min(1).max(12),
-  alternatives: z.array(z.string().min(1).max(200)).max(10).default([]),
+  summary: z.string().min(10).max(2500),
+  reasons: z.array(z.string()).max(10).default([]),
+  skillsToBuild: z.array(z.string()).max(12).default([]),
+  alternatives: z.array(z.string()).max(10).default([]),
   subScores: z
     .object({
-      taskAutomation: score01_100,
-      toolMaturity: score01_100,
-      marketAdoption: score01_100,
-      agenticExposure: score01_100,
+      taskAutomation: z.number().min(0).max(100),
+      toolMaturity: z.number().min(0).max(100),
+      marketAdoption: z.number().min(0).max(100),
+      agenticExposure: z.number().min(0).max(100),
     })
     .optional(),
   timeHorizon: z.string().max(40).optional(),
-  confidence: score01_100.optional(),
+  confidence: z.number().min(0).max(100).optional(),
   industryOutlook: z.string().max(500).optional(),
 });
-
-export type CareerRiskAiOutput = z.infer<typeof careerRiskAiOutputSchema>;
 
 export const CAREER_RISK_DISCLAIMER_EN =
   "This is an AI-powered estimate based on the information you provided. It is not a definitive prediction of your career future.";
