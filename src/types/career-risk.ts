@@ -100,24 +100,23 @@ export type CareerRiskRequest = z.infer<typeof careerRiskRequestSchema>;
 
 const score01_100 = z.coerce.number().min(0).max(100);
 
+/** Strict AI output: subScores required for acceptance */
 export const careerRiskAiOutputSchema = z.object({
   jobTitle: z.string().min(1).max(120).optional(),
   riskScore: score01_100,
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
   summary: z.string().min(10).max(2500),
-  reasons: z.array(z.string().min(1).max(400)).max(10).default([]),
-  skillsToBuild: z.array(z.string().min(1).max(200)).max(12).default([]),
+  reasons: z.array(z.string().min(1).max(400)).min(1).max(10),
+  skillsToBuild: z.array(z.string().min(1).max(200)).min(1).max(12),
   alternatives: z.array(z.string().min(1).max(200)).max(10).default([]),
-  subScores: z
-    .object({
-      taskAutomation: score01_100,
-      toolMaturity: score01_100,
-      marketAdoption: score01_100,
-      agenticExposure: score01_100,
-    })
-    .optional(),
-  timeHorizon: z.string().max(40).optional(),
-  confidence: score01_100.optional(),
+  subScores: z.object({
+    taskAutomation: score01_100,
+    toolMaturity: score01_100,
+    marketAdoption: score01_100,
+    agenticExposure: score01_100,
+  }),
+  timeHorizon: z.string().min(1).max(40),
+  confidence: score01_100,
   industryOutlook: z.string().max(500).optional(),
 });
 
