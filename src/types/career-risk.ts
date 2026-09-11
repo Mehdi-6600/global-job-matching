@@ -69,7 +69,12 @@ export type CareerRiskFormInput = {
 export const careerRiskRequestSchema = z.object({
   jobTitle: z.string().trim().min(2).max(120),
   skills: z.string().max(1500).optional().or(z.literal("")),
-  experienceYears: z.number().min(0).max(50).optional(),
+  // Accept string numbers from mobile forms
+  experienceYears: z.preprocess((v) => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  }, z.number().min(0).max(50).optional()),
   industry: z.string().max(120).optional().or(z.literal("")),
   country: z.string().max(120).optional().or(z.literal("")),
   location: z.string().max(200).optional().or(z.literal("")),
@@ -78,27 +83,30 @@ export const careerRiskRequestSchema = z.object({
 
 export type CareerRiskRequest = z.infer<typeof careerRiskRequestSchema>;
 
-/** Structured AI output (validated before use) */
+const score01_100 = z.coerce.number().min(0).max(100);
+
 export const careerRiskAiOutputSchema = z.object({
-  jobTitle: z.string().optional(),
-  riskScore: z.number().min(0).max(100),
+  jobTitle: z.string().min(1).max(120).optional(),
+  riskScore: score01_100,
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
   summary: z.string().min(10).max(2500),
-  reasons: z.array(z.string()).max(10).default([]),
-  skillsToBuild: z.array(z.string()).max(12).default([]),
-  alternatives: z.array(z.string()).max(10).default([]),
+  reasons: z.array(z.string().min(1).max(400)).max(10).default([]),
+  skillsToBuild: z.array(z.string().min(1).max(200)).max(12).default([]),
+  alternatives: z.array(z.string().min(1).max(200)).max(10).default([]),
   subScores: z
     .object({
-      taskAutomation: z.number().min(0).max(100),
-      toolMaturity: z.number().min(0).max(100),
-      marketAdoption: z.number().min(0).max(100),
-      agenticExposure: z.number().min(0).max(100),
+      taskAutomation: score01_100,
+      toolMaturity: score01_100,
+      marketAdoption: score01_100,
+      agenticExposure: score01_100,
     })
     .optional(),
   timeHorizon: z.string().max(40).optional(),
-  confidence: z.number().min(0).max(100).optional(),
+  confidence: score01_100.optional(),
   industryOutlook: z.string().max(500).optional(),
 });
+
+export type CareerRiskAiOutput = z.infer<typeof careerRiskAiOutputSchema>;
 
 export const CAREER_RISK_DISCLAIMER_EN =
   "This is an AI-powered estimate based on the information you provided. It is not a definitive prediction of your career future.";
