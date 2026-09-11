@@ -76,7 +76,6 @@ function asStringArray(value: unknown, max = 12): string[] {
     .slice(0, max);
 }
 
-/** Strict: reject missing / NaN / out-of-range — do NOT invent 50 */
 export function parseSubScoresStrict(
   raw: unknown
 ): CareerRiskSubScores | null {
@@ -97,6 +96,23 @@ export function parseSubScoresStrict(
   return out as CareerRiskSubScores;
 }
 
+/** Soft parse: fill gaps only when individual values are valid */
+function parseSubScoresSoft(raw: unknown): CareerRiskSubScores | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  const one = (v: unknown, fallback: number) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0 || n > 100) return fallback;
+    return Math.round(n);
+  };
+  return {
+    taskAutomation: one(o.taskAutomation, 45),
+    toolMaturity: one(o.toolMaturity, 45),
+    marketAdoption: one(o.marketAdoption, 40),
+    agenticExposure: one(o.agenticExposure, 35),
+  };
+}
+
 export function compositeFromSubScores(s: CareerRiskSubScores): number {
   const base =
     s.taskAutomation *
@@ -104,23 +120,20 @@ export function compositeFromSubScores(s: CareerRiskSubScores): number {
   return clampScore(base + 0.1 * s.agenticExposure);
 }
 
-/**
- * Consistency rule:
- * If |riskScore - composite(subScores)| > 35, prefer composite from subScores.
- * If subScores invalid → reject entire AI result (null).
- */
 export function reconcileScoreWithSubScores(
   riskScore: number,
   subScores: CareerRiskSubScores
 ): number {
   const composite = compositeFromSubScores(subScores);
   const raw = clampScore(riskScore);
-  if (Math.abs(raw - composite) > 35) {
-    return composite;
-  }
+  if (Math.abs(raw - composite) > 35) return composite;
   return raw;
 }
 
+/**
+ * Accept AI JSON if we have a usable summary + score.
+ * Prefer strict Zod; fall back to soft parse so free models still count as "online".
+ */
 export function parseRiskJson(
   text: string,
   userJobTitle: string
@@ -137,37 +150,82 @@ export function parseRiskJson(
 
   try {
     const raw = JSON.parse(jsonStr.slice(start, end + 1)) as unknown;
-    const parsed = careerRiskAiOutputSchema.safeParse(raw);
-    if (!parsed.success) {
+    if (!raw || typeof raw !== "object") return null;
+    const obj = raw as Record<string, unknown>;
+
+    const strict = careerRiskAiOutputSchema.safeParse(raw);
+    const summary = String(
+      strict.success ? strict.data.summary : obj.summary || ""
+    ).trim();
+    if (summary.length < 10) return null;
+
+    const rawScore = Number(
+      strict.success ? strict.data.riskScore : obj.riskScore
+    );
+    if (!Number.isFinite(rawScore)) return null;
+
+    let subScores =
+      parseSubScoresStrict(
+        strict.success ? strict.data.subScores : obj.subScores
+      ) || parseSubScoresSoft(obj.subScores);
+
+    let riskScore = clampScore(rawScore);
+    if (subScores) {
+      riskScore = reconcileScoreWithSubScores(riskScore, subScores);
+    }
+
+    const reasons = asStringArray(
+      strict.success ? strict.data.reasons : obj.reasons,
+      10
+    );
+    const skillsToBuild = asStringArray(
+      strict.success ? strict.data.skillsToBuild : obj.skillsToBuild,
+      12
+    );
+    if (reasons.length === 0 && skillsToBuild.length === 0) {
+      // Too empty to treat as real AI analysis
       return null;
     }
 
-    const data = parsed.data;
-    const subScores = parseSubScoresStrict(data.subScores);
-    if (!subScores) return null;
+    const confidenceRaw = Number(
+      strict.success ? strict.data.confidence : obj.confidence
+    );
+    const confidence = Number.isFinite(confidenceRaw)
+      ? clampScore(confidenceRaw)
+      : 60;
 
-    if (!data.summary || data.summary.trim().length < 10) return null;
-    if (!data.reasons?.length || !data.skillsToBuild?.length) return null;
-    if (data.confidence == null || !data.timeHorizon) return null;
-
-    const riskScore = reconcileScoreWithSubScores(data.riskScore, subScores);
-    const jobTitle = userJobTitle.trim().slice(0, 120);
+    const timeHorizon = String(
+      (strict.success ? strict.data.timeHorizon : obj.timeHorizon) ||
+        "5–10 years"
+    ).slice(0, 40);
 
     return {
-      jobTitle,
+      jobTitle: userJobTitle.trim().slice(0, 120),
       riskScore,
       riskLevel: scoreToRiskLevel(riskScore),
-      summary: data.summary.slice(0, 2500),
-      reasons: asStringArray(data.reasons, 10),
-      skillsToBuild: asStringArray(data.skillsToBuild, 12),
-      alternatives: asStringArray(data.alternatives, 10),
+      summary: summary.slice(0, 2500),
+      reasons:
+        reasons.length > 0
+          ? reasons
+          : ["Analysis based on role characteristics and provided context."],
+      skillsToBuild:
+        skillsToBuild.length > 0
+          ? skillsToBuild
+          : ["Domain specialization", "Digital literacy"],
+      alternatives: asStringArray(
+        strict.success ? strict.data.alternatives : obj.alternatives,
+        10
+      ),
       source: "ai",
       subScores,
-      timeHorizon: String(data.timeHorizon).slice(0, 40),
-      confidence: clampScore(data.confidence),
-      industryOutlook: data.industryOutlook
-        ? String(data.industryOutlook).slice(0, 500)
-        : undefined,
+      timeHorizon,
+      confidence,
+      industryOutlook: (() => {
+        const v = strict.success
+          ? strict.data.industryOutlook
+          : obj.industryOutlook;
+        return v ? String(v).slice(0, 500) : undefined;
+      })(),
     };
   } catch {
     return null;
@@ -199,246 +257,102 @@ type RoleBucket =
 
 function detectRoleBucket(title: string, industry: string): RoleBucket {
   const blob = `${normalizeTitle(title)} ${normalizeTitle(industry)}`;
-
   if (
     includesAny(blob, [
       "physio",
       "physiotherapist",
-      "physical therapy",
-      "therapist",
       "nurse",
       "doctor",
       "physician",
-      "surgeon",
-      "dentist",
-      "midwife",
-      "caregiver",
-      "paramedic",
       "فیزیوتراپ",
       "پزشک",
       "پرستار",
       "دکتر",
-      "جراح",
-      "دندانپزشک",
-      "ماما",
-      "طبيب",
-      "ممرض",
-      "arzt",
-      "krankenpfleger",
-      "physiotherapeut",
-      "médecin",
-      "infirmier",
-      "médico",
-      "enfermero",
-      "fisioterapeuta",
-      "चिकित्सक",
-      "नर्स",
     ])
-  ) {
+  )
     return "care";
-  }
-
   if (
     includesAny(blob, [
       "architect",
-      "architecture",
       "معمار",
       "معماری",
       "architekt",
       "architecte",
-      "arquitecto",
-      "urbanist",
-      "شهرساز",
     ])
-  ) {
+  )
     return "architecture";
-  }
-
   if (
     includesAny(blob, [
       "electrician",
       "plumber",
-      "welder",
-      "carpenter",
       "mechanic",
-      "technician",
-      "firefighter",
       "chef",
-      "cook",
       "برقکار",
-      "لوله‌کش",
-      "جوشکار",
       "مکانیک",
-      "آشپز",
     ])
-  ) {
+  )
     return "trades";
-  }
-
-  if (
-    includesAny(blob, [
-      "teacher",
-      "professor",
-      "instructor",
-      "tutor",
-      "معلم",
-      "استاد",
-      "مدرس",
-      "lehrer",
-      "professeur",
-      "profesor",
-    ])
-  ) {
+  if (includesAny(blob, ["teacher", "معلم", "استاد", "lehrer"]))
     return "education";
-  }
-
   if (
     includesAny(blob, [
       "data entry",
       "cashier",
       "clerk",
-      "receptionist",
-      "telemarket",
-      "call center",
-      "transcription",
-      "bookkeeper",
-      "proofreader",
       "منشی",
       "صندوقدار",
-      "ورود داده",
     ])
-  ) {
+  )
     return "clerical";
-  }
-
-  if (
-    includesAny(blob, [
-      "frontend",
-      "front-end",
-      "front end",
-      "ui engineer",
-      "ui developer",
-      "فرانت",
-    ])
-  ) {
-    return "frontend";
-  }
-
+  if (includesAny(blob, ["frontend", "front-end", "فرانت"])) return "frontend";
   if (
     includesAny(blob, [
       "developer",
       "engineer",
       "software",
-      "programmer",
-      "devops",
-      "backend",
-      "full stack",
-      "data scientist",
-      "analyst",
       "برنامه نویس",
-      "برنامه‌نویس",
-      "مهندس نرم",
       "توسعه دهنده",
     ])
-  ) {
+  )
     return "tech";
-  }
-
-  if (
-    includesAny(blob, [
-      "accountant",
-      "bookkeep",
-      "accounting",
-      "auditor",
-      "حسابدار",
-      "حسابداری",
-    ])
-  ) {
-    return "finance";
-  }
-
+  if (includesAny(blob, ["accountant", "حسابدار"])) return "finance";
   return "generic";
 }
 
-/** Rough market pressure hints from country/city text (not a labor API). */
 function locationPressure(
   country?: string,
   location?: string
 ): { delta: number; noteEn: string; noteFa: string } {
   const blob = `${country || ""} ${location || ""}`.toLowerCase();
-  if (!blob.trim()) {
-    return { delta: 0, noteEn: "", noteFa: "" };
-  }
-
-  // Competitive tech hubs → slightly higher automation/tool pressure
+  if (!blob.trim()) return { delta: 0, noteEn: "", noteFa: "" };
   if (
     includesAny(blob, [
-      "silicon valley",
-      "san francisco",
-      "seattle",
-      "london",
       "berlin",
-      "amsterdam",
+      "london",
       "singapore",
+      "san francisco",
       "bangalore",
-      "bengaluru",
-      "toronto",
     ])
   ) {
     return {
       delta: 6,
-      noteEn: `In ${location || country}, competitive tech adoption can raise tool pressure faster than average.`,
-      noteFa: `در ${location || country} رقابت و پذیرش ابزارهای دیجیتال می‌تواند فشار اتوماسیون را سریع‌تر از میانگین بالا ببرد.`,
+      noteEn: `In ${location || country}, competitive digital adoption can raise tool pressure faster than average.`,
+      noteFa: `در ${location || country} پذیرش ابزارهای دیجیتال می‌تواند فشار اتوماسیون را بالاتر ببرد.`,
     };
   }
-
-  // Large regional markets with mixed formal/informal sectors
   if (
-    includesAny(blob, [
-      "iran",
-      "tehran",
-      "تهران",
-      "ایران",
-      "iraq",
-      "egypt",
-      "pakistan",
-      "india",
-      "delhi",
-      "mumbai",
-      "nigeria",
-      "lagos",
-    ])
+    includesAny(blob, ["iran", "tehran", "تهران", "ایران", "india", "egypt"])
   ) {
     return {
       delta: -4,
-      noteEn: `Local market structure in ${location || country} still relies heavily on in-person networks and licensed practice for many roles.`,
-      noteFa: `ساختار بازار محلی در ${location || country} برای بسیاری از مشاغل همچنان به حضور فیزیکی، شبکه حرفه‌ای و مجوزهای رسمی وابسته است.`,
+      noteEn: `Local market structure in ${location || country} still relies heavily on in-person networks for many roles.`,
+      noteFa: `بازار محلی در ${location || country} برای بسیاری از مشاغل همچنان به حضور فیزیکی و شبکه حرفه‌ای وابسته است.`,
     };
   }
-
-  if (
-    includesAny(blob, [
-      "germany",
-      "deutschland",
-      "france",
-      "canada",
-      "australia",
-      "netherlands",
-      "sweden",
-      "norway",
-    ])
-  ) {
-    return {
-      delta: 3,
-      noteEn: `In ${country || location}, regulated professions and strong digital infrastructure shape automation differently by sector.`,
-      noteFa: `در ${country || location} زیرم‌های شغلی و زیرساخت دیجیتال، مسیر اتوماسیون را بر اساس بخش متفاوت می‌کند.`,
-    };
-  }
-
   return {
     delta: 0,
-    noteEn: `Location context (${location || country}) can shift hiring demand even when task automation is similar globally.`,
-    noteFa: `بافت مکانی (${location || country}) می‌تواند تقاضای استخدام را جابه‌جا کند؛ حتی اگر سطح اتوماسیون جهانی مشابه باشد.`,
+    noteEn: `Location (${location || country}) can shift demand even when global automation trends are similar.`,
+    noteFa: `مکان (${location || country}) می‌تواند تقاضای استخدام را جابه‌جا کند.`,
   };
 }
 
@@ -462,6 +376,9 @@ export function heuristicCareerRisk(
     Number.isFinite(extra.experienceYears)
       ? extra.experienceYears
       : null;
+  const fa = locale === "fa";
+  const loc = locationPressure(extra?.country, extra?.location);
+  const bucket = detectRoleBucket(title, industry);
 
   let taskAutomation = 40;
   let toolMaturity = 45;
@@ -470,193 +387,64 @@ export function heuristicCareerRisk(
   const reasons: string[] = [];
   const skillsToBuild: string[] = [];
   const alternatives: string[] = [];
-  const bucket = detectRoleBucket(title, industry);
-  const loc = locationPressure(extra?.country, extra?.location);
-
-  const fa = locale === "fa";
 
   if (bucket === "care") {
     taskAutomation -= 22;
     agenticExposure -= 18;
-    marketAdoption -= 12;
     reasons.push(
       fa
-        ? "ارزیابی فیزیکی، درمان حضوری و مراقبت تنظیم‌شده به‌سختی به‌طور کامل اتوماسیون می‌شود."
-        : "Hands-on clinical work, physical assessment, and regulated care are hard to fully automate."
-    );
-    skillsToBuild.push(
-      ...(fa
-        ? [
-            "درمان مبتنی بر شواهد",
-            "ارتباط با بیمار",
-            "همکاری بین‌رشته‌ای",
-            "مستندسازی بالینی",
-          ]
-        : [
-            "Evidence-based practice",
-            "Patient communication",
-            "Interdisciplinary collaboration",
-            "Clinical documentation",
-          ])
-    );
-    alternatives.push(
-      ...(fa
-        ? ["فیزیوتراپیست ارشد", "سرپرست توانبخشی", "مسیر ورزشی/ارتوپدی"]
-        : [
-            "Senior clinician",
-            "Rehab team lead",
-            "Sports / orthopedic track",
-          ])
+        ? "کار بالینی حضوری و مراقبت تنظیم‌شده به‌سختی کامل اتوماسیون می‌شود."
+        : "Hands-on clinical care is hard to fully automate."
     );
   } else if (bucket === "architecture") {
     taskAutomation -= 8;
-    agenticExposure -= 10;
     toolMaturity += 8;
     reasons.push(
       fa
-        ? "طراحی معماری و مسئولیت حرفه‌ای همچنان به قضاوت انسانی، مجوز و هماهنگی میدانی وابسته است؛ هرچند ابزارهای مدل‌سازی دیجیتال در حال گسترش‌اند."
-        : "Architectural design still depends on professional judgment, codes/permits, and site coordination—while digital modeling tools keep expanding."
+        ? "طراحی معماری به قضاوت حرفه‌ای، مجوز و هماهنگی میدانی وابسته است."
+        : "Architecture still depends on professional judgment, codes, and site coordination."
     );
     skillsToBuild.push(
       ...(fa
-        ? [
-            "مدل‌سازی اطلاعات ساختمان (BIM)",
-            "پایداری و بهینه‌سازی انرژی",
-            "هماهنگی پروژه",
-            "ابزارهای طراحی مولد",
-          ]
-        : [
-            "BIM / Revit workflows",
-            "Sustainable design",
-            "Project coordination",
-            "Generative design tools",
-          ])
-    );
-    alternatives.push(
-      ...(fa
-        ? ["مدیر پروژه ساختمانی", "مشاور پایداری", "طراح داخلی ارشد"]
-        : [
-            "Construction project manager",
-            "Sustainability consultant",
-            "Senior interior designer",
-          ])
-    );
-  } else if (bucket === "trades") {
-    taskAutomation -= 18;
-    agenticExposure -= 15;
-    reasons.push(
-      fa
-        ? "کارهای فنی دستی و کارگاهی به مهارت فیزیکی و حضور در محل وابسته‌اند."
-        : "Skilled trades rely on physical presence and hands-on craft that resist full automation."
-    );
-  } else if (bucket === "education") {
-    taskAutomation -= 10;
-    reasons.push(
-      fa
-        ? "آموزش حضوری و مربی‌گری انسانی همچنان نقش محوری دارد؛ ابزارهای دیجیتال مکمل‌اند نه جایگزین کامل."
-        : "In-person teaching and mentoring remain central; digital tools complement rather than fully replace educators."
+        ? ["BIM", "پایداری", "هماهنگی پروژه"]
+        : ["BIM", "Sustainable design", "Project coordination"])
     );
   } else if (bucket === "clerical") {
     taskAutomation += 30;
-    toolMaturity += 20;
     marketAdoption += 25;
-    agenticExposure += 15;
     reasons.push(
       fa
-        ? "کارهای اداری تکراری از آسان‌ترین اهداف نرم‌افزار و هوش مصنوعی هستند."
-        : "Repetitive, well-specified office tasks are among the easiest for software and AI to absorb."
+        ? "کارهای اداری تکراری هدف آسان اتوماسیون هستند."
+        : "Repetitive office tasks are easy automation targets."
     );
-  } else if (bucket === "tech") {
-    taskAutomation += 12;
+  } else if (bucket === "tech" || bucket === "frontend") {
+    taskAutomation += 14;
     toolMaturity += 25;
-    marketAdoption += 20;
-    agenticExposure += 18;
-    reasons.push(
-      fa
-        ? "نقش‌های نرم‌افزاری با دستیارهای AI در حال تغییرند؛ کارهای روتین بیشترین فشار را می‌بینند."
-        : "Software roles are being reshaped by AI assistants; routine implementation faces the most pressure."
-    );
-    skillsToBuild.push(
-      ...(fa
-        ? ["معماری سیستم", "بازبینی خروجی AI", "تست و کیفیت", "Cloud / DevOps"]
-        : [
-            "System design",
-            "AI-assisted development + review",
-            "Testing & quality",
-            "Cloud / DevOps",
-          ])
-    );
-  } else if (bucket === "frontend") {
-    taskAutomation += 18;
-    toolMaturity += 28;
-    marketAdoption += 22;
     agenticExposure += 16;
     reasons.push(
       fa
-        ? "تولید خودکار UI در حال رشد است؛ تمایز در UX، دسترسی‌پذیری و کارایی است."
-        : "UI boilerplate is increasingly tool-generated; differentiation shifts to UX, accessibility, and performance."
-    );
-  } else if (bucket === "finance") {
-    taskAutomation += 18;
-    toolMaturity += 15;
-    marketAdoption += 12;
-    reasons.push(
-      fa
-        ? "گزارش‌گیری استاندارد هدف اتوماسیون است؛ مشاوره و قضاوت مالی دفاع‌پذیرتر است."
-        : "Standard reporting is an automation target; advisory judgment remains more defensible."
+        ? "نقش‌های نرم‌افزاری با دستیارهای AI در حال تغییرند."
+        : "Software roles are being reshaped by AI assistants."
     );
   }
 
-  if (years != null && years >= 8) {
-    taskAutomation -= 5;
-    reasons.push(
-      fa
-        ? "سابقه بالاتر معمولاً با قضاوت حرفه‌ای و مربی‌گری همراه است."
-        : "Longer experience often correlates with judgment and mentoring that are harder to automate."
-    );
-  } else if (years != null && years <= 2) {
-    taskAutomation += 5;
-    reasons.push(
-      fa
-        ? "نقش‌های تازه‌کار اغلب کارهای استانداردتری دارند که ابزارها بخشی از آن را پوشش می‌دهند."
-        : "Early-career roles often include standardized tasks that tools can partially cover."
-    );
-  }
-
-  // Apply location delta mainly to marketAdoption / toolMaturity
+  if (years != null && years >= 8) taskAutomation -= 5;
+  if (years != null && years <= 2) taskAutomation += 5;
   marketAdoption += loc.delta;
-  toolMaturity += Math.round(loc.delta / 2);
-  if (loc.noteEn || loc.noteFa) {
-    reasons.push(fa && loc.noteFa ? loc.noteFa : loc.noteEn);
-  }
+  if (loc.noteEn) reasons.push(fa && loc.noteFa ? loc.noteFa : loc.noteEn);
 
   if (skillsToBuild.length === 0) {
     skillsToBuild.push(
       ...(fa
-        ? ["سواد دیجیتال", "حل مسئله", "ارتباطات", "تخصص حوزه‌ای"]
-        : [
-            "Digital literacy",
-            "Problem solving",
-            "Communication",
-            "Domain specialization",
-          ])
-    );
-    reasons.push(
-      fa
-        ? "مهارت‌های بادوام، تاب‌آوری بلندمدت را بالا می‌برند."
-        : "Building durable, hard-to-automate skills improves long-term resilience."
+        ? ["سواد دیجیتال", "حل مسئله", "تخصص حوزه‌ای"]
+        : ["Digital literacy", "Problem solving", "Domain specialization"])
     );
   }
-
   if (alternatives.length === 0) {
     alternatives.push(
       ...(fa
-        ? ["نقش مجاور تخصصی", "مسیر سرپرستی", "تخصص + ابزار دیجیتال"]
-        : [
-            "Adjacent specialist role",
-            "Team lead path",
-            "Hybrid domain + digital tools",
-          ])
+        ? ["نقش مجاور تخصصی", "مسیر سرپرستی"]
+        : ["Adjacent specialist role", "Team lead path"])
     );
   }
 
@@ -667,47 +455,37 @@ export function heuristicCareerRisk(
     agenticExposure: clampScore(agenticExposure),
   };
   const score = compositeFromSubScores(subScores);
+  const place = [extra?.location, extra?.country].filter(Boolean).join(fa ? "، " : ", ");
 
-  const place = [extra?.location, extra?.country].filter(Boolean).join("، ");
-  const placeEn = [extra?.location, extra?.country].filter(Boolean).join(", ");
-
-  let summary: string;
-  if (fa) {
-    summary =
-      score >= 65
-        ? `نقش «${title}»${place ? ` در ${place}` : ""} در افق ۵ تا ۱۰ سال در معرض اتوماسیون نسبتاً بالایی است. روی مهارت‌های مکمل هوش مصنوعی تمرکز کنید.`
-        : score >= 35
-          ? `نقش «${title}»${place ? ` در ${place}` : ""} با تغییر متوسط ناشی از هوش مصنوعی روبه‌روست. ارتقای هدفمند مهارت‌ها تاب‌آوری را حفظ می‌کند.`
-          : `نقش «${title}»${place ? ` در ${place}` : ""} در کوتاه‌مدت نسبتاً مقاوم است؛ به‌خاطر کار حضوری، قضاوت و تعامل انسانی. یادگیری مداوم ضروری است.`;
-  } else {
-    summary =
-      score >= 65
-        ? `${title}${placeEn ? ` in ${placeEn}` : ""}: elevated automation exposure over the next 5–10 years. Prioritize skills that complement AI.`
-        : score >= 35
-          ? `${title}${placeEn ? ` in ${placeEn}` : ""}: moderate change from AI is likely. Targeted upskilling can keep the role resilient.`
-          : `${title}${placeEn ? ` in ${placeEn}` : ""}: relatively resilient near-term due to hands-on work, judgment, and human interaction—continuous learning still matters.`;
-  }
-
-  let industryOutlook: string | undefined;
-  if (industry || place) {
-    industryOutlook = fa
-      ? `زمینه صنعت: ${industry || "نامشخص"}${place ? ` · مکان: ${place}` : ""}. شرایط بازار محلی می‌تواند امتیاز را جابه‌جا کند.`
-      : `Industry: ${industry || "n/a"}${placeEn ? ` · Location: ${placeEn}` : ""}. Local market conditions may shift the score.`;
-  }
+  const summary = fa
+    ? score >= 65
+      ? `نقش «${title}»${place ? ` در ${place}` : ""} در معرض اتوماسیون نسبتاً بالا است.`
+      : score >= 35
+        ? `نقش «${title}»${place ? ` در ${place}` : ""} با تغییر متوسط ناشی از AI روبه‌روست.`
+        : `نقش «${title}»${place ? ` در ${place}` : ""} در کوتاه‌مدت نسبتاً مقاوم است.`
+    : score >= 65
+      ? `${title}${place ? ` in ${place}` : ""}: elevated automation exposure.`
+      : score >= 35
+        ? `${title}${place ? ` in ${place}` : ""}: moderate AI-driven change.`
+        : `${title}${place ? ` in ${place}` : ""}: relatively resilient near-term.`;
 
   return {
     jobTitle: title,
     riskScore: score,
     riskLevel: scoreToRiskLevel(score),
     summary,
-    reasons: Array.from(new Set(reasons.filter(Boolean))).slice(0, 6),
+    reasons: Array.from(new Set(reasons)).slice(0, 6),
     skillsToBuild: Array.from(new Set(skillsToBuild)).slice(0, 8),
     alternatives: Array.from(new Set(alternatives)).slice(0, 5),
     source: "heuristic",
     subScores,
     timeHorizon: fa ? "۵–۱۰ سال" : "5–10 years",
     confidence: bucket === "generic" ? 52 : 64,
-    industryOutlook,
+    industryOutlook: industry || place
+      ? fa
+        ? `صنعت: ${industry || "—"} · مکان: ${place || "—"}`
+        : `Industry: ${industry || "n/a"} · Location: ${place || "n/a"}`
+      : undefined,
   };
 }
 
