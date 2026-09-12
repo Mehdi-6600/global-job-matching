@@ -58,10 +58,10 @@ export const metadata: Metadata = {
       "Browse global jobs, apply in one place, and hire talent with a secure modern platform.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Global Job Matching",
+        alt: "Global Job Matching — Find jobs worldwide",
       },
     ],
   },
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Global Job Matching",
     description: "Find jobs and hire talent worldwide on Global Job Matching.",
-    images: ["/og-image.png"],
+    images: ["/twitter-image"],
   },
   robots: {
     index: true,
