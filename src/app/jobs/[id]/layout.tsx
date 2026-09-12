@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { absoluteUrl, getSiteUrl, truncateMeta, stripHtml } from "@/lib/seo/core";
+import {
+  absoluteUrl,
+  getSiteUrl,
+  truncateMeta,
+  stripHtml,
+  jsonLdScript,
+} from "@/lib/seo/core";
 import { jobPostingJsonLd, breadcrumbJsonLd } from "@/lib/seo/json-ld";
 import { jobBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
-import { jsonLdScript } from "@/lib/seo/core";
 
 type Props = {
   children: React.ReactNode;
@@ -62,9 +67,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     );
 
     const url = absoluteUrl(`/jobs/${job.id}`);
-    const ogImage = job.company?.logo?.startsWith("http")
-      ? job.company.logo
-      : absoluteUrl("/og-image.png");
+    // Prefer generated OG card; company logo only if absolute HTTPS
+    const ogImage =
+      job.company?.logo && /^https:\/\//i.test(job.company.logo)
+        ? job.company.logo
+        : absoluteUrl(`/jobs/${job.id}/opengraph-image`);
 
     return {
       title,
@@ -78,7 +85,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title,
         description: desc,
         siteName: "Global Job Matching",
-        images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+        images: [
+          {
+            url: ogImage,
+            width: 1200,
+            height: 630,
+            alt: title,
+          },
+        ],
       },
       twitter: {
         card: "summary_large_image",
@@ -92,7 +106,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     console.error("Job generateMetadata failed:", error);
     return {
       title: "Job",
-      description: "View this job on Global Job Matching.",
+      description: "Job listing on Global Job Matching.",
       metadataBase: new URL(base),
     };
   }
@@ -118,9 +132,14 @@ export default async function JobIdLayout({ children, params }: Props) {
         currency: true,
         createdAt: true,
         updatedAt: true,
-        deadline: true,
         company: {
-          select: { id: true, name: true, logo: true, website: true },
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+            website: true,
+            location: true,
+          },
         },
       },
     });
