@@ -13,6 +13,7 @@ import {
 } from "@/lib/quota";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
+import { strictAiLimit } from "@/lib/safe-ratelimit";
 import {
   buildResumeSystemPrompt,
   buildResumeUserPrompt,
@@ -21,6 +22,16 @@ import {
   normalizeTone,
   scrubResumeText,
 } from "@/lib/resume-ai";
+
+function infraUnavailable(code: string, message: string) {
+  return NextResponse.json(
+    {
+      error: message,
+      code,
+    },
+    { status: 503 }
+  );
+}
 
 const schema = z.object({
   fullName: z.string().min(2).max(120),
@@ -51,9 +62,16 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const limit = await aiRatelimit.limit(
+    const limit = await strictAiLimit(
+      aiRatelimit,
       `resume_gen_${session.user.id}_${ip}`
     );
+    if (limit.infraFailed) {
+      return infraUnavailable(
+        "RATE_LIMIT_INFRA_ERROR",
+        "Service temporarily unavailable. Please try again shortly."
+      );
+    }
     if (!limit.success) {
       return rateLimitedResponse(limit, "Too many requests. Please wait.");
     }
@@ -118,7 +136,6 @@ export async function POST(req: NextRequest) {
       console.error("Resume getEffectivePlan failed:", planErr);
     }
 
-    // Quota must succeed before AI — no silent bypass
     try {
       const reserveResult = await db.$transaction(async (tx) => {
         await lockUserRow(tx, session.user.id);
@@ -146,12 +163,9 @@ export async function POST(req: NextRequest) {
       reservedUserId = session.user.id;
     } catch (quotaErr) {
       console.error("Resume quota reserve failed:", quotaErr);
-      return NextResponse.json(
-        {
-          error: "Service temporarily unavailable. Please try again shortly.",
-          code: "QUOTA_INFRA_ERROR",
-        },
-        { status: 503 }
+      return infraUnavailable(
+        "QUOTA_INFRA_ERROR",
+        "Service temporarily unavailable. Please try again shortly."
       );
     }
 
