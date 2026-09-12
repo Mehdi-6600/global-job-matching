@@ -11,7 +11,7 @@ export function Footer() {
   return (
     <footer className="border-t border-white/10 bg-slate-950/80 py-10 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
             <Link href="/" className="text-lg font-bold text-white">
               G<span className="text-sky-400">JM</span>
@@ -50,10 +50,66 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/locations"
+                  className="text-slate-400 hover:text-sky-400 transition-colors"
+                >
+                  {t("Footer.locations", "Locations")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/categories"
+                  className="text-slate-400 hover:text-sky-400 transition-colors"
+                >
+                  {t("Footer.categories", "Categories")}
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/pricing"
                   className="text-slate-400 hover:text-sky-400 transition-colors"
                 >
                   {t("Nav.pricing", "Pricing")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-white text-sm font-semibold mb-3">
+              {t("Footer.tools", "Tools")}
+            </h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link
+                  href="/career-risk"
+                  className="text-slate-400 hover:text-sky-400 transition-colors"
+                >
+                  {t("Nav.careerRisk", "Career risk")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/resume-builder"
+                  className="text-slate-400 hover:text-sky-400 transition-colors"
+                >
+                  {t("Nav.resumeBuilder", "Resume builder")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-slate-400 hover:text-sky-400 transition-colors"
+                >
+                  {t("Nav.blog", "Blog")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/search"
+                  className="text-slate-400 hover:text-sky-400 transition-colors"
+                >
+                  {t("Nav.search", "Search")}
                 </Link>
               </li>
               <li>
@@ -102,7 +158,8 @@ export function Footer() {
 
         <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p className="text-slate-500 text-xs sm:text-sm">
-            © {year} Global Job Matching. {t("Footer.rights", "All rights reserved.")}
+            © {year} Global Job Matching.{" "}
+            {t("Footer.rights", "All rights reserved.")}
           </p>
           <p className="text-slate-600 text-xs">
             {t("Footer.builtFor", "Built for seekers & employers")}
