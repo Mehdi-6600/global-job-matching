@@ -264,7 +264,8 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `You are a practical career coach.
-Write ALL human-readable text in ${languageName}.
+Write ALL human-readable text ENTIRELY in ${languageName} (not English unless language is English).
+Every week title, focus, action and resource must be in ${languageName}.
 Return ONLY JSON:
 {
   "title": "string",
@@ -283,6 +284,7 @@ Reasons: ${(parsed.data.reasons || []).join(" | ") || "n/a"}
 Country: ${parsed.data.country || "n/a"}
 City: ${parsed.data.location || "n/a"}
 Experience years: ${parsed.data.experienceYears ?? "n/a"}
+CRITICAL: Reply language = ${languageName} only.
 Language: ${languageName}`;
 
     let result: RoadmapResult | null = null;
