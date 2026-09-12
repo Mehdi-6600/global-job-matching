@@ -36,16 +36,18 @@ const bodySchema = z.object({
 
 type WeekPlan = { week: string; focus: string; actions: string[] };
 
+type RoadmapResult = {
+  title: string;
+  weeks: WeekPlan[];
+  resources: string[];
+  source: "ai" | "heuristic";
+};
+
 function heuristicRoadmap(
   jobTitle: string,
   skills: string[],
   locale: string
-): {
-  title: string;
-  weeks: WeekPlan[];
-  resources: string[];
-  source: "heuristic";
-} {
+): RoadmapResult {
   const fa = locale === "fa";
   const s1 = skills[0] || (fa ? "مهارت تخصصی اصلی" : "core specialist skill");
   const s2 = skills[1] || (fa ? "ابزار دیجیتال" : "digital tools");
@@ -126,13 +128,8 @@ function heuristicRoadmap(
 function parseRoadmapJson(
   text: string,
   jobTitle: string,
-  locale: string
-): {
-  title: string;
-  weeks: WeekPlan[];
-  resources: string[];
-  source: "ai";
-} | null {
+  _locale: string
+): RoadmapResult | null {
   let jsonStr = text.trim();
   const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) jsonStr = fence[1].trim();
@@ -170,7 +167,7 @@ function parseRoadmapJson(
       source: "ai",
     };
   } catch {
-    return heuristicRoadmap(jobTitle, [], locale) as never;
+    return null;
   }
 }
 
@@ -288,7 +285,7 @@ City: ${parsed.data.location || "n/a"}
 Experience years: ${parsed.data.experienceYears ?? "n/a"}
 Language: ${languageName}`;
 
-    let result = null as ReturnType<typeof heuristicRoadmap> | null;
+    let result: RoadmapResult | null = null;
 
     try {
       const { text } = await chatCompletionWithMeta(
@@ -300,7 +297,7 @@ Language: ${languageName}`;
       );
       if (text) {
         const parsedAi = parseRoadmapJson(text, jobTitle, locale);
-        if (parsedAi) result = parsedAi as typeof result;
+        if (parsedAi) result = parsedAi;
       }
     } catch (err) {
       console.error("Roadmap AI failed:", err);
