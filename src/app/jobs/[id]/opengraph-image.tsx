@@ -8,42 +8,58 @@ export const alt = "Job on Global Job Matching";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params?: Promise<{ id?: string }> | { id?: string };
+};
 
 function truncate(s: string, n: number) {
-  const t = s.trim();
+  const t = String(s || "").trim();
   if (t.length <= n) return t;
   return `${t.slice(0, n - 1)}…`;
 }
 
-export default async function JobOpenGraphImage({ params }: Props) {
-  const { id } = await params;
+async function resolveId(params: Props["params"]): Promise<string> {
+  if (!params) return "";
+  try {
+    const resolved =
+      typeof (params as Promise<{ id?: string }>).then === "function"
+        ? await (params as Promise<{ id?: string }>)
+        : (params as { id?: string });
+    return String(resolved?.id || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+export default async function JobOpenGraphImage(props: Props) {
+  const id = await resolveId(props.params);
 
   let title = "Job opportunity";
   let company = "Global Job Matching";
   let location = "";
   let remote = false;
 
-  try {
-    const job = await db.job.findUnique({
-      where: { id },
-      select: {
-        title: true,
-        location: true,
-        remote: true,
-        status: true,
-        company: { select: { name: true } },
-      },
-    });
-    if (job && job.status === "active") {
-      title = truncate(job.title, 80);
-      company = job.company?.name || company;
-      location =
-        normalizeLocation(job.location) || job.location || "";
-      remote = !!job.remote;
+  if (id) {
+    try {
+      const job = await db.job.findUnique({
+        where: { id },
+        select: {
+          title: true,
+          location: true,
+          remote: true,
+          status: true,
+          company: { select: { name: true } },
+        },
+      });
+      if (job && job.status === "active") {
+        title = truncate(job.title, 80);
+        company = job.company?.name || company;
+        location = normalizeLocation(job.location) || job.location || "";
+        remote = !!job.remote;
+      }
+    } catch {
+      /* keep fallback */
     }
-  } catch {
-    /* fallback brand card */
   }
 
   const metaLine = [company, remote ? "Remote" : null, location || null]
@@ -59,7 +75,8 @@ export default async function JobOpenGraphImage({ params }: Props) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "linear-gradient(145deg, #0f172a 0%, #164e63 55%, #0f172a 100%)",
+          background:
+            "linear-gradient(145deg, #0f172a 0%, #164e63 55%, #0f172a 100%)",
           padding: "52px 60px",
           fontFamily:
             "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
