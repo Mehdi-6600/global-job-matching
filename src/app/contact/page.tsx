@@ -1,10 +1,17 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import ContactContent from "./ContactContent";
+import { absoluteUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = {
-  title: "Contact Us | Global Job Matching",
+  title: "Contact Us",
   description:
     "Get in touch with the Global Job Matching team. We are here to help.",
+  alternates: { canonical: absoluteUrl("/contact") },
+  openGraph: {
+    title: "Contact Us | Global Job Matching",
+    description: "Contact the Global Job Matching team.",
+    url: absoluteUrl("/contact"),
+  },
 };
 
 export default function ContactPage() {
