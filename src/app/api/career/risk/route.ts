@@ -10,7 +10,6 @@ import {
   languageNameForPrompt,
   normalizeCareerLocale,
   parseRiskJson,
-  scoreToRiskLevel,
   toSuccessResponse,
 } from "@/lib/career-risk";
 import { careerRiskRequestSchema } from "@/types/career-risk";
@@ -24,70 +23,31 @@ import {
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 
-async function checkAiRateLimit(key: string): Promise<{
-  blocked: boolean;
-  limit?: {
-    success: boolean;
-    limit?: number;
-    remaining?: number;
-    reset?: number;
-  };
+async function safeRateLimit(key: string): Promise<{
+  success: boolean;
+  limit?: number;
+  remaining?: number;
+  reset?: number;
+  infraFailed?: boolean;
 }> {
   try {
-    const limit = await aiRatelimit.limit(key);
-    if (!limit.success) return { blocked: true, limit };
-    return { blocked: false, limit };
+    const r = await aiRatelimit.limit(key);
+    return {
+      success: r.success,
+      limit: r.limit,
+      remaining: r.remaining,
+      reset: r.reset,
+    };
   } catch (err) {
     console.error("Career risk rate limit infra error (fail-open):", err);
-    return { blocked: false };
-  }
-}
-
-/**
- * Try to reserve quota.
- * - denied (limit hit) → block AI
- * - infra error → still allow AI (best-effort, log only)
- */
-async function tryReserveAiQuota(params: {
-  userId: string;
-  plan: string;
-  jobTitle: string;
-}): Promise<
-  | { allowAi: true; usageEventId: string | null }
-  | { allowAi: false; error: string; code: string; limit?: number; used?: number }
-> {
-  try {
-    const result = await db.$transaction(async (tx) => {
-      try {
-        await lockUserRow(tx, params.userId);
-      } catch {
-        /* Neon pooler may reject FOR UPDATE — continue */
-      }
-      return assertAndReserveAiUsage(tx, {
-        userId: params.userId,
-        plan: params.plan,
-        kind: "ai_career_risk",
-        meta: params.jobTitle,
-      });
-    });
-
-    if (!result.ok) {
-      return {
-        allowAi: false,
-        error: result.error,
-        code: result.code || "PLAN_LIMIT_AI",
-        limit: result.limit,
-        used: result.used,
-      };
-    }
-    return { allowAi: true, usageEventId: result.usageEventId ?? null };
-  } catch (err) {
-    console.error(
-      "Quota reserve failed — allowing AI without ledger entry:",
-      err
-    );
-    // Still allow online AI; do not brick the product
-    return { allowAi: true, usageEventId: null };
+    // Fail-open: allow request so online AI can still run
+    return {
+      success: true,
+      limit: 999,
+      remaining: 999,
+      reset: Date.now() + 60_000,
+      infraFailed: true,
+    };
   }
 }
 
@@ -99,11 +59,11 @@ export async function GET(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const rl = await checkAiRateLimit(
+    const limit = await safeRateLimit(
       `career_risk_list_${session.user.id}_${ip}`
     );
-    if (rl.blocked && rl.limit) {
-      return rateLimitedResponse(rl.limit, "Too many requests");
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
     try {
@@ -122,16 +82,19 @@ export async function GET(req: NextRequest) {
           createdAt: true,
         },
       });
+
       return NextResponse.json({
         assessments: items.map((a) => ({
           ...a,
           sharePath: `/career-risk/share/${a.shareToken}`,
         })),
       });
-    } catch {
+    } catch (listErr) {
+      console.error("Career risk list DB error:", listErr);
       return NextResponse.json({ assessments: [] });
     }
-  } catch {
+  } catch (error) {
+    console.error("Career risk list error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }
@@ -150,12 +113,12 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const rl = await checkAiRateLimit(
+    const limit = await safeRateLimit(
       `career_risk_${session.user.id}_${ip}`
     );
-    if (rl.blocked && rl.limit) {
+    if (!limit.success) {
       return rateLimitedResponse(
-        rl.limit,
+        limit,
         "Too many requests. Please wait a minute and try again."
       );
     }
@@ -211,49 +174,63 @@ export async function POST(req: NextRequest) {
     try {
       const effective = await getEffectivePlan(user.id);
       effectivePlan = effective.plan;
-    } catch {
+    } catch (planErr) {
+      console.error("getEffectivePlan failed, using free:", planErr);
       effectivePlan = String(user.plan || "free").toLowerCase();
     }
     const paid = isPaidPlan(effectivePlan);
 
-    const quota = await tryReserveAiQuota({
-      userId: user.id,
-      plan: effectivePlan,
-      jobTitle,
-    });
+    // Quota: exceeded → still allow heuristic; infra fail → try AI anyway
+    let allowAi = true;
+    try {
+      const reserveResult = await db.$transaction(async (tx) => {
+        await lockUserRow(tx, user.id);
+        return assertAndReserveAiUsage(tx, {
+          userId: user.id,
+          plan: effectivePlan,
+          kind: "ai_career_risk",
+          meta: jobTitle,
+        });
+      });
 
-    if (!quota.allowAi) {
-      return NextResponse.json(
-        {
-          error: quota.error,
-          code: quota.code,
-          limit: quota.limit,
-          used: quota.used,
-        },
-        { status: 403 }
+      if (!reserveResult.ok) {
+        allowAi = false;
+        console.warn("Career risk quota exceeded; heuristic only", {
+          code: reserveResult.code,
+        });
+      } else {
+        reservedEventId = reserveResult.usageEventId ?? null;
+        reservedUserId = user.id;
+      }
+    } catch (quotaErr) {
+      console.error(
+        "Career risk quota infra failure (continue with AI):",
+        quotaErr
       );
+      allowAi = true;
     }
 
-    reservedEventId = quota.usageEventId;
-    reservedUserId = user.id;
-
-    // ——— Always attempt online AI first ———
     const systemPrompt = `You are a careful career-risk analyst for the next 5–10 years.
 
-CRITICAL: Write summary, reasons, skillsToBuild, alternatives, industryOutlook ENTIRELY in ${languageName}.
-JSON keys stay in English.
+CRITICAL LANGUAGE RULE:
+- Write summary, reasons, skillsToBuild, alternatives, and industryOutlook ENTIRELY in ${languageName}.
+- JSON keys stay in English.
+- Write 3–5 concrete reasons, not one vague sentence.
+- Skills must be specific to THIS job title and location (not generic "digital literacy" only).
 
-Analyze this specific role using skills, experience, industry, country, and city.
-Mention local market context when country/city are provided.
-Do not invent statistics. Do not change the job title.
+Rules:
+- Analyze THIS job title plus skills, experience, industry, country, city/location, and education.
+- Explicitly reflect how the local market (${country || "n/a"} / ${location || "n/a"}) affects demand and automation pressure.
+- Do NOT invent statistics. Do NOT replace the user's job title.
+- Distinguish task automation from total job elimination.
 
-Reply with ONLY valid JSON:
+Reply with ONLY valid JSON (no markdown):
 {
   "riskScore": 0-100,
-  "summary": "2-4 sentences",
-  "reasons": ["up to 6 reasons"],
-  "skillsToBuild": ["up to 8 skills"],
-  "alternatives": ["up to 6 roles"],
+  "summary": "3-5 sentences including location context when provided",
+  "reasons": ["up to 6 concrete reasons"],
+  "skillsToBuild": ["up to 8 specific skills for this role"],
+  "alternatives": ["up to 6 adjacent roles"],
   "subScores": {
     "taskAutomation": 0-100,
     "toolMaturity": 0-100,
@@ -262,66 +239,77 @@ Reply with ONLY valid JSON:
   },
   "timeHorizon": "5–10 years",
   "confidence": 0-100,
-  "industryOutlook": "short string"
-}`;
+  "industryOutlook": "short string with industry + location nuance"
+}
+riskScore must be consistent with subScores. All subScores are required.`;
 
-    const userPrompt = `Language: ${languageName}
+    const userPrompt = `Response language: ${languageName}
 Job title: ${jobTitle}
 Skills: ${skills || "n/a"}
 Experience years: ${experienceYears ?? "n/a"}
 Industry: ${industry || "n/a"}
 Country: ${country || "n/a"}
-City: ${location || "n/a"}
+City/Location: ${location || "n/a"}
 Education: ${education || "n/a"}`;
 
     let result = null as ReturnType<typeof heuristicCareerRisk> | null;
 
-    try {
-      const { text, meta } = await chatCompletionWithMeta(
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        {
-          maxTokens: 1200,
-          temperature: 0.35,
-          timeoutMs: 22_000,
-          maxAttempts: 3,
-        }
-      );
-
-      console.info("Career risk AI meta", {
-        provider: meta.provider,
-        model: meta.model,
-        success: meta.success,
-        error: meta.error,
-        attempt: meta.attempt,
-        latencyMs: meta.latencyMs,
-      });
-
-      if (text) {
-        result = parseRiskJson(text, jobTitle);
-      }
-    } catch (aiErr) {
-      console.error("Career risk AI call failed:", aiErr);
-      result = null;
-    }
-
-    // If AI failed after we reserved, release the reservation
-    if (!result && reservedEventId && reservedUserId) {
+    if (allowAi) {
       try {
-        await releaseUsageEventById(db, {
-          userId: reservedUserId,
-          usageEventId: reservedEventId,
-        });
-      } catch (releaseErr) {
-        console.error("Release unused AI quota failed:", releaseErr);
+        const { text, meta } = await chatCompletionWithMeta(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          {
+            maxTokens: 1400,
+            temperature: 0.4,
+            timeoutMs: 28_000,
+            maxAttempts: 3,
+          }
+        );
+
+        if (text) {
+          result = parseRiskJson(text, jobTitle);
+          if (result) {
+            console.info("Career risk AI ok", {
+              provider: meta.provider,
+              model: meta.model,
+              latencyMs: meta.latencyMs,
+              attempt: meta.attempt,
+              locale,
+            });
+          } else {
+            console.error("Career risk AI parse failed", {
+              preview: text.slice(0, 200),
+            });
+          }
+        } else {
+          console.error("Career risk AI empty", {
+            error: meta.error,
+            attempt: meta.attempt,
+          });
+        }
+      } catch (aiErr) {
+        console.error("Career risk AI call failed:", aiErr);
+        result = null;
       }
-      reservedEventId = null;
     }
 
-    // Offline only if AI truly failed
     if (!result) {
+      if (reservedEventId && reservedUserId) {
+        try {
+          await db.$transaction(async (tx) => {
+            await releaseUsageEventById(tx, {
+              userId: reservedUserId!,
+              usageEventId: reservedEventId!,
+            });
+          });
+        } catch (releaseErr) {
+          console.error("Release unused AI quota failed:", releaseErr);
+        }
+        reservedEventId = null;
+      }
       result = heuristicCareerRisk(jobTitle, skills, {
         industry,
         experienceYears,
@@ -332,11 +320,7 @@ Education: ${education || "n/a"}`;
       });
     }
 
-    result = {
-      ...result,
-      jobTitle,
-      riskLevel: scoreToRiskLevel(result.riskScore),
-    };
+    result = { ...result, jobTitle };
 
     const shareToken = randomBytes(18).toString("hex");
     let assessmentId: string | undefined;
@@ -369,7 +353,10 @@ Education: ${education || "n/a"}`;
       assessmentId = saved.id;
       savedShareToken = saved.shareToken;
     } catch (saveErr) {
-      console.error("Career risk save failed:", saveErr);
+      console.error(
+        "Career risk save failed (returning analysis anyway):",
+        saveErr
+      );
       savedShareToken = undefined;
       assessmentId = undefined;
     }
@@ -385,16 +372,20 @@ Education: ${education || "n/a"}`;
     );
   } catch (error) {
     console.error("Career risk error:", error);
+
     if (reservedEventId && reservedUserId) {
       try {
-        await releaseUsageEventById(db, {
-          userId: reservedUserId,
-          usageEventId: reservedEventId,
+        await db.$transaction(async (tx) => {
+          await releaseUsageEventById(tx, {
+            userId: reservedUserId!,
+            usageEventId: reservedEventId!,
+          });
         });
-      } catch {
-        /* ignore */
+      } catch (releaseErr) {
+        console.error("Failed to release AI quota reservation:", releaseErr);
       }
     }
+
     return NextResponse.json(
       {
         error:
