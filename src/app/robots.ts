@@ -1,15 +1,8 @@
 import type { MetadataRoute } from "next";
-
-function siteBase(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://global-job-matching.vercel.app"
-  ).replace(/\/$/, "");
-}
+import { getSiteUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
-  const base = siteBase();
+  const base = getSiteUrl();
 
   return {
     rules: [
@@ -30,11 +23,12 @@ export default function robots(): MetadataRoute.Robots {
           "/notifications",
           "/job-alerts",
           "/profile",
-          "/resume-builder",
           "/payment",
           "/account",
           "/verify-email",
           "/reset-password",
+          "/login",
+          "/register",
         ],
       },
     ],
