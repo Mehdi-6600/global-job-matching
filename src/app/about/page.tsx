@@ -1,10 +1,18 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import AboutContent from "./AboutContent";
+import { absoluteUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = {
-  title: "About Us | Global Job Matching",
+  title: "About Us",
   description:
     "Learn more about Global Job Matching — a modern job board connecting talent and employers worldwide.",
+  alternates: { canonical: absoluteUrl("/about") },
+  openGraph: {
+    title: "About Us | Global Job Matching",
+    description:
+      "Learn more about Global Job Matching — connecting talent and employers worldwide.",
+    url: absoluteUrl("/about"),
+  },
 };
 
 export default function AboutPage() {
