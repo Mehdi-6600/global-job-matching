@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { absoluteUrl, getSiteUrl, truncateMeta } from "@/lib/site-url";
+import { absoluteUrl, getSiteUrl, truncateMeta, stripHtml } from "@/lib/seo/core";
+import { jobPostingJsonLd, breadcrumbJsonLd } from "@/lib/seo/json-ld";
+import { jobBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
+import { jsonLdScript } from "@/lib/seo/core";
 
 type Props = {
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 };
-
-function stripHtml(text: string): string {
-  return text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -31,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         salaryMax: true,
         currency: true,
         updatedAt: true,
-        company: { select: { name: true, logo: true } },
+        company: { select: { id: true, name: true, logo: true } },
       },
     });
 
@@ -44,7 +43,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const companyName = job.company?.name || "Company";
     const loc =
-      normalizeLocation(job.location) || job.location || (job.remote ? "Remote" : "");
+      normalizeLocation(job.location) ||
+      job.location ||
+      (job.remote ? "Remote" : "");
     const title = `${job.title} at ${companyName}`;
     const desc = truncateMeta(
       [
@@ -67,7 +68,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return {
       title,
-      description: desc || `Apply for ${job.title} at ${companyName} on Global Job Matching.`,
+      description:
+        desc ||
+        `Apply for ${job.title} at ${companyName} on Global Job Matching.`,
       alternates: { canonical: url },
       openGraph: {
         type: "article",
@@ -84,9 +87,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         images: [ogImage],
       },
       robots: { index: true, follow: true },
-      other: {
-        "og:locale": "en_US",
-      },
     };
   } catch (error) {
     console.error("Job generateMetadata failed:", error);
@@ -98,85 +98,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-function buildJobPostingJsonLd(job: {
-  id: string;
-  title: string;
-  description: string;
-  location: string;
-  remote: boolean;
-  type: string;
-  salaryMin: number | null;
-  salaryMax: number | null;
-  currency: string;
-  createdAt: Date;
-  updatedAt: Date;
-  deadline: Date | null;
-  company: { name: string; logo: string | null; website: string | null } | null;
-}): Record<string, unknown> {
-  const url = absoluteUrl(`/jobs/${job.id}`);
-  const description = stripHtml(job.description || job.title).slice(0, 5000);
-  const loc = normalizeLocation(job.location) || job.location || "";
-
-  const jsonLd: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "JobPosting",
-    title: job.title,
-    description,
-    datePosted: job.createdAt.toISOString(),
-    dateModified: job.updatedAt.toISOString(),
-    employmentType: (job.type || "FULL_TIME").toUpperCase().replace(/[\s-]+/g, "_"),
-    url,
-    directApply: true,
-    hiringOrganization: {
-      "@type": "Organization",
-      name: job.company?.name || "Employer",
-      sameAs: job.company?.website || undefined,
-      logo: job.company?.logo || undefined,
-    },
-  };
-
-  if (job.deadline) {
-    jsonLd.validThrough = job.deadline.toISOString();
-  }
-
-  if (job.remote) {
-    jsonLd.jobLocationType = "TELECOMMUTE";
-    jsonLd.applicantLocationRequirements = {
-      "@type": "Country",
-      name: "Worldwide",
-    };
-  }
-
-  if (loc) {
-    jsonLd.jobLocation = {
-      "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: loc,
-        addressCountry: undefined,
-      },
-    };
-  }
-
-  if (job.salaryMin != null || job.salaryMax != null) {
-    jsonLd.baseSalary = {
-      "@type": "MonetaryAmount",
-      currency: job.currency || "USD",
-      value: {
-        "@type": "QuantitativeValue",
-        minValue: job.salaryMin ?? undefined,
-        maxValue: job.salaryMax ?? undefined,
-        unitText: "YEAR",
-      },
-    };
-  }
-
-  return jsonLd;
-}
-
 export default async function JobIdLayout({ children, params }: Props) {
   const { id } = await params;
-  let jsonLd: Record<string, unknown> | null = null;
+  const scripts: string[] = [];
 
   try {
     const job = await db.job.findUnique({
@@ -196,13 +120,25 @@ export default async function JobIdLayout({ children, params }: Props) {
         updatedAt: true,
         deadline: true,
         company: {
-          select: { name: true, logo: true, website: true },
+          select: { id: true, name: true, logo: true, website: true },
         },
       },
     });
 
     if (job && job.status === "active") {
-      jsonLd = buildJobPostingJsonLd(job);
+      scripts.push(jsonLdScript(jobPostingJsonLd(job)));
+      scripts.push(
+        jsonLdScript(
+          breadcrumbJsonLd(
+            jobBreadcrumbs({
+              jobTitle: job.title,
+              jobId: job.id,
+              companyName: job.company?.name,
+              companyId: job.company?.id,
+            })
+          )
+        )
+      );
     }
   } catch (error) {
     console.error("Job JSON-LD load failed:", error);
@@ -210,15 +146,13 @@ export default async function JobIdLayout({ children, params }: Props) {
 
   return (
     <>
-      {jsonLd && (
+      {scripts.map((html, i) => (
         <script
+          key={i}
           type="application/ld+json"
-          // Server-rendered structured data for Google JobPosting
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-          }}
+          dangerouslySetInnerHTML={{ __html: html }}
         />
-      )}
+      ))}
       {children}
     </>
   );
