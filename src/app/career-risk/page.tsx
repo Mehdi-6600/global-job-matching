@@ -15,6 +15,7 @@ import {
   History,
   Copy,
   Map,
+  Plane,
 } from "lucide-react";
 import type {
   CareerRiskAnalysis,
@@ -46,15 +47,30 @@ type HistoryItem = {
 };
 
 type RoadmapWeek = {
-  range: string;
+  week: string;
   focus: string;
-  tasks: string[];
+  actions: string[];
 };
 
 type RoadmapResult = {
   title: string;
   weeks: RoadmapWeek[];
   resources: string[];
+  source: "ai" | "heuristic";
+};
+
+type MigrationCountry = {
+  country: string;
+  demand: string;
+  pathway: string;
+  notes: string;
+};
+
+type MigrationResult = {
+  title: string;
+  summary: string;
+  countries: MigrationCountry[];
+  caveats: string[];
   source: "ai" | "heuristic";
 };
 
@@ -160,6 +176,9 @@ export default function CareerRiskPage() {
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapError, setRoadmapError] = useState("");
   const [roadmap, setRoadmap] = useState<RoadmapResult | null>(null);
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationError, setMigrationError] = useState("");
+  const [migration, setMigration] = useState<MigrationResult | null>(null);
 
   const levelLabel = useCallback(
     (level: string) => {
@@ -244,6 +263,8 @@ export default function CareerRiskPage() {
     setUpgradeMessage(null);
     setRoadmap(null);
     setRoadmapError("");
+    setMigration(null);
+    setMigrationError("");
     trackEvent("career_risk_submit");
 
     try {
@@ -305,17 +326,16 @@ export default function CareerRiskPage() {
         credentials: "include",
         body: JSON.stringify({
           jobTitle: analysis.jobTitle,
-          skills: skills.trim() || undefined,
-          industry: industry.trim() || undefined,
+          skillsToBuild: analysis.skillsToBuild,
+          reasons: analysis.reasons,
+          riskScore: analysis.riskScore,
+          riskLevel: analysis.riskLevel,
+          summary: analysis.summary,
+          country: country.trim() || undefined,
+          location: location.trim() || undefined,
           experienceYears: experienceYears.trim()
             ? Number(experienceYears)
             : undefined,
-          country: country.trim() || undefined,
-          location: location.trim() || undefined,
-          education: education.trim() || undefined,
-          riskScore: analysis.riskScore,
-          riskLevel: analysis.riskLevel,
-          skillsToBuild: analysis.skillsToBuild,
           locale: locale || "en",
         }),
       });
@@ -333,15 +353,23 @@ export default function CareerRiskPage() {
         setRoadmapLoading(false);
         return;
       }
-      const weeks = Array.isArray((data as { weeks?: unknown }).weeks)
-        ? ((data as { weeks: RoadmapWeek[] }).weeks || []).map((w) => ({
-            range: String(w.range || ""),
-            focus: String(w.focus || ""),
-            tasks: Array.isArray(w.tasks)
-              ? w.tasks.map((x) => String(x))
-              : [],
-          }))
+
+      const rawWeeks = Array.isArray((data as { weeks?: unknown }).weeks)
+        ? ((data as { weeks: Array<Record<string, unknown>> }).weeks || [])
         : [];
+      const weeks: RoadmapWeek[] = rawWeeks.map((w) => {
+        const actionsRaw = Array.isArray(w.actions)
+          ? w.actions
+          : Array.isArray(w.tasks)
+            ? w.tasks
+            : [];
+        return {
+          week: String(w.week || w.range || "").slice(0, 80),
+          focus: String(w.focus || "").slice(0, 160),
+          actions: actionsRaw.map((x) => String(x)).filter(Boolean).slice(0, 8),
+        };
+      });
+
       setRoadmap({
         title: String((data as { title?: string }).title || ""),
         weeks,
@@ -362,6 +390,85 @@ export default function CareerRiskPage() {
       );
     } finally {
       setRoadmapLoading(false);
+    }
+  }, [analysis, country, location, experienceYears, locale, t]);
+
+  const generateMigration = useCallback(async () => {
+    if (!analysis) return;
+    setMigrationError("");
+    setMigrationLoading(true);
+    trackEvent("career_migration_submit");
+    try {
+      const res = await fetch("/api/career/migration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          jobTitle: analysis.jobTitle,
+          skills: skills.trim() || undefined,
+          skillsToBuild: analysis.skillsToBuild,
+          industry: industry.trim() || undefined,
+          experienceYears: experienceYears.trim()
+            ? Number(experienceYears)
+            : undefined,
+          country: country.trim() || undefined,
+          location: location.trim() || undefined,
+          education: education.trim() || undefined,
+          riskScore: analysis.riskScore,
+          riskLevel: analysis.riskLevel,
+          locale: locale || "en",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setShowAuthGate(true);
+        setMigrationLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setMigrationError(
+          (data as { error?: string }).error ||
+            t(
+              "CareerRisk.migrationFailed",
+              "Failed to analyze migration options"
+            )
+        );
+        setMigrationLoading(false);
+        return;
+      }
+      const countries = Array.isArray(
+        (data as { countries?: unknown }).countries
+      )
+        ? (
+            (data as { countries: MigrationCountry[] }).countries || []
+          ).map((c) => ({
+            country: String(c.country || ""),
+            demand: String(c.demand || ""),
+            pathway: String(c.pathway || ""),
+            notes: String(c.notes || ""),
+          }))
+        : [];
+      setMigration({
+        title: String((data as { title?: string }).title || ""),
+        summary: String((data as { summary?: string }).summary || ""),
+        countries,
+        caveats: Array.isArray((data as { caveats?: unknown }).caveats)
+          ? ((data as { caveats: string[] }).caveats || []).map((x) =>
+              String(x)
+            )
+          : [],
+        source:
+          (data as { source?: string }).source === "heuristic"
+            ? "heuristic"
+            : "ai",
+      });
+      trackEvent("career_migration_success");
+    } catch {
+      setMigrationError(
+        t("Auth.errors.network", "Network error. Please try again.")
+      );
+    } finally {
+      setMigrationLoading(false);
     }
   }, [
     analysis,
@@ -416,13 +523,11 @@ export default function CareerRiskPage() {
 
   function continueWithGoogle() {
     saveCareerRiskDraft(currentForm(), { autoSubmit: true });
-    trackEvent("career_risk_google_login");
     void signIn("google", { callbackUrl: "/career-risk" });
   }
 
   function continueWithEmail() {
     saveCareerRiskDraft(currentForm(), { autoSubmit: true });
-    trackEvent("career_risk_email_login");
     window.location.href = `/login?callbackUrl=${encodeURIComponent("/career-risk")}`;
   }
 
@@ -676,10 +781,10 @@ export default function CareerRiskPage() {
               />
             </div>
 
-            <p className="text-slate-300 leading-relaxed">{analysis.summary}</p>
+            <p className="text-slate-200 leading-relaxed">{analysis.summary}</p>
 
             {analysis.industryOutlook && (
-              <p className="text-sm text-slate-400 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]">
+              <p className="text-sm text-slate-300 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]">
                 {analysis.industryOutlook}
               </p>
             )}
@@ -717,7 +822,7 @@ export default function CareerRiskPage() {
                   {analysis.reasons.map((r, i) => (
                     <li
                       key={i}
-                      className="flex gap-2 text-sm text-slate-300"
+                      className="flex gap-2 text-sm text-slate-200"
                     >
                       <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                       <span>{r}</span>
@@ -736,7 +841,7 @@ export default function CareerRiskPage() {
                   {analysis.skillsToBuild.map((s, i) => (
                     <span
                       key={i}
-                      className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-200"
+                      className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-100"
                     >
                       {s}
                     </span>
@@ -752,7 +857,7 @@ export default function CareerRiskPage() {
               {paid && analysis.alternatives.length > 0 ? (
                 <ul className="space-y-2">
                   {analysis.alternatives.map((a, i) => (
-                    <li key={i} className="text-sm text-slate-300">
+                    <li key={i} className="text-sm text-slate-200">
                       • {a}
                     </li>
                   ))}
@@ -774,7 +879,7 @@ export default function CareerRiskPage() {
               )}
             </section>
 
-            {/* High-contrast roadmap CTA */}
+            {/* Roadmap CTA — high contrast */}
             <button
               type="button"
               onClick={() => void generateRoadmap()}
@@ -789,13 +894,42 @@ export default function CareerRiskPage() {
               ) : (
                 <>
                   <Map className="w-4 h-4" />
+                  {t("CareerRisk.roadmapCta", "Build 90-day skill roadmap")}
+                </>
+              )}
+            </button>
+
+            {/* Migration CTA — emergency red */}
+            <button
+              type="button"
+              onClick={() => void generateMigration()}
+              disabled={migrationLoading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-red-600/30 border border-red-400/30"
+            >
+              {migrationLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   {t(
-                    "CareerRisk.roadmapCta",
-                    "Build 90-day skill roadmap"
+                    "CareerRisk.migrationLoading",
+                    "Analyzing migration options..."
+                  )}
+                </>
+              ) : (
+                <>
+                  <Plane className="w-4 h-4" />
+                  {t(
+                    "CareerRisk.migrationCta",
+                    "Where can I migrate with these skills?"
                   )}
                 </>
               )}
             </button>
+            <p className="text-[11px] text-slate-500 text-center -mt-2">
+              {t(
+                "CareerRisk.migrationDisclaimer",
+                "General orientation only — not legal or immigration advice. Laws change; verify with official sources."
+              )}
+            </p>
 
             {roadmapError && (
               <div className="flex items-start gap-2 text-red-300 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
@@ -812,18 +946,19 @@ export default function CareerRiskPage() {
                 {roadmap.weeks.map((w, i) => (
                   <div
                     key={i}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-2"
+                    className="rounded-xl border border-white/10 bg-slate-900/60 p-4 space-y-2"
                   >
-                    <p className="text-sm font-semibold text-cyan-300">
-                      {w.range} — {w.focus}
+                    <p className="text-sm font-semibold text-white">
+                      {w.week}
+                      {w.focus ? ` — ${w.focus}` : ""}
                     </p>
                     <ul className="space-y-1.5">
-                      {w.tasks.map((task, j) => (
+                      {w.actions.map((task, j) => (
                         <li
                           key={j}
-                          className="text-sm text-slate-300 flex gap-2"
+                          className="text-sm text-slate-200 flex gap-2"
                         >
-                          <span className="text-cyan-500 shrink-0">•</span>
+                          <span className="text-cyan-400 shrink-0">•</span>
                           <span>{task}</span>
                         </li>
                       ))}
@@ -837,8 +972,65 @@ export default function CareerRiskPage() {
                     </p>
                     <ul className="space-y-1">
                       {roadmap.resources.map((r, i) => (
-                        <li key={i} className="text-sm text-slate-400">
+                        <li key={i} className="text-sm text-slate-300">
                           • {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {migrationError && (
+              <div className="flex items-start gap-2 text-red-300 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{migrationError}</span>
+              </div>
+            )}
+
+            {migration && (
+              <section className="space-y-4 border-t border-red-500/20 pt-5">
+                <h2 className="text-base font-semibold text-white">
+                  {migration.title}
+                </h2>
+                <p className="text-sm text-slate-200 leading-relaxed">
+                  {migration.summary}
+                </p>
+                <div className="space-y-3">
+                  {migration.countries.map((c, i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl border border-red-500/20 bg-red-950/30 p-4 space-y-2"
+                    >
+                      <p className="text-sm font-bold text-white">{c.country}</p>
+                      <p className="text-sm text-slate-200">
+                        <span className="text-red-300 font-medium">
+                          {t("CareerRisk.demand", "Demand")}:{" "}
+                        </span>
+                        {c.demand}
+                      </p>
+                      <p className="text-sm text-slate-200">
+                        <span className="text-red-300 font-medium">
+                          {t("CareerRisk.pathway", "Pathway")}:{" "}
+                        </span>
+                        {c.pathway}
+                      </p>
+                      {c.notes ? (
+                        <p className="text-sm text-slate-300">{c.notes}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                {migration.caveats.length > 0 && (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+                    <p className="text-xs font-semibold text-amber-300 mb-1">
+                      {t("CareerRisk.caveats", "Important notes")}
+                    </p>
+                    <ul className="space-y-1">
+                      {migration.caveats.map((c, i) => (
+                        <li key={i} className="text-xs text-slate-300">
+                          • {c}
                         </li>
                       ))}
                     </ul>
@@ -899,7 +1091,10 @@ export default function CareerRiskPage() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-semibold text-cyan-300 tabular-nums" dir="ltr">
+                    <p
+                      className="font-semibold text-cyan-300 tabular-nums"
+                      dir="ltr"
+                    >
                       {h.riskScore}
                     </p>
                     <p className="text-[10px] text-slate-500">
@@ -933,17 +1128,11 @@ export default function CareerRiskPage() {
                 "Please sign in to run a career risk analysis."
               )}
             </h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              {t(
-                "CareerRisk.disclaimer",
-                "This is an AI-powered estimate based on the information you provided."
-              )}
-            </p>
-            <div className="space-y-3">
+            <div className="space-y-3 mt-6">
               <button
                 type="button"
                 onClick={continueWithGoogle}
-                className="w-full rounded-xl bg-white text-slate-900 font-semibold text-sm py-3 hover:bg-slate-100"
+                className="w-full rounded-xl bg-white text-slate-900 font-semibold text-sm py-3"
               >
                 {t("Auth.continueGoogle", "Continue with Google")}
               </button>
@@ -954,15 +1143,6 @@ export default function CareerRiskPage() {
               >
                 {t("Common.signIn", "Sign in")}
               </button>
-              <Link
-                href={`/register?callbackUrl=${encodeURIComponent("/career-risk")}`}
-                className="block w-full text-center rounded-xl border border-white/10 text-slate-300 text-sm py-3"
-                onClick={() =>
-                  saveCareerRiskDraft(currentForm(), { autoSubmit: true })
-                }
-              >
-                {t("Auth.submitRegister", "Create Account")}
-              </Link>
             </div>
           </div>
         </div>
