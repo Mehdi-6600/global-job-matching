@@ -140,9 +140,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
     <div className="space-y-1">
       <div className="flex justify-between text-xs text-slate-400">
         <span>{label}</span>
-        <span className="text-slate-200 font-medium tabular-nums" dir="ltr">
-          {value}
-        </span>
+        <span className="text-slate-200 font-medium">{value}</span>
       </div>
       <div className="h-2 rounded-full bg-white/5 overflow-hidden">
         <div
@@ -155,7 +153,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 }
 
 export default function CareerRiskPage() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const { status } = useSession();
   const [jobTitle, setJobTitle] = useState("");
   const [skills, setSkills] = useState("");
@@ -180,19 +178,7 @@ export default function CareerRiskPage() {
   const [migrationError, setMigrationError] = useState("");
   const [migration, setMigration] = useState<MigrationResult | null>(null);
 
-  const levelLabel = useCallback(
-    (level: string) => {
-      if (level === "low") return t("CareerRisk.levelLow", "LOW");
-      if (level === "medium") return t("CareerRisk.levelMedium", "MEDIUM");
-      if (level === "high") return t("CareerRisk.levelHigh", "HIGH");
-      return level.toUpperCase();
-    },
-    [t]
-  );
-
-  const currentForm = useCallback((): CareerRiskFormInput & {
-    locale?: string;
-  } => {
+  const currentForm = useCallback((): CareerRiskFormInput => {
     const years = experienceYears.trim()
       ? Number(experienceYears)
       : undefined;
@@ -205,7 +191,6 @@ export default function CareerRiskPage() {
       country: country.trim() || undefined,
       location: location.trim() || undefined,
       education: education.trim() || undefined,
-      locale: locale || "en",
     };
   }, [
     jobTitle,
@@ -215,8 +200,18 @@ export default function CareerRiskPage() {
     country,
     location,
     education,
-    locale,
   ]);
+
+  const levelLabel = useCallback(
+    (level: string) => {
+      const l = String(level || "").toLowerCase();
+      if (l === "low") return t("CareerRisk.levelLow", "LOW");
+      if (l === "medium") return t("CareerRisk.levelMedium", "MEDIUM");
+      if (l === "high") return t("CareerRisk.levelHigh", "HIGH");
+      return level;
+    },
+    [t]
+  );
 
   const loadHistory = useCallback(async () => {
     if (status !== "authenticated") return;
@@ -314,174 +309,6 @@ export default function CareerRiskPage() {
     }
   }, [currentForm, t, loadHistory]);
 
-  const generateRoadmap = useCallback(async () => {
-    if (!analysis) return;
-    setRoadmapError("");
-    setRoadmapLoading(true);
-    trackEvent("career_roadmap_submit");
-    try {
-      const res = await fetch("/api/career/roadmap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          jobTitle: analysis.jobTitle,
-          skillsToBuild: analysis.skillsToBuild,
-          reasons: analysis.reasons,
-          riskScore: analysis.riskScore,
-          riskLevel: analysis.riskLevel,
-          summary: analysis.summary,
-          country: country.trim() || undefined,
-          location: location.trim() || undefined,
-          experienceYears: experienceYears.trim()
-            ? Number(experienceYears)
-            : undefined,
-          locale: locale || "en",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        setShowAuthGate(true);
-        setRoadmapLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        setRoadmapError(
-          (data as { error?: string }).error ||
-            t("CareerRisk.roadmapFailed", "Failed to build roadmap")
-        );
-        setRoadmapLoading(false);
-        return;
-      }
-
-      const rawWeeks = Array.isArray((data as { weeks?: unknown }).weeks)
-        ? ((data as { weeks: Array<Record<string, unknown>> }).weeks || [])
-        : [];
-      const weeks: RoadmapWeek[] = rawWeeks.map((w) => {
-        const actionsRaw = Array.isArray(w.actions)
-          ? w.actions
-          : Array.isArray(w.tasks)
-            ? w.tasks
-            : [];
-        return {
-          week: String(w.week || w.range || "").slice(0, 80),
-          focus: String(w.focus || "").slice(0, 160),
-          actions: actionsRaw.map((x) => String(x)).filter(Boolean).slice(0, 8),
-        };
-      });
-
-      setRoadmap({
-        title: String((data as { title?: string }).title || ""),
-        weeks,
-        resources: Array.isArray((data as { resources?: unknown }).resources)
-          ? ((data as { resources: string[] }).resources || []).map((x) =>
-              String(x)
-            )
-          : [],
-        source:
-          (data as { source?: string }).source === "heuristic"
-            ? "heuristic"
-            : "ai",
-      });
-      trackEvent("career_roadmap_success");
-    } catch {
-      setRoadmapError(
-        t("Auth.errors.network", "Network error. Please try again.")
-      );
-    } finally {
-      setRoadmapLoading(false);
-    }
-  }, [analysis, country, location, experienceYears, locale, t]);
-
-  const generateMigration = useCallback(async () => {
-    if (!analysis) return;
-    setMigrationError("");
-    setMigrationLoading(true);
-    trackEvent("career_migration_submit");
-    try {
-      const res = await fetch("/api/career/migration", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          jobTitle: analysis.jobTitle,
-          skills: skills.trim() || undefined,
-          skillsToBuild: analysis.skillsToBuild,
-          industry: industry.trim() || undefined,
-          experienceYears: experienceYears.trim()
-            ? Number(experienceYears)
-            : undefined,
-          country: country.trim() || undefined,
-          location: location.trim() || undefined,
-          education: education.trim() || undefined,
-          riskScore: analysis.riskScore,
-          riskLevel: analysis.riskLevel,
-          locale: locale || "en",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        setShowAuthGate(true);
-        setMigrationLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        setMigrationError(
-          (data as { error?: string }).error ||
-            t(
-              "CareerRisk.migrationFailed",
-              "Failed to analyze migration options"
-            )
-        );
-        setMigrationLoading(false);
-        return;
-      }
-      const countries = Array.isArray(
-        (data as { countries?: unknown }).countries
-      )
-        ? (
-            (data as { countries: MigrationCountry[] }).countries || []
-          ).map((c) => ({
-            country: String(c.country || ""),
-            demand: String(c.demand || ""),
-            pathway: String(c.pathway || ""),
-            notes: String(c.notes || ""),
-          }))
-        : [];
-      setMigration({
-        title: String((data as { title?: string }).title || ""),
-        summary: String((data as { summary?: string }).summary || ""),
-        countries,
-        caveats: Array.isArray((data as { caveats?: unknown }).caveats)
-          ? ((data as { caveats: string[] }).caveats || []).map((x) =>
-              String(x)
-            )
-          : [],
-        source:
-          (data as { source?: string }).source === "heuristic"
-            ? "heuristic"
-            : "ai",
-      });
-      trackEvent("career_migration_success");
-    } catch {
-      setMigrationError(
-        t("Auth.errors.network", "Network error. Please try again.")
-      );
-    } finally {
-      setMigrationLoading(false);
-    }
-  }, [
-    analysis,
-    skills,
-    industry,
-    experienceYears,
-    country,
-    location,
-    education,
-    locale,
-    t,
-  ]);
-
   useEffect(() => {
     const draft = loadCareerRiskDraft();
     if (!draft?.form) return;
@@ -501,6 +328,143 @@ export default function CareerRiskPage() {
       void runAnalysis();
     }
   }, [status, runAnalysis]);
+
+  const generateRoadmap = useCallback(async () => {
+    if (!analysis) return;
+    setRoadmapError("");
+    setRoadmapLoading(true);
+    trackEvent("career_roadmap_submit");
+    try {
+      const res = await fetch("/api/career/roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          ...currentForm(),
+          riskScore: analysis.riskScore,
+          riskLevel: analysis.riskLevel,
+          skillsToBuild: analysis.skillsToBuild,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setShowAuthGate(true);
+        setRoadmapLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setRoadmapError(
+          (data as { error?: string }).error ||
+            t("CareerRisk.roadmapFailed", "Failed to build roadmap")
+        );
+        setRoadmapLoading(false);
+        return;
+      }
+      const rawWeeks = Array.isArray((data as { weeks?: unknown }).weeks)
+        ? ((data as { weeks: unknown[] }).weeks as Record<string, unknown>[])
+        : [];
+      const weeks: RoadmapWeek[] = rawWeeks.map((w) => {
+        const week = String(w.week || w.range || "");
+        const focus = String(w.focus || "");
+        const actionsRaw = w.actions ?? w.tasks;
+        const actions = Array.isArray(actionsRaw)
+          ? actionsRaw.map((x) => String(x))
+          : [];
+        return { week, focus, actions };
+      });
+      setRoadmap({
+        title: String(
+          (data as { title?: string }).title ||
+            t("CareerRisk.roadmapCta", "Build 90-day skill roadmap")
+        ),
+        weeks,
+        resources: Array.isArray((data as { resources?: unknown }).resources)
+          ? ((data as { resources: unknown[] }).resources as unknown[]).map(
+              (x) => String(x)
+            )
+          : [],
+        source:
+          (data as { source?: string }).source === "heuristic"
+            ? "heuristic"
+            : "ai",
+      });
+      trackEvent("career_roadmap_success");
+    } catch {
+      setRoadmapError(
+        t("Auth.errors.network", "Network error. Please try again.")
+      );
+    } finally {
+      setRoadmapLoading(false);
+    }
+  }, [analysis, currentForm, t]);
+
+  const generateMigration = useCallback(async () => {
+    if (!analysis) return;
+    setMigrationError("");
+    setMigrationLoading(true);
+    trackEvent("career_migration_submit");
+    try {
+      const res = await fetch("/api/career/migration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          ...currentForm(),
+          riskScore: analysis.riskScore,
+          riskLevel: analysis.riskLevel,
+          skillsToBuild: analysis.skillsToBuild,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setShowAuthGate(true);
+        setMigrationLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setMigrationError(
+          (data as { error?: string }).error ||
+            t(
+              "CareerRisk.migrationFailed",
+              "Failed to analyze migration options"
+            )
+        );
+        setMigrationLoading(false);
+        return;
+      }
+      const countries = (
+        Array.isArray((data as { countries?: unknown }).countries)
+          ? (data as { countries: MigrationCountry[] }).countries || []
+          : []
+      ).map((c) => ({
+        country: String(c.country || ""),
+        demand: String(c.demand || ""),
+        pathway: String(c.pathway || ""),
+        notes: String(c.notes || ""),
+      }));
+      setMigration({
+        title: String((data as { title?: string }).title || ""),
+        summary: String((data as { summary?: string }).summary || ""),
+        countries,
+        caveats: Array.isArray((data as { caveats?: unknown }).caveats)
+          ? ((data as { caveats: unknown[] }).caveats as unknown[]).map((x) =>
+              String(x)
+            )
+          : [],
+        source:
+          (data as { source?: string }).source === "heuristic"
+            ? "heuristic"
+            : "ai",
+      });
+      trackEvent("career_migration_success");
+    } catch {
+      setMigrationError(
+        t("Auth.errors.network", "Network error. Please try again.")
+      );
+    } finally {
+      setMigrationLoading(false);
+    }
+  }, [analysis, currentForm, t]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -523,11 +487,13 @@ export default function CareerRiskPage() {
 
   function continueWithGoogle() {
     saveCareerRiskDraft(currentForm(), { autoSubmit: true });
+    trackEvent("career_risk_google_login");
     void signIn("google", { callbackUrl: "/career-risk" });
   }
 
   function continueWithEmail() {
     saveCareerRiskDraft(currentForm(), { autoSubmit: true });
+    trackEvent("career_risk_email_login");
     window.location.href = `/login?callbackUrl=${encodeURIComponent("/career-risk")}`;
   }
 
@@ -546,10 +512,9 @@ export default function CareerRiskPage() {
 
   const sourceLabel = useMemo(() => {
     if (!analysis) return "";
-    if (analysis.source === "heuristic") {
-      return t("CareerRisk.offlineModel", "Offline model");
-    }
-    return t("CareerRisk.onlineModel", "Online AI");
+    return analysis.source === "heuristic"
+      ? t("CareerRisk.offlineModel", "Offline model")
+      : t("CareerRisk.onlineModel", "Online AI");
   }, [analysis, t]);
 
   return (
@@ -628,7 +593,7 @@ export default function CareerRiskPage() {
                   "e.g. Finance, Software"
                 )}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
-                maxLength={120}
+                maxLength={80}
               />
             </div>
           </div>
@@ -637,16 +602,15 @@ export default function CareerRiskPage() {
             <label className="block text-xs text-slate-400 mb-1.5">
               {t("CareerRisk.skills", "Skills")}
             </label>
-            <textarea
+            <input
               value={skills}
               onChange={(e) => setSkills(e.target.value)}
               placeholder={t(
                 "CareerRisk.skillsPh",
                 "e.g. Excel, Python, customer service"
               )}
-              rows={3}
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 resize-y"
-              maxLength={2000}
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
+              maxLength={300}
             />
           </div>
 
@@ -660,19 +624,19 @@ export default function CareerRiskPage() {
                 onChange={(e) => setCountry(e.target.value)}
                 placeholder={t("CareerRisk.countryPh", "e.g. Germany")}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
-                maxLength={100}
+                maxLength={80}
               />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1.5">
-                {t("CareerRisk.location", "Location / city")}
+                {t("CareerRisk.location", "City / location")}
               </label>
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder={t("CareerRisk.locationPh", "e.g. Berlin")}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50"
-                maxLength={120}
+                maxLength={80}
               />
             </div>
           </div>
@@ -700,23 +664,98 @@ export default function CareerRiskPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-cyan-500/20"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t("CareerRisk.analyzing", "Analyzing...")}
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                {t("CareerRisk.submit", "Check my risk")}
-              </>
-            )}
-          </button>
+          <div className="space-y-3 pt-1">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-cyan-500/30 border border-cyan-300/30"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("CareerRisk.analyzing", "Analyzing...")}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  {t("CareerRisk.submit", "Check my risk")}
+                </>
+              )}
+            </button>
+
+            <p className="text-[11px] text-slate-400 text-center leading-relaxed px-1">
+              {t(
+                "CareerRisk.stepsAfterRisk",
+                "The steps below unlock after you run a risk analysis."
+              )}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => void generateRoadmap()}
+                disabled={!analysis || roadmapLoading}
+                className={
+                  analysis
+                    ? "w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 hover:bg-orange-400 text-slate-950 font-bold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-orange-500/40 border border-orange-300/40"
+                    : "w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-700/80 text-slate-400 font-semibold text-sm py-3.5 cursor-not-allowed border border-white/5 shadow-none"
+                }
+              >
+                {roadmapLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t(
+                      "CareerRisk.roadmapLoading",
+                      "Building 90-day roadmap..."
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Map className="w-4 h-4" />
+                    {t("CareerRisk.roadmapCta", "Build 90-day skill roadmap")}
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void generateMigration()}
+                disabled={!analysis || migrationLoading}
+                className={
+                  analysis
+                    ? "w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-red-700 hover:bg-red-600 text-white font-bold text-sm py-3.5 disabled:opacity-60 shadow-xl shadow-red-900/50 border border-red-500/40"
+                    : "w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-700/80 text-slate-400 font-semibold text-sm py-3.5 cursor-not-allowed border border-white/5 shadow-none"
+                }
+              >
+                {migrationLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t(
+                      "CareerRisk.migrationLoading",
+                      "Analyzing migration options..."
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Plane className="w-4 h-4" />
+                    {t(
+                      "CareerRisk.migrationCta",
+                      "Where can I migrate with these skills?"
+                    )}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {analysis ? (
+              <p className="text-[11px] text-slate-500 text-center">
+                {t(
+                  "CareerRisk.migrationDisclaimer",
+                  "General orientation only — not legal or immigration advice. Laws change; verify with official sources."
+                )}
+              </p>
+            ) : null}
+          </div>
 
           <p className="text-[11px] text-slate-500 text-center">
             {t(
@@ -781,13 +820,9 @@ export default function CareerRiskPage() {
               />
             </div>
 
-            <p className="text-slate-200 leading-relaxed">{analysis.summary}</p>
-
-            {analysis.industryOutlook && (
-              <p className="text-sm text-slate-300 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]">
-                {analysis.industryOutlook}
-              </p>
-            )}
+            <p className="text-sm text-slate-200 leading-relaxed">
+              {analysis.summary}
+            </p>
 
             {analysis.subScores && (
               <section className="space-y-3">
@@ -813,42 +848,32 @@ export default function CareerRiskPage() {
               </section>
             )}
 
-            {analysis.reasons.length > 0 && (
-              <section>
-                <h2 className="text-sm font-semibold text-white mb-2">
-                  {t("CareerRisk.why", "Why this score")}
-                </h2>
-                <ul className="space-y-2">
-                  {analysis.reasons.map((r, i) => (
-                    <li
-                      key={i}
-                      className="flex gap-2 text-sm text-slate-200"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                      <span>{r}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            <section>
+              <h2 className="text-sm font-semibold text-white mb-2">
+                {t("CareerRisk.why", "Why this score")}
+              </h2>
+              <ul className="space-y-2">
+                {analysis.reasons.map((r, i) => (
+                  <li key={i} className="text-sm text-slate-200 flex gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-            {analysis.skillsToBuild.length > 0 && (
-              <section>
-                <h2 className="text-sm font-semibold text-white mb-2">
-                  {t("CareerRisk.skillsToBuild", "Skills to build")}
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.skillsToBuild.map((s, i) => (
-                    <span
-                      key={i}
-                      className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-100"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
+            <section>
+              <h2 className="text-sm font-semibold text-white mb-2">
+                {t("CareerRisk.skillsToBuild", "Skills to build")}
+              </h2>
+              <ul className="space-y-2">
+                {analysis.skillsToBuild.map((s, i) => (
+                  <li key={i} className="text-sm text-slate-200">
+                    • {s}
+                  </li>
+                ))}
+              </ul>
+            </section>
 
             <section>
               <h2 className="text-sm font-semibold text-white mb-2">
@@ -879,58 +904,6 @@ export default function CareerRiskPage() {
               )}
             </section>
 
-            {/* Roadmap CTA — high contrast */}
-            <button
-              type="button"
-              onClick={() => void generateRoadmap()}
-              disabled={roadmapLoading}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-cyan-500/25"
-            >
-              {roadmapLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t("CareerRisk.roadmapLoading", "Building 90-day roadmap...")}
-                </>
-              ) : (
-                <>
-                  <Map className="w-4 h-4" />
-                  {t("CareerRisk.roadmapCta", "Build 90-day skill roadmap")}
-                </>
-              )}
-            </button>
-
-            {/* Migration CTA — emergency red */}
-            <button
-              type="button"
-              onClick={() => void generateMigration()}
-              disabled={migrationLoading}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-red-600/30 border border-red-400/30"
-            >
-              {migrationLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t(
-                    "CareerRisk.migrationLoading",
-                    "Analyzing migration options..."
-                  )}
-                </>
-              ) : (
-                <>
-                  <Plane className="w-4 h-4" />
-                  {t(
-                    "CareerRisk.migrationCta",
-                    "Where can I migrate with these skills?"
-                  )}
-                </>
-              )}
-            </button>
-            <p className="text-[11px] text-slate-500 text-center -mt-2">
-              {t(
-                "CareerRisk.migrationDisclaimer",
-                "General orientation only — not legal or immigration advice. Laws change; verify with official sources."
-              )}
-            </p>
-
             {roadmapError && (
               <div className="flex items-start gap-2 text-red-300 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -946,7 +919,7 @@ export default function CareerRiskPage() {
                 {roadmap.weeks.map((w, i) => (
                   <div
                     key={i}
-                    className="rounded-xl border border-white/10 bg-slate-900/60 p-4 space-y-2"
+                    className="rounded-xl border border-white/15 bg-slate-950/80 p-4 space-y-2 shadow-inner"
                   >
                     <p className="text-sm font-semibold text-white">
                       {w.week}
@@ -958,7 +931,7 @@ export default function CareerRiskPage() {
                           key={j}
                           className="text-sm text-slate-200 flex gap-2"
                         >
-                          <span className="text-cyan-400 shrink-0">•</span>
+                          <span className="text-orange-400 shrink-0">•</span>
                           <span>{task}</span>
                         </li>
                       ))}
@@ -972,7 +945,7 @@ export default function CareerRiskPage() {
                     </p>
                     <ul className="space-y-1">
                       {roadmap.resources.map((r, i) => (
-                        <li key={i} className="text-sm text-slate-300">
+                        <li key={i} className="text-sm text-slate-200">
                           • {r}
                         </li>
                       ))}
@@ -1003,7 +976,9 @@ export default function CareerRiskPage() {
                       key={i}
                       className="rounded-xl border border-red-500/20 bg-red-950/30 p-4 space-y-2"
                     >
-                      <p className="text-sm font-bold text-white">{c.country}</p>
+                      <p className="text-sm font-bold text-white">
+                        {c.country}
+                      </p>
                       <p className="text-sm text-slate-200">
                         <span className="text-red-300 font-medium">
                           {t("CareerRisk.demand", "Demand")}:{" "}
@@ -1068,8 +1043,8 @@ export default function CareerRiskPage() {
           </div>
         )}
 
-        {status === "authenticated" && history.length > 0 && (
-          <div className="glass rounded-2xl p-5 border border-white/10">
+        {history.length > 0 && (
+          <div className="glass rounded-2xl p-5 border border-white/10 mb-8">
             <div className="flex items-center gap-2 mb-4">
               <History className="w-4 h-4 text-slate-400" />
               <h2 className="text-sm font-semibold text-white">
@@ -1080,7 +1055,7 @@ export default function CareerRiskPage() {
               {history.slice(0, 8).map((h) => (
                 <li
                   key={h.id}
-                  className="flex items-start justify-between gap-3 text-sm border-b border-white/5 pb-3 last:border-0 last:pb-0"
+                  className="flex items-start justify-between gap-3 border-b border-white/5 pb-3 last:border-0 last:pb-0"
                 >
                   <div className="min-w-0">
                     <p className="text-white font-medium truncate">
