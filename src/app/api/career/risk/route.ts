@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
     }
     const paid = isPaidPlan(effectivePlan);
 
-    // Quota states:
+    // Quota:
     // A) reserved → may call AI
     // B) exceeded → heuristic only, no AI
     // C) infra failure → 503, no AI
@@ -242,7 +242,7 @@ Country: ${country || "n/a"}
 City: ${location || "n/a"}
 Education: ${education || "n/a"}`;
 
-    let result = null as ReturnType<typeof heuristicCareerRisk> | null;
+    let result: ReturnType<typeof heuristicCareerRisk> | null = null;
 
     if (allowAi) {
       try {
@@ -259,11 +259,8 @@ Education: ${education || "n/a"}`;
           }
         );
         if (text) {
-          const parsedAi = parseRiskJson(text, {
-            jobTitle,
-            locale,
-            paid,
-          });
+          // Signature on main: parseRiskJson(text, userJobTitle: string)
+          const parsedAi = parseRiskJson(text, jobTitle);
           if (parsedAi) {
             result = parsedAi;
           }
