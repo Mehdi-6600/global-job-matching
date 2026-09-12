@@ -1,6 +1,16 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { absoluteUrl, getSiteUrl, truncateMeta } from "@/lib/site-url";
+import {
+  absoluteUrl,
+  getSiteUrl,
+  truncateMeta,
+  jsonLdScript,
+} from "@/lib/seo/core";
+import {
+  companyOrganizationJsonLd,
+  breadcrumbJsonLd,
+} from "@/lib/seo/json-ld";
+import { companyBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
 
 type Props = {
@@ -81,7 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CompanyIdLayout({ children, params }: Props) {
   const { id } = await params;
-  let jsonLd: Record<string, unknown> | null = null;
+  const scripts: string[] = [];
 
   try {
     const company = await db.company.findUnique({
@@ -98,22 +108,17 @@ export default async function CompanyIdLayout({ children, params }: Props) {
     });
 
     if (company && company.status === "active") {
-      jsonLd = {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        name: company.name,
-        description: truncateMeta(company.description, 300) || undefined,
-        url: absoluteUrl(`/companies/${company.id}`),
-        sameAs: company.website || undefined,
-        logo: company.logo || undefined,
-        address: company.location
-          ? {
-              "@type": "PostalAddress",
-              addressLocality:
-                normalizeLocation(company.location) || company.location,
-            }
-          : undefined,
-      };
+      scripts.push(jsonLdScript(companyOrganizationJsonLd(company)));
+      scripts.push(
+        jsonLdScript(
+          breadcrumbJsonLd(
+            companyBreadcrumbs({
+              companyName: company.name,
+              companyId: company.id,
+            })
+          )
+        )
+      );
     }
   } catch (error) {
     console.error("Company JSON-LD load failed:", error);
@@ -121,14 +126,13 @@ export default async function CompanyIdLayout({ children, params }: Props) {
 
   return (
     <>
-      {jsonLd && (
+      {scripts.map((html, i) => (
         <script
+          key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-          }}
+          dangerouslySetInnerHTML={{ __html: html }}
         />
-      )}
+      ))}
       {children}
     </>
   );
