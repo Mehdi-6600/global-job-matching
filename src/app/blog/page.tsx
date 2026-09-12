@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Calendar, BookOpen } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -5,8 +6,16 @@ import { cookies } from "next/headers";
 import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 import { LOCALE_COOKIE } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
+import { absoluteUrl } from "@/lib/site-url";
 
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: "Career Blog",
+  description:
+    "Career tips, guides, and insights for job seekers and employers on Global Job Matching.",
+  alternates: { canonical: absoluteUrl("/blog") },
+};
 
 export default async function BlogPage() {
   const cookieStore = await cookies();
