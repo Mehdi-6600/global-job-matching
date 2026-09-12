@@ -17,6 +17,7 @@ import {
 } from "@/lib/quota";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
+import { strictAiLimit } from "@/lib/safe-ratelimit";
 
 const bodySchema = z.object({
   jobTitle: z.string().trim().min(2).max(120),
@@ -182,15 +183,21 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    try {
-      const limit = await aiRatelimit.limit(
-        `career_roadmap_${session.user.id}_${ip}`
+    const limit = await strictAiLimit(
+      aiRatelimit,
+      `career_roadmap_${session.user.id}_${ip}`
+    );
+    if (limit.infraFailed) {
+      return NextResponse.json(
+        {
+          error: "Service temporarily unavailable. Please try again shortly.",
+          code: "RATE_LIMIT_INFRA_ERROR",
+        },
+        { status: 503 }
       );
-      if (!limit.success) {
-        return rateLimitedResponse(limit, "Too many requests");
-      }
-    } catch {
-      // fail-open rate limit
+    }
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
     const body = await readJsonBody(req);
@@ -232,12 +239,13 @@ export async function POST(req: NextRequest) {
       /* keep */
     }
 
+    let allowAi = false;
     try {
       const quota = await db.$transaction(async (tx) => {
         try {
           await lockUserRow(tx, user.id);
         } catch {
-          /* ignore lock */
+          /* lock best-effort */
         }
         return assertAndReserveAiUsage(tx, {
           userId: user.id,
@@ -257,10 +265,18 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
+      allowAi = true;
       reservedEventId = quota.usageEventId ?? null;
       reservedUserId = user.id;
     } catch (err) {
-      console.error("Roadmap quota fail-open:", err);
+      console.error("Roadmap quota infra failure:", err);
+      return NextResponse.json(
+        {
+          error: "Service temporarily unavailable. Please try again shortly.",
+          code: "QUOTA_INFRA_ERROR",
+        },
+        { status: 503 }
+      );
     }
 
     const systemPrompt = `You are a practical career coach.
@@ -289,20 +305,27 @@ Language: ${languageName}`;
 
     let result: RoadmapResult | null = null;
 
-    try {
-      const { text } = await chatCompletionWithMeta(
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        { maxTokens: 1400, temperature: 0.4, timeoutMs: 22_000, maxAttempts: 3 }
-      );
-      if (text) {
-        const parsedAi = parseRoadmapJson(text, jobTitle, locale);
-        if (parsedAi) result = parsedAi;
+    if (allowAi) {
+      try {
+        const { text } = await chatCompletionWithMeta(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          {
+            maxTokens: 1400,
+            temperature: 0.4,
+            timeoutMs: 22_000,
+            maxAttempts: 3,
+          }
+        );
+        if (text) {
+          const parsedAi = parseRoadmapJson(text, jobTitle, locale);
+          if (parsedAi) result = parsedAi;
+        }
+      } catch (err) {
+        console.error("Roadmap AI failed:", err);
       }
-    } catch (err) {
-      console.error("Roadmap AI failed:", err);
     }
 
     if (!result) {
