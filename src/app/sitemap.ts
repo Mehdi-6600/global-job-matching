@@ -1,16 +1,11 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { getSiteUrl } from "@/lib/site-url";
+import { listLocationStats } from "@/lib/seo/location-query";
 
-/** Jobs per sitemap chunk (Google limit is 50k URLs / 50MB) */
 const JOBS_PER_SITEMAP = 2000;
-/** Hard ceiling so generateSitemaps stays bounded */
 const MAX_JOB_CHUNKS = 40;
 
-/**
- * id 0  → static + companies + blog + career tools
- * id 1+ → active jobs chunks
- */
 export async function generateSitemaps() {
   let jobCount = 0;
   try {
@@ -31,15 +26,19 @@ export async function generateSitemaps() {
   return ids;
 }
 
-export default async function sitemap({
-  id,
-}: {
-  id: number;
+export default async function sitemap(props: {
+  id: number | string;
 }): Promise<MetadataRoute.Sitemap> {
+  // Next may pass id as string ("0") — must coerce
+  const id =
+    typeof props.id === "string" ? parseInt(props.id, 10) : Number(props.id);
   const base = getSiteUrl();
   const now = new Date();
 
-  // --- Chunk 0: static + companies + blog ---
+  if (!Number.isFinite(id) || id < 0) {
+    return [];
+  }
+
   if (id === 0) {
     const staticPages: MetadataRoute.Sitemap = [
       { url: base, lastModified: now, changeFrequency: "daily", priority: 1 },
@@ -54,6 +53,18 @@ export default async function sitemap({
         lastModified: now,
         changeFrequency: "daily",
         priority: 0.8,
+      },
+      {
+        url: `${base}/locations`,
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.75,
+      },
+      {
+        url: `${base}/categories`,
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.75,
       },
       {
         url: `${base}/search`,
@@ -113,6 +124,8 @@ export default async function sitemap({
 
     let blogEntries: MetadataRoute.Sitemap = [];
     let companyEntries: MetadataRoute.Sitemap = [];
+    let locationEntries: MetadataRoute.Sitemap = [];
+    let categoryEntries: MetadataRoute.Sitemap = [];
 
     try {
       const posts = await db.blogPost.findMany({
@@ -148,10 +161,47 @@ export default async function sitemap({
       /* ignore */
     }
 
-    return [...staticPages, ...companyEntries, ...blogEntries];
+    try {
+      const locs = await listLocationStats(1);
+      locationEntries = locs.map((l) => ({
+        url: `${base}/locations/${l.slug}`,
+        lastModified: now,
+        changeFrequency: "daily" as const,
+        priority: 0.7,
+      }));
+    } catch {
+      /* ignore */
+    }
+
+    try {
+      const categories = await db.category.findMany({
+        select: {
+          slug: true,
+          _count: { select: { jobs: { where: { status: "active" } } } },
+        },
+        take: 200,
+      });
+      categoryEntries = categories
+        .filter((c) => c._count.jobs > 0)
+        .map((c) => ({
+          url: `${base}/categories/${c.slug}`,
+          lastModified: now,
+          changeFrequency: "daily" as const,
+          priority: 0.7,
+        }));
+    } catch {
+      /* ignore */
+    }
+
+    return [
+      ...staticPages,
+      ...locationEntries,
+      ...categoryEntries,
+      ...companyEntries,
+      ...blogEntries,
+    ];
   }
 
-  // --- Chunk 1+: jobs ---
   const chunkIndex = id - 1;
   const skip = chunkIndex * JOBS_PER_SITEMAP;
 
