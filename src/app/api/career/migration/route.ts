@@ -17,6 +17,17 @@ import {
 } from "@/lib/quota";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
+import { strictAiLimit } from "@/lib/safe-ratelimit";
+
+function infraUnavailable(code: string, message: string) {
+  return NextResponse.json(
+    {
+      error: message,
+      code,
+    },
+    { status: 503 }
+  );
+}
 
 const bodySchema = z.object({
   jobTitle: z.string().trim().min(2).max(120),
@@ -120,67 +131,65 @@ function heuristicMigration(
       countries: [
         {
           country: "ألمانيا / الاتحاد الأوروبي",
-          demand:
-            "طلب ثابت على المهارات التقنية والصحية والبناء وتقنية المعلومات.",
-          pathway:
-            "تأشيرة مهنية / البطاقة الزرقاء (حسب الشهادة وعرض العمل واللغة).",
-          notes: "غالباً يتطلب اعتراف بالشهادات ومستوى لغة أدنى.",
+          demand: "طلب مستمر على المهارات التقنية والرعاية الصحية والبناء وتقنية المعلومات.",
+          pathway: "تأشيرة المهارات / البطاقة الزرقاء الأوروبية.",
+          notes: "غالباً يتطلب اعترافاً بالمؤهلات ومستوى لغة أدنى.",
         },
         {
           country: "كندا",
-          demand: "نظام نقاط للعمالة الماهرة؛ المهن المدرجة في NOC أفضل.",
+          demand: "هجرة قائمة على النقاط للعمالة الماهرة.",
           pathway: "Express Entry / برامج الترشيح الإقليمية (PNP).",
-          notes: "اختبارات لغة وتقييم شهادات (ECA) شائعة.",
+          notes: "اختبارات اللغة وتقييم الشهادات شائعة.",
         },
         {
           country: "أستراليا",
-          demand: "قوائم المهن المهارية تؤثر بقوة على الأهلية.",
-          pathway: "تأشيرة مهارة مستقلة أو رعاية صاحب عمل.",
-          notes: "تقييم مهني ونقاط العمر/اللغة مهمة.",
+          demand: "قوائم المهن المطلوبة تؤثر بقوة على الأهلية.",
+          pathway: "تأشيرة مهارات مستقلة أو رعاية صاحب عمل.",
+          notes: "تقييم المهارات ونقاط العمر/اللغة مهمة.",
         },
         {
           country: "دول الخليج (الإمارات، قطر، عمان)",
-          demand: "طلب قائم على المشاريع في البناء والطاقة والصحة والتقنية.",
+          demand: "طلب مرتبط بالمشاريع في البناء والطاقة والصحة والتقنية.",
           pathway: "تأشيرة عمل برعاية صاحب العمل.",
-          notes: "غالباً عقود مؤقتة؛ الإقامة الدائمة محدودة.",
+          notes: "غالباً قائمة على العقود؛ مسارات الإقامة الدائمة محدودة.",
         },
       ],
       caveats: [
-        "قوانين الهجرة تتغير؛ راجع المصادر الرسمية.",
+        "تتغير قوانين الهجرة باستمرار؛ راجع المصادر الرسمية.",
         "العقوبات أو قيود جواز السفر قد تعيق المسار.",
         "هذا ليس استشارة قانونية.",
       ],
     },
     de: {
       originFallback: "Herkunftsland",
-      title: (j) => `Migrationsoptionen für ${j}`,
+      title: (j) => `Berufliche Migrationsoptionen für ${j}`,
       summary: (j, o) =>
-        `Basierend auf der Rolle „${j}“ und Herkunft „${o}“: Märkte mit typischer Nachfrage nach ähnlichen Skills. Nur Orientierung — keine Rechtsberatung.`,
+        `Basierend auf der Rolle „${j}“ und Herkunft „${o}“ Märkte, die ähnliche Skills oft suchen. Nur Orientierung – keine Rechtsberatung.`,
       countries: [
         {
           country: "Deutschland / EU",
-          demand: "Stabile Nachfrage nach Technik, Gesundheit, Bau und IT.",
-          pathway: "Fachkräfteeinwanderung / Blaue Karte EU.",
-          notes: "Anerkennung von Abschlüssen und Sprachniveau oft nötig.",
+          demand:
+            "Stetige Nachfrage nach Technik, Gesundheit, Bau und IT.",
+          pathway: "Fachkräfteeinwanderung / EU Blue Card.",
+          notes: "Anerkennung der Abschlüsse und Sprachniveau oft nötig.",
         },
         {
           country: "Kanada",
-          demand: "Punktesystem; NOC-gelistete Berufe sind im Vorteil.",
+          demand: "Punktebasiertes System für Fachkräfte.",
           pathway: "Express Entry / Provincial Nominee (PNP).",
           notes: "Sprachtests und Credential Assessment üblich.",
         },
         {
           country: "Australien",
-          demand:
-            "Skilled-occupation-Listen beeinflussen die Eligibility stark.",
-          pathway: "Independent skilled visa oder Employer Sponsorship.",
-          notes: "Skills assessment und Punkte für Alter/Sprache zählen.",
+          demand: "Skilled-Occupation-Listen steuern die Eignung.",
+          pathway: "Unabhängiges Skilled Visa oder Arbeitgeber-Sponsoring.",
+          notes: "Skills Assessment und Punkte für Alter/Sprache zählen.",
         },
         {
           country: "Golfstaaten (VAE, Katar, Oman)",
-          demand: "Projektgetriebene Nachfrage in Bau, Energie, Health, Tech.",
-          pathway: "Arbeitgeber-gesponsertes Arbeitsvisum.",
-          notes: "Meist befristete Verträge; dauerhafte Residenz begrenzt.",
+          demand: "Projektbezogene Nachfrage in Bau, Energie, Health, Tech.",
+          pathway: "Arbeitgeber-gesponsertes Work Visa.",
+          notes: "Meist vertragsbasiert; dauerhafte Aufenthaltspfade begrenzt.",
         },
       ],
       caveats: [
@@ -191,103 +200,101 @@ function heuristicMigration(
     },
     es: {
       originFallback: "país de origen",
-      title: (j) => `Opciones de migración para ${j}`,
+      title: (j) => `Opciones de migración laboral para ${j}`,
       summary: (j, o) =>
-        `Según el rol «${j}» y origen «${o}», mercados que suelen demandar habilidades similares. Orientación general, no asesoría legal.`,
+        `Según el rol «${j}» y el origen «${o}», mercados que suelen contratar habilidades similares. Orientación general, no asesoría legal.`,
       countries: [
         {
           country: "Alemania / UE",
           demand: "Demanda estable en técnica, salud, construcción e IT.",
           pathway: "Visado de cualificados / Tarjeta Azul UE.",
-          notes: "Suele exigir homologación y nivel de idioma.",
+          notes: "Suele exigir títulos reconocidos y nivel de idioma.",
         },
         {
           country: "Canadá",
-          demand: "Sistema de puntos; ocupaciones NOC tienen ventaja.",
-          pathway: "Express Entry / PNP provincial.",
-          notes: "Tests de idioma y ECA son habituales.",
+          demand: "Inmigración por puntos para trabajadores cualificados.",
+          pathway: "Express Entry / Programas provinciales (PNP).",
+          notes: "Pruebas de idioma y evaluación de títulos son comunes.",
         },
         {
           country: "Australia",
-          demand: "Listas de ocupaciones cualificadas influyen mucho.",
-          pathway: "Visado independiente o sponsorship del empleador.",
-          notes: "Skills assessment y puntos de edad/idioma importan.",
+          demand: "Listas de ocupaciones cualificadas influyen en la elegibilidad.",
+          pathway: "Visado independiente o patrocinio del empleador.",
+          notes: "Evaluación de skills y puntos por edad/idioma importan.",
         },
         {
           country: "Golfo (EAU, Catar, Omán)",
-          demand: "Demanda por proyectos en construcción, energía y tech.",
-          pathway: "Visado laboral patrocinado por empleador.",
-          notes: "Contratos temporales; residencia permanente limitada.",
+          demand: "Demanda por proyectos en construcción, energía, salud y tech.",
+          pathway: "Visado de trabajo patrocinado por empleador.",
+          notes: "Suele ser por contrato; residencia permanente limitada.",
         },
       ],
       caveats: [
-        "Las normas migratorias cambian; consulte fuentes oficiales.",
-        "Sanciones o límites de pasaporte pueden bloquear rutas.",
-        "No es asesoramiento legal.",
+        "Las normas migratorias cambian; consulta fuentes oficiales.",
+        "Sanciones o límites de pasaporte pueden bloquear vías.",
+        "Esto no es asesoría legal.",
       ],
     },
     fr: {
       originFallback: "pays d'origine",
-      title: (j) => `Options de migration pour ${j}`,
+      title: (j) => `Options de migration professionnelle pour ${j}`,
       summary: (j, o) =>
-        `D'après le rôle « ${j} » et l'origine « ${o} », marchés qui recrutent souvent des compétences proches. Orientation générale uniquement.`,
+        `Selon le rôle « ${j} » et l'origine « ${o} », marchés qui recrutent souvent des compétences proches. Orientation générale, pas un conseil juridique.`,
       countries: [
         {
           country: "Allemagne / UE",
-          demand: "Demande stable en technique, santé, BTP et IT.",
-          pathway: "Visa métiers en tension / Carte bleue européenne.",
-          notes:
-            "Reconnaissance des diplômes et niveau de langue souvent requis.",
+          demand: "Demande stable en technique, santé, construction et IT.",
+          pathway: "Visa travailleurs qualifiés / Carte bleue UE.",
+          notes: "Reconnaissance des diplômes et niveau de langue souvent requis.",
         },
         {
           country: "Canada",
-          demand: "Système à points ; métiers NOC avantagés.",
-          pathway: "Entrée express / PNP provincial.",
-          notes: "Tests de langue et ECA courants.",
+          demand: "Immigration à points pour les travailleurs qualifiés.",
+          pathway: "Express Entry / Programmes provinciaux (PNP).",
+          notes: "Tests de langue et évaluation des diplômes courants.",
         },
         {
           country: "Australie",
-          demand: "Listes d'occupations qualifiées déterminantes.",
-          pathway: "Visa skilled indépendant ou parrainage employeur.",
-          notes: "Évaluation des compétences et points âge/langue.",
+          demand: "Listes d'occupations qualifiées influencent l'éligibilité.",
+          pathway: "Visa indépendant ou parrainage employeur.",
+          notes: "Évaluation des skills et points âge/langue comptent.",
         },
         {
           country: "Golfe (EAU, Qatar, Oman)",
-          demand: "Demande liée aux projets (construction, énergie, tech).",
-          pathway: "Visa de travail sponsorisé par l'employeur.",
-          notes:
-            "Contrats souvent temporaires ; résidence permanente limitée.",
+          demand: "Demande liée aux projets (construction, énergie, santé, tech).",
+          pathway: "Visa de travail parrainé par l'employeur.",
+          notes: "Souvent contractuel ; résidence permanente limitée.",
         },
       ],
       caveats: [
-        "Les règles changent ; vérifiez les sources officielles.",
-        "Sanctions ou contraintes de passeport peuvent bloquer.",
-        "Ceci n'est pas un conseil juridique.",
+        "Les règles changent ; consultez les sources officielles.",
+        "Sanctions ou limites de passeport peuvent bloquer le parcours.",
+        "Ce n'est pas un conseil juridique.",
       ],
     },
     hi: {
       originFallback: "मूल देश",
-      title: (j) => `${j} के लिए प्रवास विकल्प`,
+      title: (j) => `${j} के लिए कौशल-आधारित प्रवास विकल्प`,
       summary: (j, o) =>
-        `भूमिका «${j}» और मूल «${o}» के आधार पर समान कौशल की माँग वाले बाज़ार। केवल सामान्य मार्गदर्शन — कानूनी सलाह नहीं।`,
+        `भूमिका «${j}» और मूल «${o}» के आधार पर वे बाज़ार जो अक्सर मिलते-जुलते कौशल चाहते हैं। सामान्य मार्गदर्शन — कानूनी सलाह नहीं।`,
       countries: [
         {
           country: "जर्मनी / EU",
           demand: "तकनीक, स्वास्थ्य, निर्माण और IT में स्थिर माँग।",
-          pathway: "स्किल्ड वर्कर वीज़ा / EU Blue Card।",
-          notes: "डिग्री मान्यता और भाषा स्तर अक्सर जरूरी।",
+          pathway: "कुशल कार्यकर्ता वीज़ा / EU ब्लू कार्ड।",
+          notes: "मान्य योग्यता और न्यूनतम भाषा स्तर अक्सर ज़रूरी।",
         },
         {
           country: "कनाडा",
-          demand: "पॉइंट्स सिस्टम; NOC सूचीबद्ध पेशे बेहतर।",
-          pathway: "Express Entry / PNP।",
-          notes: "भाषा टेस्ट और ECA सामान्य।",
+          demand: "कुशल कामगारों के लिए पॉइंट-आधारित आव्रजन।",
+          pathway: "Express Entry / प्रांतीय (PNP)।",
+          notes: "भाषा परीक्षा और क्रेडेंशियल मूल्यांकन आम।",
         },
         {
           country: "ऑस्ट्रेलिया",
-          demand: "स्किल्ड ऑक्यूपेशन सूचियाँ पात्रता तय करती हैं।",
-          pathway: "स्वतंत्र स्किल्ड वीज़ा या नियोक्ता स्पॉन्सरशिप।",
-          notes: "स्किल्स असेसमेंट और आयु/भाषा पॉइंट्स महत्वपूर्ण।",
+          demand: "स्किल्ड ऑक्यूपेशन सूची पात्रता तय करती है।",
+          pathway: "स्वतंत्र स्किल्ड वीज़ा या नियोक्ता प्रायोजन।",
+          notes: "स्किल्स असेसमेंट और आयु/भाषा अंक मायने रखते हैं।",
         },
         {
           country: "खाड़ी देश (UAE, कतर, ओमान)",
@@ -418,15 +425,18 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    try {
-      const limit = await aiRatelimit.limit(
-        `career_migration_${session.user.id}_${ip}`
+    const limit = await strictAiLimit(
+      aiRatelimit,
+      `career_migration_${session.user.id}_${ip}`
+    );
+    if (limit.infraFailed) {
+      return infraUnavailable(
+        "RATE_LIMIT_INFRA_ERROR",
+        "Service temporarily unavailable. Please try again shortly."
       );
-      if (!limit.success) {
-        return rateLimitedResponse(limit, "Too many requests");
-      }
-    } catch {
-      // fail-open
+    }
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests. Please wait.");
     }
 
     const body = await readJsonBody(req);
@@ -437,7 +447,10 @@ export async function POST(req: NextRequest) {
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten() },
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
@@ -482,13 +495,10 @@ export async function POST(req: NextRequest) {
       /* keep */
     }
 
+    let allowAi = false;
     try {
       const quota = await db.$transaction(async (tx) => {
-        try {
-          await lockUserRow(tx, user.id);
-        } catch {
-          /* ignore */
-        }
+        await lockUserRow(tx, user.id);
         return assertAndReserveAiUsage(tx, {
           userId: user.id,
           plan,
@@ -497,20 +507,21 @@ export async function POST(req: NextRequest) {
         });
       });
       if (!quota.ok) {
-        return NextResponse.json(
-          {
-            error: quota.error,
-            code: quota.code,
-            limit: quota.limit,
-            used: quota.used,
-          },
-          { status: 403 }
-        );
+        allowAi = false;
+        console.warn("Migration quota exceeded; heuristic only", {
+          code: quota.code,
+        });
+      } else {
+        allowAi = true;
+        reservedEventId = quota.usageEventId ?? null;
+        reservedUserId = user.id;
       }
-      reservedEventId = quota.usageEventId ?? null;
-      reservedUserId = user.id;
     } catch (err) {
-      console.error("Migration quota fail-open:", err);
+      console.error("Migration quota infra failure:", err);
+      return infraUnavailable(
+        "QUOTA_INFRA_ERROR",
+        "Service temporarily unavailable. Please try again shortly."
+      );
     }
 
     const systemPrompt = `You are a careful international labor-mobility analyst.
@@ -549,37 +560,43 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
 
     let result: MigrationResult | null = null;
 
-    try {
-      const { text } = await chatCompletionWithMeta(
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        {
-          maxTokens: 1600,
-          temperature: 0.35,
-          timeoutMs: 28_000,
-          maxAttempts: 3,
+    if (allowAi) {
+      try {
+        const { text } = await chatCompletionWithMeta(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          {
+            maxTokens: 1600,
+            temperature: 0.35,
+            timeoutMs: 28_000,
+            maxAttempts: 3,
+          }
+        );
+        if (text) {
+          result = parseMigrationJson(text, jobTitle);
         }
-      );
-      if (text) {
-        result = parseMigrationJson(text, jobTitle);
+      } catch (err) {
+        console.error("Migration AI failed:", err);
       }
-    } catch (err) {
-      console.error("Migration AI failed:", err);
-    }
 
-    if (!result) {
-      if (reservedEventId && reservedUserId) {
+      if (!result && reservedEventId && reservedUserId) {
         try {
-          await releaseUsageEventById(db, {
-            userId: reservedUserId,
-            usageEventId: reservedEventId,
+          await db.$transaction(async (tx) => {
+            await releaseUsageEventById(tx, {
+              userId: reservedUserId!,
+              usageEventId: reservedEventId!,
+            });
           });
         } catch {
           /* ignore */
         }
+        reservedEventId = null;
       }
+    }
+
+    if (!result) {
       result = heuristicMigration(jobTitle, country, locale);
     }
 
@@ -588,9 +605,11 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
     console.error("Migration error:", error);
     if (reservedEventId && reservedUserId) {
       try {
-        await releaseUsageEventById(db, {
-          userId: reservedUserId,
-          usageEventId: reservedEventId,
+        await db.$transaction(async (tx) => {
+          await releaseUsageEventById(tx, {
+            userId: reservedUserId!,
+            usageEventId: reservedEventId!,
+          });
         });
       } catch {
         /* ignore */
