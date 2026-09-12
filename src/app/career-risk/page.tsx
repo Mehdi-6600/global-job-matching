@@ -120,7 +120,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
         <span className="text-start" dir="auto">
           {label}
         </span>
-        <span className="text-slate-300 font-medium tabular-nums shrink-0">
+        <span className="text-slate-300 font-medium tabular-nums shrink-0" dir="ltr">
           {value}
         </span>
       </div>
@@ -160,9 +160,9 @@ export default function CareerRiskPage() {
   const levelLabel = useCallback(
     (level: string) => {
       const k = level.toLowerCase();
-      if (k === "low") return t("CareerRisk.levelLow", "LOW");
-      if (k === "medium") return t("CareerRisk.levelMedium", "MEDIUM");
-      if (k === "high") return t("CareerRisk.levelHigh", "HIGH");
+      if (k === "low") return t("CareerRisk.levelLow", "کم");
+      if (k === "medium") return t("CareerRisk.levelMedium", "متوسط");
+      if (k === "high") return t("CareerRisk.levelHigh", "بالا");
       return level;
     },
     [t]
@@ -405,23 +405,6 @@ export default function CareerRiskPage() {
     }
   }
 
-  const metaParts: string[] = [];
-  if (analysis?.timeHorizon) {
-    metaParts.push(
-      `${t("CareerRisk.horizon", "Time horizon")}: ${analysis.timeHorizon}`
-    );
-  }
-  if (analysis?.confidence != null) {
-    metaParts.push(
-      `${t("CareerRisk.confidence", "Confidence")}: ${analysis.confidence}%`
-    );
-  }
-  if (analysis?.source === "heuristic") {
-    metaParts.push(t("CareerRisk.offlineModel", "Offline model"));
-  } else if (analysis) {
-    metaParts.push(t("CareerRisk.onlineModel", "Online AI"));
-  }
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <div className="max-w-3xl mx-auto">
@@ -606,22 +589,37 @@ export default function CareerRiskPage() {
                 <p className="text-xl font-semibold text-white" dir="auto">
                   {analysis.jobTitle}
                 </p>
-                {metaParts.length > 0 && (
-                  <p
-                    className="text-xs text-slate-500 mt-1 leading-relaxed"
-                    dir="auto"
-                  >
-                    {metaParts.join(" · ")}
+                <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+                  {analysis.timeHorizon ? (
+                    <p>
+                      {t("CareerRisk.horizon", "افق زمانی")}:{" "}
+                      <span dir="ltr" className="inline-block">
+                        {analysis.timeHorizon}
+                      </span>
+                    </p>
+                  ) : null}
+                  {analysis.confidence != null ? (
+                    <p>
+                      {t("CareerRisk.confidence", "اطمینان")}:{" "}
+                      <span dir="ltr" className="tabular-nums">
+                        {analysis.confidence}%
+                      </span>
+                    </p>
+                  ) : null}
+                  <p>
+                    {analysis.source === "heuristic"
+                      ? t("CareerRisk.offlineModel", "مدل آفلاین")
+                      : t("CareerRisk.onlineModel", "هوش مصنوعی آنلاین")}
                   </p>
-                )}
+                </div>
               </div>
               <div
                 className={`rounded-xl border px-3 py-2 text-center min-w-[88px] ${levelColor[analysis.riskLevel]}`}
               >
-                <p className="text-2xl font-bold tabular-nums">
+                <p className="text-2xl font-bold tabular-nums" dir="ltr">
                   {analysis.riskScore}
                 </p>
-                <p className="text-xs uppercase tracking-wide">
+                <p className="text-xs tracking-wide">
                   {levelLabel(analysis.riskLevel)}
                 </p>
               </div>
@@ -656,30 +654,24 @@ export default function CareerRiskPage() {
             {analysis.subScores && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold text-white">
-                  {t("CareerRisk.breakdown", "Risk breakdown")}
+                  {t("CareerRisk.breakdown", "تفکیک ریسک")}
                 </h2>
                 <ScoreBar
-                  label={t(
-                    "CareerRisk.taskAutomation",
-                    "Task automation"
-                  )}
+                  label={t("CareerRisk.taskAutomation", "اتوماسیون وظایف")}
                   value={analysis.subScores.taskAutomation}
                 />
                 <ScoreBar
-                  label={t("CareerRisk.toolMaturity", "Tool maturity")}
+                  label={t("CareerRisk.toolMaturity", "بلوغ ابزارها")}
                   value={analysis.subScores.toolMaturity}
                 />
                 <ScoreBar
-                  label={t(
-                    "CareerRisk.marketAdoption",
-                    "Market adoption"
-                  )}
+                  label={t("CareerRisk.marketAdoption", "پذیرش بازار")}
                   value={analysis.subScores.marketAdoption}
                 />
                 <ScoreBar
                   label={t(
                     "CareerRisk.agentExposure",
-                    "Agent exposure"
+                    "قرار گرفتن در برابر عامل‌های هوشمند"
                   )}
                   value={analysis.subScores.agenticExposure}
                 />
@@ -689,7 +681,7 @@ export default function CareerRiskPage() {
             {analysis.reasons.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-white mb-2">
-                  {t("CareerRisk.why", "Why this score")}
+                  {t("CareerRisk.why", "دلیل این امتیاز")}
                 </h2>
                 <ul className="space-y-2">
                   {analysis.reasons.map((r, i) => (
@@ -708,7 +700,7 @@ export default function CareerRiskPage() {
             {analysis.skillsToBuild.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-white mb-2">
-                  {t("CareerRisk.skillsToBuild", "Skills to build")}
+                  {t("CareerRisk.skillsToBuild", "مهارت‌های قابل توسعه")}
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {analysis.skillsToBuild.map((s, i) => (
@@ -726,7 +718,7 @@ export default function CareerRiskPage() {
 
             <section>
               <h2 className="text-sm font-semibold text-white mb-2">
-                {t("CareerRisk.alternatives", "Alternative paths")}
+                {t("CareerRisk.alternatives", "مسیرهای جایگزین")}
               </h2>
               {paid && analysis.alternatives.length > 0 ? (
                 <ul className="space-y-2">
@@ -763,14 +755,17 @@ export default function CareerRiskPage() {
                 {roadmapLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    {t("CareerRisk.roadmapLoading", "Building roadmap...")}
+                    {t(
+                      "CareerRisk.roadmapLoading",
+                      "در حال ساخت نقشه راه..."
+                    )}
                   </>
                 ) : (
                   <>
                     <Route className="w-4 h-4" />
                     {t(
                       "CareerRisk.roadmapCta",
-                      "Generate 90-day skill roadmap"
+                      "ساخت نقشه راه ۹۰روزه مهارت"
                     )}
                   </>
                 )}
@@ -788,7 +783,10 @@ export default function CareerRiskPage() {
                   </h3>
                   {roadmap.weeks.map((w, i) => (
                     <div key={i} className="space-y-1">
-                      <p className="text-xs text-cyan-300 font-medium" dir="auto">
+                      <p
+                        className="text-xs text-cyan-300 font-medium"
+                        dir="auto"
+                      >
                         {w.week} — {w.focus}
                       </p>
                       <ul className="space-y-1">
@@ -807,7 +805,7 @@ export default function CareerRiskPage() {
                   {roadmap.resources.length > 0 && (
                     <div>
                       <p className="text-xs text-slate-400 mb-1">
-                        {t("CareerRisk.resources", "Suggested resources")}
+                        {t("CareerRisk.resources", "منابع پیشنهادی")}
                       </p>
                       <ul className="space-y-1">
                         {roadmap.resources.map((r, i) => (
@@ -831,13 +829,13 @@ export default function CareerRiskPage() {
                 href="/search"
                 className="text-xs text-cyan-400 hover:underline"
               >
-                {t("CareerRisk.browseJobs", "Browse matching jobs")}
+                {t("CareerRisk.browseJobs", "مشاهده شغل‌های مرتبط")}
               </Link>
               <Link
                 href="/resume-builder"
                 className="text-xs text-cyan-400 hover:underline"
               >
-                {t("CareerRisk.improveResume", "Improve resume with AI")}
+                {t("CareerRisk.improveResume", "بهبود رزومه با هوش مصنوعی")}
               </Link>
               {sharePath && (
                 <button
@@ -847,8 +845,8 @@ export default function CareerRiskPage() {
                 >
                   <Copy className="w-3 h-3" />
                   {copied
-                    ? t("CareerRisk.copied", "Copied")
-                    : t("CareerRisk.copyShare", "Copy share link")}
+                    ? t("CareerRisk.copied", "کپی شد")
+                    : t("CareerRisk.copyShare", "کپی لینک اشتراک")}
                 </button>
               )}
             </div>
@@ -860,7 +858,7 @@ export default function CareerRiskPage() {
             <div className="flex items-center gap-2 mb-4">
               <History className="w-4 h-4 text-slate-400" />
               <h2 className="text-sm font-semibold text-white">
-                {t("CareerRisk.history", "Your recent analyses")}
+                {t("CareerRisk.history", "تحلیل‌های اخیر شما")}
               </h2>
             </div>
             <ul className="space-y-3">
@@ -881,10 +879,10 @@ export default function CareerRiskPage() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-semibold text-cyan-300 tabular-nums">
+                    <p className="font-semibold text-cyan-300 tabular-nums" dir="ltr">
                       {h.riskScore}
                     </p>
-                    <p className="text-[10px] uppercase text-slate-500">
+                    <p className="text-[10px] text-slate-500">
                       {levelLabel(h.riskLevel)}
                     </p>
                   </div>
