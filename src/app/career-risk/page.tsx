@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession, signIn } from "next-auth/react";
 import {
@@ -14,7 +14,7 @@ import {
   X,
   History,
   Copy,
-  Route,
+  Map,
 } from "lucide-react";
 import type {
   CareerRiskAnalysis,
@@ -45,9 +45,15 @@ type HistoryItem = {
   createdAt: string;
 };
 
+type RoadmapWeek = {
+  range: string;
+  focus: string;
+  tasks: string[];
+};
+
 type RoadmapResult = {
   title: string;
-  weeks: Array<{ week: string; focus: string; actions: string[] }>;
+  weeks: RoadmapWeek[];
   resources: string[];
   source: "ai" | "heuristic";
 };
@@ -116,11 +122,9 @@ function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
 function ScoreBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-slate-400 gap-2">
-        <span className="text-start" dir="auto">
-          {label}
-        </span>
-        <span className="text-slate-300 font-medium tabular-nums shrink-0" dir="ltr">
+      <div className="flex justify-between text-xs text-slate-400">
+        <span>{label}</span>
+        <span className="text-slate-200 font-medium tabular-nums" dir="ltr">
           {value}
         </span>
       </div>
@@ -154,21 +158,22 @@ export default function CareerRiskPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
-  const [roadmap, setRoadmap] = useState<RoadmapResult | null>(null);
   const [roadmapError, setRoadmapError] = useState("");
+  const [roadmap, setRoadmap] = useState<RoadmapResult | null>(null);
 
   const levelLabel = useCallback(
     (level: string) => {
-      const k = level.toLowerCase();
-      if (k === "low") return t("CareerRisk.levelLow", "کم");
-      if (k === "medium") return t("CareerRisk.levelMedium", "متوسط");
-      if (k === "high") return t("CareerRisk.levelHigh", "بالا");
-      return level;
+      if (level === "low") return t("CareerRisk.levelLow", "LOW");
+      if (level === "medium") return t("CareerRisk.levelMedium", "MEDIUM");
+      if (level === "high") return t("CareerRisk.levelHigh", "HIGH");
+      return level.toUpperCase();
     },
     [t]
   );
 
-  const currentForm = useCallback((): CareerRiskFormInput => {
+  const currentForm = useCallback((): CareerRiskFormInput & {
+    locale?: string;
+  } => {
     const years = experienceYears.trim()
       ? Number(experienceYears)
       : undefined;
@@ -181,7 +186,7 @@ export default function CareerRiskPage() {
       country: country.trim() || undefined,
       location: location.trim() || undefined,
       education: education.trim() || undefined,
-      locale,
+      locale: locale || "en",
     };
   }, [
     jobTitle,
@@ -288,6 +293,88 @@ export default function CareerRiskPage() {
     }
   }, [currentForm, t, loadHistory]);
 
+  const generateRoadmap = useCallback(async () => {
+    if (!analysis) return;
+    setRoadmapError("");
+    setRoadmapLoading(true);
+    trackEvent("career_roadmap_submit");
+    try {
+      const res = await fetch("/api/career/roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          jobTitle: analysis.jobTitle,
+          skills: skills.trim() || undefined,
+          industry: industry.trim() || undefined,
+          experienceYears: experienceYears.trim()
+            ? Number(experienceYears)
+            : undefined,
+          country: country.trim() || undefined,
+          location: location.trim() || undefined,
+          education: education.trim() || undefined,
+          riskScore: analysis.riskScore,
+          riskLevel: analysis.riskLevel,
+          skillsToBuild: analysis.skillsToBuild,
+          locale: locale || "en",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setShowAuthGate(true);
+        setRoadmapLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setRoadmapError(
+          (data as { error?: string }).error ||
+            t("CareerRisk.roadmapFailed", "Failed to build roadmap")
+        );
+        setRoadmapLoading(false);
+        return;
+      }
+      const weeks = Array.isArray((data as { weeks?: unknown }).weeks)
+        ? ((data as { weeks: RoadmapWeek[] }).weeks || []).map((w) => ({
+            range: String(w.range || ""),
+            focus: String(w.focus || ""),
+            tasks: Array.isArray(w.tasks)
+              ? w.tasks.map((x) => String(x))
+              : [],
+          }))
+        : [];
+      setRoadmap({
+        title: String((data as { title?: string }).title || ""),
+        weeks,
+        resources: Array.isArray((data as { resources?: unknown }).resources)
+          ? ((data as { resources: string[] }).resources || []).map((x) =>
+              String(x)
+            )
+          : [],
+        source:
+          (data as { source?: string }).source === "heuristic"
+            ? "heuristic"
+            : "ai",
+      });
+      trackEvent("career_roadmap_success");
+    } catch {
+      setRoadmapError(
+        t("Auth.errors.network", "Network error. Please try again.")
+      );
+    } finally {
+      setRoadmapLoading(false);
+    }
+  }, [
+    analysis,
+    skills,
+    industry,
+    experienceYears,
+    country,
+    location,
+    education,
+    locale,
+    t,
+  ]);
+
   useEffect(() => {
     const draft = loadCareerRiskDraft();
     if (!draft?.form) return;
@@ -352,58 +439,13 @@ export default function CareerRiskPage() {
     }
   }
 
-  async function generateRoadmap() {
-    if (!analysis) return;
-    setRoadmapError("");
-    setRoadmapLoading(true);
-    trackEvent("career_roadmap_submit");
-    try {
-      const res = await fetch("/api/career/roadmap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          jobTitle: analysis.jobTitle,
-          skillsToBuild: analysis.skillsToBuild,
-          reasons: analysis.reasons,
-          riskScore: analysis.riskScore,
-          riskLevel: analysis.riskLevel,
-          summary: analysis.summary,
-          country: country.trim() || undefined,
-          location: location.trim() || undefined,
-          experienceYears: experienceYears.trim()
-            ? Number(experienceYears)
-            : undefined,
-          locale,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        setShowAuthGate(true);
-        return;
-      }
-      if (!res.ok) {
-        setRoadmapError(
-          (data as { error?: string }).error ||
-            t("CareerRisk.roadmapFailed", "Could not generate roadmap")
-        );
-        return;
-      }
-      const r = data as RoadmapResult;
-      if (!r?.weeks || !Array.isArray(r.weeks)) {
-        setRoadmapError(t("Common.error", "Something went wrong"));
-        return;
-      }
-      setRoadmap(r);
-      trackEvent("career_roadmap_success");
-    } catch {
-      setRoadmapError(
-        t("Auth.errors.network", "Network error. Please try again.")
-      );
-    } finally {
-      setRoadmapLoading(false);
+  const sourceLabel = useMemo(() => {
+    if (!analysis) return "";
+    if (analysis.source === "heuristic") {
+      return t("CareerRisk.offlineModel", "Offline model");
     }
-  }
+    return t("CareerRisk.onlineModel", "Online AI");
+  }, [analysis, t]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
@@ -556,7 +598,7 @@ export default function CareerRiskPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm py-3 disabled:opacity-60"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-cyan-500/20"
           >
             {loading ? (
               <>
@@ -582,17 +624,17 @@ export default function CareerRiskPage() {
         {analysis && (
           <div className="glass rounded-2xl p-5 sm:p-6 border border-white/10 space-y-5 mb-8">
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-0 flex-1">
+              <div>
                 <p className="text-sm text-slate-400">
                   {t("CareerRisk.jobTitle", "Job title")}
                 </p>
-                <p className="text-xl font-semibold text-white" dir="auto">
+                <p className="text-xl font-semibold text-white">
                   {analysis.jobTitle}
                 </p>
                 <div className="text-xs text-slate-500 mt-1 space-y-0.5">
                   {analysis.timeHorizon ? (
                     <p>
-                      {t("CareerRisk.horizon", "افق زمانی")}:{" "}
+                      {t("CareerRisk.horizon", "Horizon")}:{" "}
                       <span dir="ltr" className="inline-block">
                         {analysis.timeHorizon}
                       </span>
@@ -600,17 +642,13 @@ export default function CareerRiskPage() {
                   ) : null}
                   {analysis.confidence != null ? (
                     <p>
-                      {t("CareerRisk.confidence", "اطمینان")}:{" "}
+                      {t("CareerRisk.confidence", "Confidence")}:{" "}
                       <span dir="ltr" className="tabular-nums">
                         {analysis.confidence}%
                       </span>
                     </p>
                   ) : null}
-                  <p>
-                    {analysis.source === "heuristic"
-                      ? t("CareerRisk.offlineModel", "مدل آفلاین")
-                      : t("CareerRisk.onlineModel", "هوش مصنوعی آنلاین")}
-                  </p>
+                  <p>{sourceLabel}</p>
                 </div>
               </div>
               <div
@@ -638,15 +676,10 @@ export default function CareerRiskPage() {
               />
             </div>
 
-            <p className="text-slate-300 leading-relaxed" dir="auto">
-              {analysis.summary}
-            </p>
+            <p className="text-slate-300 leading-relaxed">{analysis.summary}</p>
 
             {analysis.industryOutlook && (
-              <p
-                className="text-sm text-slate-400 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]"
-                dir="auto"
-              >
+              <p className="text-sm text-slate-400 border border-white/5 rounded-xl px-3 py-2 bg-white/[0.02]">
                 {analysis.industryOutlook}
               </p>
             )}
@@ -654,25 +687,22 @@ export default function CareerRiskPage() {
             {analysis.subScores && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold text-white">
-                  {t("CareerRisk.breakdown", "تفکیک ریسک")}
+                  {t("CareerRisk.breakdown", "Risk breakdown")}
                 </h2>
                 <ScoreBar
-                  label={t("CareerRisk.taskAutomation", "اتوماسیون وظایف")}
+                  label={t("CareerRisk.taskAutomation", "Task automation")}
                   value={analysis.subScores.taskAutomation}
                 />
                 <ScoreBar
-                  label={t("CareerRisk.toolMaturity", "بلوغ ابزارها")}
+                  label={t("CareerRisk.toolMaturity", "Tool maturity")}
                   value={analysis.subScores.toolMaturity}
                 />
                 <ScoreBar
-                  label={t("CareerRisk.marketAdoption", "پذیرش بازار")}
+                  label={t("CareerRisk.marketAdoption", "Market adoption")}
                   value={analysis.subScores.marketAdoption}
                 />
                 <ScoreBar
-                  label={t(
-                    "CareerRisk.agentExposure",
-                    "قرار گرفتن در برابر عامل‌های هوشمند"
-                  )}
+                  label={t("CareerRisk.agentExposure", "Agent exposure")}
                   value={analysis.subScores.agenticExposure}
                 />
               </section>
@@ -681,7 +711,7 @@ export default function CareerRiskPage() {
             {analysis.reasons.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-white mb-2">
-                  {t("CareerRisk.why", "دلیل این امتیاز")}
+                  {t("CareerRisk.why", "Why this score")}
                 </h2>
                 <ul className="space-y-2">
                   {analysis.reasons.map((r, i) => (
@@ -690,7 +720,7 @@ export default function CareerRiskPage() {
                       className="flex gap-2 text-sm text-slate-300"
                     >
                       <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                      <span dir="auto">{r}</span>
+                      <span>{r}</span>
                     </li>
                   ))}
                 </ul>
@@ -700,14 +730,13 @@ export default function CareerRiskPage() {
             {analysis.skillsToBuild.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-white mb-2">
-                  {t("CareerRisk.skillsToBuild", "مهارت‌های قابل توسعه")}
+                  {t("CareerRisk.skillsToBuild", "Skills to build")}
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {analysis.skillsToBuild.map((s, i) => (
                     <span
                       key={i}
                       className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-200"
-                      dir="auto"
                     >
                       {s}
                     </span>
@@ -718,12 +747,12 @@ export default function CareerRiskPage() {
 
             <section>
               <h2 className="text-sm font-semibold text-white mb-2">
-                {t("CareerRisk.alternatives", "مسیرهای جایگزین")}
+                {t("CareerRisk.alternatives", "Alternative paths")}
               </h2>
               {paid && analysis.alternatives.length > 0 ? (
                 <ul className="space-y-2">
                   {analysis.alternatives.map((a, i) => (
-                    <li key={i} className="text-sm text-slate-300" dir="auto">
+                    <li key={i} className="text-sm text-slate-300">
                       • {a}
                     </li>
                   ))}
@@ -745,97 +774,91 @@ export default function CareerRiskPage() {
               )}
             </section>
 
-            <div className="pt-2 border-t border-white/5 space-y-3">
-              <button
-                type="button"
-                onClick={() => void generateRoadmap()}
-                disabled={roadmapLoading}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 font-semibold text-sm py-3 disabled:opacity-60"
-              >
-                {roadmapLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {t(
-                      "CareerRisk.roadmapLoading",
-                      "در حال ساخت نقشه راه..."
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Route className="w-4 h-4" />
-                    {t(
-                      "CareerRisk.roadmapCta",
-                      "ساخت نقشه راه ۹۰روزه مهارت"
-                    )}
-                  </>
-                )}
-              </button>
-              {roadmapError && (
-                <p className="text-sm text-red-300">{roadmapError}</p>
-              )}
-              {roadmap && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
-                  <h3
-                    className="text-sm font-semibold text-white"
-                    dir="auto"
-                  >
-                    {roadmap.title}
-                  </h3>
-                  {roadmap.weeks.map((w, i) => (
-                    <div key={i} className="space-y-1">
-                      <p
-                        className="text-xs text-cyan-300 font-medium"
-                        dir="auto"
-                      >
-                        {w.week} — {w.focus}
-                      </p>
-                      <ul className="space-y-1">
-                        {w.actions.map((a, j) => (
-                          <li
-                            key={j}
-                            className="text-sm text-slate-300 flex gap-2"
-                          >
-                            <span className="text-cyan-500">•</span>
-                            <span dir="auto">{a}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                  {roadmap.resources.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-400 mb-1">
-                        {t("CareerRisk.resources", "منابع پیشنهادی")}
-                      </p>
-                      <ul className="space-y-1">
-                        {roadmap.resources.map((r, i) => (
-                          <li
-                            key={i}
-                            className="text-sm text-slate-300"
-                            dir="auto"
-                          >
-                            • {r}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+            {/* High-contrast roadmap CTA */}
+            <button
+              type="button"
+              onClick={() => void generateRoadmap()}
+              disabled={roadmapLoading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm py-3.5 disabled:opacity-60 shadow-lg shadow-cyan-500/25"
+            >
+              {roadmapLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("CareerRisk.roadmapLoading", "Building 90-day roadmap...")}
+                </>
+              ) : (
+                <>
+                  <Map className="w-4 h-4" />
+                  {t(
+                    "CareerRisk.roadmapCta",
+                    "Build 90-day skill roadmap"
                   )}
-                </div>
+                </>
               )}
-            </div>
+            </button>
+
+            {roadmapError && (
+              <div className="flex items-start gap-2 text-red-300 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{roadmapError}</span>
+              </div>
+            )}
+
+            {roadmap && (
+              <section className="space-y-4 border-t border-white/10 pt-5">
+                <h2 className="text-base font-semibold text-white">
+                  {roadmap.title}
+                </h2>
+                {roadmap.weeks.map((w, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-2"
+                  >
+                    <p className="text-sm font-semibold text-cyan-300">
+                      {w.range} — {w.focus}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {w.tasks.map((task, j) => (
+                        <li
+                          key={j}
+                          className="text-sm text-slate-300 flex gap-2"
+                        >
+                          <span className="text-cyan-500 shrink-0">•</span>
+                          <span>{task}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                {roadmap.resources.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-white mb-2">
+                      {t("CareerRisk.resources", "Resources")}
+                    </p>
+                    <ul className="space-y-1">
+                      {roadmap.resources.map((r, i) => (
+                        <li key={i} className="text-sm text-slate-400">
+                          • {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
 
             <div className="flex flex-wrap gap-3 pt-1">
               <Link
                 href="/search"
                 className="text-xs text-cyan-400 hover:underline"
               >
-                {t("CareerRisk.browseJobs", "مشاهده شغل‌های مرتبط")}
+                {t("CareerRisk.browseJobs", "Browse matching jobs")}
               </Link>
               <Link
                 href="/resume-builder"
                 className="text-xs text-cyan-400 hover:underline"
               >
-                {t("CareerRisk.improveResume", "بهبود رزومه با هوش مصنوعی")}
+                {t("CareerRisk.improveResume", "Improve resume with AI")}
               </Link>
               {sharePath && (
                 <button
@@ -845,8 +868,8 @@ export default function CareerRiskPage() {
                 >
                   <Copy className="w-3 h-3" />
                   {copied
-                    ? t("CareerRisk.copied", "کپی شد")
-                    : t("CareerRisk.copyShare", "کپی لینک اشتراک")}
+                    ? t("CareerRisk.copied", "Copied")
+                    : t("CareerRisk.copyShare", "Copy share link")}
                 </button>
               )}
             </div>
@@ -858,7 +881,7 @@ export default function CareerRiskPage() {
             <div className="flex items-center gap-2 mb-4">
               <History className="w-4 h-4 text-slate-400" />
               <h2 className="text-sm font-semibold text-white">
-                {t("CareerRisk.history", "تحلیل‌های اخیر شما")}
+                {t("CareerRisk.history", "Your recent analyses")}
               </h2>
             </div>
             <ul className="space-y-3">
@@ -868,13 +891,10 @@ export default function CareerRiskPage() {
                   className="flex items-start justify-between gap-3 text-sm border-b border-white/5 pb-3 last:border-0 last:pb-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-white font-medium truncate" dir="auto">
+                    <p className="text-white font-medium truncate">
                       {h.jobTitle}
                     </p>
-                    <p
-                      className="text-xs text-slate-500 line-clamp-2"
-                      dir="auto"
-                    >
+                    <p className="text-xs text-slate-500 line-clamp-2">
                       {h.summary}
                     </p>
                   </div>
@@ -930,7 +950,7 @@ export default function CareerRiskPage() {
               <button
                 type="button"
                 onClick={continueWithEmail}
-                className="w-full rounded-xl bg-cyan-500 text-white font-semibold text-sm py-3"
+                className="w-full rounded-xl bg-cyan-500 text-slate-950 font-semibold text-sm py-3"
               >
                 {t("Common.signIn", "Sign in")}
               </button>
