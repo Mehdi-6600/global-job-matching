@@ -7,6 +7,7 @@ export const metadata: Metadata = buildPublicMetadata({
     "Generate a professional resume with AI. Edit, copy, and save notes to your profile on Global Job Matching.",
   path: "/resume-builder",
   index: true,
+  hreflang: true,
 });
 
 export default function ResumeBuilderLayout({
