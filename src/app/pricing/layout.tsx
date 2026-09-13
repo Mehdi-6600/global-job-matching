@@ -1,20 +1,13 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/site-url";
+import { buildPublicMetadata } from "@/lib/seo/core";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: "Pricing",
   description:
     "Choose Free, Pro, Business, or Enterprise plans. Crypto payments supported. Upgrade when you need more applications, AI tools, and employer seats.",
-  alternates: {
-    canonical: absoluteUrl("/pricing"),
-  },
-  openGraph: {
-    title: "Pricing | Global Job Matching",
-    description:
-      "Plans for job seekers and employers. Crypto checkout available.",
-    url: absoluteUrl("/pricing"),
-  },
-};
+  path: "/pricing",
+  index: true,
+});
 
 export default function PricingLayout({
   children,
