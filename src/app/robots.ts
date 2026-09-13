@@ -33,7 +33,7 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     host: base,
-    // Canonical index (chunks live at /sitemap/0.xml, /sitemap/1.xml, ...)
-    sitemap: `${base}/sitemaps.xml`,
+    // Primary index + legacy path (redirects to primary)
+    sitemap: [`${base}/sitemaps.xml`, `${base}/sitemap.xml`],
   };
 }
