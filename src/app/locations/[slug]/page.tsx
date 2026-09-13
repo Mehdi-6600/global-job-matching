@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, Briefcase, Building2, Wifi } from "lucide-react";
-import { getLocationDef, LOCATION_SEO } from "@/lib/seo/locations";
+import { getLocationDef } from "@/lib/seo/locations";
 import {
   countJobsForLocation,
   listJobsForLocation,
@@ -10,7 +10,9 @@ import {
 } from "@/lib/seo/location-query";
 import { absoluteUrl, truncateMeta } from "@/lib/site-url";
 import { jsonLdScript, DEFAULT_OG_PATH } from "@/lib/seo/core";
+import { buildHreflangLanguages } from "@/lib/seo/hreflang";
 import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo/json-ld";
+import { locationBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
 
 export const revalidate = 300;
@@ -37,12 +39,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     `${count} active job${count === 1 ? "" : "s"} in ${def.name} on Global Job Matching. ${def.intro}`,
     160
   );
-  const url = absoluteUrl(`/locations/${def.slug}`);
+  const path = `/locations/${def.slug}`;
+  const url = absoluteUrl(path);
 
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      languages: buildHreflangLanguages(path),
+    },
     openGraph: {
       title: `${title} | Global Job Matching`,
       description,
@@ -79,15 +85,11 @@ export default async function LocationJobsPage({ params }: Props) {
 
   if (count < 1) notFound();
 
-  const related = allStats
-    .filter((s) => s.slug !== def.slug)
-    .slice(0, 6);
+  const related = allStats.filter((s) => s.slug !== def.slug).slice(0, 6);
 
-  const breadcrumbs = breadcrumbJsonLd([
-    { name: "Home", path: "/" },
-    { name: "Locations", path: "/locations" },
-    { name: def.name, path: `/locations/${def.slug}` },
-  ]);
+  const breadcrumbs = breadcrumbJsonLd(
+    locationBreadcrumbs({ name: def.name, slug: def.slug })
+  );
 
   const jobList = itemListJsonLd({
     name: `Jobs in ${def.name}`,
