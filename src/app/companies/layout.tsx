@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl, buildPublicMetadata, jsonLdScript } from "@/lib/seo/core";
+import { InternalHubLinks } from "@/components/seo/internal-hub-links";
 
 export const metadata: Metadata = buildPublicMetadata({
   title: "Companies",
@@ -35,6 +36,9 @@ export default function CompaniesLayout({
         dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionLd) }}
       />
       {children}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
+        <InternalHubLinks />
+      </div>
     </>
   );
 }
