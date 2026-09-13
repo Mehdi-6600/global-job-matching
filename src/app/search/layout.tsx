@@ -2,15 +2,16 @@ import type { Metadata } from "next";
 import { buildPublicMetadata } from "@/lib/seo/core";
 
 /**
- * Clean /search can be lightly indexed; filtered query URLs are noindex via middleware.
+ * Search is a tool page. Clean URL may be reachable; prefer noindex to avoid
+ * thin/duplicate search result variants. Middleware also noindexes ?query URLs.
  */
 export const metadata: Metadata = buildPublicMetadata({
   title: "Search jobs",
   description:
     "Search global job listings by keyword, location, and remote options on Global Job Matching.",
   path: "/search",
-  index: true,
-  hreflang: true,
+  index: false,
+  hreflang: false,
 });
 
 export default function SearchLayout({
