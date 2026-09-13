@@ -257,7 +257,7 @@ export default function CareerRiskPage() {
       const res = await fetch("/api/career/risk", { credentials: "include" });
       if (!res.ok) return;
       const data = await res.json().catch(() => ({}));
-      const raw = asRecord(data).items ?? asRecord(data).history ?? data;
+      const raw = asRecord(data).assessments ?? asRecord(data).items ?? asRecord(data).history;
       if (!Array.isArray(raw)) return;
       const items: HistoryItem[] = raw
         .map((item: unknown) => {
