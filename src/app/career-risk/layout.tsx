@@ -7,6 +7,7 @@ export const metadata: Metadata = buildPublicMetadata({
     "Analyze how automation and AI may affect your role, get a 90-day roadmap, and explore skill-based migration options.",
   path: "/career-risk",
   index: true,
+  hreflang: true,
 });
 
 export default function CareerRiskLayout({
