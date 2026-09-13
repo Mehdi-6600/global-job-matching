@@ -1,38 +1,29 @@
 import { describe, it, expect } from "vitest";
 import {
-  LISTING_PATHS_NOINDEX_QUERY,
-  pathShouldNoindexWhenQueried,
-  urlHasIndexableQueryNoise,
+  shouldNoindexListingUrl,
+  isPublicListingPath,
 } from "@/lib/seo/listing-policy";
 
-describe("listing-policy", () => {
-  it("includes core public listing paths", () => {
-    expect(LISTING_PATHS_NOINDEX_QUERY).toEqual(
-      expect.arrayContaining([
-        "/jobs",
-        "/search",
-        "/companies",
-        "/locations",
-        "/categories",
-        "/blog",
-      ])
-    );
+describe("listing-policy noindex rules", () => {
+  it("indexes clean listing paths", () => {
+    expect(shouldNoindexListingUrl("/jobs", "")).toBe(false);
+    expect(shouldNoindexListingUrl("/companies", "")).toBe(false);
+    expect(shouldNoindexListingUrl("/search", "")).toBe(false);
   });
 
-  it("pathShouldNoindexWhenQueried matches listing roots", () => {
-    expect(pathShouldNoindexWhenQueried("/jobs")).toBe(true);
-    expect(pathShouldNoindexWhenQueried("/jobs/")).toBe(true);
-    expect(pathShouldNoindexWhenQueried("/search")).toBe(true);
-    expect(pathShouldNoindexWhenQueried("/about")).toBe(false);
-    expect(pathShouldNoindexWhenQueried("/jobs/abc")).toBe(false);
+  it("noindexes filtered query strings on listing paths", () => {
+    expect(shouldNoindexListingUrl("/jobs", "q=react")).toBe(true);
+    expect(shouldNoindexListingUrl("/jobs", "page=2")).toBe(true);
+    expect(shouldNoindexListingUrl("/search", "location=berlin")).toBe(true);
   });
 
-  it("urlHasIndexableQueryNoise detects non-empty params", () => {
-    expect(urlHasIndexableQueryNoise(new URLSearchParams())).toBe(false);
-    expect(urlHasIndexableQueryNoise(new URLSearchParams("q="))).toBe(false);
-    expect(urlHasIndexableQueryNoise(new URLSearchParams("q=dev"))).toBe(true);
-    expect(
-      urlHasIndexableQueryNoise(new URLSearchParams("page=2&remote=1"))
-    ).toBe(true);
+  it("respects locale prefixes when stripping", () => {
+    expect(shouldNoindexListingUrl("/fa/jobs", "")).toBe(false);
+    expect(shouldNoindexListingUrl("/de/jobs", "remote=1")).toBe(true);
+  });
+
+  it("does not treat private paths as public listings", () => {
+    expect(isPublicListingPath("/dashboard")).toBe(false);
+    expect(isPublicListingPath("/jobs")).toBe(true);
   });
 });
