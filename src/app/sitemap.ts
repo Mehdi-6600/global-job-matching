@@ -2,9 +2,41 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { getSiteUrl } from "@/lib/site-url";
 import { listLocationStats } from "@/lib/seo/location-query";
+import { locales, defaultLocale } from "@/lib/i18n/config";
+import { localizePath } from "@/lib/i18n/locale-path";
 
 const JOBS_PER_SITEMAP = 2000;
 const MAX_JOB_CHUNKS = 40;
+
+function languageAlternates(pathname: string): Record<string, string> {
+  const base = getSiteUrl().replace(/\/$/, "");
+  const languages: Record<string, string> = {};
+  for (const locale of locales) {
+    languages[locale] = `${base}${localizePath(pathname, locale)}`;
+  }
+  languages["x-default"] = `${base}${localizePath(pathname, defaultLocale)}`;
+  return languages;
+}
+
+function entry(
+  pathname: string,
+  opts: {
+    lastModified?: Date;
+    changeFrequency?: MetadataRoute.Sitemap[0]["changeFrequency"];
+    priority?: number;
+  } = {}
+): MetadataRoute.Sitemap[0] {
+  const base = getSiteUrl().replace(/\/$/, "");
+  return {
+    url: `${base}${localizePath(pathname, defaultLocale)}`,
+    lastModified: opts.lastModified || new Date(),
+    changeFrequency: opts.changeFrequency || "weekly",
+    priority: opts.priority ?? 0.5,
+    alternates: {
+      languages: languageAlternates(pathname),
+    },
+  };
+}
 
 export async function generateSitemaps() {
   let jobCount = 0;
@@ -29,10 +61,8 @@ export async function generateSitemaps() {
 export default async function sitemap(props: {
   id: number | string;
 }): Promise<MetadataRoute.Sitemap> {
-  // Next may pass id as string ("0") — must coerce
   const id =
     typeof props.id === "string" ? parseInt(props.id, 10) : Number(props.id);
-  const base = getSiteUrl();
   const now = new Date();
 
   if (!Number.isFinite(id) || id < 0) {
@@ -40,87 +70,30 @@ export default async function sitemap(props: {
   }
 
   if (id === 0) {
-    const staticPages: MetadataRoute.Sitemap = [
-      { url: base, lastModified: now, changeFrequency: "daily", priority: 1 },
-      {
-        url: `${base}/jobs`,
-        lastModified: now,
-        changeFrequency: "daily",
-        priority: 0.9,
-      },
-      {
-        url: `${base}/companies`,
-        lastModified: now,
-        changeFrequency: "daily",
-        priority: 0.8,
-      },
-      {
-        url: `${base}/locations`,
-        lastModified: now,
-        changeFrequency: "daily",
-        priority: 0.75,
-      },
-      {
-        url: `${base}/categories`,
-        lastModified: now,
-        changeFrequency: "daily",
-        priority: 0.75,
-      },
-      {
-        url: `${base}/search`,
-        lastModified: now,
-        changeFrequency: "daily",
-        priority: 0.7,
-      },
-      {
-        url: `${base}/pricing`,
-        lastModified: now,
-        changeFrequency: "weekly",
-        priority: 0.7,
-      },
-      {
-        url: `${base}/blog`,
-        lastModified: now,
-        changeFrequency: "weekly",
-        priority: 0.6,
-      },
-      {
-        url: `${base}/career-risk`,
-        lastModified: now,
-        changeFrequency: "weekly",
-        priority: 0.55,
-      },
-      {
-        url: `${base}/resume-builder`,
-        lastModified: now,
-        changeFrequency: "weekly",
-        priority: 0.55,
-      },
-      {
-        url: `${base}/about`,
-        lastModified: now,
-        changeFrequency: "monthly",
-        priority: 0.5,
-      },
-      {
-        url: `${base}/contact`,
-        lastModified: now,
-        changeFrequency: "monthly",
-        priority: 0.5,
-      },
-      {
-        url: `${base}/terms`,
-        lastModified: now,
-        changeFrequency: "monthly",
-        priority: 0.3,
-      },
-      {
-        url: `${base}/privacy`,
-        lastModified: now,
-        changeFrequency: "monthly",
-        priority: 0.3,
-      },
+    const staticPaths = [
+      "/",
+      "/jobs",
+      "/companies",
+      "/locations",
+      "/categories",
+      "/search",
+      "/pricing",
+      "/blog",
+      "/career-risk",
+      "/resume-builder",
+      "/about",
+      "/contact",
+      "/privacy",
+      "/terms",
     ];
+
+    const staticPages = staticPaths.map((p) =>
+      entry(p, {
+        lastModified: now,
+        changeFrequency: p === "/" || p === "/jobs" ? "daily" : "weekly",
+        priority: p === "/" ? 1 : p === "/jobs" ? 0.9 : 0.6,
+      })
+    );
 
     let blogEntries: MetadataRoute.Sitemap = [];
     let companyEntries: MetadataRoute.Sitemap = [];
@@ -134,12 +107,13 @@ export default async function sitemap(props: {
         orderBy: { updatedAt: "desc" },
         take: 2000,
       });
-      blogEntries = posts.map((p) => ({
-        url: `${base}/blog/${p.slug}`,
-        lastModified: p.updatedAt || p.createdAt,
-        changeFrequency: "weekly" as const,
-        priority: 0.55,
-      }));
+      blogEntries = posts.map((p) =>
+        entry(`/blog/${p.slug}`, {
+          lastModified: p.updatedAt || p.createdAt,
+          changeFrequency: "weekly",
+          priority: 0.55,
+        })
+      );
     } catch {
       /* ignore */
     }
@@ -151,24 +125,26 @@ export default async function sitemap(props: {
         orderBy: { updatedAt: "desc" },
         take: 5000,
       });
-      companyEntries = companies.map((c) => ({
-        url: `${base}/companies/${c.id}`,
-        lastModified: c.updatedAt,
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      }));
+      companyEntries = companies.map((c) =>
+        entry(`/companies/${c.id}`, {
+          lastModified: c.updatedAt,
+          changeFrequency: "weekly",
+          priority: 0.6,
+        })
+      );
     } catch {
       /* ignore */
     }
 
     try {
       const locs = await listLocationStats(1);
-      locationEntries = locs.map((l) => ({
-        url: `${base}/locations/${l.slug}`,
-        lastModified: now,
-        changeFrequency: "daily" as const,
-        priority: 0.7,
-      }));
+      locationEntries = locs.map((l) =>
+        entry(`/locations/${l.slug}`, {
+          lastModified: now,
+          changeFrequency: "daily",
+          priority: 0.7,
+        })
+      );
     } catch {
       /* ignore */
     }
@@ -183,12 +159,13 @@ export default async function sitemap(props: {
       });
       categoryEntries = categories
         .filter((c) => c._count.jobs > 0)
-        .map((c) => ({
-          url: `${base}/categories/${c.slug}`,
-          lastModified: now,
-          changeFrequency: "daily" as const,
-          priority: 0.7,
-        }));
+        .map((c) =>
+          entry(`/categories/${c.slug}`, {
+            lastModified: now,
+            changeFrequency: "daily",
+            priority: 0.7,
+          })
+        );
     } catch {
       /* ignore */
     }
@@ -214,12 +191,13 @@ export default async function sitemap(props: {
       take: JOBS_PER_SITEMAP,
     });
 
-    return jobs.map((j) => ({
-      url: `${base}/jobs/${j.id}`,
-      lastModified: j.updatedAt,
-      changeFrequency: "daily" as const,
-      priority: 0.8,
-    }));
+    return jobs.map((j) =>
+      entry(`/jobs/${j.id}`, {
+        lastModified: j.updatedAt,
+        changeFrequency: "daily",
+        priority: 0.8,
+      })
+    );
   } catch {
     return [];
   }
