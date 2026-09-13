@@ -77,7 +77,7 @@ export function Footer() {
 
           <div>
             <h3 className="text-white text-sm font-semibold mb-3">
-              {t("Footer.tools", "Tools")}
+              {t("Footer.tools", "Tools & content")}
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
@@ -85,7 +85,7 @@ export function Footer() {
                   href="/career-risk"
                   className="text-slate-400 hover:text-sky-400 transition-colors"
                 >
-                  {t("Nav.careerRisk", "Career risk")}
+                  {t("Nav.careerRisk", "AI Career Risk")}
                 </Link>
               </li>
               <li>
