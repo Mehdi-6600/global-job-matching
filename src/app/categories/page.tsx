@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Layers } from "lucide-react";
 import { db } from "@/lib/db";
 import { absoluteUrl } from "@/lib/site-url";
+import { jsonLdScript, DEFAULT_OG_PATH } from "@/lib/seo/core";
+import { itemListJsonLd } from "@/lib/seo/json-ld";
 
 export const revalidate = 300;
 
@@ -15,7 +17,22 @@ export const metadata: Metadata = {
     title: "Jobs by category | Global Job Matching",
     description: "Explore open roles by job category with live counts.",
     url: absoluteUrl("/categories"),
+    images: [
+      {
+        url: absoluteUrl(DEFAULT_OG_PATH),
+        width: 1200,
+        height: 630,
+        alt: "Jobs by category",
+      },
+    ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Jobs by category | Global Job Matching",
+    description: "Explore open roles by job category with live counts.",
+    images: [absoluteUrl(DEFAULT_OG_PATH)],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default async function CategoriesIndexPage() {
@@ -45,8 +62,22 @@ export default async function CategoriesIndexPage() {
     console.error("Categories index error:", e);
   }
 
+  const listLd = itemListJsonLd({
+    name: "Jobs by category",
+    description: "Categories with active jobs on Global Job Matching.",
+    path: "/categories",
+    items: rows.map((c) => ({
+      name: c.name,
+      path: `/categories/${c.slug}`,
+    })),
+  });
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(listLd) }}
+      />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
           <Layers className="w-10 h-10 text-indigo-400 mx-auto mb-3" />
@@ -84,6 +115,15 @@ export default async function CategoriesIndexPage() {
             ))}
           </ul>
         )}
+
+        <p className="text-center mt-10 flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/jobs" className="text-indigo-400 hover:underline">
+            View all jobs →
+          </Link>
+          <Link href="/locations" className="text-indigo-400 hover:underline">
+            Browse locations →
+          </Link>
+        </p>
       </div>
     </main>
   );
