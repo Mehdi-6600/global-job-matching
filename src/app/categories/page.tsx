@@ -2,38 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Layers } from "lucide-react";
 import { db } from "@/lib/db";
-import { absoluteUrl } from "@/lib/site-url";
-import { jsonLdScript, DEFAULT_OG_PATH } from "@/lib/seo/core";
+import {
+  buildPublicMetadata,
+  jsonLdScript,
+} from "@/lib/seo/core";
 import { itemListJsonLd } from "@/lib/seo/json-ld";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: "Jobs by category",
   description:
     "Browse active jobs by category on Global Job Matching. Categories are only listed when they have open roles.",
-  alternates: { canonical: absoluteUrl("/categories") },
-  openGraph: {
-    title: "Jobs by category | Global Job Matching",
-    description: "Explore open roles by job category with live counts.",
-    url: absoluteUrl("/categories"),
-    images: [
-      {
-        url: absoluteUrl(DEFAULT_OG_PATH),
-        width: 1200,
-        height: 630,
-        alt: "Jobs by category",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Jobs by category | Global Job Matching",
-    description: "Explore open roles by job category with live counts.",
-    images: [absoluteUrl(DEFAULT_OG_PATH)],
-  },
-  robots: { index: true, follow: true },
-};
+  path: "/categories",
+  index: true,
+  hreflang: true,
+});
 
 export default async function CategoriesIndexPage() {
   let rows: Array<{ id: string; name: string; slug: string; count: number }> =
