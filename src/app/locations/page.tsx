@@ -3,37 +3,22 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { absoluteUrl } from "@/lib/site-url";
 import { listLocationStats } from "@/lib/seo/location-query";
-import { jsonLdScript, DEFAULT_OG_PATH } from "@/lib/seo/core";
+import {
+  buildPublicMetadata,
+  jsonLdScript,
+} from "@/lib/seo/core";
 import { itemListJsonLd } from "@/lib/seo/json-ld";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: "Jobs by location",
   description:
     "Browse active job listings by country and city on Global Job Matching. Only locations with real open roles are listed.",
-  alternates: { canonical: absoluteUrl("/locations") },
-  openGraph: {
-    title: "Jobs by location | Global Job Matching",
-    description: "Explore open roles by location with live job counts.",
-    url: absoluteUrl("/locations"),
-    images: [
-      {
-        url: absoluteUrl(DEFAULT_OG_PATH),
-        width: 1200,
-        height: 630,
-        alt: "Jobs by location",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Jobs by location | Global Job Matching",
-    description: "Explore open roles by location with live job counts.",
-    images: [absoluteUrl(DEFAULT_OG_PATH)],
-  },
-  robots: { index: true, follow: true },
-};
+  path: "/locations",
+  index: true,
+  hreflang: true,
+});
 
 export default async function LocationsIndexPage() {
   const stats = await listLocationStats(1);
