@@ -8,6 +8,7 @@ export const metadata: Metadata = buildPublicMetadata({
     "Get in touch with the Global Job Matching team. We are here to help job seekers and employers.",
   path: "/contact",
   index: true,
+  hreflang: true,
 });
 
 export default function ContactPage() {
