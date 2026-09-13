@@ -4,8 +4,11 @@ import {
   absoluteUrl,
   getSiteUrl,
   truncateMeta,
+  stripHtml,
   jsonLdScript,
+  DEFAULT_OG_PATH,
 } from "@/lib/seo/core";
+import { buildHreflangLanguages } from "@/lib/seo/hreflang";
 import {
   companyOrganizationJsonLd,
   breadcrumbJsonLd,
@@ -30,8 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         name: true,
         description: true,
         location: true,
-        website: true,
         logo: true,
+        website: true,
         status: true,
       },
     });
@@ -46,27 +49,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const loc = normalizeLocation(company.location) || company.location || "";
     const title = company.name;
     const desc = truncateMeta(
-      [company.name, loc, company.description || ""]
-        .filter(Boolean)
-        .join(" — "),
+      stripHtml(company.description) ||
+        `${company.name}${loc ? ` — ${loc}` : ""} on Global Job Matching.`,
       160
     );
-    const url = absoluteUrl(`/companies/${company.id}`);
+    const path = `/companies/${company.id}`;
+    const url = absoluteUrl(path);
     const ogImage =
-      company.logo && company.logo.startsWith("http")
+      company.logo && /^https:\/\//i.test(company.logo)
         ? company.logo
-        : absoluteUrl("/og-image.png");
+        : absoluteUrl(DEFAULT_OG_PATH);
 
     return {
       title,
-      description:
-        desc ||
-        `View ${company.name} profile and open jobs on Global Job Matching.`,
-      alternates: { canonical: url },
+      description: desc,
+      alternates: {
+        canonical: url,
+        languages: buildHreflangLanguages(path),
+      },
       openGraph: {
         type: "profile",
         url,
-        title: `${title} | Global Job Matching`,
+        title,
         description: desc,
         siteName: "Global Job Matching",
         images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
