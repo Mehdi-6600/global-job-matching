@@ -7,6 +7,7 @@ export const metadata: Metadata = buildPublicMetadata({
     "Choose Free, Pro, Business, or Enterprise plans. Crypto payments supported. Upgrade when you need more applications, AI tools, and employer seats.",
   path: "/pricing",
   index: true,
+  hreflang: true,
 });
 
 export default function PricingLayout({
