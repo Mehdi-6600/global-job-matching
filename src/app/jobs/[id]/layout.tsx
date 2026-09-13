@@ -7,6 +7,7 @@ import {
   stripHtml,
   jsonLdScript,
 } from "@/lib/seo/core";
+import { buildHreflangLanguages } from "@/lib/seo/hreflang";
 import { jobPostingJsonLd, breadcrumbJsonLd } from "@/lib/seo/json-ld";
 import { jobBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
@@ -66,7 +67,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       160
     );
 
-    const url = absoluteUrl(`/jobs/${job.id}`);
+    const path = `/jobs/${job.id}`;
+    const url = absoluteUrl(path);
     const ogImage =
       job.company?.logo && /^https:\/\//i.test(job.company.logo)
         ? job.company.logo
@@ -77,7 +79,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description:
         desc ||
         `Apply for ${job.title} at ${companyName} on Global Job Matching.`,
-      alternates: { canonical: url },
+      alternates: {
+        canonical: url,
+        languages: buildHreflangLanguages(path),
+      },
       openGraph: {
         type: "article",
         url,
