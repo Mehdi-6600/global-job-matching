@@ -1,20 +1,26 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar } from "lucide-react";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { sanitizeBlogHtml } from "@/lib/sanitize-html";
+import { cookies } from "next/headers";
 import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 import { LOCALE_COOKIE } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
 import { absoluteUrl, truncateMeta } from "@/lib/site-url";
-import { DEFAULT_OG_PATH, jsonLdScript } from "@/lib/seo/core";
-import { blogPostingJsonLd } from "@/lib/seo/json-ld";
+import {
+  jsonLdScript,
+  stripHtml,
+  DEFAULT_OG_PATH,
+} from "@/lib/seo/core";
+import { buildHreflangLanguages } from "@/lib/seo/hreflang";
+import { blogPostingJsonLd, breadcrumbJsonLd } from "@/lib/seo/json-ld";
+import { blogBreadcrumbs } from "@/lib/seo/breadcrumbs";
+import { sanitizeBlogHtml } from "@/lib/sanitize-html";
 
-interface Props {
-  params: Promise<{ slug: string }>;
-}
+export const revalidate = 60;
+
+type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -24,43 +30,45 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       where: { slug, published: true },
       select: {
         title: true,
+        slug: true,
         excerpt: true,
         content: true,
         coverImage: true,
-        updatedAt: true,
         createdAt: true,
-        slug: true,
+        updatedAt: true,
       },
     });
 
     if (!post) {
       return {
-        title: "Post not found",
+        title: "Article not found",
         robots: { index: false, follow: false },
       };
     }
 
-    const url = absoluteUrl(`/blog/${post.slug}`);
-    const description =
-      truncateMeta(post.excerpt || post.content, 160) ||
-      `Read ${post.title} on Global Job Matching.`;
+    const description = truncateMeta(
+      stripHtml(post.excerpt || post.content) || post.title,
+      160
+    );
+    const path = `/blog/${post.slug}`;
+    const url = absoluteUrl(path);
     const image =
       post.coverImage && /^https:\/\//i.test(post.coverImage)
         ? post.coverImage
-        : absoluteUrl(`/blog/${post.slug}/opengraph-image`);
+        : absoluteUrl(DEFAULT_OG_PATH);
 
     return {
       title: post.title,
       description,
-      alternates: { canonical: url },
+      alternates: {
+        canonical: url,
+        languages: buildHreflangLanguages(path),
+      },
       openGraph: {
         type: "article",
         url,
         title: post.title,
         description,
-        siteName: "Global Job Matching",
-        publishedTime: post.createdAt.toISOString(),
-        modifiedTime: (post.updatedAt || post.createdAt).toISOString(),
         images: [{ url: image, width: 1200, height: 630, alt: post.title }],
       },
       twitter: {
@@ -102,14 +110,19 @@ export default async function BlogPostPage({ params }: Props) {
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
   });
+  const crumbs = breadcrumbJsonLd(
+    blogBreadcrumbs({ title: post.title, slug: post.slug })
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLdScript(jsonLd),
-        }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <Link
@@ -145,6 +158,24 @@ export default async function BlogPostPage({ params }: Props) {
             className="prose prose-invert prose-lg max-w-none text-slate-300 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
+
+          <div className="mt-10 pt-6 border-t border-white/10 flex flex-wrap gap-4 text-sm">
+            <Link href="/jobs" className="text-indigo-400 hover:underline">
+              Browse jobs
+            </Link>
+            <Link
+              href="/career-risk"
+              className="text-indigo-400 hover:underline"
+            >
+              AI Career Risk
+            </Link>
+            <Link
+              href="/locations"
+              className="text-indigo-400 hover:underline"
+            >
+              Jobs by location
+            </Link>
+          </div>
         </article>
       </div>
     </div>
