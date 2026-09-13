@@ -7,6 +7,7 @@ export const metadata: Metadata = buildPublicMetadata({
     "How Global Job Matching collects, uses, and protects your personal data.",
   path: "/privacy",
   index: true,
+  hreflang: true,
 });
 
 export default function PrivacyLayout({
