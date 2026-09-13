@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, Briefcase, Building2, Wifi } from "lucide-react";
-import { getLocationDef } from "@/lib/seo/locations";
+import { getLocationDef, LOCATION_SEO } from "@/lib/seo/locations";
 import {
   countJobsForLocation,
   listJobsForLocation,
+  listLocationStats,
 } from "@/lib/seo/location-query";
 import { absoluteUrl, truncateMeta } from "@/lib/site-url";
-import { jsonLdScript } from "@/lib/seo/core";
-import { breadcrumbJsonLd } from "@/lib/seo/json-ld";
+import { jsonLdScript, DEFAULT_OG_PATH } from "@/lib/seo/core";
+import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo/json-ld";
 import { normalizeLocation } from "@/lib/location";
 
 export const revalidate = 300;
@@ -20,7 +21,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const def = getLocationDef(slug);
   if (!def) {
-    return { title: "Location not found", robots: { index: false, follow: false } };
+    return {
+      title: "Location not found",
+      robots: { index: false, follow: false },
+    };
   }
 
   const count = await countJobsForLocation(def);
@@ -43,6 +47,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${title} | Global Job Matching`,
       description,
       url,
+      images: [
+        {
+          url: absoluteUrl(DEFAULT_OG_PATH),
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [absoluteUrl(DEFAULT_OG_PATH)],
     },
     robots: { index: true, follow: true },
   };
@@ -53,12 +71,17 @@ export default async function LocationJobsPage({ params }: Props) {
   const def = getLocationDef(slug);
   if (!def) notFound();
 
-  const [count, jobs] = await Promise.all([
+  const [count, jobs, allStats] = await Promise.all([
     countJobsForLocation(def),
     listJobsForLocation(def, 30),
+    listLocationStats(1),
   ]);
 
   if (count < 1) notFound();
+
+  const related = allStats
+    .filter((s) => s.slug !== def.slug)
+    .slice(0, 6);
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: "Home", path: "/" },
@@ -66,11 +89,25 @@ export default async function LocationJobsPage({ params }: Props) {
     { name: def.name, path: `/locations/${def.slug}` },
   ]);
 
+  const jobList = itemListJsonLd({
+    name: `Jobs in ${def.name}`,
+    description: def.intro,
+    path: `/locations/${def.slug}`,
+    items: jobs.map((job) => ({
+      name: job.title,
+      path: `/jobs/${job.id}`,
+    })),
+  });
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbs) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jobList) }}
       />
       <div className="max-w-5xl mx-auto">
         <nav className="text-xs text-slate-500 mb-6 flex flex-wrap gap-1">
@@ -139,12 +176,36 @@ export default async function LocationJobsPage({ params }: Props) {
           })}
         </ul>
 
+        {related.length > 0 && (
+          <section className="mt-12">
+            <h2 className="text-lg font-semibold text-white mb-4">
+              More locations
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {related.map((loc) => (
+                <li key={loc.slug}>
+                  <Link
+                    href={`/locations/${loc.slug}`}
+                    className="inline-block rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300 transition-colors"
+                  >
+                    {loc.name}
+                    <span className="text-slate-500 ml-1">({loc.count})</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <div className="mt-10 flex flex-wrap gap-4 text-sm">
           <Link href="/jobs" className="text-cyan-400 hover:underline">
             All jobs
           </Link>
           <Link href="/locations" className="text-cyan-400 hover:underline">
             All locations
+          </Link>
+          <Link href="/categories" className="text-cyan-400 hover:underline">
+            Categories
           </Link>
           <Link href="/companies" className="text-cyan-400 hover:underline">
             Companies
