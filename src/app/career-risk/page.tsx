@@ -522,7 +522,7 @@ export default function CareerRiskPage() {
       return;
     }
     if (status !== "authenticated") {
-      saveCareerRiskDraft({ form: currentForm(), autoSubmit: true });
+      saveCareerRiskDraft(currentForm(), { autoSubmit: true });
       setShowAuthGate(true);
       return;
     }
@@ -530,12 +530,12 @@ export default function CareerRiskPage() {
   }
 
   function continueWithGoogle() {
-    saveCareerRiskDraft({ form: currentForm(), autoSubmit: true });
+    saveCareerRiskDraft(currentForm(), { autoSubmit: true });
     void signIn("google", { callbackUrl: "/career-risk" });
   }
 
   function continueWithEmail() {
-    saveCareerRiskDraft({ form: currentForm(), autoSubmit: true });
+    saveCareerRiskDraft(currentForm(), { autoSubmit: true });
     window.location.href = "/login?callbackUrl=/career-risk";
   }
 
@@ -582,10 +582,12 @@ export default function CareerRiskPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
               {t("CareerRisk.title", "AI Career Risk")}
             </h1>
-            <p className="text-slate-400 text-sm leading-relaxed">
+            <p"
+ className="text-slate-400 text-sm leading-relaxed             ">
               {t(
-                "CareerRisk.subtitle",
-                "See how automation may affect your role, then unlock a 90-day roadmap and migration insights."
+                "CareerRisk.subtitle />
+",
+                "See how automation may affect your role, then            unlock a 90-day roadmap and </ migration insights."
               )}
             </p>
           </div>
@@ -669,9 +671,7 @@ export default function CareerRiskPage() {
                   "CareerRisk.educationPlaceholder",
                   "BSc Computer Science"
                 )}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
-              />
-            </div>
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50div>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
