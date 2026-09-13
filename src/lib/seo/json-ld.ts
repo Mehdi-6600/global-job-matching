@@ -46,6 +46,29 @@ export function organizationSiteJsonLd() {
   };
 }
 
+/** ItemList for hub pages (locations, categories, job cards) */
+export function itemListJsonLd(opts: {
+  name: string;
+  description?: string;
+  path: string;
+  items: Array<{ name: string; path: string }>;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: opts.name,
+    description: opts.description || undefined,
+    url: absoluteUrl(opts.path),
+    numberOfItems: opts.items.length,
+    itemListElement: opts.items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      url: absoluteUrl(item.path),
+    })),
+  };
+}
+
 type JobForLd = {
   id: string;
   title: string;
