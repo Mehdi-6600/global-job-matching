@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolveLocale, resolveLocaleFromCandidates } from "./resolve-locale";
-import { defaultLocale } from "./config";
+import { defaultLocale, isRtlLocale, locales } from "./config";
 
 describe("resolveLocale", () => {
   it("returns valid locales", () => {
@@ -21,5 +21,20 @@ describe("resolveLocale", () => {
     expect(resolveLocaleFromCandidates(undefined, "fa", "en")).toBe("fa");
     expect(resolveLocaleFromCandidates("bad", null, "de")).toBe("de");
     expect(resolveLocaleFromCandidates("bad", null)).toBe(defaultLocale);
+  });
+
+  it("accepts all product locales", () => {
+    for (const locale of locales) {
+      expect(resolveLocale(locale)).toBe(locale);
+    }
+  });
+});
+
+describe("isRtlLocale", () => {
+  it("marks Arabic and Persian as RTL", () => {
+    expect(isRtlLocale("ar")).toBe(true);
+    expect(isRtlLocale("fa")).toBe(true);
+    expect(isRtlLocale("en")).toBe(false);
+    expect(isRtlLocale("de")).toBe(false);
   });
 });
