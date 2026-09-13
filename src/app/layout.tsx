@@ -4,6 +4,11 @@ import "./globals.css";
 import Navbar from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Providers } from "./providers";
+import {
+  websiteJsonLd,
+  organizationSiteJsonLd,
+} from "@/lib/seo/json-ld";
+import { jsonLdScript } from "@/lib/seo/core";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -90,23 +95,14 @@ export const metadata: Metadata = {
   },
 };
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "Global Job Matching",
-  url: siteUrl,
-  potentialAction: {
-    "@type": "SearchAction",
-    target: `${siteUrl}/search?q={search_term_string}`,
-    "query-input": "required name=search_term_string",
-  },
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const websiteLd = websiteJsonLd();
+  const orgLd = organizationSiteJsonLd();
+
   return (
     <html lang="en" className="light" suppressHydrationWarning>
       <head>
@@ -114,7 +110,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(orgLd) }}
         />
       </head>
       <body
