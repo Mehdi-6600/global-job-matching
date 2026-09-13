@@ -67,7 +67,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     );
 
     const url = absoluteUrl(`/jobs/${job.id}`);
-    // Prefer generated OG card; company logo only if absolute HTTPS
     const ogImage =
       job.company?.logo && /^https:\/\//i.test(job.company.logo)
         ? job.company.logo
@@ -132,6 +131,7 @@ export default async function JobIdLayout({ children, params }: Props) {
         currency: true,
         createdAt: true,
         updatedAt: true,
+        deadline: true,
         company: {
           select: {
             id: true,
@@ -145,7 +145,31 @@ export default async function JobIdLayout({ children, params }: Props) {
     });
 
     if (job && job.status === "active") {
-      scripts.push(jsonLdScript(jobPostingJsonLd(job)));
+      scripts.push(
+        jsonLdScript(
+          jobPostingJsonLd({
+            id: job.id,
+            title: job.title,
+            description: job.description || job.title,
+            location: job.location || "",
+            remote: job.remote,
+            type: job.type,
+            salaryMin: job.salaryMin,
+            salaryMax: job.salaryMax,
+            currency: job.currency || "USD",
+            createdAt: job.createdAt,
+            updatedAt: job.updatedAt,
+            deadline: job.deadline,
+            company: job.company
+              ? {
+                  name: job.company.name,
+                  logo: job.company.logo,
+                  website: job.company.website,
+                }
+              : null,
+          })
+        )
+      );
       scripts.push(
         jsonLdScript(
           breadcrumbJsonLd(
