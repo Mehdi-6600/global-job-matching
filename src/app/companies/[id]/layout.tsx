@@ -15,6 +15,7 @@ import {
 } from "@/lib/seo/json-ld";
 import { companyBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
+import { InternalHubLinks } from "@/components/seo/internal-hub-links";
 
 type Props = {
   children: React.ReactNode;
@@ -138,6 +139,9 @@ export default async function CompanyIdLayout({ children, params }: Props) {
         />
       ))}
       {children}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
+        <InternalHubLinks />
+      </div>
     </>
   );
 }
