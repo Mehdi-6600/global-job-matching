@@ -3,6 +3,9 @@ import { absoluteUrl, getSiteUrl, truncateMeta } from "@/lib/site-url";
 
 export { absoluteUrl, getSiteUrl, truncateMeta };
 
+/** Default social card (Next.js ImageResponse route) */
+export const DEFAULT_OG_PATH = "/opengraph-image";
+
 export function stripHtml(text: string | null | undefined): string {
   return String(text || "")
     .replace(/<[^>]+>/g, " ")
@@ -41,7 +44,7 @@ export function buildPublicMetadata(opts: {
   const image =
     opts.image && /^https?:\/\//i.test(opts.image)
       ? opts.image
-      : absoluteUrl("/og-image.png");
+      : absoluteUrl(DEFAULT_OG_PATH);
   const index = opts.index !== false;
 
   return {
