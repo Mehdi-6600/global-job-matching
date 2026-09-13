@@ -28,10 +28,11 @@ export default function Navbar() {
   const links = [
     { href: "/", label: t("Nav.home", "Home") },
     { href: "/jobs", label: t("Nav.jobs", "Jobs") },
+    { href: "/locations", label: t("Nav.locations", "Locations") },
+    { href: "/categories", label: t("Nav.categories", "Categories") },
     { href: "/companies", label: t("Nav.companies", "Companies") },
+    { href: "/blog", label: t("Nav.blog", "Blog") },
     { href: "/pricing", label: t("Nav.pricing", "Pricing") },
-    { href: "/about", label: t("Nav.about", "About") },
-    { href: "/contact", label: t("Nav.contact", "Contact") },
   ];
 
   return (
@@ -42,8 +43,7 @@ export default function Navbar() {
             G<span className="text-sky-400">JM</span>
           </Link>
 
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-4 lg:gap-5 flex-1 justify-end">
+          <div className="hidden lg:flex items-center gap-3 xl:gap-4 flex-1 justify-end">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -72,29 +72,25 @@ export default function Navbar() {
               </Link>
             )}
 
-            <LanguageSwitcher />
-
-            {status === "loading" ? (
-              <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
-            ) : isLoggedIn ? (
-              <div className="flex items-center gap-2">
+            {isLoggedIn ? (
+              <>
                 <Link
                   href="/career-risk"
-                  className="text-slate-300 hover:text-sky-400 p-1"
+                  className="text-slate-300 hover:text-sky-400 transition-colors"
                   title={t("Nav.careerRisk", "AI Career Risk")}
                 >
                   <ShieldAlert className="w-4 h-4" />
                 </Link>
                 <Link
                   href="/resume-builder"
-                  className="text-slate-300 hover:text-sky-400 p-1"
+                  className="text-slate-300 hover:text-sky-400 transition-colors"
                   title={t("Nav.resume", "Resume Builder")}
                 >
                   <FileText className="w-4 h-4" />
                 </Link>
                 <Link
                   href="/notifications"
-                  className="text-slate-300 hover:text-sky-400 p-1"
+                  className="text-slate-300 hover:text-sky-400 transition-colors"
                   title={t("Nav.notifications", "Notifications")}
                 >
                   <Bell className="w-4 h-4" />
@@ -112,50 +108,49 @@ export default function Navbar() {
                 >
                   {t("Nav.logout", "Logout")}
                 </button>
-              </div>
+              </>
+            ) : status === "loading" ? (
+              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
             ) : (
-              <div className="flex items-center gap-2">
+              <>
                 <Link
                   href="/register"
-                  className="text-slate-300 hover:text-white text-sm font-medium px-2 py-2"
+                  className="text-slate-300 hover:text-sky-400 text-sm font-medium"
                 >
                   {t("Nav.register", "Sign up")}
                 </Link>
                 <Link
                   href="/login"
-                  className="bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold px-4 py-2 rounded-lg"
+                  className="bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
                 >
                   {t("Nav.login", "Login")}
                 </Link>
-              </div>
+              </>
             )}
+
+            <LanguageSwitcher />
           </div>
 
-          {/* Mobile: language + hamburger */}
-          <div className="flex md:hidden items-center gap-2">
-            <LanguageSwitcher compact />
+          <div className="flex lg:hidden items-center gap-2">
+            <LanguageSwitcher />
             <button
               type="button"
-              onClick={() => setMobileOpen(!mobileOpen)}
               className="text-slate-300 p-2"
-              aria-label="Toggle menu"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
             >
-              {mobileOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
+              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
         {mobileOpen && (
-          <div className="md:hidden pb-4 space-y-1 border-t border-white/10 pt-3">
+          <div className="lg:hidden pb-4 border-t border-white/10 pt-3 space-y-1">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="block text-slate-300 hover:text-sky-400 py-2 text-sm"
+                className="block text-slate-300 py-2 text-sm"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
