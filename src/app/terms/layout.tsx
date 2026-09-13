@@ -7,6 +7,7 @@ export const metadata: Metadata = buildPublicMetadata({
     "Terms and conditions for using Global Job Matching as a job seeker or employer.",
   path: "/terms",
   index: true,
+  hreflang: true,
 });
 
 export default function TermsLayout({
