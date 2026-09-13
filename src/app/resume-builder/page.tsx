@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { messageFromAiHttpError } from "@/lib/ai-client-errors";
 
 interface FormState {
   fullName: string;
@@ -116,9 +117,15 @@ export default function ResumeBuilderPage() {
         credentials: "include",
         body: JSON.stringify(form),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        window.location.href = "/login?callbackUrl=/resume-builder";
+        return;
+      }
       if (!res.ok) {
-        setError(data.error || t("Common.error", "Generation failed"));
+        setError(
+          messageFromAiHttpError(res.status, data, (k, fb) => t(k, fb))
+        );
         setLoading(false);
         return;
       }
@@ -194,13 +201,16 @@ export default function ResumeBuilderPage() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+          <div
+            role="alert"
+            className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-2"
+          >
             <AlertCircle className="w-4 h-4 shrink-0" />
             {error}
           </div>
         )}
         {success && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             {success}
             {source && <span className="text-slate-500">({source})</span>}
@@ -273,10 +283,10 @@ export default function ResumeBuilderPage() {
               name="experience"
               value={form.experience}
               onChange={handleChange}
-              rows={5}
+              rows={4}
               placeholder={t(
-                "Profile.experience",
-                "Experience (company, role, years)"
+                "Resume.experiencePlaceholder",
+                "Work experience (roles, years, achievements)"
               )}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
             />
@@ -285,22 +295,31 @@ export default function ResumeBuilderPage() {
               value={form.education}
               onChange={handleChange}
               rows={2}
-              placeholder={t("Profile.education", "Education")}
+              placeholder={t(
+                "Resume.educationPlaceholder",
+                "Education"
+              )}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
             />
             <input
               name="languages"
               value={form.languages}
               onChange={handleChange}
-              placeholder={t("Common.optional", "Languages")}
+              placeholder={t(
+                "Resume.languagesPlaceholder",
+                "Languages (e.g. English, Persian)"
+              )}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
             />
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="text-slate-400 text-xs">
+                {t("Resume.tone", "Tone")}
+              </label>
               <select
                 name="tone"
                 value={form.tone}
                 onChange={handleChange}
-                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
               >
                 <option value="professional">
                   {t("Resume.toneProfessional", "Professional")}
@@ -312,20 +331,21 @@ export default function ResumeBuilderPage() {
                   {t("Resume.toneConcise", "Concise")}
                 </option>
               </select>
-              <label className="flex items-center gap-2 text-slate-300 text-sm">
+              <label className="inline-flex items-center gap-2 text-slate-400 text-xs ml-auto">
                 <input
                   type="checkbox"
                   name="saveToProfile"
                   checked={form.saveToProfile}
                   onChange={handleChange}
+                  className="rounded border-white/20"
                 />
-                {t("Common.save", "Save notes to profile")}
+                {t("Resume.saveToProfile", "Save note to profile")}
               </label>
             </div>
             <button
               type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-60"
+              disabled={loading || form.fullName.trim().length < 2}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 disabled:opacity-60"
             >
               {loading ? (
                 <>
