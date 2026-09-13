@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/site-url";
+import { buildPublicMetadata } from "@/lib/seo/core";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: "Career Blog",
   description:
     "Career tips, guides, and insights for job seekers and employers on Global Job Matching.",
-  alternates: { canonical: absoluteUrl("/blog") },
-  openGraph: {
-    title: "Career Blog | Global Job Matching",
-    description: "Tips and guides for your career journey.",
-    url: absoluteUrl("/blog"),
-  },
-};
+  path: "/blog",
+  index: true,
+});
 
 export default function BlogLayout({
   children,
