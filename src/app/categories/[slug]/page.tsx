@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { Layers, MapPin, Building2, Wifi } from "lucide-react";
 import { db } from "@/lib/db";
 import { absoluteUrl, truncateMeta } from "@/lib/site-url";
-import { jsonLdScript } from "@/lib/seo/core";
-import { breadcrumbJsonLd } from "@/lib/seo/json-ld";
+import { jsonLdScript, DEFAULT_OG_PATH } from "@/lib/seo/core";
+import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo/json-ld";
 import { normalizeLocation } from "@/lib/location";
 
 export const revalidate = 300;
@@ -49,6 +49,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: `${title} | Global Job Matching`,
         description,
         url,
+        images: [
+          {
+            url: absoluteUrl(DEFAULT_OG_PATH),
+            width: 1200,
+            height: 630,
+            alt: title,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [absoluteUrl(DEFAULT_OG_PATH)],
       },
       robots: { index: true, follow: true },
     };
@@ -86,17 +100,44 @@ export default async function CategoryJobsPage({ params }: Props) {
     take: 30,
   });
 
+  const otherCategories = await db.category.findMany({
+    where: {
+      slug: { not: category.slug },
+      jobs: { some: { status: "active" } },
+    },
+    select: {
+      name: true,
+      slug: true,
+      _count: { select: { jobs: { where: { status: "active" } } } },
+    },
+    orderBy: { name: "asc" },
+    take: 8,
+  });
+
   const breadcrumbs = breadcrumbJsonLd([
     { name: "Home", path: "/" },
     { name: "Categories", path: "/categories" },
     { name: category.name, path: `/categories/${category.slug}` },
   ]);
 
+  const jobList = itemListJsonLd({
+    name: `${category.name} jobs`,
+    path: `/categories/${category.slug}`,
+    items: jobs.map((job) => ({
+      name: job.title,
+      path: `/jobs/${job.id}`,
+    })),
+  });
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbs) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jobList) }}
       />
       <div className="max-w-5xl mx-auto">
         <nav className="text-xs text-slate-500 mb-6 flex flex-wrap gap-1">
@@ -158,12 +199,38 @@ export default async function CategoryJobsPage({ params }: Props) {
           ))}
         </ul>
 
+        {otherCategories.length > 0 && (
+          <section className="mt-12">
+            <h2 className="text-lg font-semibold text-white mb-4">
+              Other categories
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {otherCategories.map((c) => (
+                <li key={c.slug}>
+                  <Link
+                    href={`/categories/${c.slug}`}
+                    className="inline-block rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500/40 hover:text-indigo-300 transition-colors"
+                  >
+                    {c.name}
+                    <span className="text-slate-500 ml-1">
+                      ({c._count.jobs})
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <div className="mt-10 flex flex-wrap gap-4 text-sm">
           <Link href="/jobs" className="text-indigo-400 hover:underline">
             All jobs
           </Link>
           <Link href="/categories" className="text-indigo-400 hover:underline">
             All categories
+          </Link>
+          <Link href="/locations" className="text-indigo-400 hover:underline">
+            Locations
           </Link>
         </div>
       </div>
