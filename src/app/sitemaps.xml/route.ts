@@ -1,55 +1,13 @@
-import { db } from "@/lib/db";
+import { NextResponse } from "next/server";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 3600;
-
-const JOBS_PER_SITEMAP = 2000;
-const MAX_JOB_CHUNKS = 40;
 
 /**
- * Sitemap index at /sitemaps.xml
- * Next.js generateSitemaps serves /sitemap/0.xml, /sitemap/1.xml, ...
- * but /sitemap.xml index is currently 404 on this deploy — this route is the
- * canonical index for robots.txt and Search Console.
+ * Next.js generateSitemaps does not serve a working /sitemap.xml index on this deploy.
+ * Canonical index is /sitemaps.xml — permanent redirect for crawlers & Search Console defaults.
  */
-export async function GET() {
+export function GET() {
   const base = getSiteUrl().replace(/\/$/, "");
-
-  let jobCount = 0;
-  try {
-    jobCount = await db.job.count({ where: { status: "active" } });
-  } catch {
-    jobCount = 0;
-  }
-
-  const jobChunks = Math.min(
-    MAX_JOB_CHUNKS,
-    Math.max(1, Math.ceil(Math.max(jobCount, 1) / JOBS_PER_SITEMAP))
-  );
-
-  const ids: number[] = [0];
-  for (let i = 1; i <= jobChunks; i++) {
-    ids.push(i);
-  }
-
-  const body = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${ids
-  .map(
-    (id) => `  <sitemap>
-    <loc>${base}/sitemap/${id}.xml</loc>
-  </sitemap>`
-  )
-  .join("\n")}
-</sitemapindex>
-`;
-
-  return new Response(body, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-    },
-  });
+  return NextResponse.redirect(`${base}/sitemaps.xml`, 308);
 }
