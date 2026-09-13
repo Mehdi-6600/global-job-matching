@@ -33,6 +33,16 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
+  async redirects() {
+    return [
+      {
+        source: "/sitemap.xml",
+        destination: "/sitemaps.xml",
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     // Report-Only first: does not break the app; monitor in browser console / reports
     const cspReportOnly = [
