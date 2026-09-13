@@ -1,7 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Globe, Zap, Bell, Search, ShieldAlert } from "lucide-react";
+import {
+  Globe,
+  Zap,
+  Bell,
+  Search,
+  ShieldAlert,
+  MapPin,
+  Layers,
+  Building2,
+  BookOpen,
+  FileText,
+} from "lucide-react";
 import Newsletter from "./components/Newsletter";
 import { useLocale } from "@/components/locale-provider";
 
@@ -58,6 +69,57 @@ export default function HomePage() {
     },
   ];
 
+  const hubs = [
+    {
+      href: "/jobs",
+      icon: <Search className="w-5 h-5 text-sky-400" />,
+      title: t("Home.hubJobs", "Browse jobs"),
+      desc: t("Home.hubJobsDesc", "Search active listings worldwide."),
+    },
+    {
+      href: "/locations",
+      icon: <MapPin className="w-5 h-5 text-cyan-400" />,
+      title: t("Home.hubLocations", "By location"),
+      desc: t(
+        "Home.hubLocationsDesc",
+        "Country and city hubs with real open roles."
+      ),
+    },
+    {
+      href: "/categories",
+      icon: <Layers className="w-5 h-5 text-indigo-400" />,
+      title: t("Home.hubCategories", "By category"),
+      desc: t(
+        "Home.hubCategoriesDesc",
+        "Explore roles grouped by field and skill area."
+      ),
+    },
+    {
+      href: "/companies",
+      icon: <Building2 className="w-5 h-5 text-emerald-400" />,
+      title: t("Home.hubCompanies", "Companies"),
+      desc: t(
+        "Home.hubCompaniesDesc",
+        "Profiles of employers hiring on the platform."
+      ),
+    },
+    {
+      href: "/blog",
+      icon: <BookOpen className="w-5 h-5 text-amber-400" />,
+      title: t("Home.hubBlog", "Career blog"),
+      desc: t("Home.hubBlogDesc", "Guides and tips for seekers and employers."),
+    },
+    {
+      href: "/resume-builder",
+      icon: <FileText className="w-5 h-5 text-violet-400" />,
+      title: t("Home.hubResume", "Resume builder"),
+      desc: t(
+        "Home.hubResumeDesc",
+        "Generate a professional resume with AI support."
+      ),
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <section className="pt-28 pb-16 px-5 text-center">
@@ -91,7 +153,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* AI Career Risk — primary acquisition CTA */}
       <section className="px-5 pb-14">
         <div className="max-w-4xl mx-auto rounded-3xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-white/5 to-blue-600/10 p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
@@ -99,16 +160,10 @@ export default function HomePage() {
               <ShieldAlert className="w-7 h-7 text-cyan-300" />
             </div>
             <div className="flex-1 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300/90 mb-1">
-                AI Career Risk
-              </p>
-              <h2 className="text-xl sm:text-2xl font-bold text-white mb-1.5">
-                {t(
-                  "Home.careerRiskTitle",
-                  "Is your job safe from AI automation?"
-                )}
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
+                {t("Home.careerRiskTitle", "Is your job at risk from AI?")}
               </h2>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <p className="text-sm text-slate-400 leading-relaxed">
                 {t(
                   "Home.careerRiskDesc",
                   "Get a clear risk score, skills to build, and smarter next steps — free to start."
@@ -140,6 +195,34 @@ export default function HomePage() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Internal linking hubs — crawlable from homepage */}
+      <section className="px-5 pb-16">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-[22px] sm:text-2xl font-bold text-center text-white mb-8 tracking-tight">
+            {t("Home.hubsTitle", "Explore the platform")}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {hubs.map((hub) => (
+              <Link
+                key={hub.href}
+                href={hub.href}
+                className="rounded-2xl p-5 bg-white/5 border border-white/10 hover:border-sky-500/30 transition-all active:scale-[0.98] text-left"
+              >
+                <div className="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center mb-3">
+                  {hub.icon}
+                </div>
+                <h3 className="text-[15px] font-semibold text-white mb-1">
+                  {hub.title}
+                </h3>
+                <p className="text-[13px] text-slate-400 leading-relaxed">
+                  {hub.desc}
+                </p>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
