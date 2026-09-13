@@ -7,6 +7,7 @@ export const metadata: Metadata = buildPublicMetadata({
     "Career tips, guides, and insights for job seekers and employers on Global Job Matching.",
   path: "/blog",
   index: true,
+  hreflang: true,
 });
 
 export default function BlogLayout({
