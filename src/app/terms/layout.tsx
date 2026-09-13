@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/site-url";
+import { buildPublicMetadata } from "@/lib/seo/core";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: "Terms of Service",
   description:
     "Terms and conditions for using Global Job Matching as a job seeker or employer.",
-  alternates: { canonical: absoluteUrl("/terms") },
-  openGraph: {
-    title: "Terms of Service | Global Job Matching",
-    description: "Terms of use for the Global Job Matching platform.",
-    url: absoluteUrl("/terms"),
-  },
-  robots: { index: true, follow: true },
-};
+  path: "/terms",
+  index: true,
+});
 
 export default function TermsLayout({
   children,
