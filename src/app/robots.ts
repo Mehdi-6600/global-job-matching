@@ -33,7 +33,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     host: base,
-    // Primary index + legacy path (redirects to primary)
     sitemap: [`${base}/sitemaps.xml`, `${base}/sitemap.xml`],
   };
 }
