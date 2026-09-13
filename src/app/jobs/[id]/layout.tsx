@@ -11,6 +11,7 @@ import { buildHreflangLanguages } from "@/lib/seo/hreflang";
 import { jobPostingJsonLd, breadcrumbJsonLd } from "@/lib/seo/json-ld";
 import { jobBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
+import { InternalHubLinks } from "@/components/seo/internal-hub-links";
 
 type Props = {
   children: React.ReactNode;
@@ -108,7 +109,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description: desc,
         images: [ogImage],
       },
-      // Closed jobs: keep URL for users/links, do not push as active job index
       robots: isActive
         ? { index: true, follow: true }
         : { index: false, follow: true },
@@ -156,7 +156,6 @@ export default async function JobIdLayout({ children, params }: Props) {
       },
     });
 
-    // JobPosting only for active listings — never emit invalid active-job schema
     if (job && job.status === "active") {
       scripts.push(
         jsonLdScript(
@@ -223,6 +222,9 @@ export default async function JobIdLayout({ children, params }: Props) {
         />
       ))}
       {children}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
+        <InternalHubLinks />
+      </div>
     </>
   );
 }
