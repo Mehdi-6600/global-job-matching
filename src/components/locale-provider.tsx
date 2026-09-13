@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   defaultLocale,
   isLocale,
@@ -19,6 +19,11 @@ import {
 } from "@/lib/i18n/config";
 import { getDictionary, t, type Dictionary } from "@/lib/i18n/get-dictionary";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
+import {
+  localizePath,
+  parseLocalePath,
+  stripLocaleFromPathname,
+} from "@/lib/i18n/locale-path";
 
 type LocaleContextValue = {
   locale: Locale;
@@ -39,18 +44,20 @@ function writeLocaleCookie(locale: Locale) {
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname() || "/";
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const fromPath = parseLocalePath(pathname).localeFromPath;
     try {
       const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
-      setLocaleState(resolveLocale(saved));
+      setLocaleState(resolveLocale(fromPath || saved));
     } catch {
-      setLocaleState(defaultLocale);
+      setLocaleState(resolveLocale(fromPath));
     }
     setReady(true);
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     if (!ready) return;
@@ -76,10 +83,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       }
       document.documentElement.lang = next;
       document.documentElement.dir = isRtlLocale(next) ? "rtl" : "ltr";
-      // Refresh Server Components so they read the new cookie
+
+      const bare = stripLocaleFromPathname(pathname);
+      const nextPath = localizePath(bare, next);
+      const search = typeof window !== "undefined" ? window.location.search : "";
+      router.push(`${nextPath}${search}`);
       router.refresh();
     },
-    [router]
+    [router, pathname]
   );
 
   const dict = useMemo(() => getDictionary(locale), [locale]);
