@@ -44,3 +44,25 @@ export function blogBreadcrumbs(params: {
     { name: params.title, path: `/blog/${params.slug}` },
   ];
 }
+
+export function locationBreadcrumbs(params: {
+  name: string;
+  slug: string;
+}): BreadcrumbItem[] {
+  return [
+    { name: "Home", path: "/" },
+    { name: "Locations", path: "/locations" },
+    { name: params.name, path: `/locations/${params.slug}` },
+  ];
+}
+
+export function categoryBreadcrumbs(params: {
+  name: string;
+  slug: string;
+}): BreadcrumbItem[] {
+  return [
+    { name: "Home", path: "/" },
+    { name: "Categories", path: "/categories" },
+    { name: params.name, path: `/categories/${params.slug}` },
+  ];
+}
