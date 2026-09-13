@@ -9,6 +9,8 @@ import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 import { LOCALE_COOKIE } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
 import { absoluteUrl, truncateMeta } from "@/lib/site-url";
+import { DEFAULT_OG_PATH, jsonLdScript } from "@/lib/seo/core";
+import { blogPostingJsonLd } from "@/lib/seo/json-ld";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -45,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const image =
       post.coverImage && /^https:\/\//i.test(post.coverImage)
         ? post.coverImage
-        : absoluteUrl("/og-image.png");
+        : absoluteUrl(`/blog/${post.slug}/opengraph-image`);
 
     return {
       title: post.title,
@@ -91,37 +93,22 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) return notFound();
 
   const safeHtml = sanitizeBlogHtml(post.content || "");
-  const articleUrl = absoluteUrl(`/blog/${post.slug}`);
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description: truncateMeta(post.excerpt || post.content, 200) || undefined,
-    datePublished: post.createdAt.toISOString(),
-    dateModified: (post.updatedAt || post.createdAt).toISOString(),
-    mainEntityOfPage: articleUrl,
-    image:
-      post.coverImage && /^https:\/\//i.test(post.coverImage)
-        ? post.coverImage
-        : undefined,
-    author: {
-      "@type": "Organization",
-      name: "Global Job Matching",
-    },
-    publisher: {
-      "@type": "Organization",
-      name: "Global Job Matching",
-      url: absoluteUrl("/"),
-    },
-  };
+  const jsonLd = blogPostingJsonLd({
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    content: post.content,
+    coverImage: post.coverImage,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+          __html: jsonLdScript(jsonLd),
         }}
       />
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
