@@ -1,3 +1,5 @@
+import { stripLocaleFromPathname } from "@/lib/i18n/locale-path";
+
 /**
  * Public listing paths where query-string variants should not be indexed.
  * Canonical HTML stays on the clean path (see layouts).
@@ -13,12 +15,14 @@ export const LISTING_PATHS_NOINDEX_QUERY = [
 ] as const;
 
 export function pathShouldNoindexWhenQueried(pathname: string): boolean {
-  const path = pathname.replace(/\/$/, "") || "/";
+  const path = stripLocaleFromPathname(pathname).replace(/\/$/, "") || "/";
   return (LISTING_PATHS_NOINDEX_QUERY as readonly string[]).includes(path);
 }
 
 /** True if URL has any non-empty query value */
-export function urlHasIndexableQueryNoise(searchParams: URLSearchParams): boolean {
+export function urlHasIndexableQueryNoise(
+  searchParams: URLSearchParams
+): boolean {
   for (const [, value] of searchParams.entries()) {
     if (String(value || "").trim() !== "") return true;
   }
