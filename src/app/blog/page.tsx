@@ -7,6 +7,8 @@ import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 import { LOCALE_COOKIE } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
 import { absoluteUrl } from "@/lib/site-url";
+import { DEFAULT_OG_PATH, jsonLdScript } from "@/lib/seo/core";
+import { itemListJsonLd } from "@/lib/seo/json-ld";
 
 export const revalidate = 60;
 
@@ -15,6 +17,28 @@ export const metadata: Metadata = {
   description:
     "Career tips, guides, and insights for job seekers and employers on Global Job Matching.",
   alternates: { canonical: absoluteUrl("/blog") },
+  openGraph: {
+    title: "Career Blog | Global Job Matching",
+    description:
+      "Career tips, guides, and insights for job seekers and employers.",
+    url: absoluteUrl("/blog"),
+    images: [
+      {
+        url: absoluteUrl(DEFAULT_OG_PATH),
+        width: 1200,
+        height: 630,
+        alt: "Career Blog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Career Blog | Global Job Matching",
+    description:
+      "Career tips, guides, and insights for job seekers and employers.",
+    images: [absoluteUrl(DEFAULT_OG_PATH)],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default async function BlogPage() {
@@ -54,8 +78,23 @@ export default async function BlogPage() {
     day: "numeric",
   };
 
+  const listLd = itemListJsonLd({
+    name: "Career Blog",
+    description:
+      "Career tips, guides, and insights on Global Job Matching.",
+    path: "/blog",
+    items: posts.map((p) => ({
+      name: p.title,
+      path: `/blog/${p.slug}`,
+    })),
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(listLd) }}
+      />
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
           <BookOpen className="w-10 h-10 text-indigo-400 mx-auto mb-4" />
