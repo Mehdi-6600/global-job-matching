@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/site-url";
-import { DEFAULT_OG_PATH } from "@/lib/seo/core";
+import { DEFAULT_OG_PATH, jsonLdScript } from "@/lib/seo/core";
 
 export const metadata: Metadata = {
   title: "Companies",
@@ -34,10 +34,32 @@ export const metadata: Metadata = {
   },
 };
 
+const collectionLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Companies",
+  description:
+    "Companies hiring worldwide on Global Job Matching.",
+  url: absoluteUrl("/companies"),
+  isPartOf: {
+    "@type": "WebSite",
+    name: "Global Job Matching",
+    url: absoluteUrl("/"),
+  },
+};
+
 export default function CompaniesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(collectionLd) }}
+      />
+      {children}
+    </>
+  );
 }
