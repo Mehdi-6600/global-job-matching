@@ -70,13 +70,13 @@ export default async function sitemap(props: {
   }
 
   if (id === 0) {
+    // Indexable marketing + hub pages only (no auth/private)
     const staticPaths = [
       "/",
       "/jobs",
       "/companies",
       "/locations",
       "/categories",
-      "/search",
       "/pricing",
       "/blog",
       "/career-risk",
@@ -91,7 +91,14 @@ export default async function sitemap(props: {
       entry(p, {
         lastModified: now,
         changeFrequency: p === "/" || p === "/jobs" ? "daily" : "weekly",
-        priority: p === "/" ? 1 : p === "/jobs" ? 0.9 : 0.6,
+        priority:
+          p === "/"
+            ? 1
+            : p === "/jobs"
+              ? 0.9
+              : p === "/career-risk" || p === "/pricing"
+                ? 0.75
+                : 0.6,
       })
     );
 
