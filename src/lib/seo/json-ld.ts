@@ -1,4 +1,9 @@
-import { absoluteUrl, stripHtml, toSchemaEmploymentType } from "@/lib/seo/core";
+import {
+  absoluteUrl,
+  stripHtml,
+  toSchemaEmploymentType,
+  DEFAULT_OG_PATH,
+} from "@/lib/seo/core";
 import { normalizeLocation } from "@/lib/location";
 
 export type BreadcrumbItem = { name: string; path: string };
@@ -37,7 +42,7 @@ export function organizationSiteJsonLd() {
     "@type": "Organization",
     name: "Global Job Matching",
     url: absoluteUrl("/"),
-    logo: absoluteUrl("/og-image.png"),
+    logo: absoluteUrl(DEFAULT_OG_PATH),
   };
 }
 
@@ -177,7 +182,7 @@ export function blogPostingJsonLd(post: {
     image:
       post.coverImage && /^https:\/\//i.test(post.coverImage)
         ? post.coverImage
-        : undefined,
+        : absoluteUrl(DEFAULT_OG_PATH),
     author: {
       "@type": "Organization",
       name: "Global Job Matching",
@@ -188,7 +193,7 @@ export function blogPostingJsonLd(post: {
       url: absoluteUrl("/"),
       logo: {
         "@type": "ImageObject",
-        url: absoluteUrl("/og-image.png"),
+        url: absoluteUrl(DEFAULT_OG_PATH),
       },
     },
   };
