@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     });
 
-    if (!job || job.status !== "active") {
+    if (!job) {
       return {
         title: "Job not found",
         robots: { index: false, follow: false },
@@ -52,9 +52,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       normalizeLocation(job.location) ||
       job.location ||
       (job.remote ? "Remote" : "");
-    const title = `${job.title} at ${companyName}`;
+    const isActive = job.status === "active";
+    const title = isActive
+      ? `${job.title} at ${companyName}`
+      : `${job.title} at ${companyName} (Closed)`;
     const desc = truncateMeta(
       [
+        isActive ? null : "This listing is no longer active.",
         job.title,
         companyName,
         loc,
@@ -78,7 +82,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description:
         desc ||
-        `Apply for ${job.title} at ${companyName} on Global Job Matching.`,
+        `Job listing for ${job.title} at ${companyName} on Global Job Matching.`,
       alternates: {
         canonical: url,
         languages: buildHreflangLanguages(path),
@@ -104,7 +108,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description: desc,
         images: [ogImage],
       },
-      robots: { index: true, follow: true },
+      // Closed jobs: keep URL for users/links, do not push as active job index
+      robots: isActive
+        ? { index: true, follow: true }
+        : { index: false, follow: true },
     };
   } catch (error) {
     console.error("Job generateMetadata failed:", error);
@@ -149,6 +156,7 @@ export default async function JobIdLayout({ children, params }: Props) {
       },
     });
 
+    // JobPosting only for active listings — never emit invalid active-job schema
     if (job && job.status === "active") {
       scripts.push(
         jsonLdScript(
@@ -175,6 +183,19 @@ export default async function JobIdLayout({ children, params }: Props) {
           })
         )
       );
+      scripts.push(
+        jsonLdScript(
+          breadcrumbJsonLd(
+            jobBreadcrumbs({
+              jobTitle: job.title,
+              jobId: job.id,
+              companyName: job.company?.name,
+              companyId: job.company?.id,
+            })
+          )
+        )
+      );
+    } else if (job) {
       scripts.push(
         jsonLdScript(
           breadcrumbJsonLd(
