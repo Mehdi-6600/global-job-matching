@@ -5,7 +5,9 @@ import { Layers, MapPin, Building2, Wifi } from "lucide-react";
 import { db } from "@/lib/db";
 import { absoluteUrl, truncateMeta } from "@/lib/site-url";
 import { jsonLdScript, DEFAULT_OG_PATH } from "@/lib/seo/core";
+import { buildHreflangLanguages } from "@/lib/seo/hreflang";
 import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo/json-ld";
+import { categoryBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
 
 export const revalidate = 300;
@@ -39,12 +41,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       } on Global Job Matching.`,
       160
     );
-    const url = absoluteUrl(`/categories/${category.slug}`);
+    const path = `/categories/${category.slug}`;
+    const url = absoluteUrl(path);
 
     return {
       title,
       description,
-      alternates: { canonical: url },
+      alternates: {
+        canonical: url,
+        languages: buildHreflangLanguages(path),
+      },
       openGraph: {
         title: `${title} | Global Job Matching`,
         description,
@@ -114,11 +120,9 @@ export default async function CategoryJobsPage({ params }: Props) {
     take: 8,
   });
 
-  const breadcrumbs = breadcrumbJsonLd([
-    { name: "Home", path: "/" },
-    { name: "Categories", path: "/categories" },
-    { name: category.name, path: `/categories/${category.slug}` },
-  ]);
+  const breadcrumbs = breadcrumbJsonLd(
+    categoryBreadcrumbs({ name: category.name, slug: category.slug })
+  );
 
   const jobList = itemListJsonLd({
     name: `${category.name} jobs`,
