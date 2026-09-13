@@ -1,37 +1,16 @@
 import type { Metadata } from "next";
 import AboutContent from "./AboutContent";
-import { absoluteUrl } from "@/lib/site-url";
-import { DEFAULT_OG_PATH, jsonLdScript } from "@/lib/seo/core";
+import { buildPublicMetadata, jsonLdScript } from "@/lib/seo/core";
 import { faqPageJsonLd } from "@/lib/seo/json-ld";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: "About Us",
   description:
     "Learn more about Global Job Matching — a modern job board connecting talent and employers worldwide.",
-  alternates: { canonical: absoluteUrl("/about") },
-  openGraph: {
-    title: "About Us | Global Job Matching",
-    description:
-      "Learn more about Global Job Matching — connecting talent and employers worldwide.",
-    url: absoluteUrl("/about"),
-    images: [
-      {
-        url: absoluteUrl(DEFAULT_OG_PATH),
-        width: 1200,
-        height: 630,
-        alt: "About Global Job Matching",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "About Us | Global Job Matching",
-    description:
-      "Connecting talent and employers worldwide on Global Job Matching.",
-    images: [absoluteUrl(DEFAULT_OG_PATH)],
-  },
-  robots: { index: true, follow: true },
-};
+  path: "/about",
+  index: true,
+  hreflang: true,
+});
 
 const aboutFaqs = [
   {
