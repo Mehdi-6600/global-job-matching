@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { absoluteUrl, getSiteUrl, truncateMeta } from "@/lib/site-url";
+import { buildHreflangLanguages } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/lib/i18n/config";
+import { localizePath } from "@/lib/i18n/locale-path";
+import { toOgLocale } from "@/lib/i18n/og-locale";
+import type { Locale } from "@/lib/i18n/config";
 
 export { absoluteUrl, getSiteUrl, truncateMeta };
 
@@ -39,21 +44,35 @@ export function buildPublicMetadata(opts: {
   image?: string | null;
   index?: boolean;
   type?: "website" | "article" | "profile";
+  /** Content language for OG; default en */
+  locale?: Locale;
+  /** Include hreflang alternates (default true for public pages) */
+  hreflang?: boolean;
 }): Metadata {
-  const url = absoluteUrl(opts.path);
+  const path = opts.path.startsWith("/") ? opts.path : `/${opts.path}`;
+  const locale = opts.locale || defaultLocale;
+  const canonicalPath = localizePath(path, locale);
+  const url = absoluteUrl(canonicalPath);
   const image =
     opts.image && /^https?:\/\//i.test(opts.image)
       ? opts.image
       : absoluteUrl(DEFAULT_OG_PATH);
   const index = opts.index !== false;
+  const withHreflang = opts.hreflang !== false && index;
 
   return {
     title: opts.title,
     description: opts.description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      ...(withHreflang
+        ? { languages: buildHreflangLanguages(path) }
+        : {}),
+    },
     openGraph: {
       type: opts.type || "website",
       url,
+      locale: toOgLocale(locale),
       title: opts.title,
       description: opts.description,
       siteName: "Global Job Matching",
