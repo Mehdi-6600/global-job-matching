@@ -1,6 +1,10 @@
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
+import {
+  pathShouldNoindexWhenQueried,
+  urlHasIndexableQueryNoise,
+} from "@/lib/seo/listing-policy";
 
 const { auth } = NextAuth(authConfig);
 
@@ -23,6 +27,14 @@ export default auth((req) => {
     path.startsWith("/api/")
   ) {
     response.headers.set("Cache-Control", "private, no-store");
+  }
+
+  // Prevent thin/duplicate indexation of filtered listing URLs
+  if (
+    pathShouldNoindexWhenQueried(path) &&
+    urlHasIndexableQueryNoise(req.nextUrl.searchParams)
+  ) {
+    response.headers.set("X-Robots-Tag", "noindex, follow");
   }
 
   return response;
