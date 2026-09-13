@@ -46,7 +46,7 @@ export function organizationSiteJsonLd() {
   };
 }
 
-/** ItemList for hub pages (locations, categories, job cards) */
+/** ItemList for hub pages (locations, categories, blog, job cards) */
 export function itemListJsonLd(opts: {
   name: string;
   description?: string;
@@ -65,6 +65,24 @@ export function itemListJsonLd(opts: {
       position: index + 1,
       name: item.name,
       url: absoluteUrl(item.path),
+    })),
+  };
+}
+
+/** FAQPage schema for static help / about content */
+export function faqPageJsonLd(
+  faqs: Array<{ question: string; answer: string }>
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
     })),
   };
 }
