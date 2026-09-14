@@ -232,13 +232,63 @@ export default function PricingPage() {
       if (res.ok) {
         setSubmitted(true);
         setTxHash("");
+        return;
+      }
+
+      const code = typeof data.code === "string" ? data.code : "";
+      const serverMsg =
+        typeof data.error === "string" ? data.error : "";
+
+      if (code === "TX_FAILED_ON_CHAIN") {
+        setError(
+          t(
+            "Pricing.errTxFailed",
+            "This transaction failed on the blockchain and cannot be used."
+          )
+        );
+      } else if (code === "INVALID_TX_HASH") {
+        setError(
+          t(
+            "Pricing.errInvalidHash",
+            "Transaction hash format is invalid for the selected crypto."
+          )
+        );
+      } else if (code === "DUPLICATE_TX") {
+        setError(
+          t(
+            "Pricing.errDuplicateTx",
+            "This transaction hash was already submitted."
+          )
+        );
+      } else if (code === "WALLET_NOT_CONFIGURED") {
+        setError(
+          t(
+            "Pricing.errWallet",
+            "That cryptocurrency is not configured for payments."
+          )
+        );
+      } else if (code === "TOO_MANY_PENDING") {
+        setError(
+          t(
+            "Pricing.errTooManyPending",
+            "You already have too many pending payments. Wait for admin review."
+          )
+        );
+      } else if (res.status === 429) {
+        setError(
+          t(
+            "Auth.errors.rateLimited",
+            "Too many requests. Please wait a minute and try again."
+          )
+        );
       } else {
         setError(
-          typeof data.error === "string" ? data.error : "Submission failed"
+          serverMsg ||
+            t("Pricing.errSubmit", "Submission failed. Please try again.")
         );
       }
     } catch {
-      setError("Network error");
+      setError(t("Common.errorNetwork", "Network error. Please try again."));
     } finally {
       setSubmitting(false);
     }
