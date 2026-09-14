@@ -11,8 +11,13 @@ function envPresent(name: string): boolean {
   return Boolean(v && String(v).trim().length > 0);
 }
 
+/**
+ * Public readiness probe for Vercel / uptime monitors.
+ * Never returns secrets — only booleans and safe counts.
+ */
 export async function GET() {
   const started = Date.now();
+  const production = process.env.NODE_ENV === "production";
 
   let database: "ok" | "error" = "ok";
   let dbMs = 0;
@@ -26,14 +31,8 @@ export async function GET() {
     console.error("Health DB check failed:", err);
   }
 
-  const totalMs = Date.now() - started;
   const redisStatus = getRedisEnvStatus();
   const redisOk = isRedisConfigured();
-  const production = process.env.NODE_ENV === "production";
-
-  const healthy = database === "ok";
-  const status =
-    !healthy ? "degraded" : production && !redisOk ? "degraded" : "ok";
 
   let walletCount = 0;
   try {
@@ -64,24 +63,60 @@ export async function GET() {
   };
 
   const warnings: string[] = [];
+
   if (production && !redisOk) {
     if (redisStatus.hasUrl && !redisStatus.hasToken) {
       warnings.push(
-        "Redis URL found but TOKEN missing. Add UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN (or UPSTASH_KV_REDIS_TOKEN)."
+        "Redis URL found but TOKEN missing. Add UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN."
       );
     } else if (!redisStatus.hasUrl && redisStatus.hasToken) {
       warnings.push(
-        "Redis TOKEN found but HTTPS REST URL missing. Add UPSTASH_REDIS_REST_URL / KV_REST_API_URL / UPSTASH_KV_REDIS_URL (must start with https://)."
+        "Redis TOKEN found but HTTPS REST URL missing. Add UPSTASH_REDIS_REST_URL (must start with https://)."
       );
     } else {
       warnings.push(
-        "Rate limiting uses in-memory fallback. Set a pair: UPSTASH_REDIS_REST_URL+TOKEN or KV_REST_API_URL+TOKEN or UPSTASH_KV_REDIS_URL+TOKEN."
+        "Rate limiting uses in-memory fallback. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN."
       );
     }
   }
-  if (!config.blob) {
-    warnings.push("BLOB_READ_WRITE_TOKEN missing — resume upload disabled.");
+
+  if (production && walletCount < 1) {
+    warnings.push(
+      "No crypto wallets configured. Paid plan checkout cannot receive funds."
+    );
   }
+
+  if (production && !config.resend) {
+    warnings.push(
+      "RESEND_API_KEY missing. Password reset and transactional email will fail."
+    );
+  }
+
+  if (production && !config.cronSecret) {
+    warnings.push(
+      "CRON_SECRET missing. Plan expiry and job sync crons cannot authenticate."
+    );
+  }
+
+  if (production && dbMs > 2000) {
+    warnings.push(
+      `Database latency is high (${dbMs}ms). Check Neon region / connection pool.`
+    );
+  }
+
+  const healthy = database === "ok";
+  const degraded =
+    !healthy ||
+    (production && !redisOk) ||
+    (production && walletCount < 1 && config.appUrl);
+
+  const status: "ok" | "degraded" | "error" = !healthy
+    ? "error"
+    : degraded
+      ? "degraded"
+      : "ok";
+
+  const totalMs = Date.now() - started;
 
   return NextResponse.json(
     {
@@ -96,6 +131,10 @@ export async function GET() {
         rateLimit: {
           status: redisOk ? "redis" : "memory",
           sharedAcrossInstances: redisOk,
+        },
+        payments: {
+          walletsConfigured: walletCount,
+          ready: walletCount > 0,
         },
         config,
       },
