@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Layers } from "lucide-react";
 import { db } from "@/lib/db";
 import {
@@ -7,6 +8,9 @@ import {
   jsonLdScript,
 } from "@/lib/seo/core";
 import { itemListJsonLd } from "@/lib/seo/json-ld";
+import { LOCALE_COOKIE } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/resolve-locale";
+import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 
 export const revalidate = 300;
 
@@ -20,6 +24,10 @@ export const metadata: Metadata = buildPublicMetadata({
 });
 
 export default async function CategoriesIndexPage() {
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const dict = getDictionary(locale);
+
   let rows: Array<{ id: string; name: string; slug: string; count: number }> =
     [];
 
@@ -46,9 +54,25 @@ export default async function CategoriesIndexPage() {
     console.error("Categories index error:", e);
   }
 
+  const title = t(dict, "Categories.title", "Jobs by category");
+  const subtitle = t(
+    dict,
+    "Categories.subtitle",
+    "Only categories that currently have active jobs are shown."
+  );
+  const empty = t(
+    dict,
+    "Categories.empty",
+    "No categories with active jobs yet."
+  );
+  const browseJobs = t(dict, "Categories.browseJobs", "Browse all jobs");
+  const viewAll = t(dict, "Categories.viewAllJobs", "View all jobs →");
+  const browseLoc = t(dict, "Categories.browseLocations", "Browse locations →");
+  const activeJobsLabel = t(dict, "Categories.activeJobs", "active jobs");
+
   const listLd = itemListJsonLd({
-    name: "Jobs by category",
-    description: "Categories with active jobs on Global Job Matching.",
+    name: title,
+    description: subtitle,
     path: "/categories",
     items: rows.map((c) => ({
       name: c.name,
@@ -65,19 +89,15 @@ export default async function CategoriesIndexPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
           <Layers className="w-10 h-10 text-indigo-400 mx-auto mb-3" />
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Jobs by category
-          </h1>
-          <p className="text-slate-400 text-sm max-w-xl mx-auto">
-            Only categories that currently have active jobs are shown.
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+          <p className="text-slate-400 text-sm max-w-xl mx-auto">{subtitle}</p>
         </div>
 
         {rows.length === 0 ? (
           <div className="glass rounded-2xl p-10 text-center border border-white/10 text-slate-400">
-            No categories with active jobs yet.{" "}
+            {empty}{" "}
             <Link href="/jobs" className="text-cyan-400 hover:underline">
-              Browse all jobs
+              {browseJobs}
             </Link>
           </div>
         ) : (
@@ -92,7 +112,7 @@ export default async function CategoriesIndexPage() {
                     {c.name}
                   </span>
                   <span className="block text-sm text-slate-400 mt-1">
-                    {c.count} active job{c.count === 1 ? "" : "s"}
+                    {c.count} {activeJobsLabel}
                   </span>
                 </Link>
               </li>
@@ -102,10 +122,10 @@ export default async function CategoriesIndexPage() {
 
         <p className="text-center mt-10 flex flex-wrap justify-center gap-4 text-sm">
           <Link href="/jobs" className="text-indigo-400 hover:underline">
-            View all jobs →
+            {viewAll}
           </Link>
           <Link href="/locations" className="text-indigo-400 hover:underline">
-            Browse locations →
+            {browseLoc}
           </Link>
         </p>
       </div>
