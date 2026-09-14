@@ -588,29 +588,3 @@
     "loginToApply": "برای اقدام وارد شوید"
   },
   "Companies": {
-    "title": "شرکت‌ها",
-    "subtitle": "کارفرمایان را در Global Job Matching کاوش کنید",
-    "searchPlaceholder": "جستجوی شرکت‌ها...",
-    "noCompanies": "هیچ شرکتی یافت نشد",
-    "jobs": "شغل‌ها",
-    "viewProfile": "مشاهده پروفایل",
-    "location": "مکان",
-    "website": "وبسایت",
-    "pending": "شرکت‌های در انتظار"
-  },
-  "AuthExtra": {
-    "forgotTitle": "فراموشی رمز عبور",
-    "forgotSubtitle": "ایمیل خود را وارد کنید تا لینک بازنشانی برای شما ارسال شود",
-    "sendReset": "ارسال لینک",
-    "sending": "در حال ارسال...",
-    "resetTitle": "بازنشانی رمز عبور",
-    "resetSubtitle": "رمز عبور جدید انتخاب کنید",
-    "newPassword": "رمز عبور جدید",
-    "confirmPassword": "تأیید رمز عبور",
-    "submitReset": "به‌روزرسانی رمز عبور",
-    "verifyTitle": "تأیید ایمیل",
-    "verifySubtitle": "برای فعال‌سازی حساب، ایمیل خود را تأیید کنید",
-    "verifyCta": "تأیید ایمیل",
-    "backToLogin": "بازگشت به ورود"
-  }
-}
