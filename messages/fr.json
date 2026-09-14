@@ -612,5 +612,23 @@
     "verifySubtitle": "Confirmez votre email pour activer le compte",
     "verifyCta": "Vérifier l'email",
     "backToLogin": "Retour à la connexion"
+  },
+  "Categories": {
+    "title": "Emplois par catégorie",
+    "subtitle": "Seules les catégories avec des offres actives sont affichées.",
+    "empty": "Aucune catégorie avec des offres actives pour le moment.",
+    "browseJobs": "Voir tous les emplois",
+    "activeJobs": "offres actives",
+    "viewAllJobs": "Tous les emplois →",
+    "browseLocations": "Parcourir les lieux →"
+  },
+  "Locations": {
+    "title": "Emplois par lieu",
+    "subtitle": "Ces pages n'apparaissent que s'il existe au moins une offre active pour ce lieu.",
+    "empty": "Aucun lieu avec des offres actives. Revenez bientôt ou",
+    "browseJobs": "parcourir tous les emplois",
+    "activeJobs": "offres actives",
+    "viewAllJobs": "Tous les emplois →",
+    "browseCategories": "Parcourir les catégories →"
   }
 }
