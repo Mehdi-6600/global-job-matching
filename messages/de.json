@@ -612,5 +612,23 @@
     "verifySubtitle": "Bestätigen Sie Ihre E-Mail, um das Konto zu aktivieren",
     "verifyCta": "E-Mail verifizieren",
     "backToLogin": "Zurück zur Anmeldung"
+  },
+  "Categories": {
+    "title": "Jobs nach Kategorie",
+    "subtitle": "Es werden nur Kategorien mit aktiven Stellenanzeigen angezeigt.",
+    "empty": "Noch keine Kategorien mit aktiven Jobs.",
+    "browseJobs": "Alle Jobs durchsuchen",
+    "activeJobs": "aktive Jobs",
+    "viewAllJobs": "Alle Jobs →",
+    "browseLocations": "Standorte durchsuchen →"
+  },
+  "Locations": {
+    "title": "Jobs nach Standort",
+    "subtitle": "Diese Seiten erscheinen nur, wenn mindestens ein aktiver Job für den Standort vorliegt.",
+    "empty": "Noch keine Standorte mit aktiven Jobs. Schauen Sie später vorbei oder",
+    "browseJobs": "alle Jobs durchsuchen",
+    "activeJobs": "aktive Jobs",
+    "viewAllJobs": "Alle Jobs →",
+    "browseCategories": "Kategorien durchsuchen →"
   }
 }
