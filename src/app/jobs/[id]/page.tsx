@@ -786,4 +786,4 @@ export default function JobDetailPage() {
     </main>
   );
 }
-  const companyName = job.company?.name || t("JobDetail.company", "Company");
+  
