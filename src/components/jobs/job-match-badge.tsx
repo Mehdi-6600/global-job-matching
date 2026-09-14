@@ -15,9 +15,6 @@ type MatchPayload = {
   error?: string;
 };
 
-/**
- * Shows personalized match % for the logged-in user on a job page.
- */
 export function JobMatchBadge({ jobId }: { jobId: string }) {
   const { t } = useLocale();
   const [loading, setLoading] = useState(true);
