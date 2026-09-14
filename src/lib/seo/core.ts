@@ -71,6 +71,23 @@ export function toSchemaEmploymentType(
 }
 
 /**
+ * Serialize a JSON-LD object for safe embedding inside a
+ * <script type="application/ld+json"> tag via dangerouslySetInnerHTML.
+ *
+ * Escapes characters that could otherwise break out of the script
+ * context or be used for XSS (</script>, <!--, line/paragraph
+ * separators that some browsers treat specially in inline scripts).
+ */
+export function jsonLdScript(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
+/**
  * Normalize a public pathname.
  *
  * This function intentionally removes any existing locale prefix
