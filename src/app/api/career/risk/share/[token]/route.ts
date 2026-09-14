@@ -4,6 +4,7 @@ import { ratelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
 import { safeLimit } from "@/lib/safe-ratelimit";
 import { rateLimitedResponse } from "@/lib/http";
+import { isPrismaNotFoundLike } from "@/lib/prisma-errors";
 
 export async function GET(
   req: NextRequest,
@@ -22,26 +23,50 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const row = await db.careerRiskAssessment.findUnique({
-      where: { shareToken },
-      select: {
-        id: true,
-        jobTitle: true,
-        riskScore: true,
-        riskLevel: true,
-        summary: true,
-        reasons: true,
-        skillsToBuild: true,
-        alternatives: true,
-        paidSnapshot: true,
-        source: true,
-        createdAt: true,
-      },
-    });
+    // Reject obviously non-hex tokens early (share tokens are randomBytes hex)
+    if (!/^[a-zA-Z0-9_-]+$/.test(shareToken)) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    let row;
+    try {
+      row = await db.careerRiskAssessment.findUnique({
+        where: { shareToken },
+        select: {
+          id: true,
+          jobTitle: true,
+          riskScore: true,
+          riskLevel: true,
+          summary: true,
+          reasons: true,
+          skillsToBuild: true,
+          alternatives: true,
+          paidSnapshot: true,
+          source: true,
+          createdAt: true,
+        },
+      });
+    } catch (dbErr) {
+      console.error("Career risk share DB error:", dbErr);
+      if (isPrismaNotFoundLike(dbErr)) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      // Table missing / connection issues — soft 404 for public share links
+      // (avoid leaking infra details; analysis still works without persistence)
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     if (!row) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+
+    const reasons = Array.isArray(row.reasons) ? row.reasons : [];
+    const skillsToBuild = Array.isArray(row.skillsToBuild)
+      ? row.skillsToBuild
+      : [];
+    const alternatives = Array.isArray(row.alternatives)
+      ? row.alternatives
+      : [];
 
     return NextResponse.json({
       success: true,
@@ -51,9 +76,9 @@ export async function GET(
         riskScore: row.riskScore,
         riskLevel: row.riskLevel,
         summary: row.summary,
-        reasons: row.reasons,
-        skillsToBuild: row.skillsToBuild,
-        alternatives: row.paidSnapshot ? row.alternatives : [],
+        reasons,
+        skillsToBuild,
+        alternatives: row.paidSnapshot ? alternatives : [],
         alternativesLocked: !row.paidSnapshot,
         source: row.source,
         createdAt: row.createdAt,
@@ -61,6 +86,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Career risk share GET error:", error);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 }
