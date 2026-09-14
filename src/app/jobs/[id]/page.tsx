@@ -350,6 +350,13 @@ export default function JobDetailPage() {
       </main>
     );
   }
+
+  // FIX: `companyName` was referenced below (logo, header, share title, apply
+  // modal) but never declared, which broke the Vercel type-check build.
+  // Derive it from the job's company relation, with a safe fallback.
+  const companyName =
+    job.company?.name || t("Companies.unknown", "Unknown company");
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
@@ -786,4 +793,3 @@ export default function JobDetailPage() {
     </main>
   );
 }
-  
