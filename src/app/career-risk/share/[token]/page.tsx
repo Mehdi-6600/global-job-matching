@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, ShieldAlert, CheckCircle2, Lock } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 
 type Assessment = {
@@ -19,8 +20,14 @@ type Assessment = {
   createdAt: string;
 };
 
+const levelColor: Record<string, string> = {
+  low: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+  medium: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+  high: "text-red-400 border-red-500/30 bg-red-500/10",
+};
+
 export default function CareerRiskSharePage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const params = useParams();
   const token = typeof params?.token === "string" ? params.token : "";
   const [data, setData] = useState<Assessment | null>(null);
@@ -37,17 +44,22 @@ export default function CareerRiskSharePage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/career/risk/share/${token}`);
-        const json = await res.json();
+        const res = await fetch(`/api/career/risk/share/${encodeURIComponent(token)}`);
+        const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          if (!cancelled)
-            setError(json.error || t("Common.noResults", "Not found"));
+          if (!cancelled) {
+            setError(
+              (typeof json.error === "string" && json.error) ||
+                t("Common.noResults", "Not found")
+            );
+          }
           return;
         }
-        if (!cancelled) setData(json.assessment);
+        if (!cancelled) setData(json.assessment ?? null);
       } catch {
-        if (!cancelled)
+        if (!cancelled) {
           setError(t("Common.error", "Failed to load report"));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -60,118 +72,158 @@ export default function CareerRiskSharePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
-        <p className="text-slate-400">
-          {t("Common.loading", "Loading report…")}
-        </p>
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 flex items-center justify-center p-6 pt-20">
+        <p className="text-slate-400">{t("Common.loading", "Loading report…")}</p>
       </main>
     );
   }
 
   if (error || !data) {
     return (
-      <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-4 p-6">
-        <p className="text-red-400">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 flex flex-col items-center justify-center gap-4 p-6 pt-20">
+        <p className="text-red-300">
           {error || t("Common.noResults", "Report not found")}
         </p>
-        <Link href="/career-risk" className="text-cyan-400 underline">
+        <Link
+          href="/career-risk"
+          className="text-cyan-300 hover:underline text-sm"
+        >
           {t("CareerRisk.title", "Run your own assessment")}
         </Link>
       </main>
     );
   }
 
+  const level = String(data.riskLevel || "medium").toLowerCase();
+  const levelLabel =
+    level === "low"
+      ? t("CareerRisk.levelLow", "Low")
+      : level === "high"
+        ? t("CareerRisk.levelHigh", "High")
+        : t("CareerRisk.levelMedium", "Medium");
+
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-6">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 p-6 pt-20 pb-16">
       <div className="mx-auto max-w-2xl space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold text-cyan-300">
-            {t("CareerRisk.title", "Career Risk Report")}
-          </h1>
-          <Link
-            href="/career-risk"
-            className="text-sm text-slate-400 hover:text-cyan-400"
-          >
-            {t("CareerRisk.cta", "New assessment")}
-          </Link>
+        <Link
+          href="/career-risk"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t("CareerRisk.cta", "New assessment")}
+        </Link>
+
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-5 h-5 text-cyan-300" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-white">
+              {t("CareerRisk.title", "Career Risk Report")}
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              {data.createdAt
+                ? new Date(data.createdAt).toLocaleString(locale)
+                : ""}
+            </p>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-sm text-slate-400">
-                {t("Settings.headline", "Role")}
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                {data.jobTitle}
               </p>
-              <p className="text-xl font-medium">{data.jobTitle}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-slate-400">
-                {t("CareerRisk.score", "Risk score")}
-              </p>
-              <p className="text-3xl font-bold text-cyan-300">
-                {data.riskScore}
-                <span className="text-base font-normal text-slate-400">
-                  /100
-                </span>
-              </p>
-              <p className="text-sm uppercase tracking-wide text-slate-400">
-                {data.riskLevel}
-              </p>
+              <span
+                className={`inline-flex mt-2 items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                  levelColor[level] || levelColor.medium
+                }`}
+              >
+                {levelLabel} · {data.riskScore}/100
+              </span>
             </div>
           </div>
 
-          <p className="text-slate-300 leading-relaxed">{data.summary}</p>
+          {data.summary && (
+            <p className="text-sm text-slate-200 leading-relaxed">{data.summary}</p>
+          )}
 
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              {t("CareerRisk.why", "Why this score")}
-            </h2>
-            <ul className="list-disc space-y-1 pl-5 text-slate-300">
-              {(data.reasons || []).map((r, i) => (
-                <li key={i}>{r}</li>
-              ))}
-            </ul>
-          </section>
+          {Array.isArray(data.reasons) && data.reasons.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-white mb-2">
+                {t("CareerRisk.whyScore", "Why this score")}
+              </h2>
+              <ul className="space-y-1.5">
+                {data.reasons.map((r, i) => (
+                  <li key={i} className="text-sm text-slate-300 flex gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
-              {t("CareerRisk.skills", "Skills to build")}
-            </h2>
-            <ul className="list-disc space-y-1 pl-5 text-slate-300">
-              {(data.skillsToBuild || []).map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ul>
-          </section>
+          {Array.isArray(data.skillsToBuild) && data.skillsToBuild.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-white mb-2">
+                {t("CareerRisk.skillsToBuild", "Skills to build")}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {data.skillsToBuild.map((s, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-200"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">
+          <div>
+            <h2 className="text-sm font-semibold text-white mb-2">
               {t("CareerRisk.alternatives", "Alternative paths")}
             </h2>
-            {data.alternativesLocked || !data.alternatives?.length ? (
-              <p className="text-slate-500 text-sm">
-                {t(
-                  "CareerRisk.locked",
-                  "Alternative roles were locked for this shared free report."
-                )}{" "}
-                <Link href="/pricing" className="text-cyan-400 underline">
-                  {t("Common.upgrade", "Upgrade")}
-                </Link>
-              </p>
+            {data.alternativesLocked ||
+            !Array.isArray(data.alternatives) ||
+            data.alternatives.length === 0 ? (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-sm text-slate-300 flex gap-2">
+                <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p>
+                    {t(
+                      "CareerRisk.alternativesLocked",
+                      "Upgrade to Pro to unlock alternative role recommendations."
+                    )}
+                  </p>
+                  <Link
+                    href="/pricing"
+                    className="text-cyan-300 hover:underline text-xs mt-1 inline-block"
+                  >
+                    {t("CareerRisk.viewPricing", "View pricing")}
+                  </Link>
+                </div>
+              </div>
             ) : (
-              <ul className="list-disc space-y-1 pl-5 text-slate-300">
+              <ul className="space-y-1.5">
                 {data.alternatives.map((a, i) => (
-                  <li key={i}>{a}</li>
+                  <li key={i} className="text-sm text-slate-300">
+                    • {a}
+                  </li>
                 ))}
               </ul>
             )}
-          </section>
-
-          <p className="text-xs text-slate-500">
-            {t("CareerRisk.disclaimer", "Shared report · not personalized advice")}{" "}
-            · {data.source}
-          </p>
+          </div>
         </div>
+
+        <p className="text-center text-xs text-slate-500">
+          <Link href="/career-risk" className="text-cyan-300 hover:underline">
+            {t("CareerRisk.cta", "Run your own AI career risk analysis")}
+          </Link>
+        </p>
       </div>
     </main>
   );
