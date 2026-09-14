@@ -30,6 +30,7 @@ import {
 } from "@/components/plan-limit-banner";
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
+import { JobMatchBadge } from "@/components/jobs/job-match-badge";
 
 interface JobDetail {
   id: string;
@@ -93,6 +94,7 @@ function timeAgo(dateString: string): string {
   if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
   return "Just now";
 }
+
 function formatSalary(
   t: (key: string, fallback?: string) => string,
   locale: string,
@@ -186,7 +188,8 @@ export default function JobDetailPage() {
         setError(t("Common.error", "Failed to load job details"));
         setLoading(false);
       });
-  }, [id]);
+  }, [id, t]);
+
   useEffect(() => {
     if (!id) return;
 
@@ -231,7 +234,7 @@ export default function JobDetailPage() {
         setMatchMessage(t("Common.error", "Could not load match score"));
       })
       .finally(() => setMatchLoading(false));
-  }, [id]);
+  }, [id, t]);
 
   const handleSave = async () => {
     setPlanLimit(null);
@@ -316,7 +319,8 @@ export default function JobDetailPage() {
       setApplying(false);
     }
   };
-    if (loading) {
+
+  if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
         <div className="text-center">
@@ -346,9 +350,6 @@ export default function JobDetailPage() {
       </main>
     );
   }
-
-  const companyName = job.company?.name || t("JobDetail.company", "Company");
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
@@ -385,6 +386,9 @@ export default function JobDetailPage() {
                     <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">
                       {job.title}
                     </h1>
+                    <div className="mb-2">
+                      <JobMatchBadge jobId={job.id} />
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
                       <span className="flex items-center gap-1">
                         <Building2 className="w-3.5 h-3.5" />
@@ -398,7 +402,7 @@ export default function JobDetailPage() {
                     </div>
                   </div>
                 </div>
-                                <button
+                <button
                   type="button"
                   onClick={handleSave}
                   className={`p-2.5 rounded-xl border transition-all ${
@@ -478,7 +482,8 @@ export default function JobDetailPage() {
                 )}
               </div>
             </div>
-                        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Target className="w-5 h-5 text-cyan-400" />
                 Your match score
@@ -567,7 +572,8 @@ export default function JobDetailPage() {
                 </div>
               )}
             </div>
-                        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-cyan-400" />
                 {t("JobDetail.description", "Description")}
@@ -644,7 +650,8 @@ export default function JobDetailPage() {
               </div>
             )}
           </div>
-                    <aside className="w-full lg:w-80 shrink-0 space-y-4">
+
+          <aside className="w-full lg:w-80 shrink-0 space-y-4">
             <div className="glass rounded-2xl p-5 border border-white/10 space-y-3">
               <p className="text-xs text-slate-500">
                 {job.viewCount} views · {job.applicantCount} applicants
@@ -688,25 +695,28 @@ export default function JobDetailPage() {
               <div className="text-center py-6">
                 <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
                 <h3 className="text-lg font-semibold text-white mb-2">
-                  {t("JobDetail.applied", "Applied")}
+                  {t("JobDetail.applied", "Application submitted")}
                 </h3>
                 <p className="text-slate-400 text-sm mb-4">
-                  {job.title}
+                  {t(
+                    "JobDetail.apply",
+                    "Your application has been sent successfully."
+                  )}
                 </p>
                 <button
                   type="button"
                   onClick={() => setApplyOpen(false)}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm"
+                  className="px-5 py-2 rounded-xl bg-cyan-500 text-white text-sm font-medium"
                 >
-                  {t("Common.cancel", "Cancel")}
+                  {t("Common.close", "Close")}
                 </button>
               </div>
             ) : (
               <>
-                <h3 className="text-lg font-semibold text-white mb-1">
+                <h3 className="text-lg font-semibold text-white mb-1 pr-8">
                   {t("JobDetail.apply", "Apply now")} — {job.title}
                 </h3>
-                <p className="text-slate-400 text-sm mb-6">at {companyName}</p>
+                <p className="text-slate-400 text-sm mb-4">{companyName}</p>
 
                 {planLimit && (
                   <div className="mb-4">
@@ -723,7 +733,8 @@ export default function JobDetailPage() {
                     {applyError}
                   </div>
                 )}
-                                <form onSubmit={handleApply} className="space-y-4">
+
+                <form onSubmit={handleApply} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Cover Letter (Optional)
@@ -775,3 +786,4 @@ export default function JobDetailPage() {
     </main>
   );
 }
+  const companyName = job.company?.name || t("JobDetail.company", "Company");
