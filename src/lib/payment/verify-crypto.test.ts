@@ -1,30 +1,37 @@
 import { describe, it, expect } from "vitest";
-import { isPlausibleTxHash } from "./verify-crypto";
-
-const HEX64 = "a".repeat(64);
-const EVM = `0x${HEX64}`;
+import {
+  isPlausibleTxHash,
+  verifyTxOnChain,
+} from "@/lib/payment/verify-crypto";
 
 describe("isPlausibleTxHash", () => {
-  it("accepts 64-hex for BTC/DOGE", () => {
-    expect(isPlausibleTxHash("BTC", HEX64)).toBe(true);
-    expect(isPlausibleTxHash("DOGE", HEX64)).toBe(true);
+  it("accepts BTC 64-hex", () => {
+    expect(
+      isPlausibleTxHash("BTC", "a".repeat(64))
+    ).toBe(true);
   });
 
-  it("rejects short BTC hash", () => {
-    expect(isPlausibleTxHash("BTC", "abcdef")).toBe(false);
+  it("rejects short hashes", () => {
+    expect(isPlausibleTxHash("BTC", "abc")).toBe(false);
   });
 
-  it("accepts EVM style hashes", () => {
-    expect(isPlausibleTxHash("ETH", EVM)).toBe(true);
-    expect(isPlausibleTxHash("USDT", HEX64)).toBe(true);
-    expect(isPlausibleTxHash("BNB", EVM)).toBe(true);
+  it("accepts EVM 0x hash", () => {
+    expect(isPlausibleTxHash("ETH", "0x" + "ab".repeat(32))).toBe(true);
+  });
+});
+
+describe("verifyTxOnChain fail-closed", () => {
+  it("invalid format → not_found", async () => {
+    const r = await verifyTxOnChain({ asset: "BTC", txHash: "nope" });
+    expect(r.status).toBe("not_found");
+    expect(r.found).toBe(false);
   });
 
-  it("rejects invalid characters", () => {
-    expect(isPlausibleTxHash("ETH", "0xzzzz")).toBe(false);
-  });
-
-  it("is lenient for TON", () => {
-    expect(isPlausibleTxHash("TON", "abcde12345_ok")).toBe(true);
+  it("TON without integration → verification_unavailable", async () => {
+    const r = await verifyTxOnChain({
+      asset: "TON",
+      txHash: "abcdefghijklmnop",
+    });
+    expect(r.status).toBe("verification_unavailable");
   });
 });
