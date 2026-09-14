@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { MapPin } from "lucide-react";
-import { absoluteUrl } from "@/lib/site-url";
 import { listLocationStats } from "@/lib/seo/location-query";
 import {
   buildPublicMetadata,
   jsonLdScript,
 } from "@/lib/seo/core";
 import { itemListJsonLd } from "@/lib/seo/json-ld";
+import { LOCALE_COOKIE } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/resolve-locale";
+import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 
 export const revalidate = 300;
 
@@ -21,12 +24,35 @@ export const metadata: Metadata = buildPublicMetadata({
 });
 
 export default async function LocationsIndexPage() {
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const dict = getDictionary(locale);
+
   const stats = await listLocationStats(1);
 
+  const title = t(dict, "Locations.title", "Jobs by location");
+  const subtitle = t(
+    dict,
+    "Locations.subtitle",
+    "These pages only appear when there is at least one active job matching that location in our database — no empty doorway pages."
+  );
+  const empty = t(
+    dict,
+    "Locations.empty",
+    "No location hubs with active jobs yet. Check back soon or"
+  );
+  const browseJobs = t(dict, "Locations.browseJobs", "browse all jobs");
+  const activeJobs = t(dict, "Locations.activeJobs", "active jobs");
+  const viewAll = t(dict, "Locations.viewAllJobs", "View all jobs →");
+  const browseCat = t(
+    dict,
+    "Locations.browseCategories",
+    "Browse categories →"
+  );
+
   const listLd = itemListJsonLd({
-    name: "Jobs by location",
-    description:
-      "Location hubs with at least one active job on Global Job Matching.",
+    name: title,
+    description: subtitle,
     path: "/locations",
     items: stats.map((loc) => ({
       name: loc.name,
@@ -43,20 +69,15 @@ export default async function LocationsIndexPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
           <MapPin className="w-10 h-10 text-cyan-400 mx-auto mb-3" />
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Jobs by location
-          </h1>
-          <p className="text-slate-400 text-sm max-w-xl mx-auto">
-            These pages only appear when there is at least one active job
-            matching that location in our database — no empty doorway pages.
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+          <p className="text-slate-400 text-sm max-w-xl mx-auto">{subtitle}</p>
         </div>
 
         {stats.length === 0 ? (
           <div className="glass rounded-2xl p-10 text-center border border-white/10 text-slate-400">
-            No location hubs with active jobs yet. Check back soon or{" "}
+            {empty}{" "}
             <Link href="/jobs" className="text-cyan-400 hover:underline">
-              browse all jobs
+              {browseJobs}
             </Link>
             .
           </div>
@@ -72,7 +93,7 @@ export default async function LocationsIndexPage() {
                     {loc.name}
                   </span>
                   <span className="block text-sm text-slate-400 mt-1">
-                    {loc.count} active job{loc.count === 1 ? "" : "s"}
+                    {loc.count} {activeJobs}
                   </span>
                 </Link>
               </li>
@@ -82,10 +103,10 @@ export default async function LocationsIndexPage() {
 
         <p className="text-center mt-10 flex flex-wrap justify-center gap-4 text-sm">
           <Link href="/jobs" className="text-cyan-400 hover:underline">
-            View all jobs →
+            {viewAll}
           </Link>
           <Link href="/categories" className="text-cyan-400 hover:underline">
-            Browse categories →
+            {browseCat}
           </Link>
         </p>
       </div>
