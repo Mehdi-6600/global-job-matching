@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { MapPin, Briefcase, Building2, Wifi } from "lucide-react";
+import { MapPin, Building2, Wifi } from "lucide-react";
 import { getLocationDef } from "@/lib/seo/locations";
 import {
   countJobsForLocation,
@@ -14,6 +15,9 @@ import { buildHreflangLanguages } from "@/lib/seo/hreflang";
 import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo/json-ld";
 import { locationBreadcrumbs } from "@/lib/seo/breadcrumbs";
 import { normalizeLocation } from "@/lib/location";
+import { LOCALE_COOKIE } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/resolve-locale";
+import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 
 export const revalidate = 300;
 
@@ -74,6 +78,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LocationJobsPage({ params }: Props) {
   const { slug } = await params;
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const dict = getDictionary(locale);
+
   const def = getLocationDef(slug);
   if (!def) notFound();
 
@@ -93,13 +101,23 @@ export default async function LocationJobsPage({ params }: Props) {
 
   const jobList = itemListJsonLd({
     name: `Jobs in ${def.name}`,
-    description: def.intro,
     path: `/locations/${def.slug}`,
     items: jobs.map((job) => ({
       name: job.title,
       path: `/jobs/${job.id}`,
     })),
   });
+
+  const homeLabel = t(dict, "Nav.home", "Home");
+  const locationsLabel = t(dict, "Locations.title", "Locations");
+  const activeJobs = t(dict, "Locations.activeJobs", "active jobs");
+  const remoteLabel = t(dict, "Common.remote", "Remote");
+  const moreLoc = t(dict, "Locations.browseCategories", "More locations");
+  const allJobs = t(dict, "Locations.viewAllJobs", "View all jobs →");
+  const allLocations = t(dict, "Locations.title", "All locations");
+  const categoriesLabel = t(dict, "Categories.title", "Categories");
+  const companiesLabel = t(dict, "Nav.companies", "Companies");
+  const jobsWord = t(dict, "Nav.jobs", "Jobs");
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
@@ -114,11 +132,11 @@ export default async function LocationJobsPage({ params }: Props) {
       <div className="max-w-5xl mx-auto">
         <nav className="text-xs text-slate-500 mb-6 flex flex-wrap gap-1">
           <Link href="/" className="hover:text-cyan-400">
-            Home
+            {homeLabel}
           </Link>
           <span>/</span>
           <Link href="/locations" className="hover:text-cyan-400">
-            Locations
+            {locationsLabel}
           </Link>
           <span>/</span>
           <span className="text-slate-300">{def.name}</span>
@@ -127,24 +145,23 @@ export default async function LocationJobsPage({ params }: Props) {
         <header className="mb-8">
           <div className="flex items-center gap-2 text-cyan-400 mb-2">
             <MapPin className="w-5 h-5" />
-            <span className="text-sm font-medium">Location hub</span>
+            <span className="text-sm font-medium">{locationsLabel}</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-3">
-            Jobs in {def.name}
+          <h1 className="text-3xl font-bold text-white mb-2">
+            {jobsWord} — {def.name}
           </h1>
-          <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-            {def.intro}
+          <p className="text-slate-400 text-sm mb-2">
+            {count} {activeJobs}
           </p>
-          <p className="text-slate-500 text-sm mt-3">
-            <Briefcase className="w-4 h-4 inline mr-1" />
-            {count} active listing{count === 1 ? "" : "s"} right now
-          </p>
+          {def.intro ? (
+            <p className="text-slate-500 text-sm max-w-2xl">{def.intro}</p>
+          ) : null}
         </header>
 
         <ul className="grid gap-4 sm:grid-cols-2">
           {jobs.map((job) => {
             const loc =
-              normalizeLocation(job.location) || job.location || "—";
+              normalizeLocation(job.location) || job.location || def.name;
             return (
               <li key={job.id}>
                 <Link
@@ -168,7 +185,7 @@ export default async function LocationJobsPage({ params }: Props) {
                     {job.remote && (
                       <span className="inline-flex items-center gap-1 text-emerald-400">
                         <Wifi className="w-3.5 h-3.5" />
-                        Remote
+                        {remoteLabel}
                       </span>
                     )}
                   </div>
@@ -180,9 +197,7 @@ export default async function LocationJobsPage({ params }: Props) {
 
         {related.length > 0 && (
           <section className="mt-12">
-            <h2 className="text-lg font-semibold text-white mb-4">
-              More locations
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-4">{moreLoc}</h2>
             <ul className="flex flex-wrap gap-2">
               {related.map((loc) => (
                 <li key={loc.slug}>
@@ -201,16 +216,16 @@ export default async function LocationJobsPage({ params }: Props) {
 
         <div className="mt-10 flex flex-wrap gap-4 text-sm">
           <Link href="/jobs" className="text-cyan-400 hover:underline">
-            All jobs
+            {allJobs}
           </Link>
           <Link href="/locations" className="text-cyan-400 hover:underline">
-            All locations
+            {allLocations}
           </Link>
           <Link href="/categories" className="text-cyan-400 hover:underline">
-            Categories
+            {categoriesLabel}
           </Link>
           <Link href="/companies" className="text-cyan-400 hover:underline">
-            Companies
+            {companiesLabel}
           </Link>
         </div>
       </div>
