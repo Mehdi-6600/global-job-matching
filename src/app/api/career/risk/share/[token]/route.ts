@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
+import { safeLimit } from "@/lib/safe-ratelimit";
+import { rateLimitedResponse } from "@/lib/http";
 
 export async function GET(
   req: NextRequest,
@@ -9,14 +11,14 @@ export async function GET(
 ) {
   try {
     const ip = getRequestIp(req);
-    const { success } = await ratelimit.limit(`career_share_${ip}`);
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    const limit = await safeLimit(ratelimit, `career_share_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
     const { token } = await params;
     const shareToken = (token || "").trim();
-    if (!shareToken || shareToken.length < 10) {
+    if (!shareToken || shareToken.length < 10 || shareToken.length > 128) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
