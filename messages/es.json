@@ -612,5 +612,23 @@
     "verifySubtitle": "Confirma tu correo para activar la cuenta",
     "verifyCta": "Verificar correo",
     "backToLogin": "Volver al inicio de sesión"
+  },
+  "Categories": {
+    "title": "Empleos por categoría",
+    "subtitle": "Solo se muestran categorías con ofertas activas.",
+    "empty": "Aún no hay categorías con ofertas activas.",
+    "browseJobs": "Ver todos los empleos",
+    "activeJobs": "ofertas activas",
+    "viewAllJobs": "Ver todos los empleos →",
+    "browseLocations": "Explorar ubicaciones →"
+  },
+  "Locations": {
+    "title": "Empleos por ubicación",
+    "subtitle": "Estas páginas solo aparecen cuando hay al menos una oferta activa para esa ubicación.",
+    "empty": "Aún no hay hubs de ubicación con ofertas. Vuelve pronto o",
+    "browseJobs": "explora todos los empleos",
+    "activeJobs": "ofertas activas",
+    "viewAllJobs": "Ver todos los empleos →",
+    "browseCategories": "Explorar categorías →"
   }
 }
