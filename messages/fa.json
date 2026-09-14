@@ -588,3 +588,47 @@
     "loginToApply": "برای اقدام وارد شوید"
   },
   "Companies": {
+    "title": "شرکت‌ها",
+    "subtitle": "کارفرمایان را در Global Job Matching کاوش کنید",
+    "searchPlaceholder": "جستجوی شرکت‌ها...",
+    "noCompanies": "هیچ شرکتی یافت نشد",
+    "jobs": "شغل‌ها",
+    "viewProfile": "مشاهده پروفایل",
+    "location": "مکان",
+    "website": "وبسایت",
+    "pending": "شرکت‌های در انتظار"
+  },
+  "AuthExtra": {
+    "forgotTitle": "فراموشی رمز عبور",
+    "forgotSubtitle": "ایمیل خود را وارد کنید تا لینک بازنشانی برای شما ارسال شود",
+    "sendReset": "ارسال لینک",
+    "sending": "در حال ارسال...",
+    "resetTitle": "بازنشانی رمز عبور",
+    "resetSubtitle": "رمز عبور جدید انتخاب کنید",
+    "newPassword": "رمز عبور جدید",
+    "confirmPassword": "تأیید رمز عبور",
+    "submitReset": "به‌روزرسانی رمز عبور",
+    "verifyTitle": "تأیید ایمیل",
+    "verifySubtitle": "برای فعال‌سازی حساب، ایمیل خود را تأیید کنید",
+    "verifyCta": "تأیید ایمیل",
+    "backToLogin": "بازگشت به ورود"
+  },
+  "Categories": {
+    "title": "مشاغل بر اساس دسته",
+    "subtitle": "فقط دسته‌هایی که در حال حاضر آگهی فعال دارند نمایش داده می‌شوند.",
+    "empty": "هنوز دسته‌ای با آگهی فعال وجود ندارد.",
+    "browseJobs": "مشاهده همه مشاغل",
+    "activeJobs": "آگهی فعال",
+    "viewAllJobs": "همه مشاغل →",
+    "browseLocations": "مرور مکان‌ها →"
+  },
+  "Locations": {
+    "title": "مشاغل بر اساس مکان",
+    "subtitle": "این صفحات فقط وقتی نمایش داده می‌شوند که حداقل یک آگهی فعال برای آن مکان در پایگاه‌داده باشد.",
+    "empty": "هنوز مکانی با آگهی فعال نیست. به‌زودی سر بزنید یا",
+    "browseJobs": "همه مشاغل را ببینید",
+    "activeJobs": "آگهی فعال",
+    "viewAllJobs": "همه مشاغل →",
+    "browseCategories": "مرور دسته‌ها →"
+  }
+}
