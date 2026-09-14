@@ -11,7 +11,10 @@ import {
   type PlanId,
 } from "@/lib/payment/plans";
 import { getRequestIp } from "@/lib/client-ip";
-import { isPlausibleTxHash } from "@/lib/payment/verify-crypto";
+import {
+  isPlausibleTxHash,
+  verifyTxOnChain,
+} from "@/lib/payment/verify-crypto";
 import { getEffectivePlan } from "@/lib/subscription";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
@@ -149,8 +152,28 @@ export async function POST(req: NextRequest) {
     });
     if (existingTx) {
       return NextResponse.json(
-        { error: "Transaction hash already used" },
+        {
+          error: "Transaction hash already used",
+          code: "DUPLICATE_TX",
+        },
         { status: 409 }
+      );
+    }
+
+    const chain = await verifyTxOnChain({
+      asset: cryptoType,
+      txHash,
+    });
+
+    if (chain.status === "failed") {
+      return NextResponse.json(
+        {
+          error:
+            "This transaction failed on-chain and cannot be used for payment.",
+          code: "TX_FAILED_ON_CHAIN",
+          chainVerification: chain,
+        },
+        { status: 400 }
       );
     }
 
@@ -176,6 +199,12 @@ export async function POST(req: NextRequest) {
         cryptoType: wallet.type,
         address: wallet.address,
         name: wallet.name,
+      },
+      chainVerification: {
+        status: chain.status,
+        found: chain.found,
+        note: chain.note,
+        source: chain.source ?? null,
       },
       transaction: {
         id: transaction.id,
