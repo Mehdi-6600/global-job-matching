@@ -10,6 +10,7 @@ import {
 } from "@/lib/subscription";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { securityLog } from "@/lib/security-log";
+import { verifyTxOnChain } from "@/lib/payment/verify-crypto";
 
 const patchSchema = z
   .object({
@@ -114,6 +115,41 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (status === "confirmed") {
+      let chainVerification: Awaited<
+        ReturnType<typeof verifyTxOnChain>
+      > | null = null;
+
+      if (tx.type === "crypto" && tx.txHash && tx.cryptoType) {
+        chainVerification = await verifyTxOnChain({
+          asset: tx.cryptoType,
+          txHash: tx.txHash,
+        });
+
+        if (chainVerification.status === "failed") {
+          return NextResponse.json(
+            {
+              error:
+                "On-chain verification failed: transaction reverted or failed. Cannot confirm.",
+              code: "TX_FAILED_ON_CHAIN",
+              chainVerification,
+            },
+            { status: 400 }
+          );
+        }
+
+        if (chainVerification.status === "not_found") {
+          return NextResponse.json(
+            {
+              error:
+                "Transaction not found on-chain yet. Wait for network propagation or reject.",
+              code: "TX_NOT_FOUND",
+              chainVerification,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       const billing = resolveBillingCycle(tx.billingCycle);
 
       try {
@@ -156,6 +192,8 @@ export async function PATCH(req: NextRequest) {
             transactionId: id,
             planId: tx.planId,
             billing,
+            chainStatus: chainVerification?.status ?? null,
+            chainNote: chainVerification?.note ?? null,
           },
         });
       } catch (e: unknown) {
@@ -168,34 +206,42 @@ export async function PATCH(req: NextRequest) {
         }
         throw e;
       }
-    } else {
-      const rejected = await db.transaction.updateMany({
-        where: { id, status: "pending" },
-        data: { status: "rejected" },
-      });
-      if (rejected.count !== 1) {
-        return NextResponse.json(
-          { error: "Already processed" },
-          { status: 409 }
-        );
-      }
-      await db.notification.create({
-        data: {
-          userId: tx.userId,
-          type: "alert",
-          title: "Payment not verified",
-          message:
-            "We could not verify your crypto payment. Contact support if you need help.",
-          actionUrl: "/contact",
-        },
-      });
 
-      securityLog("admin.payment_reject", {
-        actorId: authz.user.id,
-        targetId: tx.userId,
-        meta: { transactionId: id, planId: tx.planId },
+      const updated = await db.transaction.findUnique({ where: { id } });
+      return NextResponse.json({
+        success: true,
+        transaction: updated,
+        chainVerification,
       });
     }
+
+    const rejected = await db.transaction.updateMany({
+      where: { id, status: "pending" },
+      data: { status: "rejected" },
+    });
+    if (rejected.count !== 1) {
+      return NextResponse.json(
+        { error: "Already processed" },
+        { status: 409 }
+      );
+    }
+
+    await db.notification.create({
+      data: {
+        userId: tx.userId,
+        type: "alert",
+        title: "Payment not verified",
+        message:
+          "We could not verify your crypto payment. Contact support if you need help.",
+        actionUrl: "/contact",
+      },
+    });
+
+    securityLog("admin.payment_reject", {
+      actorId: authz.user.id,
+      targetId: tx.userId,
+      meta: { transactionId: id, planId: tx.planId },
+    });
 
     const updated = await db.transaction.findUnique({ where: { id } });
     return NextResponse.json({ success: true, transaction: updated });
