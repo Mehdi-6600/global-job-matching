@@ -612,5 +612,23 @@
     "verifySubtitle": "Confirm your email address to activate your account",
     "verifyCta": "Verify email",
     "backToLogin": "Back to login"
+  },
+  "Categories": {
+    "title": "Jobs by category",
+    "subtitle": "Only categories that currently have active jobs are shown.",
+    "empty": "No categories with active jobs yet.",
+    "browseJobs": "Browse all jobs",
+    "activeJobs": "active jobs",
+    "viewAllJobs": "View all jobs →",
+    "browseLocations": "Browse locations →"
+  },
+  "Locations": {
+    "title": "Jobs by location",
+    "subtitle": "These pages only appear when there is at least one active job matching that location in our database — no empty doorway pages.",
+    "empty": "No location hubs with active jobs yet. Check back soon or",
+    "browseJobs": "browse all jobs",
+    "activeJobs": "active jobs",
+    "viewAllJobs": "View all jobs →",
+    "browseCategories": "Browse categories →"
   }
 }
