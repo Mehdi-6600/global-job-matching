@@ -39,6 +39,26 @@ interface ApiJob {
   } | null;
 }
 
+interface MatchedJob {
+  id: string;
+  title: string;
+  location: string | null;
+  remote: boolean | null;
+  type: string | null;
+  salary: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  company: {
+    id: string;
+    name: string;
+    logo: string | null;
+  } | null;
+  match: {
+    score: number;
+    breakdown?: Record<string, number>;
+  };
+}
+
 interface ProfileData {
   name?: string;
   title?: string;
@@ -78,6 +98,11 @@ export default function DashboardPage() {
   const [savedCount, setSavedCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [totalJobs, setTotalJobs] = useState(0);
+  const [matchedJobs, setMatchedJobs] = useState<MatchedJob[]>([]);
+  const [matchProfileComplete, setMatchProfileComplete] = useState<
+    boolean | null
+  >(null);
+  const [matchMessage, setMatchMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -96,21 +121,40 @@ export default function DashboardPage() {
       fetch("/api/notifications")
         .then((r) => (r.ok ? r.json() : { unreadCount: 0 }))
         .catch(() => ({ unreadCount: 0 })),
+      fetch("/api/matching/jobs?limit=6&minScore=25")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
     ])
-      .then(([jobsData, profileData, appsData, savedData, notifData]) => {
-        if (jobsData.jobs) setJobs(jobsData.jobs);
-        if (jobsData.pagination?.total != null) {
-          setTotalJobs(jobsData.pagination.total);
-        } else if (jobsData.jobs) {
-          setTotalJobs(jobsData.jobs.length);
+      .then(
+        ([jobsData, profileData, appsData, savedData, notifData, matchData]) => {
+          if (jobsData.jobs) setJobs(jobsData.jobs);
+          if (jobsData.pagination?.total != null) {
+            setTotalJobs(jobsData.pagination.total);
+          } else if (jobsData.jobs) {
+            setTotalJobs(jobsData.jobs.length);
+          }
+          if (profileData.profile) setProfile(profileData.profile);
+          else if (profileData.user) setProfile(profileData.user);
+          setAppCount(appsData.count ?? appsData.applications?.length ?? 0);
+          setSavedCount(savedData.count ?? savedData.jobs?.length ?? 0);
+          setUnreadCount(notifData.unreadCount ?? 0);
+
+          if (matchData && Array.isArray(matchData.jobs)) {
+            setMatchedJobs(matchData.jobs as MatchedJob[]);
+            setMatchProfileComplete(
+              matchData.profileComplete === false ? false : true
+            );
+            setMatchMessage(
+              typeof matchData.message === "string" ? matchData.message : null
+            );
+          } else {
+            setMatchedJobs([]);
+            setMatchProfileComplete(null);
+            setMatchMessage(null);
+          }
+          setLoading(false);
         }
-        if (profileData.profile) setProfile(profileData.profile);
-        else if (profileData.user) setProfile(profileData.user);
-        setAppCount(appsData.count ?? appsData.applications?.length ?? 0);
-        setSavedCount(savedData.count ?? savedData.jobs?.length ?? 0);
-        setUnreadCount(notifData.unreadCount ?? 0);
-        setLoading(false);
-      })
+      )
       .catch(() => setLoading(false));
   }, []);
 
@@ -352,6 +396,108 @@ export default function DashboardPage() {
                   <p className="text-slate-400 text-sm">{stat.title}</p>
                 </Link>
               ))}
+            </div>
+
+            {/* Personalized match scores */}
+            <div className="glass rounded-2xl overflow-hidden border border-white/10">
+              <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                  <h2 className="text-xl font-bold text-white">
+                    {t("Dashboard.matchedJobs", "Best matches for you")}
+                  </h2>
+                </div>
+                <Link
+                  href="/jobs"
+                  className="text-cyan-400 text-sm font-medium hover:text-cyan-300 transition-colors flex items-center gap-1"
+                >
+                  {t("Dashboard.browseAll", "Browse All")}{" "}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              {matchProfileComplete === false ? (
+                <div className="p-8 text-center space-y-3">
+                  <p className="text-slate-300 text-sm">
+                    {matchMessage ||
+                      t(
+                        "Dashboard.matchNeedProfile",
+                        "Add skills or a bio in your profile to unlock personalized match scores."
+                      )}
+                  </p>
+                  <Link
+                    href="/profile"
+                    className="inline-flex text-sm font-medium text-cyan-400 hover:text-cyan-300"
+                  >
+                    {t("Dashboard.completeProfile", "Complete profile →")}
+                  </Link>
+                </div>
+              ) : matchedJobs.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+                  {matchedJobs.map((job) => {
+                    const score = Math.round(job.match?.score ?? 0);
+                    const scoreColor =
+                      score >= 75
+                        ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30"
+                        : score >= 50
+                          ? "text-cyan-300 bg-cyan-500/15 border-cyan-500/30"
+                          : "text-amber-300 bg-amber-500/15 border-amber-500/30";
+                    return (
+                      <Link
+                        key={job.id}
+                        href={`/jobs/${job.id}`}
+                        className="glass rounded-xl p-4 border border-transparent hover:border-cyan-500/30 transition-all group"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 shrink-0 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center text-cyan-300 text-xs font-bold">
+                              {getLogo(job.company?.name)}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-white font-medium text-sm group-hover:text-cyan-300 transition-colors line-clamp-2">
+                                {job.title}
+                              </h4>
+                              <p className="text-slate-400 text-xs flex items-center gap-1">
+                                <Building2 className="w-3 h-3 shrink-0" />
+                                <span className="truncate">
+                                  {job.company?.name ||
+                                    t("Dashboard.company", "Company")}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full border ${scoreColor}`}
+                            title={t("Dashboard.matchScore", "Match score")}
+                          >
+                            {score}%
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                          {job.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {job.location}
+                            </span>
+                          )}
+                          {job.remote && (
+                            <span className="text-emerald-400">
+                              {t("Dashboard.remote", "Remote")}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-400 text-sm">
+                  {t(
+                    "Dashboard.noMatches",
+                    "No strong matches yet. Update your skills or browse all jobs."
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="glass rounded-2xl overflow-hidden border border-white/10">
