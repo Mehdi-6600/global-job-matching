@@ -51,7 +51,6 @@ export function isAiUsageKind(kind: string): kind is UsageKind {
   return (AI_KINDS as string[]).includes(kind);
 }
 
-/** Serialize quota checks per user inside a transaction */
 export async function lockUserRow(tx: Tx, userId: string): Promise<void> {
   await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
 }
@@ -115,7 +114,6 @@ export async function assertAndReserveAiUsage(
   return { ok: true, used: used + 1, limit, usageEventId: event.id };
 }
 
-/** Release only the reservation created by this request (race-safe) */
 export async function releaseUsageEventById(
   tx: Tx,
   params: { userId: string; usageEventId: string }
@@ -128,7 +126,6 @@ export async function releaseUsageEventById(
   });
 }
 
-/** Read-only snapshot for UI / debugging */
 export async function getAiQuotaSnapshot(
   tx: Tx,
   params: { userId: string; plan: PlanId | string }
