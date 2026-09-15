@@ -33,6 +33,7 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     host: base,
-    sitemap: [`${base}/sitemaps.xml`, `${base}/sitemap.xml`],
+    // Next.js multi-sitemap: /sitemap.xml is the index (id=0,1,2,...)
+    sitemap: `${base}/sitemap.xml`,
   };
 }
