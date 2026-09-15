@@ -1,6 +1,9 @@
 /**
  * Single source of truth for plans + crypto wallets.
  * Feature copy MUST match src/lib/plan-limits.ts quotas.
+ *
+ * TON is intentionally NOT offered in production payment UI/API
+ * until a production-grade on-chain verifier exists.
  */
 
 export const PLAN_IDS = ["free", "pro", "business", "enterprise"] as const;
@@ -78,6 +81,7 @@ export const PLANS = [
   },
 ] as const;
 
+/** Assets allowed for production payments (TON excluded). */
 const WALLET_DEFS = [
   { type: "BTC", name: "Bitcoin", env: "CRYPTO_BTC_ADDRESS" },
   { type: "ETH", name: "Ethereum", env: "CRYPTO_ETH_ADDRESS" },
@@ -85,7 +89,6 @@ const WALLET_DEFS = [
   { type: "USDT", name: "USDT (TRC20)", env: "CRYPTO_USDT_ADDRESS" },
   { type: "USDC", name: "USDC", env: "CRYPTO_USDC_ADDRESS" },
   { type: "DOGE", name: "Dogecoin", env: "CRYPTO_DOGE_ADDRESS" },
-  { type: "TON", name: "TON", env: "CRYPTO_TON_ADDRESS" },
 ] as const;
 
 export type CryptoType = (typeof WALLET_DEFS)[number]["type"];
@@ -115,7 +118,9 @@ export function getCryptoWallets(): CryptoWallet[] {
 
 export function getCryptoWallet(type: string): CryptoWallet | null {
   const wallets = getCryptoWallets();
-  return wallets.find((w) => w.type === type) || null;
+  const upper = type.toUpperCase();
+  if (upper === "TON") return null;
+  return wallets.find((w) => w.type === upper) || null;
 }
 
 /** @deprecated use getCryptoWallets() */
