@@ -5,22 +5,36 @@ import Link from "next/link";
 import { verifyEmailToken } from "./actions";
 import { useLocale } from "@/components/locale-provider";
 
-export default function VerifyEmailHandler({ token }: { token?: string }) {
+export default function VerifyEmailHandler({
+  token,
+  email,
+}: {
+  token?: string;
+  email?: string;
+}) {
   const { t } = useLocale();
   const [status, setStatus] = useState<
     "loading" | "success" | "error" | "missing"
   >("loading");
 
   useEffect(() => {
-    if (!token) {
+    if (!token || !email) {
       setStatus("missing");
       return;
     }
 
-    verifyEmailToken(token).then((result) => {
-      setStatus(result.success ? "success" : "error");
+    let cancelled = false;
+
+    verifyEmailToken(token, email).then((result) => {
+      if (!cancelled) {
+        setStatus(result.success ? "success" : "error");
+      }
     });
-  }, [token]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, email]);
 
   if (status === "loading") {
     return (
