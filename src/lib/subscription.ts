@@ -7,14 +7,35 @@ export type BillingCycle = "monthly" | "yearly";
 
 type DbClient = Prisma.TransactionClient | PrismaClient;
 
+/**
+ * Add billing period without month-end overflow bugs
+ * (e.g. Jan 31 + 1 month → last day of Feb, not March overflow).
+ */
 export function computePlanExpiry(from: Date, billing: BillingCycle): Date {
-  const d = new Date(from);
+  const d = new Date(from.getTime());
   if (billing === "yearly") {
-    d.setFullYear(d.getFullYear() + 1);
-  } else {
-    d.setMonth(d.getMonth() + 1);
+    const y = d.getUTCFullYear() + 1;
+    const m = d.getUTCMonth();
+    const day = d.getUTCDate();
+    const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    d.setUTCFullYear(y, m, Math.min(day, lastDay));
+    return d;
   }
-  return d;
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + 1;
+  const day = d.getUTCDate();
+  const target = new Date(Date.UTC(y, m, 1));
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  target.setUTCHours(
+    d.getUTCHours(),
+    d.getUTCMinutes(),
+    d.getUTCSeconds(),
+    d.getUTCMilliseconds()
+  );
+  return target;
 }
 
 /** Pure — safe inside transactions */
@@ -101,8 +122,8 @@ export async function getEffectivePlan(
 }
 
 /**
- * Activate plan after admin confirms payment.
- * Pass `client` when inside db.$transaction so plan + payment stay atomic.
+ * Activate plan after payment is confirmed.
+ * Extension policy: max(currentExpiry, now) + duration when still active.
  */
 export async function activatePlanForUser(
   params: {
@@ -125,8 +146,19 @@ export async function activatePlanForUser(
     });
   }
 
-  const started = new Date();
-  const expires = computePlanExpiry(started, params.billingCycle);
+  const existing = await client.user.findUnique({
+    where: { id: params.userId },
+    select: { planExpiresAt: true, plan: true },
+  });
+
+  const now = new Date();
+  const base =
+    existing?.planExpiresAt && existing.planExpiresAt.getTime() > now.getTime()
+      ? existing.planExpiresAt
+      : now;
+
+  const started = now;
+  const expires = computePlanExpiry(base, params.billingCycle);
 
   return client.user.update({
     where: { id: params.userId },
