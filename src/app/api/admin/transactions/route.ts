@@ -115,50 +115,32 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (status === "confirmed") {
-      let chainVerification: Awaited<
-        ReturnType<typeof verifyTxOnChain>
-      > | null = null;
+      if (tx.type !== "crypto" || !tx.txHash || !tx.cryptoType) {
+        return NextResponse.json(
+          {
+            error: "Only crypto transactions with a tx hash can be confirmed",
+            code: "INVALID_TX_TYPE",
+          },
+          { status: 400 }
+        );
+      }
 
-      if (tx.type === "crypto") {
-        if (!tx.txHash || !tx.cryptoType) {
-          return NextResponse.json(
-            {
-              error: "Crypto payment is missing txHash or cryptoType",
-              code: "MISSING_CHAIN_DATA",
-            },
-            { status: 400 }
-          );
-        }
+      const chainVerification = await verifyTxOnChain({
+        asset: tx.cryptoType,
+        txHash: tx.txHash,
+      });
 
-        chainVerification = await verifyTxOnChain({
-          asset: tx.cryptoType,
-          txHash: tx.txHash,
-        });
-
-        // Fail-closed: only confirmed on-chain allows plan activation
-        if (chainVerification.status !== "confirmed") {
-          const codeMap: Record<string, string> = {
-            failed: "TX_FAILED_ON_CHAIN",
-            not_found: "TX_NOT_FOUND",
-            pending: "TX_PENDING",
-            verification_unavailable: "VERIFICATION_UNAVAILABLE",
-          };
-          return NextResponse.json(
-            {
-              error:
-                chainVerification.status === "verification_unavailable"
-                  ? "On-chain verification is unavailable. Configure RPC/explorers and retry; cannot activate plan without verification."
-                  : chainVerification.status === "pending"
-                    ? "Transaction is still pending on-chain. Wait for confirmations before confirming payment."
-                    : chainVerification.status === "not_found"
-                      ? "Transaction not found on-chain. Wait for propagation or reject."
-                      : "On-chain verification failed. Cannot confirm payment.",
-              code: codeMap[chainVerification.status] || "TX_NOT_VERIFIED",
-              chainVerification,
-            },
-            { status: 400 }
-          );
-        }
+      // Fail-closed: only confirmed on-chain status may activate a plan
+      if (chainVerification.status !== "confirmed") {
+        return NextResponse.json(
+          {
+            error:
+              "On-chain verification is not confirmed. Pending, failed, not found, or unavailable status cannot activate a plan.",
+            code: "TX_NOT_VERIFIED",
+            chainVerification,
+          },
+          { status: 400 }
+        );
       }
 
       const billing = resolveBillingCycle(tx.billingCycle);
@@ -173,6 +155,16 @@ export async function PATCH(req: NextRequest) {
           if (claimed.count !== 1) {
             throw Object.assign(new Error("ALREADY_PROCESSED"), {
               code: "ALREADY_PROCESSED",
+            });
+          }
+
+          if (tx.paymentIntentId) {
+            await prisma.paymentIntent.updateMany({
+              where: {
+                id: tx.paymentIntentId,
+                status: { in: ["pending", "submitted"] },
+              },
+              data: { status: "confirmed" },
             });
           }
 
@@ -203,8 +195,8 @@ export async function PATCH(req: NextRequest) {
             transactionId: id,
             planId: tx.planId,
             billing,
-            chainStatus: chainVerification?.status ?? null,
-            chainNote: chainVerification?.note ?? null,
+            chainStatus: chainVerification.status,
+            chainNote: chainVerification.note,
           },
         });
       } catch (e: unknown) {
@@ -235,6 +227,16 @@ export async function PATCH(req: NextRequest) {
         { error: "Already processed" },
         { status: 409 }
       );
+    }
+
+    if (tx.paymentIntentId) {
+      await db.paymentIntent.updateMany({
+        where: {
+          id: tx.paymentIntentId,
+          status: { in: ["pending", "submitted"] },
+        },
+        data: { status: "rejected" },
+      });
     }
 
     await db.notification.create({
