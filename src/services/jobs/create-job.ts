@@ -1,5 +1,4 @@
 import type { Job, Company } from "@prisma/client";
-import { db } from "@/lib/db";
 import { isAdminRole, isEmployerRole } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
 import { jobCreateSchema } from "@/lib/validation/job";
@@ -10,6 +9,7 @@ import {
 } from "@/services/jobs/active-job-limit";
 import { ensureDefaultCompany } from "@/services/companies/ensure-default-company";
 import { resolveEffectivePlan } from "@/lib/subscription";
+import { withTransaction } from "@/lib/db-transaction";
 
 export type CreateJobInput = z.infer<typeof jobCreateSchema>;
 
@@ -39,7 +39,8 @@ type Actor = {
 /**
  * Single entry point for creating jobs.
  * Plan limit uses effective plan (expired paid → free quota).
- * Default company + limit enforced inside one transaction with row lock.
+ * Default company + quota enforced inside one transaction with row lock,
+ * explicit timeout, and retry on lock/serialization conflicts.
  */
 export async function createJobForUser(
   actor: Actor,
@@ -66,7 +67,7 @@ export async function createJobForUser(
   const data = parsed.data;
 
   try {
-    const job = await db.$transaction(async (tx) => {
+    const job = await withTransaction(async (tx) => {
       await lockUserRow(tx, actor.id);
 
       const user = await tx.user.findUnique({
