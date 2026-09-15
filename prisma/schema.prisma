@@ -171,6 +171,7 @@ model Application {
   @@index([status])
 }
 
+/// Immutable quote before crypto is sent.
 model PaymentIntent {
   id                   String   @id @default(cuid())
   userId               String
@@ -183,6 +184,7 @@ model PaymentIntent {
   rateFetchedAt        DateTime
   expectedCryptoAmount Decimal  @db.Decimal(24, 12)
   recipientAddress     String
+  /// pending | submitted | confirmed | rejected | expired
   status               String   @default("pending")
   expiresAt            DateTime
   transactionId        String?  @unique
@@ -205,6 +207,7 @@ model Transaction {
   currency             String   @default("USD")
   cryptoType           String?
   txHash               String?  @unique
+  /// pending | confirmed | rejected
   status               String   @default("pending")
   type                 String   @default("crypto")
   billingCycle         String?  @default("monthly")
