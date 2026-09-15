@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const result = await consumeEmailVerificationToken(email, token);
+  // consumeEmailVerificationToken(rawToken, email) — order matters, was
+  // previously called as (email, token) which made verification always fail.
+  const result = await consumeEmailVerificationToken(token, email);
   if (!result.ok) {
     return NextResponse.json(
       { error: result.error },
@@ -105,7 +107,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await consumeEmailVerificationToken(email, token);
+    // Same fix as GET — correct argument order (rawToken, email).
+    const result = await consumeEmailVerificationToken(token, email);
     if (!result.ok) {
       return NextResponse.json(
         { error: result.error },
