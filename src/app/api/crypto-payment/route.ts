@@ -7,7 +7,6 @@ import {
   PLAN_PRICES,
   getCryptoWallets,
   getCryptoWallet,
-  getPlanAmount,
   type PlanId,
 } from "@/lib/payment/plans";
 import { getRequestIp } from "@/lib/client-ip";
@@ -17,19 +16,17 @@ import {
 } from "@/lib/payment/verify-crypto";
 import { getEffectivePlan } from "@/lib/subscription";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { loadValidIntentForUser } from "@/lib/payment/intent";
 
-/** TON intentionally excluded from production payment schema */
 const cryptoPaymentSchema = z
   .object({
-    planId: z.enum(["pro", "business", "enterprise"]),
+    paymentIntentId: z.string().min(1),
     txHash: z
       .string()
       .trim()
       .min(10)
       .max(200)
       .regex(/^[a-zA-Z0-9:_-]+$/, "Invalid transaction hash format"),
-    cryptoType: z.enum(["BTC", "ETH", "BNB", "USDT", "DOGE", "USDC"]),
-    billing: z.enum(["monthly", "yearly"]).optional().default("monthly"),
   })
   .strict();
 
@@ -54,6 +51,8 @@ export async function GET() {
       configured: wallets.length > 0,
       currentPlan: effective,
       prices: PLAN_PRICES,
+      requiresIntent: true,
+      intentPath: "/api/crypto-payment/intent",
     });
   } catch (error) {
     console.error("Crypto wallets GET error:", error);
@@ -81,23 +80,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    // Explicit reject if client still sends TON
-    if (
-      typeof body === "object" &&
-      body !== null &&
-      "cryptoType" in body &&
-      String((body as { cryptoType: unknown }).cryptoType).toUpperCase() ===
-        "TON"
-    ) {
-      return NextResponse.json(
-        {
-          error: "TON payments are temporarily disabled",
-          code: "ASSET_DISABLED",
-        },
-        { status: 400 }
-      );
-    }
-
     const parsed = cryptoPaymentSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -109,8 +91,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { planId, cryptoType, billing } = parsed.data;
     const txHash = normalizeTxHash(parsed.data.txHash);
+    const intentLoad = await loadValidIntentForUser(
+      parsed.data.paymentIntentId,
+      session.user.id
+    );
+    if (!intentLoad.ok) {
+      return NextResponse.json(
+        {
+          error: "Payment intent is invalid or expired. Create a new quote.",
+          code: intentLoad.code,
+        },
+        { status: 400 }
+      );
+    }
+
+    const intent = intentLoad.intent;
+    const cryptoType = intent.cryptoType;
 
     if (!isPlausibleTxHash(cryptoType, txHash)) {
       return NextResponse.json(
@@ -123,21 +120,15 @@ export async function POST(req: NextRequest) {
     }
 
     const wallet = getCryptoWallet(cryptoType);
-    if (!wallet) {
+    if (!wallet || wallet.address !== intent.recipientAddress) {
       return NextResponse.json(
         {
-          error: `Payments in ${cryptoType} are not configured.`,
-          code: "WALLET_NOT_CONFIGURED",
+          error: "Recipient wallet no longer matches intent. Create a new quote.",
+          code: "RECIPIENT_MISMATCH",
         },
         { status: 400 }
       );
     }
-
-    if (!(planId in PLAN_PRICES) || PLAN_PRICES[planId as PlanId] <= 0) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
-    }
-
-    const expectedAmount = getPlanAmount(planId as PlanId, billing);
 
     const pendingCount = await db.transaction.count({
       where: {
@@ -187,28 +178,61 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const transaction = await db.transaction.create({
-      data: {
-        userId: session.user.id,
-        planId,
-        amount: expectedAmount,
-        currency: "USD",
-        cryptoType,
-        txHash,
-        status: "pending",
-        type: "crypto",
-        billingCycle: billing,
-      },
+    const amountUsd = Number(intent.amountUsd);
+    const expectedCrypto = Number(intent.expectedCryptoAmount);
+    const rateUsd = Number(intent.rateUsd);
+
+    const transaction = await db.$transaction(async (prisma) => {
+      const claimed = await prisma.paymentIntent.updateMany({
+        where: {
+          id: intent.id,
+          userId: session.user.id,
+          status: "pending",
+        },
+        data: { status: "submitted" },
+      });
+      if (claimed.count !== 1) {
+        throw Object.assign(new Error("Intent already used"), {
+          code: "INTENT_ALREADY_USED",
+        });
+      }
+
+      const created = await prisma.transaction.create({
+        data: {
+          userId: session.user.id,
+          planId: intent.planId,
+          amount: amountUsd,
+          currency: "USD",
+          cryptoType,
+          txHash,
+          status: "pending",
+          type: "crypto",
+          billingCycle: intent.billingCycle,
+          paymentIntentId: intent.id,
+          recipientAddress: intent.recipientAddress,
+          expectedCryptoAmount: expectedCrypto,
+          rateUsd,
+        },
+      });
+
+      await prisma.paymentIntent.update({
+        where: { id: intent.id },
+        data: { transactionId: created.id },
+      });
+
+      return created;
     });
 
     return NextResponse.json({
       success: true,
       message:
-        "Transaction submitted for verification. Plan activates after admin confirmation.",
+        "Transaction submitted for verification. Plan activates after admin confirmation of on-chain payment.",
       payTo: {
         cryptoType: wallet.type,
         address: wallet.address,
         name: wallet.name,
+        expectedCryptoAmount: expectedCrypto,
+        amountUsd,
       },
       chainVerification: {
         status: chain.status,
@@ -220,14 +244,21 @@ export async function POST(req: NextRequest) {
         id: transaction.id,
         planId: transaction.planId,
         amount: transaction.amount,
-        billing,
         billingCycle: transaction.billingCycle,
         status: transaction.status,
         cryptoType: transaction.cryptoType,
+        paymentIntentId: intent.id,
         createdAt: transaction.createdAt,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error as { code?: string };
+    if (err.code === "INTENT_ALREADY_USED") {
+      return NextResponse.json(
+        { error: "This payment intent was already used", code: err.code },
+        { status: 409 }
+      );
+    }
     console.error("Crypto payment error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
