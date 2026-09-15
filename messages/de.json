@@ -541,7 +541,7 @@
     "s5Title": "5. Erlaubte Nutzung",
     "s5Body": "Missbrauchen Sie die Plattform nicht, posten Sie keine gefälschten Angebote und belästigen Sie andere Nutzer nicht.",
     "s6Title": "6. Haftungsbeschränkung",
-    "s6Body": "Im gesetzlich zulässigen Umfang wird die Plattform „wie besehen“ bereitgestellt, ohne Garantie für ständige Verfügbarkeit.",
+    "s6Body": "Im gesetzlich zulässigen Umfang wird die Plattform „wie besehen" bereitgestellt, ohne Garantie für ständige Verfügbarkeit.",
     "s7Title": "7. Kontakt",
     "s7Body": "Fragen zu diesen Bedingungen können Sie über die Kontaktseite senden."
   },
@@ -603,6 +603,8 @@
     "forgotSubtitle": "Geben Sie Ihre E-Mail ein und wir senden Ihnen einen Link",
     "sendReset": "Link senden",
     "sending": "Wird gesendet...",
+    "rememberPassword": "Erinnern Sie sich an Ihr Passwort?",
+    "forgotSuccess": "Falls ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen gesendet.",
     "resetTitle": "Passwort zurücksetzen",
     "resetSubtitle": "Wählen Sie ein neues Passwort",
     "newPassword": "Neues Passwort",
