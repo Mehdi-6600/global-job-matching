@@ -603,6 +603,8 @@
     "forgotSubtitle": "Entrez votre email et nous vous enverrons un lien",
     "sendReset": "Envoyer le lien",
     "sending": "Envoi en cours...",
+    "rememberPassword": "Vous vous souvenez de votre mot de passe ?",
+    "forgotSuccess": "Si un compte existe pour cet e-mail, un lien de réinitialisation a été envoyé.",
     "resetTitle": "Réinitialiser le mot de passe",
     "resetSubtitle": "Choisissez un nouveau mot de passe",
     "newPassword": "Nouveau mot de passe",
