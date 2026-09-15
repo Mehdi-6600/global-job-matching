@@ -1,9 +1,7 @@
 /**
  * Single source of truth for plans + crypto wallets.
  * Feature copy MUST match src/lib/plan-limits.ts quotas.
- *
- * TON is intentionally NOT offered in production payment UI/API
- * until a production-grade on-chain verifier exists.
+ * TON is listed only for future use — never returned by getCryptoWallets.
  */
 
 export const PLAN_IDS = ["free", "pro", "business", "enterprise"] as const;
@@ -81,7 +79,7 @@ export const PLANS = [
   },
 ] as const;
 
-/** Assets allowed for production payments (TON excluded). */
+/** TON intentionally excluded until a real on-chain verifier exists */
 const WALLET_DEFS = [
   { type: "BTC", name: "Bitcoin", env: "CRYPTO_BTC_ADDRESS" },
   { type: "ETH", name: "Ethereum", env: "CRYPTO_ETH_ADDRESS" },
@@ -117,9 +115,9 @@ export function getCryptoWallets(): CryptoWallet[] {
 }
 
 export function getCryptoWallet(type: string): CryptoWallet | null {
-  const wallets = getCryptoWallets();
   const upper = type.toUpperCase();
   if (upper === "TON") return null;
+  const wallets = getCryptoWallets();
   return wallets.find((w) => w.type === upper) || null;
 }
 
