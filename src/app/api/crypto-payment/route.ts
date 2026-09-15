@@ -7,7 +7,6 @@ import {
   PLAN_PRICES,
   getCryptoWallets,
   getCryptoWallet,
-  type PlanId,
 } from "@/lib/payment/plans";
 import { getRequestIp } from "@/lib/client-ip";
 import {
@@ -84,7 +83,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         {
-          error: "Invalid input",
+          error: "Invalid input — paymentIntentId and txHash required",
           details: parsed.error.flatten().fieldErrors,
         },
         { status: 400 }
@@ -161,16 +160,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const expectedCrypto = Number(intent.expectedCryptoAmount);
     const chain = await verifyTxOnChain({
       asset: cryptoType,
       txHash,
+      expectedRecipient: intent.recipientAddress,
+      expectedCryptoAmount: expectedCrypto,
     });
 
     if (chain.status === "failed") {
       return NextResponse.json(
         {
           error:
-            "This transaction failed on-chain and cannot be used for payment.",
+            "This transaction failed on-chain or does not match expected payment.",
           code: "TX_FAILED_ON_CHAIN",
           chainVerification: chain,
         },
@@ -179,7 +181,6 @@ export async function POST(req: NextRequest) {
     }
 
     const amountUsd = Number(intent.amountUsd);
-    const expectedCrypto = Number(intent.expectedCryptoAmount);
     const rateUsd = Number(intent.rateUsd);
 
     const transaction = await db.$transaction(async (prisma) => {
@@ -226,7 +227,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message:
-        "Transaction submitted for verification. Plan activates after admin confirmation of on-chain payment.",
+        "Transaction submitted. Plan activates after admin confirmation of on-chain payment.",
       payTo: {
         cryptoType: wallet.type,
         address: wallet.address,
@@ -239,6 +240,8 @@ export async function POST(req: NextRequest) {
         found: chain.found,
         note: chain.note,
         source: chain.source ?? null,
+        recipientMatched: chain.recipientMatched ?? null,
+        amountMatched: chain.amountMatched ?? null,
       },
       transaction: {
         id: transaction.id,
