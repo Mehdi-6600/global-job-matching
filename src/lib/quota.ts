@@ -10,7 +10,7 @@ export type UsageKind =
   | "saved_job"
   | "job_alert";
 
-/** All AI usage kinds share one monthly generation budget */
+/** All AI endpoints share one monthly generation budget */
 const AI_KINDS: UsageKind[] = ["ai_resume", "ai_career_risk"];
 
 export type QuotaOk = {
@@ -73,7 +73,7 @@ export async function assertAndReserveAiUsage(
   const limit = aiLimitForPlan(params.plan, params.kind);
   const periodKey = monthPeriodKey();
 
-  // Shared pool across all AI endpoints for the month
+  // Shared pool: resume + career risk + roadmap + migration all count together
   const used = await tx.usageEvent.count({
     where: {
       userId: params.userId,
