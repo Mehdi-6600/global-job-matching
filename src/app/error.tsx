@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 export default function Error({
   error,
@@ -11,6 +12,8 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useLocale();
+
   useEffect(() => {
     console.error("[app-error]", error?.digest || error?.message || error);
   }, [error]);
@@ -22,10 +25,13 @@ export default function Error({
           <AlertTriangle className="w-8 h-8 text-red-400" />
         </div>
         <h2 className="text-xl font-bold text-white mb-2">
-          Something went wrong
+          {t("Common.error", "Something went wrong")}
         </h2>
         <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-          An unexpected error occurred. You can try again or return home.
+          {t(
+            "Common.errorNetwork",
+            "An unexpected error occurred. You can try again or return home."
+          )}
         </p>
         {error?.digest ? (
           <p className="text-[11px] text-slate-500 mb-4 font-mono">
@@ -39,14 +45,14 @@ export default function Error({
             className="flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white w-full py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-95"
           >
             <RefreshCw className="w-4 h-4" />
-            Try again
+            {t("Common.retry", "Try again")}
           </button>
           <Link
             href="/"
             className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white w-full py-2.5 rounded-xl text-sm font-medium border border-white/10 transition-all"
           >
             <Home className="w-4 h-4" />
-            Go home
+            {t("Nav.home", "Go home")}
           </Link>
         </div>
       </div>
