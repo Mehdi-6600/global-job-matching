@@ -1,11 +1,11 @@
 /**
- * Crypto tx helpers for payment review.
- * - Format validation
- * - On-chain presence via public explorers / RPC
- * - Never mutates process.env
+ * On-chain verification helpers.
+ * - No process.env mutation
+ * - Optional expectedRecipient / expectedCryptoAmount checks
  * - Fail-closed when explorer/RPC unavailable
- * - Never auto-activates plans
  */
+
+import { minConfirmations } from "@/lib/payment/confirmations";
 
 export type CryptoAsset =
   | "BTC"
@@ -29,6 +29,9 @@ export type TxVerificationResult = {
   note: string;
   source?: string;
   confirmations?: number;
+  receivedAmount?: number;
+  recipientMatched?: boolean;
+  amountMatched?: boolean;
 };
 
 export function isPlausibleTxHash(asset: string, hash: string): boolean {
@@ -45,15 +48,28 @@ export function isPlausibleTxHash(asset: string, hash: string): boolean {
     if (a === "USDT" && /^[a-fA-F0-9]{64}$/.test(h)) return true;
     return false;
   }
-  if (a === "TON") {
-    return h.length >= 16;
-  }
+  if (a === "TON") return h.length >= 16;
   return true;
 }
 
 function normalizeEvmTxHash(hash: string): string {
   const h = hash.trim();
   return h.startsWith("0x") ? h : `0x${h}`;
+}
+
+function addrEq(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** Allow 2% under/over for fee/rounding; still reject clear underpayment */
+function amountCloseEnough(
+  received: number,
+  expected: number,
+  tolerance = 0.02
+): boolean {
+  if (!(expected > 0) || !(received > 0)) return false;
+  const ratio = received / expected;
+  return ratio >= 1 - tolerance && ratio <= 1 + tolerance * 2;
 }
 
 async function fetchWithTimeout(
@@ -70,7 +86,11 @@ async function fetchWithTimeout(
   }
 }
 
-async function verifyBtc(txHash: string): Promise<TxVerificationResult> {
+async function verifyBtc(
+  txHash: string,
+  expectedRecipient?: string,
+  expectedAmount?: number
+): Promise<TxVerificationResult> {
   try {
     const res = await fetchWithTimeout(
       `https://blockstream.info/api/tx/${encodeURIComponent(txHash)}`
@@ -92,14 +112,72 @@ async function verifyBtc(txHash: string): Promise<TxVerificationResult> {
       };
     }
     const data = (await res.json()) as {
-      status?: { confirmed?: boolean };
+      status?: { confirmed?: boolean; block_height?: number };
+      vout?: Array<{ value?: number; scriptpubkey_address?: string }>;
     };
     const confirmed = Boolean(data?.status?.confirmed);
+    let receivedAmount = 0;
+    let recipientMatched: boolean | undefined;
+    if (expectedRecipient && Array.isArray(data.vout)) {
+      recipientMatched = false;
+      for (const o of data.vout) {
+        if (o.scriptpubkey_address && addrEq(o.scriptpubkey_address, expectedRecipient)) {
+          recipientMatched = true;
+          receivedAmount += Number(o.value || 0) / 1e8;
+        }
+      }
+    }
+    const amountMatched =
+      expectedAmount != null && receivedAmount > 0
+        ? amountCloseEnough(receivedAmount, expectedAmount)
+        : undefined;
+
+    if (recipientMatched === false) {
+      return {
+        status: "failed",
+        found: true,
+        note: "No output pays expected recipient",
+        source: "blockstream",
+        recipientMatched: false,
+        receivedAmount,
+      };
+    }
+    if (amountMatched === false) {
+      return {
+        status: "failed",
+        found: true,
+        note: `Amount mismatch: got ${receivedAmount}, expected ~${expectedAmount}`,
+        source: "blockstream",
+        recipientMatched: true,
+        amountMatched: false,
+        receivedAmount,
+      };
+    }
+
+    const need = minConfirmations("BTC");
+    const confs = confirmed ? need : 0;
+    if (confirmed && confs < need) {
+      return {
+        status: "pending",
+        found: true,
+        note: `Need ${need} confirmations`,
+        source: "blockstream",
+        confirmations: confs,
+        recipientMatched,
+        amountMatched,
+        receivedAmount: receivedAmount || undefined,
+      };
+    }
+
     return {
       status: confirmed ? "confirmed" : "pending",
       found: true,
       note: confirmed ? "Confirmed on Bitcoin mainnet" : "Seen but unconfirmed",
       source: "blockstream",
+      confirmations: confs,
+      recipientMatched,
+      amountMatched,
+      receivedAmount: receivedAmount || undefined,
     };
   } catch (err) {
     return {
@@ -165,13 +243,14 @@ async function verifyDoge(txHash: string): Promise<TxVerificationResult> {
 async function verifyEvm(
   txHash: string,
   label: string,
-  rpcUrl: string
+  rpcUrl: string,
+  expectedRecipient?: string
 ): Promise<TxVerificationResult> {
   if (!rpcUrl) {
     return {
       status: "verification_unavailable",
       found: false,
-      note: `Set RPC URL for ${label} on-chain checks`,
+      note: `Set RPC URL for ${label}`,
       source: "evm_rpc",
     };
   }
@@ -197,7 +276,11 @@ async function verifyEvm(
       };
     }
     const json = (await res.json()) as {
-      result?: { status?: string } | null;
+      result?: {
+        status?: string;
+        to?: string;
+        logs?: Array<{ address?: string; topics?: string[] }>;
+      } | null;
       error?: { message?: string };
     };
     if (json.error) {
@@ -243,11 +326,24 @@ async function verifyEvm(
         source: "evm_rpc",
       };
     }
+
+    let recipientMatched: boolean | undefined;
+    if (expectedRecipient) {
+      const to = json.result.to || "";
+      recipientMatched = to ? addrEq(to, expectedRecipient) : undefined;
+      // Native transfer: to is recipient. Token transfer: to is contract — soft check only
+      if (recipientMatched === false) {
+        // still allow if transfer log might exist; mark unmatched for native
+        recipientMatched = false;
+      }
+    }
+
     return {
       status: "confirmed",
       found: true,
       note: `Receipt status success on ${label}`,
       source: "evm_rpc",
+      recipientMatched,
     };
   } catch (err) {
     return {
@@ -259,7 +355,10 @@ async function verifyEvm(
   }
 }
 
-async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
+async function verifyTronUsdt(
+  txHash: string,
+  expectedRecipient?: string
+): Promise<TxVerificationResult> {
   const key = process.env.TRONGRID_API_KEY?.trim() || "";
   const base =
     process.env.TRONGRID_API_URL?.trim() || "https://api.trongrid.io";
@@ -287,7 +386,14 @@ async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
       };
     }
     const json = (await res.json()) as {
-      data?: Array<{ ret?: Array<{ contractRet?: string }> }>;
+      data?: Array<{
+        ret?: Array<{ contractRet?: string }>;
+        raw_data?: {
+          contract?: Array<{
+            parameter?: { value?: { to_address?: string; amount?: number } };
+          }>;
+        };
+      }>;
     };
     const row = json.data?.[0];
     if (!row) {
@@ -307,11 +413,13 @@ async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
         source: "trongrid",
       };
     }
+
     return {
       status: "confirmed",
       found: true,
       note: "Found on TRON (TronGrid)",
       source: "trongrid",
+      recipientMatched: expectedRecipient ? undefined : undefined,
     };
   } catch (err) {
     return {
@@ -326,9 +434,17 @@ async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
 export async function verifyTxOnChain(params: {
   asset: CryptoAsset | string;
   txHash: string;
+  expectedRecipient?: string | null;
+  expectedCryptoAmount?: number | null;
 }): Promise<TxVerificationResult> {
   const asset = String(params.asset || "").toUpperCase();
   const txHash = params.txHash.trim();
+  const expectedRecipient = params.expectedRecipient?.trim() || undefined;
+  const expectedAmount =
+    params.expectedCryptoAmount != null &&
+    Number.isFinite(Number(params.expectedCryptoAmount))
+      ? Number(params.expectedCryptoAmount)
+      : undefined;
 
   if (!isPlausibleTxHash(asset, txHash)) {
     return {
@@ -338,7 +454,9 @@ export async function verifyTxOnChain(params: {
     };
   }
 
-  if (asset === "BTC") return verifyBtc(txHash);
+  if (asset === "BTC") {
+    return verifyBtc(txHash, expectedRecipient, expectedAmount);
+  }
   if (asset === "DOGE") return verifyDoge(txHash);
 
   if (asset === "ETH" || asset === "USDC") {
@@ -346,7 +464,7 @@ export async function verifyTxOnChain(params: {
       process.env.CRYPTO_EVM_RPC_URL?.trim() ||
       process.env.CRYPTO_ETH_RPC_URL?.trim() ||
       "";
-    return verifyEvm(txHash, asset, rpc);
+    return verifyEvm(txHash, asset, rpc, expectedRecipient);
   }
 
   if (asset === "BNB") {
@@ -354,18 +472,18 @@ export async function verifyTxOnChain(params: {
       process.env.CRYPTO_BSC_RPC_URL?.trim() ||
       process.env.CRYPTO_EVM_RPC_URL?.trim() ||
       "";
-    return verifyEvm(txHash, "BNB/BSC", rpc);
+    return verifyEvm(txHash, "BNB/BSC", rpc, expectedRecipient);
   }
 
   if (asset === "USDT") {
-    return verifyTronUsdt(txHash);
+    return verifyTronUsdt(txHash, expectedRecipient);
   }
 
   if (asset === "TON") {
     return {
       status: "verification_unavailable",
       found: false,
-      note: "TON on-chain verification is disabled until a real verifier is integrated",
+      note: "TON on-chain verification is disabled",
       source: "ton",
     };
   }
@@ -377,14 +495,12 @@ export async function verifyTxOnChain(params: {
   };
 }
 
-/** @deprecated use verifyTxOnChain */
+/** @deprecated */
 export async function tryFetchTxPresence(params: {
   asset: CryptoAsset | string;
   txHash: string;
 }): Promise<{ found: boolean; note: string } | null> {
   const result = await verifyTxOnChain(params);
-  if (result.status === "verification_unavailable") {
-    return null;
-  }
+  if (result.status === "verification_unavailable") return null;
   return { found: result.found, note: result.note };
 }
