@@ -1,237 +1,298 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
 import {
-  Menu,
-  X,
-  Loader2,
   Bell,
+  BriefcaseBusiness,
+  Building2,
   FileText,
-  ShieldAlert,
+  Loader2,
+  Menu,
+  UserRound,
+  X,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
+function BrandMark() {
+  return (
+    <span className="gjm-brand-mark" aria-hidden="true">
+      <span className="gjm-brand-ring" />
+      <span className="gjm-brand-node node-a" />
+      <span className="gjm-brand-node node-b" />
+      <span className="gjm-brand-node node-c" />
+    </span>
+  );
+}
+
 export default function Navbar() {
   const { data: session, status } = useSession();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const userRole = session?.user?.role as string | undefined;
   const { t } = useLocale();
+  const pathname = usePathname();
 
-  const isAdmin = userRole === ROLES.ADMIN || userRole === ROLES.OWNER;
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const userRole = session?.user?.role as string | undefined;
+
+  const isAdmin =
+    userRole === ROLES.ADMIN || userRole === ROLES.OWNER;
+
   const isEmployer = userRole === ROLES.EMPLOYER;
-  const isLoggedIn = status === "authenticated" && !!session;
+
+  const isLoggedIn =
+    status === "authenticated" && !!session;
 
   const links = [
-    { href: "/", label: t("Nav.home", "Home") },
     { href: "/jobs", label: t("Nav.jobs", "Jobs") },
-    { href: "/locations", label: t("Nav.locations", "Locations") },
-    { href: "/categories", label: t("Nav.categories", "Categories") },
-    { href: "/companies", label: t("Nav.companies", "Companies") },
+    {
+      href: "/companies",
+      label: t("Nav.companies", "Companies"),
+    },
+    {
+      href: "/locations",
+      label: t("Nav.locations", "Locations"),
+    },
+    {
+      href: "/categories",
+      label: t("Nav.categories", "Categories"),
+    },
     { href: "/blog", label: t("Nav.blog", "Blog") },
-    { href: "/pricing", label: t("Nav.pricing", "Pricing") },
+    {
+      href: "/pricing",
+      label: t("Nav.pricing", "Pricing"),
+    },
   ];
 
+  function closeMobile() {
+    setMobileOpen(false);
+  }
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-3">
-          <Link href="/" className="text-xl font-bold text-white shrink-0">
-            G<span className="text-sky-400">JM</span>
+    <header className="gjm-header">
+      <nav className="gjm-nav">
+        <div className="gjm-nav-inner">
+          <Link href="/" className="gjm-brand" onClick={closeMobile}>
+            <BrandMark />
+
+            <span className="gjm-brand-copy">
+              <strong>GLOBAL JOB</strong>
+              <span>MATCHING</span>
+            </span>
           </Link>
 
-          <div className="hidden lg:flex items-center gap-3 xl:gap-4 flex-1 justify-end">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-slate-300 hover:text-sky-400 transition-colors text-sm font-medium whitespace-nowrap"
-              >
-                {link.label}
-              </Link>
-            ))}
+          <div className="gjm-desktop-nav">
+            <div className="gjm-main-links">
+              {links.map((link) => {
+                const active =
+                  pathname === link.href ||
+                  pathname.startsWith(`${link.href}/`);
 
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="text-red-400 hover:text-red-300 text-sm font-medium"
-              >
-                {t("Nav.admin", "Admin")}
-              </Link>
-            )}
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`gjm-nav-link ${
+                      active ? "active" : ""
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
 
-            {isEmployer && (
-              <Link
-                href="/employer/dashboard"
-                className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
-              >
-                {t("Nav.employer", "Employer")}
-              </Link>
-            )}
+            <div className="gjm-nav-actions">
+              {isEmployer && (
+                <Link
+                  href="/employer/dashboard"
+                  className="gjm-nav-utility"
+                >
+                  <Building2 size={16} />
+                  {t("Nav.employer", "Employer")}
+                </Link>
+              )}
 
-            {isLoggedIn ? (
-              <>
+              {isAdmin && (
                 <Link
-                  href="/career-risk"
-                  className="text-slate-300 hover:text-sky-400 transition-colors"
-                  title={t("Nav.careerRisk", "AI Career Risk")}
+                  href="/admin"
+                  className="gjm-nav-admin"
                 >
-                  <ShieldAlert className="w-4 h-4" />
+                  Admin
                 </Link>
-                <Link
-                  href="/resume-builder"
-                  className="text-slate-300 hover:text-sky-400 transition-colors"
-                  title={t("Nav.resume", "Resume Builder")}
-                >
-                  <FileText className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/notifications"
-                  className="text-slate-300 hover:text-sky-400 transition-colors"
-                  title={t("Nav.notifications", "Notifications")}
-                >
-                  <Bell className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="text-slate-300 hover:text-sky-400 text-sm font-medium"
-                >
-                  {t("Nav.dashboard", "Dashboard")}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="text-slate-400 hover:text-white text-sm"
-                >
-                  {t("Nav.logout", "Logout")}
-                </button>
-              </>
-            ) : status === "loading" ? (
-              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-            ) : (
-              <>
-                <Link
-                  href="/register"
-                  className="text-slate-300 hover:text-sky-400 text-sm font-medium"
-                >
-                  {t("Nav.register", "Sign up")}
-                </Link>
-                <Link
-                  href="/login"
-                  className="bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  {t("Nav.login", "Login")}
-                </Link>
-              </>
-            )}
+              )}
 
-            <LanguageSwitcher />
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/notifications"
+                    className="gjm-nav-icon"
+                    aria-label={t(
+                      "Nav.notifications",
+                      "Notifications"
+                    )}
+                  >
+                    <Bell size={18} />
+                  </Link>
+
+                  <Link
+                    href="/dashboard"
+                    className="gjm-nav-profile"
+                  >
+                    <UserRound size={16} />
+                    {t("Nav.dashboard", "Dashboard")}
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="gjm-nav-signout"
+                    onClick={() =>
+                      signOut({ callbackUrl: "/" })
+                    }
+                  >
+                    {t("Nav.logout", "Logout")}
+                  </button>
+                </>
+              ) : status === "loading" ? (
+                <Loader2
+                  size={18}
+                  className="gjm-nav-loader"
+                />
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="gjm-nav-login"
+                  >
+                    {t("Nav.login", "Login")}
+                  </Link>
+
+                  <Link
+                    href="/register"
+                    className="gjm-nav-cta"
+                  >
+                    {t("Nav.register", "Get Started")}
+                    <BriefcaseBusiness size={15} />
+                  </Link>
+                </>
+              )}
+
+              <LanguageSwitcher />
+            </div>
           </div>
 
-          <div className="flex lg:hidden items-center gap-2">
+          <div className="gjm-mobile-actions">
             <LanguageSwitcher />
+
             <button
               type="button"
-              className="text-slate-300 p-2"
-              onClick={() => setMobileOpen((v) => !v)}
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              className="gjm-mobile-menu-button"
+              onClick={() =>
+                setMobileOpen((value) => !value)
+              }
+              aria-label={
+                mobileOpen
+                  ? "Close menu"
+                  : "Open menu"
+              }
+              aria-expanded={mobileOpen}
             >
-              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileOpen ? (
+                <X size={22} />
+              ) : (
+                <Menu size={22} />
+              )}
             </button>
           </div>
         </div>
 
         {mobileOpen && (
-          <div className="lg:hidden pb-4 border-t border-white/10 pt-3 space-y-1">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="block text-slate-300 py-2 text-sm"
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
+          <div className="gjm-mobile-menu">
+            <div className="gjm-mobile-links">
+              {links.map((link) => {
+                const active =
+                  pathname === link.href ||
+                  pathname.startsWith(`${link.href}/`);
 
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="block text-red-400 py-2 text-sm font-medium"
-                onClick={() => setMobileOpen(false)}
-              >
-                {t("Nav.admin", "Admin")}
-              </Link>
-            )}
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`gjm-mobile-link ${
+                      active ? "active" : ""
+                    }`}
+                    onClick={closeMobile}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
 
-            {isEmployer && (
-              <Link
-                href="/employer/dashboard"
-                className="block text-emerald-400 py-2 text-sm"
-                onClick={() => setMobileOpen(false)}
-              >
-                {t("Nav.employer", "Employer")}
-              </Link>
-            )}
+            <div className="gjm-mobile-account">
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="gjm-mobile-account-link"
+                    onClick={closeMobile}
+                  >
+                    <UserRound size={17} />
+                    {t("Nav.dashboard", "Dashboard")}
+                  </Link>
 
-            {isLoggedIn ? (
-              <>
-                <Link
-                  href="/career-risk"
-                  className="block text-slate-300 py-2 text-sm"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {t("Nav.careerRisk", "AI Career Risk")}
-                </Link>
-                <Link
-                  href="/resume-builder"
-                  className="block text-slate-300 py-2 text-sm"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {t("Nav.resume", "Resume Builder")}
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="block text-slate-300 py-2 text-sm"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {t("Nav.dashboard", "Dashboard")}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    signOut({ callbackUrl: "/" });
-                    setMobileOpen(false);
-                  }}
-                  className="block text-slate-400 py-2 text-sm w-full text-left"
-                >
-                  {t("Nav.logout", "Logout")}
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/register"
-                  className="block text-slate-300 py-2 text-sm"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {t("Nav.register", "Sign up")}
-                </Link>
-                <Link
-                  href="/login"
-                  className="block bg-sky-500 text-white text-center text-sm font-semibold px-4 py-2 rounded-lg mt-2"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {t("Nav.login", "Login")}
-                </Link>
-              </>
-            )}
+                  <Link
+                    href="/notifications"
+                    className="gjm-mobile-account-link"
+                    onClick={closeMobile}
+                  >
+                    <Bell size={17} />
+                    {t(
+                      "Nav.notifications",
+                      "Notifications"
+                    )}
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="gjm-mobile-signout"
+                    onClick={() => {
+                      closeMobile();
+                      signOut({ callbackUrl: "/" });
+                    }}
+                  >
+                    {t("Nav.logout", "Logout")}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="gjm-mobile-login"
+                    onClick={closeMobile}
+                  >
+                    {t("Nav.login", "Login")}
+                  </Link>
+
+                  <Link
+                    href="/register"
+                    className="gjm-mobile-cta"
+                    onClick={closeMobile}
+                  >
+                    {t(
+                      "Nav.register",
+                      "Get Started"
+                    )}
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         )}
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
 }
