@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowUpRight, Globe2 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
@@ -9,161 +10,171 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-white/10 bg-slate-950/80 py-10 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          <div>
-            <Link href="/" className="text-lg font-bold text-white">
-              G<span className="text-sky-400">JM</span>
+    <footer className="gjm-footer">
+      <div className="gjm-container">
+        <div className="gjm-footer-top">
+          <div className="gjm-footer-brand">
+            <Link href="/" className="gjm-footer-logo">
+              <span className="gjm-footer-symbol">
+                <Globe2 size={20} />
+              </span>
+
+              <span>
+                <strong>GLOBAL JOB</strong>
+                <span>MATCHING</span>
+              </span>
             </Link>
-            <p className="text-slate-500 text-sm mt-2 max-w-xs">
+
+            <p>
               {t(
                 "Footer.tagline",
-                "Global Job Matching — find roles and hire talent with a clear, modern job board."
+                "Global opportunities, connected careers and a clearer way to find your next move."
               )}
             </p>
-            <div className="mt-4">
+
+            <div className="gjm-footer-language">
               <LanguageSwitcher />
             </div>
           </div>
 
-          <div>
-            <h3 className="text-white text-sm font-semibold mb-3">
+          <div className="gjm-footer-column">
+            <h3>
               {t("Footer.explore", "Explore")}
             </h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/jobs"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.jobs", "Jobs")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/companies"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.companies", "Companies")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/locations"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Footer.locations", "Locations")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/categories"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Footer.categories", "Categories")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/pricing"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.pricing", "Pricing")}
-                </Link>
-              </li>
-            </ul>
+
+            <Link href="/jobs">
+              {t("Nav.jobs", "Jobs")}
+            </Link>
+
+            <Link href="/companies">
+              {t("Nav.companies", "Companies")}
+            </Link>
+
+            <Link href="/locations">
+              {t("Nav.locations", "Locations")}
+            </Link>
+
+            <Link href="/categories">
+              {t("Nav.categories", "Categories")}
+            </Link>
+
+            <Link href="/pricing">
+              {t("Nav.pricing", "Pricing")}
+            </Link>
           </div>
 
-          <div>
-            <h3 className="text-white text-sm font-semibold mb-3">
-              {t("Footer.tools", "Tools & content")}
+          <div className="gjm-footer-column">
+            <h3>
+              {t(
+                "Footer.tools",
+                "Platform"
+              )}
             </h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/career-risk"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.careerRisk", "AI Career Risk")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/resume-builder"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.resumeBuilder", "Resume builder")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/blog"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.blog", "Blog")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/search"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.search", "Search")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.about", "About")}
-                </Link>
-              </li>
-            </ul>
+
+            <Link href="/search">
+              {t("Nav.search", "Search")}
+            </Link>
+
+            <Link href="/saved-jobs">
+              {t(
+                "Footer.savedJobs",
+                "Saved Jobs"
+              )}
+            </Link>
+
+            <Link href="/my-applications">
+              {t(
+                "Footer.applications",
+                "Applications"
+              )}
+            </Link>
+
+            <Link href="/job-alerts">
+              {t(
+                "Footer.jobAlerts",
+                "Job Alerts"
+              )}
+            </Link>
+
+            <Link href="/blog">
+              {t("Nav.blog", "Blog")}
+            </Link>
           </div>
 
-          <div>
-            <h3 className="text-white text-sm font-semibold mb-3">
-              {t("Footer.legal", "Legal")}
+          <div className="gjm-footer-column">
+            <h3>
+              {t("Footer.forEmployers", "For Employers")}
             </h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/terms"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Footer.terms", "Terms of Service")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/privacy"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Footer.privacy", "Privacy Policy")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  className="text-slate-400 hover:text-sky-400 transition-colors"
-                >
-                  {t("Nav.contact", "Contact")}
-                </Link>
-              </li>
-            </ul>
+
+            <Link href="/employer/dashboard">
+              {t(
+                "Footer.employerDashboard",
+                "Employer Dashboard"
+              )}
+            </Link>
+
+            <Link href="/employer/post-job">
+              {t(
+                "Footer.postJob",
+                "Post a Job"
+              )}
+            </Link>
+
+            <Link href="/about">
+              {t("Nav.about", "About")}
+            </Link>
+
+            <Link href="/contact">
+              {t("Nav.contact", "Contact")}
+            </Link>
+
+            <Link href="/privacy">
+              {t(
+                "Footer.privacy",
+                "Privacy Policy"
+              )}
+            </Link>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <p className="text-slate-500 text-xs sm:text-sm">
+        <div className="gjm-footer-divider" />
+
+        <div className="gjm-footer-bottom">
+          <p>
             © {year} Global Job Matching.{" "}
-            {t("Footer.rights", "All rights reserved.")}
+            {t(
+              "Footer.rights",
+              "All rights reserved."
+            )}
           </p>
-          <p className="text-slate-600 text-xs">
-            {t("Footer.builtFor", "Built for seekers & employers")}
-          </p>
+
+          <div className="gjm-footer-bottom-links">
+            <Link href="/terms">
+              {t(
+                "Footer.terms",
+                "Terms of Service"
+              )}
+            </Link>
+
+            <Link href="/privacy">
+              {t(
+                "Footer.privacy",
+                "Privacy Policy"
+              )}
+            </Link>
+
+            <Link href="/contact">
+              {t("Nav.contact", "Contact")}
+            </Link>
+
+            <Link href="/jobs">
+              {t(
+                "Footer.browseJobs",
+                "Browse jobs"
+              )}
+              <ArrowUpRight size={13} />
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
