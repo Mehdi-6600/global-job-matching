@@ -1,589 +1,404 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import {
-  Check,
-  Zap,
-  Building2,
-  Crown,
-  Bitcoin,
-  Loader2,
-  Copy,
-  CheckCircle2,
-  ArrowLeft,
-} from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
-import { PLAN_PRICES, type PlanId } from "@/lib/payment/plans";
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "@/hooks/useLocale"; // فرض بر وجود این hook یا معادل resolveLocale
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Check, Copy, ExternalLink, AlertCircle, ShieldCheck } from "lucide-react";
+import { toast } from "sonner"; // یا سیستم toast خودت
 
-type Wallet = {
-  type: string;
-  name: string;
-  address: string;
-};
+// Types
+type PlanId = "basic" | "pro" | "premium";
+type CryptoAsset = "BTC" | "ETH" | "USDT" | "DOGE" | "TRX";
+
+interface Plan {
+  id: PlanId;
+  nameKey: string;
+  priceUsd: number;
+  features: string[];
+  popular?: boolean;
+}
+
+interface PaymentIntentResponse {
+  intentId: string;
+  asset: CryptoAsset;
+  expectedAmount: string; // exact crypto amount as string
+  expectedAmountUsd: number;
+  recipientAddress: string;
+  expiresAt: string;
+  network: string;
+  qrData?: string;
+}
+
+const PLANS: Plan[] = [
+  {
+    id: "basic",
+    nameKey: "pricing.plans.basic.name",
+    priceUsd: 9.99,
+    features: [
+      "pricing.plans.basic.f1",
+      "pricing.plans.basic.f2",
+      "pricing.plans.basic.f3",
+    ],
+  },
+  {
+    id: "pro",
+    nameKey: "pricing.plans.pro.name",
+    priceUsd: 29.99,
+    popular: true,
+    features: [
+      "pricing.plans.pro.f1",
+      "pricing.plans.pro.f2",
+      "pricing.plans.pro.f3",
+      "pricing.plans.pro.f4",
+    ],
+  },
+  {
+    id: "premium",
+    nameKey: "pricing.plans.premium.name",
+    priceUsd: 79.99,
+    features: [
+      "pricing.plans.premium.f1",
+      "pricing.plans.premium.f2",
+      "pricing.plans.premium.f3",
+      "pricing.plans.premium.f4",
+      "pricing.plans.premium.f5",
+    ],
+  },
+];
+
+const SUPPORTED_ASSETS: { asset: CryptoAsset; network: string; label: string }[] = [
+  { asset: "BTC", network: "Bitcoin", label: "Bitcoin (BTC)" },
+  { asset: "ETH", network: "Ethereum", label: "Ethereum (ETH)" },
+  { asset: "USDT", network: "Ethereum (ERC-20)", label: "USDT (ERC-20)" },
+  { asset: "DOGE", network: "Dogecoin", label: "Dogecoin (DOGE)" },
+  { asset: "TRX", network: "TRON", label: "TRON (TRX)" },
+];
 
 export default function PricingPage() {
-  const { t } = useLocale();
-  const [yearly, setYearly] = useState(false);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { t, locale } = useLocale(); // فرض: hookی که t() و locale می‌دهد
+
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [walletsLoading, setWalletsLoading] = useState(false);
-  const [cryptoType, setCryptoType] = useState<string>("USDT");
+  const [selectedAsset, setSelectedAsset] = useState<CryptoAsset>("USDT");
+  const [intent, setIntent] = useState<PaymentIntentResponse | null>(null);
+  const [loadingIntent, setLoadingIntent] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [txHash, setTxHash] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
+  // Redirect if not logged in
   useEffect(() => {
-    let cancelled = false;
-    setWalletsLoading(true);
-    fetch("/api/crypto-payment")
-      .then(async (res) => {
-        if (res.status === 401) {
-          // Not logged in — wallets still may be empty until login
-          return { wallets: [] as Wallet[] };
-        }
-        return res.json().catch(() => ({ wallets: [] }));
-      })
-      .then((data) => {
-        if (cancelled) return;
-        const list: Wallet[] = Array.isArray(data.wallets) ? data.wallets : [];
-        setWallets(list);
-        if (list.length > 0) {
-          const prefer =
-            list.find((w) => w.type === "USDT") ||
-            list.find((w) => w.type === "USDC") ||
-            list[0];
-          setCryptoType(prefer.type);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setWallets([]);
-      })
-      .finally(() => {
-        if (!cancelled) setWalletsLoading(false);
+    if (status === "unauthenticated") {
+      router.push(`/login?callbackUrl=/pricing`);
+    }
+  }, [status, router]);
+
+  const createIntent = useCallback(async (planId: PlanId, asset: CryptoAsset) => {
+    if (!session?.user?.id) return;
+
+    setLoadingIntent(true);
+    setError(null);
+    setIntent(null);
+    setTxHash("");
+
+    try {
+      const res = await fetch("/api/crypto-payment/intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, asset }),
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
-  const plans = useMemo(
-    () => [
-      {
-        id: "free" as const,
-        name: t("Pricing.planFree", "Free"),
-        price: {
-          monthly: PLAN_PRICES.free,
-          yearly: PLAN_PRICES.free,
-        },
-        description: t(
-          "Pricing.planFreeDesc",
-          "For job seekers getting started"
-        ),
-        features: [
-          t("Pricing.freeF1", "Up to 20 applications / month"),
-          t("Pricing.freeF2", "Basic profile"),
-          t("Pricing.freeF3", "Email alerts"),
-          t("Pricing.freeF4", "Standard support"),
-        ],
-        icon: <Zap className="w-6 h-6" />,
-        color: "from-slate-500 to-slate-400",
-        popular: false,
-      },
-      {
-        id: "pro" as const,
-        name: t("Pricing.planPro", "Pro"),
-        price: {
-          monthly: PLAN_PRICES.pro,
-          yearly: PLAN_PRICES.pro * 10,
-        },
-        description: t("Pricing.planProDesc", "For active job seekers"),
-        features: [
-          t("Pricing.proF1", "Up to 500 applications / month"),
-          t("Pricing.proF2", "AI resume tools"),
-          t("Pricing.proF3", "Career risk insights"),
-          t("Pricing.proF4", "Priority alerts"),
-          t("Pricing.proF5", "Chat support"),
-        ],
-        icon: <Zap className="w-6 h-6" />,
-        color: "from-indigo-500 to-purple-500",
-        popular: true,
-      },
-      {
-        id: "business" as const,
-        name: t("Pricing.planBusiness", "Business"),
-        price: {
-          monthly: PLAN_PRICES.business,
-          yearly: PLAN_PRICES.business * 10,
-        },
-        description: t(
-          "Pricing.planBusinessDesc",
-          "For employers & recruiters"
-        ),
-        features: [
-          t("Pricing.bizF1", "Up to 10 active job posts"),
-          t("Pricing.bizF2", "Applicant tracking"),
-          t("Pricing.bizF3", "Company profile"),
-          t("Pricing.bizF4", "Email outreach tools"),
-          t("Pricing.bizF5", "Priority support"),
-        ],
-        icon: <Building2 className="w-6 h-6" />,
-        color: "from-cyan-500 to-blue-500",
-        popular: false,
-      },
-      {
-        id: "enterprise" as const,
-        name: t("Pricing.planEnterprise", "Enterprise"),
-        price: {
-          monthly: PLAN_PRICES.enterprise,
-          yearly: PLAN_PRICES.enterprise * 10,
-        },
-        description: t(
-          "Pricing.planEnterpriseDesc",
-          "For larger hiring needs"
-        ),
-        features: [
-          t("Pricing.entF1", "Up to 50 active job posts"),
-          t("Pricing.entF2", "Advanced analytics"),
-          t("Pricing.entF3", "Custom limits"),
-          t("Pricing.entF4", "Dedicated support"),
-        ],
-        icon: <Crown className="w-6 h-6" />,
-        color: "from-amber-500 to-orange-500",
-        popular: false,
-      },
-    ],
-    [t]
-  );
+      const data = await res.json();
 
-  const faqs = useMemo(
-    () => [
-      {
-        q: t("Pricing.faq1q", "How does crypto payment work?"),
-        a: t(
-          "Pricing.faq1a",
-          "Send the plan amount to the wallet, paste the transaction hash, and we verify within 24 hours."
-        ),
-      },
-      {
-        q: t("Pricing.faq2q", "When is my plan activated?"),
-        a: t(
-          "Pricing.faq2a",
-          "After an admin confirms your transaction (usually within 24 hours)."
-        ),
-      },
-      {
-        q: t("Pricing.faq3q", "Can I switch plans later?"),
-        a: t(
-          "Pricing.faq3a",
-          "Yes. Submit a new payment for the plan you want; support can adjust your account."
-        ),
-      },
-      {
-        q: t("Pricing.faq4q", "Which cryptocurrencies are accepted?"),
-        a: t(
-          "Pricing.faq4a",
-          "BTC, ETH, BNB, USDT, USDC, DOGE, and TON (only those configured by the site)."
-        ),
-      },
-    ],
-    [t]
-  );
+      if (!res.ok) {
+        throw new Error(data.error || t("pricing.errors.createIntentFailed"));
+      }
 
-  const plan = plans.find((p) => p.id === selectedPlan) || null;
-  const selectedWallet =
-    wallets.find((w) => w.type === cryptoType) || wallets[0] || null;
+      setIntent(data);
+      setSelectedPlan(planId);
+      toast.success(t("pricing.toast.intentCreated"));
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || t("pricing.errors.generic"));
+      toast.error(err.message || t("pricing.errors.generic"));
+    } finally {
+      setLoadingIntent(false);
+    }
+  }, [session, t]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!plan || plan.id === "free" || !txHash.trim()) return;
-    if (!selectedWallet) {
-      setError(
-        t(
-          "Pricing.noWallet",
-          "No payment wallet configured. Please try again later."
-        )
-      );
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(t("pricing.toast.copied"));
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error(t("pricing.errors.copyFailed"));
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!intent || !txHash.trim()) {
+      toast.error(t("pricing.errors.txHashRequired"));
       return;
     }
 
-    setSubmitting(true);
-    setError("");
+    setVerifying(true);
+    setError(null);
+
     try {
       const res = await fetch("/api/crypto-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId: plan.id,
+          intentId: intent.intentId,
           txHash: txHash.trim(),
-          cryptoType: selectedWallet.type,
-          billing: yearly ? "yearly" : "monthly",
         }),
       });
 
-      if (res.status === 401) {
-        window.location.href = "/login?callbackUrl=/pricing";
-        return;
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || t("pricing.errors.verifyFailed"));
       }
 
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setSubmitted(true);
-        setTxHash("");
-        return;
-      }
-
-      const code = typeof data.code === "string" ? data.code : "";
-      const serverMsg =
-        typeof data.error === "string" ? data.error : "";
-
-      if (code === "TX_FAILED_ON_CHAIN") {
-        setError(
-          t(
-            "Pricing.errTxFailed",
-            "This transaction failed on the blockchain and cannot be used."
-          )
-        );
-      } else if (code === "INVALID_TX_HASH") {
-        setError(
-          t(
-            "Pricing.errInvalidHash",
-            "Transaction hash format is invalid for the selected crypto."
-          )
-        );
-      } else if (code === "DUPLICATE_TX") {
-        setError(
-          t(
-            "Pricing.errDuplicateTx",
-            "This transaction hash was already submitted."
-          )
-        );
-      } else if (code === "WALLET_NOT_CONFIGURED") {
-        setError(
-          t(
-            "Pricing.errWallet",
-            "That cryptocurrency is not configured for payments."
-          )
-        );
-      } else if (code === "TOO_MANY_PENDING") {
-        setError(
-          t(
-            "Pricing.errTooManyPending",
-            "You already have too many pending payments. Wait for admin review."
-          )
-        );
-      } else if (res.status === 429) {
-        setError(
-          t(
-            "Auth.errors.rateLimited",
-            "Too many requests. Please wait a minute and try again."
-          )
-        );
-      } else {
-        setError(
-          serverMsg ||
-            t("Pricing.errSubmit", "Submission failed. Please try again.")
-        );
-      }
-    } catch {
-      setError(t("Common.errorNetwork", "Network error. Please try again."));
+      toast.success(t("pricing.toast.paymentSuccess"));
+      // Redirect to dashboard or success page
+      router.push("/dashboard?payment=success");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || t("pricing.errors.verifyFailed"));
+      toast.error(err.message || t("pricing.errors.verifyFailed"));
     } finally {
-      setSubmitting(false);
+      setVerifying(false);
     }
+  };
+
+  const cancelIntent = () => {
+    setIntent(null);
+    setSelectedPlan(null);
+    setTxHash("");
+    setError(null);
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
-  function copyAddress() {
-    if (!selectedWallet) return;
-    navigator.clipboard.writeText(selectedWallet.address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+  // ─── Intent Active View ───────────────────────────────────────
+  if (intent) {
+    const expiresIn = Math.max(0, Math.floor((new Date(intent.expiresAt).getTime() - Date.now()) / 1000 / 60));
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">
-            {t("Pricing.title", "Simple, Transparent Pricing")}
-          </h1>
-          <p className="text-slate-400 max-w-2xl mx-auto mb-8">
-            {t(
-              "Pricing.subtitle",
-              "Choose the plan that fits your needs. Upgrade or downgrade anytime."
-            )}
-          </p>
+    return (
+      <div className="container mx-auto max-w-2xl px-4 py-12">
+        <Card className="border-2 border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">{t("pricing.intent.title")}</CardTitle>
+              <Badge variant="secondary" className="gap-1">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {t("pricing.intent.secure")}
+              </Badge>
+            </div>
+            <CardDescription>
+              {t("pricing.intent.subtitle", { plan: t(`pricing.plans.${selectedPlan}.name`) })}
+            </CardDescription>
+          </CardHeader>
 
-          <div className="inline-flex items-center gap-2 p-1 rounded-xl bg-white/5 border border-white/10">
-            <button
-              type="button"
-              onClick={() => setYearly(false)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                !yearly
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              {t("Pricing.monthly", "Monthly")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setYearly(true)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                yearly
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              {t("Pricing.yearly", "Yearly")}
-              <span className="ml-1 text-xs text-emerald-400">
-                {t("Pricing.save", "save ~2 mo")}
-              </span>
-            </button>
-          </div>
-        </div>
+          <CardContent className="space-y-6">
+            {/* Amount Box */}
+            <div className="rounded-lg bg-muted/50 p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-1">{t("pricing.intent.sendExactly")}</p>
+              <p className="text-3xl font-bold tracking-tight">
+                {intent.expectedAmount} <span className="text-lg font-medium">{intent.asset}</span>
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                ≈ ${intent.expectedAmountUsd.toFixed(2)} USD
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {t("pricing.intent.network")}: {intent.network}
+              </p>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {plans.map((p) => {
-            const price = yearly ? p.price.yearly : p.price.monthly;
-            return (
-              <div
-                key={p.id}
-                className={`glass rounded-2xl p-6 border transition-all relative ${
-                  p.popular
-                    ? "border-indigo-500/40 shadow-lg shadow-indigo-500/10"
-                    : "border-white/10"
-                }`}
-              >
-                {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-medium">
-                    {t("Pricing.popular", "Popular")}
-                  </span>
-                )}
-                <div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${p.color} flex items-center justify-center text-white mb-4`}
+            {/* Recipient Address */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("pricing.intent.recipient")}</label>
+              <div className="flex gap-2">
+                <code className="flex-1 rounded-md bg-muted px-3 py-2 text-sm break-all font-mono">
+                  {intent.recipientAddress}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleCopy(intent.recipientAddress)}
+                  title={t("pricing.intent.copy")}
                 >
-                  {p.icon}
-                </div>
-                <h3 className="text-xl font-bold text-white mb-1">{p.name}</h3>
-                <p className="text-slate-400 text-sm mb-4">{p.description}</p>
-                <p className="text-3xl font-bold text-white mb-1">
-                  ${price}
-                  {p.id !== "free" && (
-                    <span className="text-sm font-normal text-slate-400">
-                      /{yearly ? "yr" : "mo"}
-                    </span>
-                  )}
-                </p>
-                <ul className="space-y-2 my-6">
-                  {p.features.map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-2 text-sm text-slate-300"
-                    >
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                {p.id === "free" ? (
-                  <Link
-                    href="/register"
-                    className="block w-full text-center py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white/10 transition-all"
-                  >
-                    {t("Pricing.getStarted", "Get started")}
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedPlan(p.id);
-                      setSubmitted(false);
-                      setError("");
-                    }}
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-all"
-                  >
-                    {t("Pricing.choose", "Choose plan")}
-                  </button>
-                )}
+                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
               </div>
-            );
-          })}
-        </div>
+            </div>
 
-        {selectedPlan && selectedPlan !== "free" && plan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-            <div className="glass w-full max-w-md rounded-2xl p-6 border border-white/10 relative max-h-[90vh] overflow-y-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedPlan(null);
-                  setSubmitted(false);
-                  setError("");
-                }}
-                className="absolute top-4 left-4 text-slate-400 hover:text-white"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
+            {/* Expiry Warning */}
+            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>
+                {expiresIn > 0
+                  ? t("pricing.intent.expiresIn", { minutes: expiresIn })
+                  : t("pricing.intent.expired")}
+              </span>
+            </div>
 
-              {!submitted ? (
+            {/* TX Hash Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("pricing.intent.txHashLabel")}</label>
+              <input
+                type="text"
+                value={txHash}
+                onChange={(e) => setTxHash(e.target.value)}
+                placeholder={t("pricing.intent.txHashPlaceholder")}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                disabled={verifying}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("pricing.intent.txHashHelp")}
+              </p>
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+          </CardContent>
+
+          <CardFooter className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              className="w-full sm:flex-1"
+              onClick={handleVerify}
+              disabled={verifying || !txHash.trim() || expiresIn <= 0}
+            >
+              {verifying ? (
                 <>
-                  <h2 className="text-xl font-bold text-white text-center mb-1">
-                    {t("Pricing.payTitle", "Pay with crypto")}
-                  </h2>
-                  <p className="text-slate-400 text-sm text-center mb-6">
-                    {plan.name} — $
-                    {yearly ? plan.price.yearly : plan.price.monthly}
-                    /{yearly ? "year" : "month"}
-                  </p>
-
-                  {walletsLoading ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-                    </div>
-                  ) : wallets.length === 0 ? (
-                    <div className="text-center py-6 space-y-3">
-                      <p className="text-amber-300 text-sm">
-                        {t(
-                          "Pricing.walletsEmpty",
-                          "Crypto wallets are not configured yet. Please log in or contact support."
-                        )}
-                      </p>
-                      <Link
-                        href="/login?callbackUrl=/pricing"
-                        className="inline-flex text-cyan-400 text-sm hover:underline"
-                      >
-                        {t("Pricing.login", "Sign in")}
-                      </Link>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1.5">
-                          {t("Pricing.asset", "Asset")}
-                        </label>
-                        <select
-                          value={cryptoType}
-                          onChange={(e) => setCryptoType(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
-                        >
-                          {wallets.map((w) => (
-                            <option key={w.type} value={w.type}>
-                              {w.name} ({w.type})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {selectedWallet && (
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1.5">
-                            {t("Pricing.sendTo", "Send payment to")}
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 text-xs text-cyan-300 break-all bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-                              {selectedWallet.address}
-                            </code>
-                            <button
-                              type="button"
-                              onClick={copyAddress}
-                              className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white"
-                              title="Copy"
-                            >
-                              {copied ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1.5">
-                          {t("Pricing.txHash", "Transaction hash")}
-                        </label>
-                        <input
-                          type="text"
-                          value={txHash}
-                          onChange={(e) => setTxHash(e.target.value)}
-                          placeholder="Paste TX hash after sending"
-                          className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
-                          required
-                        />
-                      </div>
-
-                      {error && (
-                        <p className="text-sm text-red-400">{error}</p>
-                      )}
-
-                      <button
-                        type="submit"
-                        disabled={submitting || !txHash.trim()}
-                        className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
-                      >
-                        {submitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            {t("Pricing.submitting", "Submitting...")}
-                          </>
-                        ) : (
-                          <>
-                            <Bitcoin className="w-4 h-4" />
-                            {t("Pricing.confirm", "Confirm Payment")}
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  )}
-
-                  <p className="text-xs text-slate-500 mt-4 text-center">
-                    {t(
-                      "Pricing.verifyNote",
-                      "Your account will be upgraded after manual verification (usually within 24h)"
-                    )}
-                  </p>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("pricing.intent.verifying")}
                 </>
               ) : (
-                <div className="text-center space-y-4">
-                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-                  <h3 className="text-lg font-medium text-white">
-                    {t("Pricing.submittedTitle", "Payment Submitted!")}
-                  </h3>
-                  <p className="text-slate-400 text-sm">
-                    {t(
-                      "Pricing.submittedDesc",
-                      "We will verify your transaction and upgrade your account soon."
-                    )}
-                  </p>
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-all"
-                  >
-                    {t("Pricing.goDashboard", "Go to Dashboard")}
-                  </Link>
-                </div>
+                t("pricing.intent.verifyButton")
               )}
-            </div>
-          </div>
-        )}
+            </Button>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={cancelIntent} disabled={verifying}>
+              {t("pricing.intent.cancel")}
+            </Button>
+          </CardFooter>
+        </Card>
 
-        <div className="mt-16 glass rounded-2xl p-8 border border-white/10">
-          <h2 className="text-xl font-bold text-white mb-6 text-center">
-            {t("Pricing.faqTitle", "Frequently Asked Questions")}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {faqs.map((item) => (
-              <div key={item.q}>
-                <h3 className="font-medium text-white mb-1">{item.q}</h3>
-                <p className="text-slate-400 text-sm">{item.a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          {t("pricing.intent.securityNote")}
+        </p>
       </div>
+    );
+  }
+
+  // ─── Plans Selection View ─────────────────────────────────────
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <div className="mx-auto max-w-3xl text-center mb-12">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          {t("pricing.title")}
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          {t("pricing.subtitle")}
+        </p>
+      </div>
+
+      {/* Asset Selector */}
+      <div className="mb-8 flex flex-wrap justify-center gap-2">
+        {SUPPORTED_ASSETS.map((item) => (
+          <Button
+            key={item.asset}
+            variant={selectedAsset === item.asset ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedAsset(item.asset)}
+          >
+            {item.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* Plans Grid */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {PLANS.map((plan) => (
+          <Card
+            key={plan.id}
+            className={`relative flex flex-col ${
+              plan.popular ? "border-primary shadow-lg scale-[1.02]" : ""
+            }`}
+          >
+            {plan.popular && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <Badge className="px-3 py-1">{t("pricing.popular")}</Badge>
+              </div>
+            )}
+
+            <CardHeader>
+              <CardTitle>{t(plan.nameKey)}</CardTitle>
+              <div className="mt-2">
+                <span className="text-3xl font-bold">${plan.priceUsd}</span>
+                <span className="text-muted-foreground"> / {t("pricing.period")}</span>
+              </div>
+            </CardHeader>
+
+            <CardContent className="flex-1">
+              <ul className="space-y-2 text-sm">
+                {plan.features.map((fKey) => (
+                  <li key={fKey} className="flex items-start gap-2">
+                    <Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
+                    <span>{t(fKey)}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+
+            <CardFooter>
+              <Button
+                className="w-full"
+                variant={plan.popular ? "default" : "outline"}
+                disabled={loadingIntent}
+                onClick={() => createIntent(plan.id, selectedAsset)}
+              >
+                {loadingIntent && selectedPlan === plan.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("pricing.creating")}
+                  </>
+                ) : (
+                  t("pricing.selectPlan")
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+
+      {error && !intent && (
+        <div className="mt-8 mx-auto max-w-md rounded-md bg-destructive/10 p-4 text-center text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      <p className="mt-12 text-center text-sm text-muted-foreground">
+        {t("pricing.footerNote")}
+      </p>
     </div>
   );
 }
