@@ -17,9 +17,6 @@ export type ApiErrorBody = {
   used?: number;
 };
 
-/**
- * Consistent API error JSON: { error, code?, details?, limit?, used? }
- */
 export function apiError(
   status: number,
   error: string,
@@ -42,9 +39,7 @@ export function validationError(
   });
 }
 
-export function unauthorizedError(
-  message = "Unauthorized"
-): NextResponse {
+export function unauthorizedError(message = "Unauthorized"): NextResponse {
   return apiError(401, message, { code: "UNAUTHORIZED" });
 }
 
@@ -56,9 +51,6 @@ export function notFoundError(message = "Not found"): NextResponse {
   return apiError(404, message, { code: "NOT_FOUND" });
 }
 
-/**
- * Consistent 429 response with standard rate-limit headers.
- */
 export function rateLimitedResponse(
   info?: Partial<RateLimitInfo>,
   message = "Too many requests. Please try again later."
@@ -98,9 +90,6 @@ export function rateLimitedResponse(
   );
 }
 
-/**
- * Safe JSON body parse — returns null on invalid JSON.
- */
 export async function readJsonBody(req: Request): Promise<unknown | null> {
   try {
     return await req.json();
