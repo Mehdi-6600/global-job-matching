@@ -1,21 +1,5 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import {
-  absoluteUrl,
-  getSiteUrl,
-  truncateMeta,
-  stripHtml,
-  jsonLdScript,
-  DEFAULT_OG_PATH,
-} from "@/lib/seo/core";
-import { buildHreflangLanguages } from "@/lib/seo/hreflang";
-import {
-  companyOrganizationJsonLd,
-  breadcrumbJsonLd,
-} from "@/lib/seo/json-ld";
-import { companyBreadcrumbs } from "@/lib/seo/breadcrumbs";
-import { normalizeLocation } from "@/lib/location";
-import { InternalHubLinks } from "@/components/seo/internal-hub-links";
 
 type Props = {
   children: React.ReactNode;
@@ -24,124 +8,67 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const base = getSiteUrl();
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.AUTH_URL ||
+    "https://global-job-matching.vercel.app";
 
   try {
     const company = await db.company.findUnique({
       where: { id },
       select: {
-        id: true,
         name: true,
         description: true,
         location: true,
         logo: true,
-        website: true,
         status: true,
       },
     });
 
-    if (!company || company.status !== "active") {
+    if (!company || (company.status && company.status !== "active")) {
       return {
-        title: "Company not found",
+        title: "Company not found | Global Job Matching",
         robots: { index: false, follow: false },
       };
     }
 
-    const loc = normalizeLocation(company.location) || company.location || "";
-    const title = company.name;
-    const desc = truncateMeta(
-      stripHtml(company.description) ||
-        `${company.name}${loc ? ` — ${loc}` : ""} on Global Job Matching.`,
-      160
-    );
-    const path = `/companies/${company.id}`;
-    const url = absoluteUrl(path);
-    const ogImage =
-      company.logo && /^https:\/\//i.test(company.logo)
-        ? company.logo
-        : absoluteUrl(DEFAULT_OG_PATH);
+    const title = `${company.name} | Global Job Matching`;
+    const description = (
+      company.description ||
+      `${company.name}${company.location ? ` — ${company.location}` : ""} — hiring on Global Job Matching`
+    )
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 160);
+
+    const url = `${base.replace(/\/$/, "")}/companies/${id}`;
 
     return {
       title,
-      description: desc,
-      alternates: {
-        canonical: url,
-        languages: buildHreflangLanguages(path),
-      },
+      description,
+      alternates: { canonical: url },
       openGraph: {
-        type: "profile",
-        url,
         title,
-        description: desc,
+        description,
+        url,
+        type: "website",
         siteName: "Global Job Matching",
-        images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+        images: company.logo ? [{ url: company.logo }] : undefined,
       },
       twitter: {
-        card: "summary_large_image",
+        card: "summary",
         title,
-        description: desc,
-        images: [ogImage],
+        description,
       },
-      robots: { index: true, follow: true },
     };
-  } catch (error) {
-    console.error("Company generateMetadata failed:", error);
+  } catch {
     return {
-      title: "Company",
-      description: "Company profile on Global Job Matching.",
-      metadataBase: new URL(base),
+      title: "Company | Global Job Matching",
+      description: "Company profile on Global Job Matching",
     };
   }
 }
 
-export default async function CompanyIdLayout({ children, params }: Props) {
-  const { id } = await params;
-  const scripts: string[] = [];
-
-  try {
-    const company = await db.company.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        location: true,
-        website: true,
-        logo: true,
-        status: true,
-      },
-    });
-
-    if (company && company.status === "active") {
-      scripts.push(jsonLdScript(companyOrganizationJsonLd(company)));
-      scripts.push(
-        jsonLdScript(
-          breadcrumbJsonLd(
-            companyBreadcrumbs({
-              companyName: company.name,
-              companyId: company.id,
-            })
-          )
-        )
-      );
-    }
-  } catch (error) {
-    console.error("Company JSON-LD load failed:", error);
-  }
-
-  return (
-    <>
-      {scripts.map((html, i) => (
-        <script
-          key={i}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      ))}
-      {children}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
-        <InternalHubLinks />
-      </div>
-    </>
-  );
+export default function CompanyDetailLayout({ children }: Props) {
+  return children;
 }
