@@ -603,6 +603,8 @@
     "forgotSubtitle": "Introduce tu correo y te enviaremos un enlace",
     "sendReset": "Enviar enlace",
     "sending": "Enviando...",
+    "rememberPassword": "¿Recuerdas tu contraseña?",
+    "forgotSuccess": "Si existe una cuenta con ese correo electrónico, se ha enviado un enlace de restablecimiento.",
     "resetTitle": "Restablecer contraseña",
     "resetSubtitle": "Elige una nueva contraseña",
     "newPassword": "Nueva contraseña",
