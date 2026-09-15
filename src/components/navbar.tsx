@@ -7,7 +7,6 @@ import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
 import {
   Bell,
-  BriefcaseBusiness,
   Building2,
   FileText,
   LayoutDashboard,
@@ -119,7 +118,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop */}
           <div className="gjm-desktop-nav">
             <div className="gjm-main-links">
               {publicLinks
@@ -188,7 +186,6 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Mobile toggle */}
           <div className="gjm-mobile-actions">
             <LanguageSwitcher />
             <button
@@ -203,7 +200,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Hamburger panel — full list */}
         {mobileOpen && (
           <div className="gjm-mobile-menu">
             <div className="gjm-mobile-links">
