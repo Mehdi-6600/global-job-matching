@@ -131,7 +131,8 @@ function heuristicMigration(
       countries: [
         {
           country: "ألمانيا / الاتحاد الأوروبي",
-          demand: "طلب مستمر على المهارات التقنية والرعاية الصحية والبناء وتقنية المعلومات.",
+          demand:
+            "طلب مستمر على المهارات التقنية والرعاية الصحية والبناء وتقنية المعلومات.",
           pathway: "تأشيرة المهارات / البطاقة الزرقاء الأوروبية.",
           notes: "غالباً يتطلب اعترافاً بالمؤهلات ومستوى لغة أدنى.",
         },
@@ -168,8 +169,7 @@ function heuristicMigration(
       countries: [
         {
           country: "Deutschland / EU",
-          demand:
-            "Stetige Nachfrage nach Technik, Gesundheit, Bau und IT.",
+          demand: "Stetige Nachfrage nach Technik, Gesundheit, Bau und IT.",
           pathway: "Fachkräfteeinwanderung / EU Blue Card.",
           notes: "Anerkennung der Abschlüsse und Sprachniveau oft nötig.",
         },
@@ -218,13 +218,15 @@ function heuristicMigration(
         },
         {
           country: "Australia",
-          demand: "Listas de ocupaciones cualificadas influyen en la elegibilidad.",
+          demand:
+            "Listas de ocupaciones cualificadas influyen en la elegibilidad.",
           pathway: "Visado independiente o patrocinio del empleador.",
           notes: "Evaluación de skills y puntos por edad/idioma importan.",
         },
         {
           country: "Golfo (EAU, Catar, Omán)",
-          demand: "Demanda por proyectos en construcción, energía, salud y tech.",
+          demand:
+            "Demanda por proyectos en construcción, energía, salud y tech.",
           pathway: "Visado de trabajo patrocinado por empleador.",
           notes: "Suele ser por contrato; residencia permanente limitada.",
         },
@@ -245,7 +247,8 @@ function heuristicMigration(
           country: "Allemagne / UE",
           demand: "Demande stable en technique, santé, construction et IT.",
           pathway: "Visa travailleurs qualifiés / Carte bleue UE.",
-          notes: "Reconnaissance des diplômes et niveau de langue souvent requis.",
+          notes:
+            "Reconnaissance des diplômes et niveau de langue souvent requis.",
         },
         {
           country: "Canada",
@@ -255,13 +258,15 @@ function heuristicMigration(
         },
         {
           country: "Australie",
-          demand: "Listes d'occupations qualifiées influencent l'éligibilité.",
+          demand:
+            "Listes d'occupations qualifiées influencent l'éligibilité.",
           pathway: "Visa indépendant ou parrainage employeur.",
           notes: "Évaluation des skills et points âge/langue comptent.",
         },
         {
           country: "Golfe (EAU, Qatar, Oman)",
-          demand: "Demande liée aux projets (construction, énergie, santé, tech).",
+          demand:
+            "Demande liée aux projets (construction, énergie, santé, tech).",
           pathway: "Visa de travail parrainé par l'employeur.",
           notes: "Souvent contractuel ; résidence permanente limitée.",
         },
@@ -502,7 +507,7 @@ export async function POST(req: NextRequest) {
         return assertAndReserveAiUsage(tx, {
           userId: user.id,
           plan,
-          kind: "ai_career_risk",
+          kind: "ai_migration",
           meta: `migration:${jobTitle}`,
         });
       });
