@@ -6,7 +6,6 @@
  * - NEVER mutates process.env
  * - NEVER auto-activates a plan
  * - Fail-closed when explorer/RPC is unavailable
- * - TON always verification_unavailable (disabled in production flow)
  */
 
 export type CryptoAsset =
@@ -346,10 +345,6 @@ function bscRpc(): string {
   );
 }
 
-/**
- * Attempt on-chain presence check. Never invents success.
- * Amount / recipient matching remains admin + future enrichment.
- */
 export async function verifyTxOnChain(params: {
   asset: CryptoAsset | string;
   txHash: string;
