@@ -125,18 +125,46 @@ export async function PATCH(req: NextRequest) {
         );
       }
 
+      const expectedCrypto =
+        tx.expectedCryptoAmount != null
+          ? Number(tx.expectedCryptoAmount)
+          : null;
+
       const chainVerification = await verifyTxOnChain({
         asset: tx.cryptoType,
         txHash: tx.txHash,
+        expectedRecipient: tx.recipientAddress,
+        expectedCryptoAmount: expectedCrypto,
       });
 
-      // Fail-closed: only confirmed on-chain status may activate a plan
       if (chainVerification.status !== "confirmed") {
         return NextResponse.json(
           {
             error:
-              "On-chain verification is not confirmed. Pending, failed, not found, or unavailable status cannot activate a plan.",
+              "On-chain verification is not confirmed. Cannot activate plan.",
             code: "TX_NOT_VERIFIED",
+            chainVerification,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (chainVerification.recipientMatched === false) {
+        return NextResponse.json(
+          {
+            error: "On-chain recipient does not match expected wallet.",
+            code: "RECIPIENT_MISMATCH",
+            chainVerification,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (chainVerification.amountMatched === false) {
+        return NextResponse.json(
+          {
+            error: "On-chain amount does not match expected payment.",
+            code: "AMOUNT_MISMATCH",
             chainVerification,
           },
           { status: 400 }
