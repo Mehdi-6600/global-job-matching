@@ -6,12 +6,19 @@ type Tx = Prisma.TransactionClient | PrismaClient;
 export type UsageKind =
   | "ai_resume"
   | "ai_career_risk"
+  | "ai_roadmap"
+  | "ai_migration"
   | "application"
   | "saved_job"
   | "job_alert";
 
-/** All AI endpoints share one monthly generation budget */
-const AI_KINDS: UsageKind[] = ["ai_resume", "ai_career_risk"];
+/** Shared monthly pool for every AI generation endpoint */
+const AI_KINDS: UsageKind[] = [
+  "ai_resume",
+  "ai_career_risk",
+  "ai_roadmap",
+  "ai_migration",
+];
 
 export type QuotaOk = {
   ok: true;
@@ -40,14 +47,17 @@ export function monthPeriodKey(d = new Date()): string {
   return `${y}-${m}`;
 }
 
+export function isAiUsageKind(kind: string): kind is UsageKind {
+  return (AI_KINDS as string[]).includes(kind);
+}
+
 /** Serialize quota checks per user inside a transaction */
 export async function lockUserRow(tx: Tx, userId: string): Promise<void> {
   await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
 }
 
-function aiLimitForPlan(plan: PlanId | string, _kind: UsageKind): number {
-  const limits = getPlanLimits(plan);
-  return limits.maxAiGenerationsPerMonth;
+function aiLimitForPlan(plan: PlanId | string): number {
+  return getPlanLimits(plan).maxAiGenerationsPerMonth;
 }
 
 export async function assertAndReserveAiUsage(
@@ -59,7 +69,7 @@ export async function assertAndReserveAiUsage(
     meta?: string | null;
   }
 ): Promise<QuotaOk | QuotaDenied> {
-  if (!AI_KINDS.includes(params.kind)) {
+  if (!isAiUsageKind(params.kind)) {
     return {
       ok: false,
       status: 400,
@@ -70,10 +80,9 @@ export async function assertAndReserveAiUsage(
     };
   }
 
-  const limit = aiLimitForPlan(params.plan, params.kind);
+  const limit = aiLimitForPlan(params.plan);
   const periodKey = monthPeriodKey();
 
-  // Shared pool: resume + career risk + roadmap + migration all count together
   const used = await tx.usageEvent.count({
     where: {
       userId: params.userId,
@@ -117,6 +126,23 @@ export async function releaseUsageEventById(
       userId: params.userId,
     },
   });
+}
+
+/** Read-only snapshot for UI / debugging */
+export async function getAiQuotaSnapshot(
+  tx: Tx,
+  params: { userId: string; plan: PlanId | string }
+): Promise<{ used: number; limit: number; periodKey: string }> {
+  const limit = aiLimitForPlan(params.plan);
+  const periodKey = monthPeriodKey();
+  const used = await tx.usageEvent.count({
+    where: {
+      userId: params.userId,
+      kind: { in: AI_KINDS },
+      periodKey,
+    },
+  });
+  return { used, limit, periodKey };
 }
 
 export async function assertApplicationQuota(
