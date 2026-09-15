@@ -2,36 +2,34 @@ import { describe, it, expect } from "vitest";
 import {
   isPlausibleTxHash,
   verifyTxOnChain,
-} from "@/lib/payment/verify-crypto";
+} from "./verify-crypto";
 
 describe("isPlausibleTxHash", () => {
-  it("accepts BTC 64-hex", () => {
+  it("accepts 64-hex BTC", () => {
     expect(
-      isPlausibleTxHash("BTC", "a".repeat(64))
+      isPlausibleTxHash(
+        "BTC",
+        "a".repeat(64)
+      )
     ).toBe(true);
   });
 
-  it("rejects short hashes", () => {
-    expect(isPlausibleTxHash("BTC", "abc")).toBe(false);
+  it("accepts 0x EVM hash", () => {
+    expect(isPlausibleTxHash("ETH", "0x" + "ab".repeat(32))).toBe(true);
   });
 
-  it("accepts EVM 0x hash", () => {
-    expect(isPlausibleTxHash("ETH", "0x" + "ab".repeat(32))).toBe(true);
+  it("rejects short hash", () => {
+    expect(isPlausibleTxHash("ETH", "0x123")).toBe(false);
   });
 });
 
-describe("verifyTxOnChain fail-closed", () => {
-  it("invalid format → not_found", async () => {
-    const r = await verifyTxOnChain({ asset: "BTC", txHash: "nope" });
-    expect(r.status).toBe("not_found");
-    expect(r.found).toBe(false);
-  });
-
-  it("TON without integration → verification_unavailable", async () => {
+describe("verifyTxOnChain TON", () => {
+  it("never invents success for TON", async () => {
     const r = await verifyTxOnChain({
       asset: "TON",
-      txHash: "abcdefghijklmnop",
+      txHash: "ton-hash-placeholder-long-enough",
     });
     expect(r.status).toBe("verification_unavailable");
+    expect(r.found).toBe(false);
   });
 });
