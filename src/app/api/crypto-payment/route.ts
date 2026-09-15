@@ -18,6 +18,7 @@ import {
 import { getEffectivePlan } from "@/lib/subscription";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
+/** TON intentionally excluded from production payment schema */
 const cryptoPaymentSchema = z
   .object({
     planId: z.enum(["pro", "business", "enterprise"]),
@@ -27,15 +28,7 @@ const cryptoPaymentSchema = z
       .min(10)
       .max(200)
       .regex(/^[a-zA-Z0-9:_-]+$/, "Invalid transaction hash format"),
-    cryptoType: z.enum([
-      "BTC",
-      "ETH",
-      "BNB",
-      "USDT",
-      "DOGE",
-      "TON",
-      "USDC",
-    ]),
+    cryptoType: z.enum(["BTC", "ETH", "BNB", "USDT", "DOGE", "USDC"]),
     billing: z.enum(["monthly", "yearly"]).optional().default("monthly"),
   })
   .strict();
@@ -86,6 +79,23 @@ export async function POST(req: NextRequest) {
     const body = await readJsonBody(req);
     if (body === null) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    // Explicit reject if client still sends TON
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "cryptoType" in body &&
+      String((body as { cryptoType: unknown }).cryptoType).toUpperCase() ===
+        "TON"
+    ) {
+      return NextResponse.json(
+        {
+          error: "TON payments are temporarily disabled",
+          code: "ASSET_DISABLED",
+        },
+        { status: 400 }
+      );
     }
 
     const parsed = cryptoPaymentSchema.safeParse(body);
