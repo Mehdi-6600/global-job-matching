@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { ZodError } from "zod";
 
 export type RateLimitInfo = {
   success: boolean;
@@ -7,6 +8,53 @@ export type RateLimitInfo = {
   /** Epoch milliseconds when the window resets */
   reset?: number;
 };
+
+export type ApiErrorBody = {
+  error: string;
+  code?: string;
+  details?: unknown;
+  limit?: number;
+  used?: number;
+};
+
+/**
+ * Consistent API error JSON: { error, code?, details?, limit?, used? }
+ */
+export function apiError(
+  status: number,
+  error: string,
+  extras?: Omit<ApiErrorBody, "error">
+): NextResponse {
+  const body: ApiErrorBody = { error, ...extras };
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+export function validationError(
+  zodError: ZodError,
+  message = "Invalid input"
+): NextResponse {
+  return apiError(400, message, {
+    code: "VALIDATION_ERROR",
+    details: zodError.flatten().fieldErrors,
+  });
+}
+
+export function unauthorizedError(
+  message = "Unauthorized"
+): NextResponse {
+  return apiError(401, message, { code: "UNAUTHORIZED" });
+}
+
+export function forbiddenError(message = "Forbidden"): NextResponse {
+  return apiError(403, message, { code: "FORBIDDEN" });
+}
+
+export function notFoundError(message = "Not found"): NextResponse {
+  return apiError(404, message, { code: "NOT_FOUND" });
+}
 
 /**
  * Consistent 429 response with standard rate-limit headers.
