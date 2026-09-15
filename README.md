@@ -9,7 +9,7 @@ International job marketplace built with **Next.js 15**, **Prisma 6**, **Postgre
 - Plan limits with effective plan / expiration
 - Crypto payment submission + admin confirmation
 - AI resume builder & career-risk analysis (with fallbacks)
-- i18n (en / fa / ar / es / fr / hi) with English fallback for missing keys
+- i18n (en / fa / ar / es / fr / hi / de) with English fallback for missing keys
 
 ## Stack
 
@@ -30,6 +30,9 @@ International job marketplace built with **Next.js 15**, **Prisma 6**, **Postgre
    - Optional: `RESEND_API_KEY`, Redis/KV, crypto wallet addresses, AI keys
 3. Install & generate:
 
-```bash
-npm install
-npx prisma generate
+        npm install
+        npx prisma generate
+
+## About
+
+[global-job-matching.vercel.app](https://global-job-matching.vercel.app)
