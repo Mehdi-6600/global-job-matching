@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
         return assertAndReserveAiUsage(tx, {
           userId: user.id,
           plan,
-          kind: "ai_career_risk",
+          kind: "ai_roadmap",
           meta: `roadmap:${jobTitle}`,
         });
       });
