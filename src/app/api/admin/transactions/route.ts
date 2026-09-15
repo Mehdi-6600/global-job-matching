@@ -119,30 +119,41 @@ export async function PATCH(req: NextRequest) {
         ReturnType<typeof verifyTxOnChain>
       > | null = null;
 
-      if (tx.type === "crypto" && tx.txHash && tx.cryptoType) {
-        chainVerification = await verifyTxOnChain({
-          asset: tx.cryptoType,
-          txHash: tx.txHash,
-        });
-
-        if (chainVerification.status === "failed") {
+      if (tx.type === "crypto") {
+        if (!tx.txHash || !tx.cryptoType) {
           return NextResponse.json(
             {
-              error:
-                "On-chain verification failed: transaction reverted or failed. Cannot confirm.",
-              code: "TX_FAILED_ON_CHAIN",
-              chainVerification,
+              error: "Crypto payment is missing txHash or cryptoType",
+              code: "MISSING_CHAIN_DATA",
             },
             { status: 400 }
           );
         }
 
-        if (chainVerification.status === "not_found") {
+        chainVerification = await verifyTxOnChain({
+          asset: tx.cryptoType,
+          txHash: tx.txHash,
+        });
+
+        // Fail-closed: only confirmed on-chain allows plan activation
+        if (chainVerification.status !== "confirmed") {
+          const codeMap: Record<string, string> = {
+            failed: "TX_FAILED_ON_CHAIN",
+            not_found: "TX_NOT_FOUND",
+            pending: "TX_PENDING",
+            verification_unavailable: "VERIFICATION_UNAVAILABLE",
+          };
           return NextResponse.json(
             {
               error:
-                "Transaction not found on-chain yet. Wait for network propagation or reject.",
-              code: "TX_NOT_FOUND",
+                chainVerification.status === "verification_unavailable"
+                  ? "On-chain verification is unavailable. Configure RPC/explorers and retry; cannot activate plan without verification."
+                  : chainVerification.status === "pending"
+                    ? "Transaction is still pending on-chain. Wait for confirmations before confirming payment."
+                    : chainVerification.status === "not_found"
+                      ? "Transaction not found on-chain. Wait for propagation or reject."
+                      : "On-chain verification failed. Cannot confirm payment.",
+              code: codeMap[chainVerification.status] || "TX_NOT_VERIFIED",
               chainVerification,
             },
             { status: 400 }
