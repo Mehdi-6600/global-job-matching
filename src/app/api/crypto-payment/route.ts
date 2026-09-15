@@ -16,6 +16,7 @@ import {
 import { getEffectivePlan } from "@/lib/subscription";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { loadValidIntentForUser } from "@/lib/payment/intent";
+import { canTransitionIntent } from "@/lib/payment/state-machine";
 
 const cryptoPaymentSchema = z
   .object({
@@ -108,6 +109,16 @@ export async function POST(req: NextRequest) {
     const intent = intentLoad.intent;
     const cryptoType = intent.cryptoType;
 
+    if (!canTransitionIntent(intent.status, "submitted")) {
+      return NextResponse.json(
+        {
+          error: "Payment intent cannot be submitted from current status",
+          code: "ILLEGAL_INTENT_TRANSITION",
+        },
+        { status: 409 }
+      );
+    }
+
     if (!isPlausibleTxHash(cryptoType, txHash)) {
       return NextResponse.json(
         {
@@ -122,7 +133,8 @@ export async function POST(req: NextRequest) {
     if (!wallet || wallet.address !== intent.recipientAddress) {
       return NextResponse.json(
         {
-          error: "Recipient wallet no longer matches intent. Create a new quote.",
+          error:
+            "Recipient wallet no longer matches intent. Create a new quote.",
           code: "RECIPIENT_MISMATCH",
         },
         { status: 400 }
