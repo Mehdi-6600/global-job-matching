@@ -9,8 +9,9 @@ import {
   expectedCryptoFromUsd,
   isRateFresh,
 } from "@/lib/payment/rates";
+import { canTransitionIntent } from "@/lib/payment/state-machine";
 
-export const INTENT_TTL_MS = 30 * 60 * 1000; // 30 minutes
+export const INTENT_TTL_MS = 30 * 60 * 1000;
 
 export type CreateIntentParams = {
   userId: string;
@@ -19,17 +20,35 @@ export type CreateIntentParams = {
   cryptoType: string;
 };
 
+/** Mark expired pending intents (best-effort cleanup). */
+export async function expireStaleIntents(userId?: string): Promise<number> {
+  const result = await db.paymentIntent.updateMany({
+    where: {
+      status: "pending",
+      expiresAt: { lte: new Date() },
+      ...(userId ? { userId } : {}),
+    },
+    data: { status: "expired" },
+  });
+  return result.count;
+}
+
 export async function createPaymentIntent(params: CreateIntentParams) {
   const { userId, planId, billing, cryptoType } = params;
 
-  if (planId === "free" || !(planId === "pro" || planId === "business" || planId === "enterprise")) {
+  if (
+    planId === "free" ||
+    !(planId === "pro" || planId === "business" || planId === "enterprise")
+  ) {
     throw Object.assign(new Error("Invalid plan"), { code: "INVALID_PLAN" });
   }
 
   const wallet = getCryptoWallet(cryptoType);
   if (!wallet) {
     throw Object.assign(
-      new Error(`Payments in ${cryptoType} are not configured or not supported`),
+      new Error(
+        `Payments in ${cryptoType} are not configured or not supported`
+      ),
       { code: "WALLET_NOT_CONFIGURED" }
     );
   }
@@ -41,6 +60,8 @@ export async function createPaymentIntent(params: CreateIntentParams) {
     });
   }
 
+  await expireStaleIntents(userId);
+
   const rate = await fetchUsdRate(cryptoType);
   if (!isRateFresh(rate.fetchedAt)) {
     throw Object.assign(new Error("Stale exchange rate"), {
@@ -51,7 +72,6 @@ export async function createPaymentIntent(params: CreateIntentParams) {
   const expectedCryptoAmount = expectedCryptoFromUsd(amountUsd, rate.rateUsd);
   const expiresAt = new Date(Date.now() + INTENT_TTL_MS);
 
-  // Cap open intents per user
   const openCount = await db.paymentIntent.count({
     where: {
       userId,
@@ -90,6 +110,8 @@ export async function loadValidIntentForUser(
   intentId: string,
   userId: string
 ) {
+  await expireStaleIntents(userId);
+
   const intent = await db.paymentIntent.findUnique({
     where: { id: intentId },
   });
@@ -101,10 +123,12 @@ export async function loadValidIntentForUser(
     return { ok: false as const, code: "INTENT_NOT_PENDING" as const };
   }
   if (intent.expiresAt.getTime() <= Date.now()) {
-    await db.paymentIntent.updateMany({
-      where: { id: intent.id, status: "pending" },
-      data: { status: "expired" },
-    });
+    if (canTransitionIntent(intent.status, "expired")) {
+      await db.paymentIntent.updateMany({
+        where: { id: intent.id, status: "pending" },
+        data: { status: "expired" },
+      });
+    }
     return { ok: false as const, code: "INTENT_EXPIRED" as const };
   }
   if (!isRateFresh(intent.rateFetchedAt)) {
