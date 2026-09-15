@@ -1,11 +1,10 @@
 /**
  * Crypto tx helpers for payment review.
- *
- * - Format validation (always)
- * - Optional on-chain presence checks via public explorers / RPC
- * - NEVER mutates process.env
- * - NEVER auto-activates a plan
- * - Fail-closed when explorer/RPC is unavailable
+ * - Format validation
+ * - On-chain presence via public explorers / RPC
+ * - Never mutates process.env
+ * - Fail-closed when explorer/RPC unavailable
+ * - Never auto-activates plans
  */
 
 export type CryptoAsset =
@@ -93,7 +92,7 @@ async function verifyBtc(txHash: string): Promise<TxVerificationResult> {
       };
     }
     const data = (await res.json()) as {
-      status?: { confirmed?: boolean; block_height?: number };
+      status?: { confirmed?: boolean };
     };
     const confirmed = Boolean(data?.status?.confirmed);
     return {
@@ -163,25 +162,23 @@ async function verifyDoge(txHash: string): Promise<TxVerificationResult> {
   }
 }
 
-/** EVM via explicit RPC URL — never mutates process.env */
-async function verifyEvmTransaction(
+async function verifyEvm(
   txHash: string,
   label: string,
   rpcUrl: string
 ): Promise<TxVerificationResult> {
-  const rpc = rpcUrl.trim();
-  if (!rpc) {
+  if (!rpcUrl) {
     return {
       status: "verification_unavailable",
       found: false,
-      note: `No RPC URL configured for ${label}`,
+      note: `Set RPC URL for ${label} on-chain checks`,
       source: "evm_rpc",
     };
   }
 
   const hash = normalizeEvmTxHash(txHash);
   try {
-    const res = await fetchWithTimeout(rpc, {
+    const res = await fetchWithTimeout(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -200,7 +197,7 @@ async function verifyEvmTransaction(
       };
     }
     const json = (await res.json()) as {
-      result?: { status?: string; blockNumber?: string } | null;
+      result?: { status?: string } | null;
       error?: { message?: string };
     };
     if (json.error) {
@@ -212,7 +209,7 @@ async function verifyEvmTransaction(
       };
     }
     if (json.result == null) {
-      const res2 = await fetchWithTimeout(rpc, {
+      const res2 = await fetchWithTimeout(rpcUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -238,8 +235,7 @@ async function verifyEvmTransaction(
         source: "evm_rpc",
       };
     }
-    const statusHex = json.result.status;
-    if (statusHex === "0x0") {
+    if (json.result.status === "0x0") {
       return {
         status: "failed",
         found: true,
@@ -268,9 +264,7 @@ async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
   const base =
     process.env.TRONGRID_API_URL?.trim() || "https://api.trongrid.io";
   try {
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-    };
+    const headers: Record<string, string> = { Accept: "application/json" };
     if (key) headers["TRON-PRO-API-KEY"] = key;
     const res = await fetchWithTimeout(
       `${base.replace(/\/$/, "")}/v1/transactions/${encodeURIComponent(txHash)}`,
@@ -329,22 +323,6 @@ async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
   }
 }
 
-function defaultEvmRpc(): string {
-  return (
-    process.env.CRYPTO_EVM_RPC_URL?.trim() ||
-    process.env.CRYPTO_ETH_RPC_URL?.trim() ||
-    ""
-  );
-}
-
-function bscRpc(): string {
-  return (
-    process.env.CRYPTO_BSC_RPC_URL?.trim() ||
-    process.env.CRYPTO_EVM_RPC_URL?.trim() ||
-    ""
-  );
-}
-
 export async function verifyTxOnChain(params: {
   asset: CryptoAsset | string;
   txHash: string;
@@ -362,20 +340,32 @@ export async function verifyTxOnChain(params: {
 
   if (asset === "BTC") return verifyBtc(txHash);
   if (asset === "DOGE") return verifyDoge(txHash);
+
   if (asset === "ETH" || asset === "USDC") {
-    return verifyEvmTransaction(txHash, asset, defaultEvmRpc());
+    const rpc =
+      process.env.CRYPTO_EVM_RPC_URL?.trim() ||
+      process.env.CRYPTO_ETH_RPC_URL?.trim() ||
+      "";
+    return verifyEvm(txHash, asset, rpc);
   }
+
   if (asset === "BNB") {
-    return verifyEvmTransaction(txHash, "BNB/BSC", bscRpc());
+    const rpc =
+      process.env.CRYPTO_BSC_RPC_URL?.trim() ||
+      process.env.CRYPTO_EVM_RPC_URL?.trim() ||
+      "";
+    return verifyEvm(txHash, "BNB/BSC", rpc);
   }
+
   if (asset === "USDT") {
     return verifyTronUsdt(txHash);
   }
+
   if (asset === "TON") {
     return {
       status: "verification_unavailable",
       found: false,
-      note: "TON payments are disabled until a production-grade verifier is available",
+      note: "TON on-chain verification is disabled until a real verifier is integrated",
       source: "ton",
     };
   }
@@ -387,9 +377,7 @@ export async function verifyTxOnChain(params: {
   };
 }
 
-/**
- * @deprecated use verifyTxOnChain
- */
+/** @deprecated use verifyTxOnChain */
 export async function tryFetchTxPresence(params: {
   asset: CryptoAsset | string;
   txHash: string;
