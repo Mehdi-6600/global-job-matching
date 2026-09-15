@@ -10,6 +10,9 @@ export type UsageKind =
   | "saved_job"
   | "job_alert";
 
+/** All AI usage kinds share one monthly generation budget */
+const AI_KINDS: UsageKind[] = ["ai_resume", "ai_career_risk"];
+
 export type QuotaOk = {
   ok: true;
   used: number;
@@ -56,13 +59,25 @@ export async function assertAndReserveAiUsage(
     meta?: string | null;
   }
 ): Promise<QuotaOk | QuotaDenied> {
+  if (!AI_KINDS.includes(params.kind)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid AI usage kind",
+      code: "INVALID_USAGE_KIND",
+      limit: 0,
+      used: 0,
+    };
+  }
+
   const limit = aiLimitForPlan(params.plan, params.kind);
   const periodKey = monthPeriodKey();
 
+  // Shared pool across all AI endpoints for the month
   const used = await tx.usageEvent.count({
     where: {
       userId: params.userId,
-      kind: params.kind,
+      kind: { in: AI_KINDS },
       periodKey,
     },
   });
