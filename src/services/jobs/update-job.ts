@@ -9,6 +9,7 @@ import {
 } from "@/services/jobs/active-job-limit";
 import { ensureDefaultCompany } from "@/services/companies/ensure-default-company";
 import { resolveEffectivePlan } from "@/lib/subscription";
+import { withTransaction } from "@/lib/db-transaction";
 
 export type UpdateJobResult =
   | { ok: true; job: Job }
@@ -30,7 +31,7 @@ type Actor = {
 /**
  * Single entry for job updates.
  * Enforces ownership, company ownership on companyId change,
- * and plan limits when reactivating.
+ * and plan limits when reactivating — with timed transaction + retry.
  */
 export async function updateJobForUser(
   actor: Actor,
@@ -67,7 +68,7 @@ export async function updateJobForUser(
   }
 
   try {
-    const job = await db.$transaction(async (tx) => {
+    const job = await withTransaction(async (tx) => {
       await lockUserRow(tx, actor.id);
 
       const data: Record<string, unknown> = { ...parsed.data };
@@ -82,7 +83,6 @@ export async function updateJobForUser(
         data.deadline = new Date(parsed.data.deadline);
       }
 
-      // companyId change: must own the target company (or admin)
       if (parsed.data.companyId !== undefined) {
         if (parsed.data.companyId === null) {
           data.companyId = null;
@@ -106,7 +106,6 @@ export async function updateJobForUser(
         }
       }
 
-      // categoryId optional existence check
       if (parsed.data.categoryId) {
         const cat = await tx.category.findUnique({
           where: { id: parsed.data.categoryId },
