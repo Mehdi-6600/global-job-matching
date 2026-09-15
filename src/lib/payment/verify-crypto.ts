@@ -3,8 +3,10 @@
  *
  * - Format validation (always)
  * - Optional on-chain presence checks via public explorers / RPC
- * - NEVER auto-activates a plan; admin confirm remains the gate for activation
- * - Fail-closed when explorer/RPC is unavailable (returns status verification_unavailable)
+ * - NEVER mutates process.env
+ * - NEVER auto-activates a plan
+ * - Fail-closed when explorer/RPC is unavailable
+ * - TON always verification_unavailable (disabled in production flow)
  */
 
 export type CryptoAsset =
@@ -27,9 +29,7 @@ export type TxVerificationResult = {
   status: TxVerificationStatus;
   found: boolean;
   note: string;
-  /** Explorer / RPC source used */
   source?: string;
-  /** Raw confirmations if known */
   confirmations?: number;
 };
 
@@ -43,14 +43,11 @@ export function isPlausibleTxHash(asset: string, hash: string): boolean {
     return /^[a-fA-F0-9]{64}$/.test(h);
   }
   if (a === "ETH" || a === "BNB" || a === "USDT" || a === "USDC") {
-    // EVM-style; USDT may be TRC20 (64 hex without 0x) — accept both shapes
     if (/^(0x)?[a-fA-F0-9]{64}$/.test(h)) return true;
-    // TRON tx id is 64 hex
     if (a === "USDT" && /^[a-fA-F0-9]{64}$/.test(h)) return true;
     return false;
   }
   if (a === "TON") {
-    // BOC base64-ish or hex — keep permissive length check already done
     return h.length >= 16;
   }
   return true;
@@ -75,7 +72,6 @@ async function fetchWithTimeout(
   }
 }
 
-/** Bitcoin mainnet via Blockstream (public, no key) */
 async function verifyBtc(txHash: string): Promise<TxVerificationResult> {
   try {
     const res = await fetchWithTimeout(
@@ -117,7 +113,6 @@ async function verifyBtc(txHash: string): Promise<TxVerificationResult> {
   }
 }
 
-/** Dogecoin via Blockchair public API (rate-limited) */
 async function verifyDoge(txHash: string): Promise<TxVerificationResult> {
   try {
     const res = await fetchWithTimeout(
@@ -169,20 +164,18 @@ async function verifyDoge(txHash: string): Promise<TxVerificationResult> {
   }
 }
 
-/** EVM (ETH / BNB / USDC-ERC20) via JSON-RPC when CRYPTO_EVM_RPC_URL is set */
-async function verifyEvm(
+/** EVM via explicit RPC URL — never mutates process.env */
+async function verifyEvmTransaction(
   txHash: string,
-  label: string
+  label: string,
+  rpcUrl: string
 ): Promise<TxVerificationResult> {
-  const rpc =
-    process.env.CRYPTO_EVM_RPC_URL?.trim() ||
-    process.env.CRYPTO_ETH_RPC_URL?.trim() ||
-    "";
+  const rpc = rpcUrl.trim();
   if (!rpc) {
     return {
       status: "verification_unavailable",
       found: false,
-      note: "Set CRYPTO_EVM_RPC_URL (or CRYPTO_ETH_RPC_URL) for on-chain EVM checks",
+      note: `No RPC URL configured for ${label}`,
       source: "evm_rpc",
     };
   }
@@ -220,7 +213,6 @@ async function verifyEvm(
       };
     }
     if (json.result == null) {
-      // try getTransaction for pending
       const res2 = await fetchWithTimeout(rpc, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -272,7 +264,6 @@ async function verifyEvm(
   }
 }
 
-/** USDT TRC20 via TronGrid (optional API key) */
 async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
   const key = process.env.TRONGRID_API_KEY?.trim() || "";
   const base =
@@ -339,10 +330,25 @@ async function verifyTronUsdt(txHash: string): Promise<TxVerificationResult> {
   }
 }
 
+function defaultEvmRpc(): string {
+  return (
+    process.env.CRYPTO_EVM_RPC_URL?.trim() ||
+    process.env.CRYPTO_ETH_RPC_URL?.trim() ||
+    ""
+  );
+}
+
+function bscRpc(): string {
+  return (
+    process.env.CRYPTO_BSC_RPC_URL?.trim() ||
+    process.env.CRYPTO_EVM_RPC_URL?.trim() ||
+    ""
+  );
+}
+
 /**
  * Attempt on-chain presence check. Never invents success.
- * Amount / recipient matching is left to admin + optional future enrichment
- * (requires reliable token-transfer decoding per chain).
+ * Amount / recipient matching remains admin + future enrichment.
  */
 export async function verifyTxOnChain(params: {
   asset: CryptoAsset | string;
@@ -361,29 +367,20 @@ export async function verifyTxOnChain(params: {
 
   if (asset === "BTC") return verifyBtc(txHash);
   if (asset === "DOGE") return verifyDoge(txHash);
-  if (asset === "ETH" || asset === "USDC") return verifyEvm(txHash, asset);
+  if (asset === "ETH" || asset === "USDC") {
+    return verifyEvmTransaction(txHash, asset, defaultEvmRpc());
+  }
   if (asset === "BNB") {
-    // Prefer dedicated BSC RPC if set
-    const prev = process.env.CRYPTO_EVM_RPC_URL;
-    if (process.env.CRYPTO_BSC_RPC_URL?.trim()) {
-      process.env.CRYPTO_EVM_RPC_URL = process.env.CRYPTO_BSC_RPC_URL.trim();
-    }
-    try {
-      return await verifyEvm(txHash, "BNB/BSC");
-    } finally {
-      if (prev === undefined) delete process.env.CRYPTO_EVM_RPC_URL;
-      else process.env.CRYPTO_EVM_RPC_URL = prev;
-    }
+    return verifyEvmTransaction(txHash, "BNB/BSC", bscRpc());
   }
   if (asset === "USDT") {
-    // Project labels USDT as TRC20 in plans.ts
     return verifyTronUsdt(txHash);
   }
   if (asset === "TON") {
     return {
       status: "verification_unavailable",
       found: false,
-      note: "TON on-chain check not configured (set integration later)",
+      note: "TON payments are disabled until a production-grade verifier is available",
       source: "ton",
     };
   }
