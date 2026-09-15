@@ -110,6 +110,7 @@ model Company {
 
   @@index([ownerId])
   @@index([status])
+  @@index([location])
 }
 
 model Job {
@@ -153,6 +154,14 @@ model Job {
   @@index([categoryId])
   @@index([createdAt])
   @@index([externalId])
+  @@index([location])
+  @@index([remote])
+  @@index([type])
+  @@index([experience])
+  @@index([salaryMin])
+  @@index([salaryMax])
+  @@index([status, createdAt])
+  @@index([status, remote, createdAt])
 }
 
 model Application {
@@ -172,6 +181,7 @@ model Application {
   @@index([userId])
   @@index([jobId])
   @@index([status])
+  @@index([userId, status])
 }
 
 model Transaction {
@@ -209,7 +219,9 @@ model Notification {
 
   @@index([userId, read])
   @@index([createdAt])
-}model Message {
+}
+
+model Message {
   id         String   @id @default(cuid())
   senderId   String
   receiverId String
@@ -299,8 +311,6 @@ model Profile {
   @@index([userId])
 }
 
-// ─── Career Risk assessments ──────────────────────────────────
-
 model CareerRiskAssessment {
   id              String   @id @default(cuid())
   userId          String
@@ -327,8 +337,6 @@ model CareerRiskAssessment {
   @@index([userId, createdAt])
   @@index([shareToken])
 }
-
-// ─── Content ──────────────────────────────────────────────────
 
 model BlogPost {
   id         String   @id @default(cuid())
@@ -377,8 +385,6 @@ model Category {
   @@index([slug])
 }
 
-// ─── Analytics ────────────────────────────────────────────────
-
 model AnalyticsEvent {
   id        String   @id @default(cuid())
   path      String
@@ -392,8 +398,6 @@ model AnalyticsEvent {
   @@index([createdAt])
   @@index([userId])
 }
-
-// ─── Usage / Quota ledger ─────────────────────────────────────
 
 model UsageEvent {
   id        String   @id @default(cuid())
