@@ -13,6 +13,7 @@ export function activeJobsWhereForUser(userId: string): Prisma.JobWhereInput {
 /**
  * Lock the user row so concurrent job creates serialize on the same employer.
  * Must run inside an interactive transaction on PostgreSQL.
+ * Outer withTransaction() supplies maxWait + timeout so this cannot hang forever.
  */
 export async function lockUserRow(tx: Tx, userId: string): Promise<void> {
   await tx.$queryRaw`
