@@ -7,6 +7,10 @@ export const jobAlertCreateSchema = z
     remote: z.boolean().nullable().optional(),
     type: z.string().trim().max(50).nullable().optional(),
     minSalary: z.coerce.number().int().min(0).nullable().optional(),
+    frequency: z
+      .enum(["daily", "weekly", "instant"])
+      .optional()
+      .default("daily"),
   })
   .strict();
 
