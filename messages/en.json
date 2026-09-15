@@ -603,6 +603,8 @@
     "forgotSubtitle": "Enter your email and we will send a reset link",
     "sendReset": "Send reset link",
     "sending": "Sending...",
+    "rememberPassword": "Remember your password?",
+    "forgotSuccess": "If an account exists for that email, a reset link has been sent.",
     "resetTitle": "Reset password",
     "resetSubtitle": "Choose a new password for your account",
     "newPassword": "New password",
