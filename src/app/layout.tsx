@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
-import "./ui-styleguide.css";
 import Navbar from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Providers } from "./providers";
