@@ -11,6 +11,7 @@ import {
   Building2,
   Loader2,
   Menu,
+  ShieldCheck,
   UserRound,
   X,
   ShieldAlert,
@@ -216,27 +217,9 @@ export default function Navbar() {
 
         {mobileOpen && (
           <div className="gjm-mobile-menu">
-            <div className="gjm-mobile-links">
-              {links.map((link) => {
-                const active = isActive(link.href);
-
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`gjm-mobile-link ${
-                      active ? "active" : ""
-                    }`}
-                    onClick={closeMobile}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-
-              {isLoggedIn &&
-                accountLinks.map((link) => {
-                  const Icon = link.icon;
+            <div className="gjm-mobile-scroll">
+              <div className="gjm-mobile-links">
+                {links.map((link) => {
                   const active = isActive(link.href);
 
                   return (
@@ -248,64 +231,106 @@ export default function Navbar() {
                       }`}
                       onClick={closeMobile}
                     >
-                      <Icon size={17} />
                       {link.label}
                     </Link>
                   );
                 })}
-            </div>
 
-            <div className="gjm-mobile-account">
-              {isLoggedIn ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="gjm-mobile-account-link"
-                    onClick={closeMobile}
-                  >
-                    <UserRound size={17} />
-                    {t("Nav.dashboard", "Dashboard")}
-                  </Link>
+                {isLoggedIn &&
+                  accountLinks.map((link) => {
+                    const Icon = link.icon;
+                    const active = isActive(link.href);
 
-                  <Link
-                    href="/notifications"
-                    className="gjm-mobile-account-link"
-                    onClick={closeMobile}
-                  >
-                    <Bell size={17} />
-                    {t("Nav.notifications", "Notifications")}
-                  </Link>
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={`gjm-mobile-link ${
+                          active ? "active" : ""
+                        }`}
+                        onClick={closeMobile}
+                      >
+                        <Icon size={17} />
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+              </div>
 
-                  <button
-                    type="button"
-                    className="gjm-mobile-signout"
-                    onClick={() => {
-                      closeMobile();
-                      signOut({ callbackUrl: "/" });
-                    }}
-                  >
-                    {t("Nav.logout", "Logout")}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="gjm-mobile-login"
-                    onClick={closeMobile}
-                  >
-                    {t("Nav.login", "Login")}
-                  </Link>
+              <div className="gjm-mobile-account">
+                {isLoggedIn ? (
+                  <>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="gjm-mobile-account-link gjm-mobile-admin-link"
+                        onClick={closeMobile}
+                      >
+                        <ShieldCheck size={17} />
+                        {t("Nav.admin", "Admin Panel")}
+                      </Link>
+                    )}
 
-                  <Link
-                    href="/register"
-                    className="gjm-mobile-cta"
-                    onClick={closeMobile}
-                  >
-                    {t("Nav.register", "Get Started")}
-                  </Link>
-                </>
-              )}
+                    {isEmployer && (
+                      <Link
+                        href="/employer/dashboard"
+                        className="gjm-mobile-account-link"
+                        onClick={closeMobile}
+                      >
+                        <Building2 size={17} />
+                        {t("Nav.employer", "Employer")}
+                      </Link>
+                    )}
+
+                    <Link
+                      href="/dashboard"
+                      className="gjm-mobile-account-link"
+                      onClick={closeMobile}
+                    >
+                      <UserRound size={17} />
+                      {t("Nav.dashboard", "Dashboard")}
+                    </Link>
+
+                    <Link
+                      href="/notifications"
+                      className="gjm-mobile-account-link"
+                      onClick={closeMobile}
+                    >
+                      <Bell size={17} />
+                      {t("Nav.notifications", "Notifications")}
+                    </Link>
+
+                    <button
+                      type="button"
+                      className="gjm-mobile-signout"
+                      onClick={() => {
+                        closeMobile();
+                        signOut({ callbackUrl: "/" });
+                      }}
+                    >
+                      {t("Nav.logout", "Logout")}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      className="gjm-mobile-login"
+                      onClick={closeMobile}
+                    >
+                      {t("Nav.login", "Login")}
+                    </Link>
+
+                    <Link
+                      href="/register"
+                      className="gjm-mobile-cta"
+                      onClick={closeMobile}
+                    >
+                      {t("Nav.register", "Get Started")}
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
