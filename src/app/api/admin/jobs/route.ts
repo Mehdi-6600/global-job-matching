@@ -8,7 +8,15 @@ import { securityLog } from "@/lib/security-log";
 import { z } from "zod";
 import { normalizeLocation } from "@/lib/location";
 import { jobStatusSchema } from "@/lib/validation/job";
-import { rateLimitedResponse, readJsonBody } from "@/lib/http";
+import { readJsonBody } from "@/lib/http";
+
+// ---------------------------------------------------------------------------
+// پیکربندی مسیر (Next.js App Router)
+// ---------------------------------------------------------------------------
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // ---------------------------------------------------------------------------
 // ثابت‌ها
@@ -19,6 +27,12 @@ const MAX_TAKE = 500;
 const MIN_TAKE = 1;
 const MAX_ID_LENGTH = 64;
 const MAX_QUERY_LENGTH = 200;
+
+// هدرهای امنیتی برای پاسخ‌های حساس
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, private",
+  Pragma: "no-cache",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Schemaها
@@ -76,8 +90,12 @@ function jsonError(
 ): NextResponse<JsonErrorBody> {
   return NextResponse.json(
     details !== undefined ? { error, details } : { error },
-    { status }
+    { status, headers: NO_STORE_HEADERS }
   );
+}
+
+function jsonOk<T>(body: T, status = 200): NextResponse<T> {
+  return NextResponse.json(body, { status, headers: NO_STORE_HEADERS });
 }
 
 function isPrismaError(
@@ -97,29 +115,46 @@ function flattenFieldErrors(
   return error.flatten().fieldErrors;
 }
 
+/** لاگ امنیتی best-effort — هرگز جریان اصلی را مختل نمی‌کند. */
+function safeSecurityLog(
+  event: string,
+  payload: Parameters<typeof securityLog>[1]
+): void {
+  try {
+    securityLog(event, payload);
+  } catch (err) {
+    console.error("[admin/jobs] securityLog failed:", err);
+  }
+}
+
 // ---------------------------------------------------------------------------
-// گارد ادمین
+// گارد ادمین + rate limit
 // ---------------------------------------------------------------------------
 
-type AdminGuard =
+type AdminGuardResult =
   | { ok: true; userId: string; role: string }
   | { ok: false; response: NextResponse<JsonErrorBody> };
 
-async function requireAdmin(): Promise<AdminGuard> {
+async function requireAdminWithRateLimit(
+  req: NextRequest
+): Promise<AdminGuardResult> {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return {
-      ok: false,
-      response: jsonError("Unauthorized", 401),
-    };
+    return { ok: false, response: jsonError("Unauthorized", 401) };
   }
 
   if (!isAdminRole(session.user.role)) {
-    return {
-      ok: false,
-      response: jsonError("Forbidden", 403),
-    };
+    return { ok: false, response: jsonError("Forbidden", 403) };
+  }
+
+  const ip = getRequestIp(req);
+  const limited = await ratelimit.limit(
+    `admin_jobs_${session.user.id}_${ip}`
+  );
+
+  if (!limited.success) {
+    return { ok: false, response: jsonError("Too many requests", 429) };
   }
 
   return {
@@ -127,34 +162,6 @@ async function requireAdmin(): Promise<AdminGuard> {
     userId: session.user.id,
     role: session.user.role,
   };
-}
-
-// ---------------------------------------------------------------------------
-// گارد مشترک: ادمین + rate limit
-// ---------------------------------------------------------------------------
-
-type AdminRateLimitedGuard =
-  | { ok: true; userId: string; role: string }
-  | { ok: false; response: NextResponse<JsonErrorBody> };
-
-async function requireAdminWithRateLimit(
-  req: NextRequest
-): Promise<AdminRateLimitedGuard> {
-  const guard = await requireAdmin();
-  if (!guard.ok) return guard;
-
-  const ip = getRequestIp(req);
-  const limited = await ratelimit.limit(
-    `admin_jobs_${guard.userId}_${ip}`
-  );
-  if (!limited.success) {
-    return {
-      ok: false,
-      response: rateLimitedResponse(limited, "Too many requests"),
-    };
-  }
-
-  return guard;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +223,7 @@ export async function GET(req: NextRequest) {
       db.job.count({ where }),
     ]);
 
-    return NextResponse.json({
+    return jsonOk({
       jobs,
       pagination: {
         total,
@@ -306,8 +313,8 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    // Audit (best-effort structured log — بدون جدول AuditLog جداگانه)
-    securityLog("admin.job_update", {
+    // Audit (best-effort structured log)
+    safeSecurityLog("admin.job_update", {
       actorId: guard.userId,
       targetId: id,
       meta: {
@@ -318,7 +325,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, job });
+    return jsonOk({ success: true, job });
   } catch (error) {
     if (isPrismaError(error, "P2025")) {
       return jsonError("Job not found", 404);
@@ -360,7 +367,7 @@ export async function DELETE(req: NextRequest) {
     if (hard) {
       await db.job.delete({ where: { id } });
 
-      securityLog("admin.job_delete", {
+      safeSecurityLog("admin.job_delete", {
         actorId: guard.userId,
         targetId: id,
         meta: {
@@ -370,7 +377,7 @@ export async function DELETE(req: NextRequest) {
         },
       });
 
-      return NextResponse.json({ success: true, id, mode: "hard" });
+      return jsonOk({ success: true, id, mode: "hard" });
     }
 
     // Soft-delete: علامت‌گذاری به‌عنوان archived
@@ -380,7 +387,7 @@ export async function DELETE(req: NextRequest) {
       select: { id: true, status: true },
     });
 
-    securityLog("admin.job_delete", {
+    safeSecurityLog("admin.job_delete", {
       actorId: guard.userId,
       targetId: id,
       meta: {
@@ -391,7 +398,7 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, id, mode: "soft", job });
+    return jsonOk({ success: true, id, mode: "soft", job });
   } catch (error) {
     if (isPrismaError(error, "P2025")) {
       return jsonError("Job not found", 404);
