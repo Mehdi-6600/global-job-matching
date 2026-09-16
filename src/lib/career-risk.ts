@@ -68,6 +68,163 @@ export function languageNameForPrompt(locale: CareerRiskLocale): string {
   }
 }
 
+
+/** UI copy for heuristic fallback — all 7 product locales */
+type LocaleCopy = Record<CareerRiskLocale, string>;
+
+function L(locale: CareerRiskLocale, table: LocaleCopy): string {
+  return table[locale] || table.en;
+}
+
+const TIME_HORIZON: LocaleCopy = {
+  en: "5–10 years",
+  es: "5–10 años",
+  ar: "٥–١٠ سنوات",
+  fa: "۵–۱۰ سال",
+  hi: "5–10 वर्ष",
+  fr: "5–10 ans",
+  de: "5–10 Jahre",
+};
+
+const UPGRADE_MSG: LocaleCopy = {
+  en: "Upgrade to Pro to unlock alternative role recommendations.",
+  es: "Mejora a Pro para desbloquear recomendaciones de roles alternativos.",
+  ar: "قم بالترقية إلى Pro لفتح توصيات الأدوار البديلة.",
+  fa: "برای مسیرهای جایگزین، به پلن Pro ارتقا دهید.",
+  hi: "वैकल्पिक भूमिका सुझाव अनलॉक करने के लिए Pro में अपग्रेड करें।",
+  fr: "Passez à Pro pour débloquer les recommandations de rôles alternatifs.",
+  de: "Upgrade auf Pro, um alternative Rollenempfehlungen freizuschalten.",
+};
+
+function summaryFor(
+  locale: CareerRiskLocale,
+  title: string,
+  place: string,
+  score: number
+): string {
+  const p = place ? { en: ` in ${place}`, es: ` en ${place}`, ar: ` في ${place}`, fa: ` در ${place}`, hi: ` (${place})`, fr: ` à ${place}`, de: ` in ${place}` }[locale] : "";
+  if (score >= 65) {
+    return L(locale, {
+      en: `${title}${p}: elevated automation exposure.`,
+      es: `${title}${p}: exposición elevada a la automatización.`,
+      ar: `دور «${title}»${p} معرض بشكل مرتفع للأتمتة.`,
+      fa: `نقش «${title}»${p} در معرض اتوماسیون نسبتاً بالا است.`,
+      hi: `${title}${p}: स्वचालन का उच्च जोखिम।`,
+      fr: `${title}${p} : exposition élevée à l'automatisation.`,
+      de: `${title}${p}: erhöhtes Automatisierungsrisiko.`,
+    });
+  }
+  if (score >= 35) {
+    return L(locale, {
+      en: `${title}${p}: moderate AI-driven change.`,
+      es: `${title}${p}: cambio moderado impulsado por IA.`,
+      ar: `دور «${title}»${p} يواجه تغييراً متوسطاً بسبب الذكاء الاصطناعي.`,
+      fa: `نقش «${title}»${p} با تغییر متوسط ناشی از AI روبه‌روست.`,
+      hi: `${title}${p}: AI से मध्यम परिवर्तन।`,
+      fr: `${title}${p} : changement modéré lié à l'IA.`,
+      de: `${title}${p}: moderate KI-bedingte Veränderung.`,
+    });
+  }
+  return L(locale, {
+    en: `${title}${p}: relatively resilient near-term.`,
+    es: `${title}${p}: relativamente resiliente a corto plazo.`,
+    ar: `دور «${title}»${p} مقاوم نسبياً على المدى القريب.`,
+    fa: `نقش «${title}»${p} در کوتاه‌مدت نسبتاً مقاوم است.`,
+    hi: `${title}${p}: निकट अवधि में अपेक्षाकृत सुरक्षित।`,
+    fr: `${title}${p} : relativement résilient à court terme.`,
+    de: `${title}${p}: kurzfristig relativ widerstandsfähig.`,
+  });
+}
+
+function defaultSkills(locale: CareerRiskLocale): string[] {
+  return {
+    en: ["Digital literacy", "Problem-solving", "Domain specialization"],
+    es: ["Alfabetización digital", "Resolución de problemas", "Especialización de dominio"],
+    ar: ["محو الأمية الرقمية", "حل المشكلات", "تخصص المجال"],
+    fa: ["سواد دیجیتال", "حل مسئله", "تخصص حوزه‌ای"],
+    hi: ["डिजिटल साक्षरता", "समस्या समाधान", "क्षेत्र विशेषज्ञता"],
+    fr: ["Culture numérique", "Résolution de problèmes", "Spécialisation métier"],
+    de: ["Digitale Kompetenz", "Problemlösung", "Fachspezialisierung"],
+  }[locale];
+}
+
+function defaultAlternatives(locale: CareerRiskLocale, title: string): string[] {
+  return {
+    en: [`Hybrid ${title} + AI roles`, "Training or supervising automated tools", "Roles leaning on interpersonal skills"],
+    es: [`Roles híbridos ${title} + IA`, "Formación o supervisión de herramientas automatizadas", "Roles basados en habilidades interpersonales"],
+    ar: [`أدوار هجينة ${title} + ذكاء اصطناعي`, "التدريب أو الإشراف على الأدوات المؤتمتة", "أدوار تعتمد على المهارات الشخصية"],
+    fa: [`نقش‌های ترکیبی ${title} + هوش مصنوعی`, "آموزش یا نظارت بر ابزارهای خودکار", "نقش‌هایی متکی بر مهارت‌های بین‌فردی"],
+    hi: [`हाइब्रिड ${title} + AI भूमिकाएँ`, "स्वचालित उपकरणों का प्रशिक्षण/पर्यवेक्षण", "पारस्परिक कौशल वाली भूमिकाएँ"],
+    fr: [`Rôles hybrides ${title} + IA`, "Formation ou supervision d'outils automatisés", "Rôles axés sur les compétences interpersonnelles"],
+    de: [`Hybride ${title}+KI-Rollen`, "Schulung oder Aufsicht automatisierter Tools", "Rollen mit Fokus auf Zwischenmenschliche Fähigkeiten"],
+  }[locale];
+}
+
+function reasonCare(locale: CareerRiskLocale): string {
+  return L(locale, {
+    en: "Hands-on clinical care is hard to fully automate.",
+    es: "La atención clínica presencial es difícil de automatizar por completo.",
+    ar: "الرعاية السريرية الحضورية يصعب أتمتتها بالكامل.",
+    fa: "کار بالینی حضوری و مراقبت تنظیم‌شده به‌سختی کامل اتوماسیون می‌شود.",
+    hi: "नैदानिक देखभाल को पूरी तरह स्वचालित करना कठिन है।",
+    fr: "Les soins cliniques en présentiel sont difficiles à automatiser entièrement.",
+    de: "Praktische klinische Versorgung lässt sich kaum vollständig automatisieren.",
+  });
+}
+
+function reasonArchitecture(locale: CareerRiskLocale): string {
+  return L(locale, {
+    en: "Architecture still depends on professional judgment, codes, and site coordination.",
+    es: "La arquitectura sigue dependiendo del juicio profesional, códigos y coordinación en obra.",
+    ar: "لا تزال العمارة تعتمد على الحكم المهني واللوائح والتنسيق الميداني.",
+    fa: "طراحی معماری به قضاوت حرفه‌ای، مجوز و هماهنگی میدانی وابسته است.",
+    hi: "वास्तुकला अभी भी पेशेवर निर्णय, कोड और साइट समन्वय पर निर्भर है।",
+    fr: "L'architecture dépend encore du jugement professionnel, des normes et de la coordination de chantier.",
+    de: "Architektur hängt weiterhin von Fachurteil, Normen und Baustellenkoordination ab.",
+  });
+}
+
+function reasonClerical(locale: CareerRiskLocale): string {
+  return L(locale, {
+    en: "Repetitive office tasks are easy automation targets.",
+    es: "Las tareas administrativas repetitivas son objetivos fáciles de automatización.",
+    ar: "المهام المكتبية المتكررة أهداف سهلة للأتمتة.",
+    fa: "کارهای اداری تکراری هدف آسان اتوماسیون هستند.",
+    hi: "दोहराव वाले कार्यालय कार्य स्वचालन के आसान लक्ष्य हैं।",
+    fr: "Les tâches de bureau répétitives sont des cibles faciles d'automatisation.",
+    de: "Wiederkehrende Büroaufgaben sind leichte Automatisierungsziele.",
+  });
+}
+
+function reasonTech(locale: CareerRiskLocale): string {
+  return L(locale, {
+    en: "Software roles are being reshaped by AI assistants.",
+    es: "Los roles de software están siendo transformados por asistentes de IA.",
+    ar: "أدوار البرمجيات تتغير بفعل مساعدي الذكاء الاصطناعي.",
+    fa: "نقش‌های نرم‌افزاری با دستیارهای AI در حال تغییرند.",
+    hi: "सॉफ़्टवेयर भूमिकाएँ AI सहायक से बदल रही हैं।",
+    fr: "Les rôles logiciels sont remodelés par les assistants d'IA.",
+    de: "Software-Rollen werden durch KI-Assistenten umgestaltet.",
+  });
+}
+
+function industryOutlookLine(
+  locale: CareerRiskLocale,
+  industry: string,
+  place: string
+): string {
+  return L(locale, {
+    en: `Industry: ${industry || "n/a"} · Location: ${place || "n/a"}`,
+    es: `Sector: ${industry || "n/d"} · Ubicación: ${place || "n/d"}`,
+    ar: `القطاع: ${industry || "—"} · الموقع: ${place || "—"}`,
+    fa: `صنعت: ${industry || "—"} · مکان: ${place || "—"}`,
+    hi: `उद्योग: ${industry || "—"} · स्थान: ${place || "—"}`,
+    fr: `Secteur : ${industry || "n/a"} · Lieu : ${place || "n/a"}`,
+    de: `Branche: ${industry || "k. A."} · Ort: ${place || "k. A."}`,
+  });
+}
+
+
 function asStringArray(value: unknown, max = 12): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -376,7 +533,6 @@ export function heuristicCareerRisk(
     Number.isFinite(extra.experienceYears)
       ? extra.experienceYears
       : null;
-  const fa = locale === "fa";
   const loc = locationPressure(extra?.country, extra?.location);
   const bucket = detectRoleBucket(title, industry);
 
@@ -391,61 +547,48 @@ export function heuristicCareerRisk(
   if (bucket === "care") {
     taskAutomation -= 22;
     agenticExposure -= 18;
-    reasons.push(
-      fa
-        ? "کار بالینی حضوری و مراقبت تنظیم‌شده به‌سختی کامل اتوماسیون می‌شود."
-        : "Hands-on clinical care is hard to fully automate."
-    );
+    reasons.push(reasonCare(locale));
   } else if (bucket === "architecture") {
     taskAutomation -= 8;
     toolMaturity += 8;
-    reasons.push(
-      fa
-        ? "طراحی معماری به قضاوت حرفه‌ای، مجوز و هماهنگی میدانی وابسته است."
-        : "Architecture still depends on professional judgment, codes, and site coordination."
-    );
+    reasons.push(reasonArchitecture(locale));
     skillsToBuild.push(
-      ...(fa
-        ? ["BIM", "پایداری", "هماهنگی پروژه"]
-        : ["BIM", "Sustainable design", "Project coordination"])
+      ...{
+        en: ["BIM", "Sustainable design", "Project coordination"],
+        es: ["BIM", "Diseño sostenible", "Coordinación de proyectos"],
+        ar: ["BIM", "تصميم مستدام", "تنسيق المشاريع"],
+        fa: ["BIM", "پایداری", "هماهنگی پروژه"],
+        hi: ["BIM", "टिकाऊ डिज़ाइन", "प्रोजेक्ट समन्वय"],
+        fr: ["BIM", "Conception durable", "Coordination de projet"],
+        de: ["BIM", "Nachhaltiges Design", "Projektkoordination"],
+      }[locale]
     );
   } else if (bucket === "clerical") {
     taskAutomation += 30;
     marketAdoption += 25;
-    reasons.push(
-      fa
-        ? "کارهای اداری تکراری هدف آسان اتوماسیون هستند."
-        : "Repetitive office tasks are easy automation targets."
-    );
+    reasons.push(reasonClerical(locale));
   } else if (bucket === "tech" || bucket === "frontend") {
     taskAutomation += 14;
     toolMaturity += 25;
     agenticExposure += 16;
-    reasons.push(
-      fa
-        ? "نقش‌های نرم‌افزاری با دستیارهای AI در حال تغییرند."
-        : "Software roles are being reshaped by AI assistants."
-    );
+    reasons.push(reasonTech(locale));
   }
 
   if (years != null && years >= 8) taskAutomation -= 5;
   if (years != null && years <= 2) taskAutomation += 5;
   marketAdoption += loc.delta;
-  if (loc.noteEn) reasons.push(fa && loc.noteFa ? loc.noteFa : loc.noteEn);
-
-  if (skillsToBuild.length === 0) {
-    skillsToBuild.push(
-      ...(fa
-        ? ["سواد دیجیتال", "حل مسئله", "تخصص حوزه‌ای"]
-        : ["Digital literacy", "Problem solving", "Domain specialization"])
+  if (loc.noteEn) {
+    // Prefer locale-specific location note when available (fa), else English
+    reasons.push(
+      locale === "fa" && loc.noteFa ? loc.noteFa : loc.noteEn
     );
   }
+
+  if (skillsToBuild.length === 0) {
+    skillsToBuild.push(...defaultSkills(locale));
+  }
   if (alternatives.length === 0) {
-    alternatives.push(
-      ...(fa
-        ? ["نقش مجاور تخصصی", "مسیر سرپرستی"]
-        : ["Adjacent specialist role", "Team lead path"])
-    );
+    alternatives.push(...defaultAlternatives(locale, title));
   }
 
   const subScores: CareerRiskSubScores = {
@@ -455,19 +598,11 @@ export function heuristicCareerRisk(
     agenticExposure: clampScore(agenticExposure),
   };
   const score = compositeFromSubScores(subScores);
-  const place = [extra?.location, extra?.country].filter(Boolean).join(fa ? "، " : ", ");
+  const place = [extra?.location, extra?.country]
+    .filter(Boolean)
+    .join(locale === "fa" || locale === "ar" ? "، " : ", ");
 
-  const summary = fa
-    ? score >= 65
-      ? `نقش «${title}»${place ? ` در ${place}` : ""} در معرض اتوماسیون نسبتاً بالا است.`
-      : score >= 35
-        ? `نقش «${title}»${place ? ` در ${place}` : ""} با تغییر متوسط ناشی از AI روبه‌روست.`
-        : `نقش «${title}»${place ? ` در ${place}` : ""} در کوتاه‌مدت نسبتاً مقاوم است.`
-    : score >= 65
-      ? `${title}${place ? ` in ${place}` : ""}: elevated automation exposure.`
-      : score >= 35
-        ? `${title}${place ? ` in ${place}` : ""}: moderate AI-driven change.`
-        : `${title}${place ? ` in ${place}` : ""}: relatively resilient near-term.`;
+  const summary = summaryFor(locale, title, place, score);
 
   return {
     jobTitle: title,
@@ -479,13 +614,12 @@ export function heuristicCareerRisk(
     alternatives: Array.from(new Set(alternatives)).slice(0, 5),
     source: "heuristic",
     subScores,
-    timeHorizon: fa ? "۵–۱۰ سال" : "5–10 years",
+    timeHorizon: L(locale, TIME_HORIZON),
     confidence: bucket === "generic" ? 52 : 64,
-    industryOutlook: industry || place
-      ? fa
-        ? `صنعت: ${industry || "—"} · مکان: ${place || "—"}`
-        : `Industry: ${industry || "n/a"} · Location: ${place || "n/a"}`
-      : undefined,
+    industryOutlook:
+      industry || place
+        ? industryOutlookLine(locale, industry, place)
+        : undefined,
   };
 }
 
@@ -511,11 +645,7 @@ export function toSuccessResponse(params: {
     analysis,
     paid: params.paid,
     alternativesLocked: !params.paid,
-    message: params.paid
-      ? undefined
-      : locale === "fa"
-        ? "برای مسیرهای جایگزین، به پلن Pro ارتقا دهید."
-        : "Upgrade to Pro to unlock alternative role recommendations.",
+    message: params.paid ? undefined : L(locale, UPGRADE_MSG),
     assessmentId: params.assessmentId,
     shareToken: params.shareToken,
     sharePath: params.shareToken
