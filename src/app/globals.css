@@ -407,36 +407,21 @@
   }
   .gjm-brand:hover { opacity: 0.85; }
 
+  /* ---------- Brand Mark (SVG-based) ---------- */
   .gjm-brand-mark {
-    position: relative;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-hover) 100%);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
   }
 
-  .gjm-brand-ring {
-    position: absolute;
-    inset: 8px;
-    border: 1.5px solid rgba(255, 255, 255, 0.85);
-    border-radius: 50%;
+  .gjm-brand-mark svg {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
-
-  .gjm-brand-node {
-    position: absolute;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #ffffff;
-  }
-  .gjm-brand-node.node-a { top: 6px; left: 50%; transform: translateX(-50%); }
-  .gjm-brand-node.node-b { bottom: 6px; left: 50%; transform: translateX(-50%); }
-  .gjm-brand-node.node-c { top: 50%; right: 6px; transform: translateY(-50%); }
 
   .gjm-brand-copy {
     display: flex;
@@ -774,16 +759,20 @@
     gap: 0.625rem;
   }
 
+  /* ---------- Footer Brand Symbol (SVG-based) ---------- */
   .gjm-footer-symbol {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-hover) 100%);
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    flex-shrink: 0;
+  }
+
+  .gjm-footer-symbol svg {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 
   .gjm-footer-logo > span:last-child {
@@ -2725,9 +2714,6 @@
 
 /* ============================================================
    LEGACY PAGE SUPPORT — Light theme overrides
-   برای صفحه‌های داخلی که با Tailwind Dark classes ساخته شده‌اند:
-   pricing, dashboard, blog, notifications, categories, locations, companies,
-   career-risk, resume-builder
    ============================================================ */
 
 /* ---------- Global backgrounds → light ---------- */
@@ -2766,7 +2752,7 @@
   --tw-gradient-to: var(--bg-page) !important;
 }
 
-/* ---------- Overlay (modal backdrop) ---------- */
+/* ---------- Overlay ---------- */
 .bg-black\/60 {
   background-color: rgba(28, 25, 23, 0.5) !important;
 }
