@@ -18,6 +18,20 @@ import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { loadValidIntentForUser } from "@/lib/payment/intent";
 import { canTransitionIntent } from "@/lib/payment/state-machine";
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** حداکثر تعداد پرداخت‌های pending مجاز برای هر کاربر. */
+const MAX_PENDING_CRYPTO_PAYMENTS = 5;
+
+/** الگوی مجاز برای hash تراکنش (عمومی، قبل از بررسی per-chain). */
+const TX_HASH_FORMAT = /^[a-zA-Z0-9:_-]+$/;
+
+// ---------------------------------------------------------------------------
+// Schemas
+// ---------------------------------------------------------------------------
+
 const cryptoPaymentSchema = z
   .object({
     paymentIntentId: z.string().min(1),
@@ -26,13 +40,21 @@ const cryptoPaymentSchema = z
       .trim()
       .min(10)
       .max(200)
-      .regex(/^[a-zA-Z0-9:_-]+$/, "Invalid transaction hash format"),
+      .regex(TX_HASH_FORMAT, "Invalid transaction hash format"),
   })
   .strict();
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function normalizeTxHash(hash: string): string {
   return hash.trim();
 }
+
+// ---------------------------------------------------------------------------
+// GET /api/crypto-payment
+// ---------------------------------------------------------------------------
 
 export async function GET() {
   try {
@@ -55,18 +77,28 @@ export async function GET() {
       intentPath: "/api/crypto-payment/intent",
     });
   } catch (error) {
-    console.error("Crypto wallets GET error:", error);
+    console.error("[crypto-payment] GET error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }
 
+// ---------------------------------------------------------------------------
+// POST /api/crypto-payment
+// ---------------------------------------------------------------------------
+
 export async function POST(req: NextRequest) {
   try {
+    // -----------------------------------------------------------------------
+    // 1) Auth
+    // -----------------------------------------------------------------------
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // -----------------------------------------------------------------------
+    // 2) Rate limit (per user + IP)
+    // -----------------------------------------------------------------------
     const ip = getRequestIp(req);
     const limit = await ratelimit.limit(
       `crypto_pay_${session.user.id}_${ip}`
@@ -75,11 +107,20 @@ export async function POST(req: NextRequest) {
       return rateLimitedResponse(limit, "Too many requests");
     }
 
+    // -----------------------------------------------------------------------
+    // 3) Parse JSON body
+    // -----------------------------------------------------------------------
     const body = await readJsonBody(req);
     if (body === null) {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
     }
 
+    // -----------------------------------------------------------------------
+    // 4) Validate input
+    // -----------------------------------------------------------------------
     const parsed = cryptoPaymentSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -92,6 +133,10 @@ export async function POST(req: NextRequest) {
     }
 
     const txHash = normalizeTxHash(parsed.data.txHash);
+
+    // -----------------------------------------------------------------------
+    // 5) Load and validate payment intent for this user
+    // -----------------------------------------------------------------------
     const intentLoad = await loadValidIntentForUser(
       parsed.data.paymentIntentId,
       session.user.id
@@ -109,6 +154,9 @@ export async function POST(req: NextRequest) {
     const intent = intentLoad.intent;
     const cryptoType = intent.cryptoType;
 
+    // -----------------------------------------------------------------------
+    // 6) State machine: only "pending" → "submitted" allowed
+    // -----------------------------------------------------------------------
     if (!canTransitionIntent(intent.status, "submitted")) {
       return NextResponse.json(
         {
@@ -119,16 +167,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // 7) Per-chain hash plausibility
+    // -----------------------------------------------------------------------
     if (!isPlausibleTxHash(cryptoType, txHash)) {
       return NextResponse.json(
         {
-          error: "Transaction hash format is not valid for the selected crypto",
+          error:
+            "Transaction hash format is not valid for the selected crypto",
           code: "INVALID_TX_HASH",
         },
         { status: 400 }
       );
     }
 
+    // -----------------------------------------------------------------------
+    // 8) Wallet still matches intent
+    // -----------------------------------------------------------------------
     const wallet = getCryptoWallet(cryptoType);
     if (!wallet || wallet.address !== intent.recipientAddress) {
       return NextResponse.json(
@@ -141,6 +196,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // 9) Pending payments cap (anti-abuse)
+    // -----------------------------------------------------------------------
     const pendingCount = await db.transaction.count({
       where: {
         userId: session.user.id,
@@ -148,7 +206,7 @@ export async function POST(req: NextRequest) {
         type: "crypto",
       },
     });
-    if (pendingCount >= 5) {
+    if (pendingCount >= MAX_PENDING_CRYPTO_PAYMENTS) {
       return NextResponse.json(
         {
           error:
@@ -159,6 +217,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // 10) Duplicate txHash guard
+    // -----------------------------------------------------------------------
     const existingTx = await db.transaction.findUnique({
       where: { txHash },
     });
@@ -172,6 +233,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // 11) On-chain verification (fail-closed)
+    // -----------------------------------------------------------------------
     const expectedCrypto = Number(intent.expectedCryptoAmount);
     const chain = await verifyTxOnChain({
       asset: cryptoType,
@@ -192,10 +256,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fail-closed: do not accept submit when explorer/RPC cannot prove the payment
+    if (chain.status === "not_found") {
+      return NextResponse.json(
+        {
+          error:
+            "Transaction was not found on-chain. Check the hash and network.",
+          code: "TX_NOT_FOUND",
+          chainVerification: chain,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (chain.status === "verification_unavailable") {
+      return NextResponse.json(
+        {
+          error:
+            "On-chain verification is temporarily unavailable. Try again shortly — payment was not recorded.",
+          code: "VERIFICATION_UNAVAILABLE",
+          chainVerification: chain,
+        },
+        { status: 503 }
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // 12) Atomic claim + transaction creation
+    // -----------------------------------------------------------------------
     const amountUsd = Number(intent.amountUsd);
     const rateUsd = Number(intent.rateUsd);
 
     const transaction = await db.$transaction(async (prisma) => {
+      // claim فقط اگر intent هنوز pending و متعلق به همین کاربر باشد
       const claimed = await prisma.paymentIntent.updateMany({
         where: {
           id: intent.id,
@@ -236,6 +329,9 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
+    // -----------------------------------------------------------------------
+    // 13) Success response
+    // -----------------------------------------------------------------------
     return NextResponse.json({
       success: true,
       message:
@@ -274,7 +370,8 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    console.error("Crypto payment error:", error);
+
+    console.error("[crypto-payment] POST error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
