@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { ROLES } from "@/lib/roles";
 import {
   Bell,
+  BriefcaseBusiness,
   Building2,
   FileText,
   LayoutDashboard,
@@ -124,12 +125,14 @@ export default function Navbar() {
         <div className="gjm-nav-inner">
           <Link href="/" className="gjm-brand" onClick={closeMobile}>
             <BrandMark />
+
             <span className="gjm-brand-copy">
               <strong>GLOBAL JOB</strong>
               <span>MATCHING</span>
             </span>
           </Link>
 
+          {/* Desktop */}
           <div className="gjm-desktop-nav">
             <div className="gjm-main-links">
               {publicLinks
@@ -171,7 +174,7 @@ export default function Navbar() {
                     className="gjm-nav-icon"
                     aria-label={t(
                       "Nav.notifications",
-                      "Notifications",
+                      "Notifications"
                     )}
                   >
                     <Bell size={18} />
@@ -223,13 +226,16 @@ export default function Navbar() {
             </div>
           </div>
 
+          {/* Mobile toggle */}
           <div className="gjm-mobile-actions">
             <LanguageSwitcher />
 
             <button
               type="button"
               className="gjm-mobile-menu-button"
-              onClick={() => setMobileOpen((v) => !v)}
+              onClick={() =>
+                setMobileOpen((v) => !v)
+              }
               aria-label={
                 mobileOpen ? "Close menu" : "Open menu"
               }
@@ -244,6 +250,7 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* Hamburger panel — full list */}
         {mobileOpen && (
           <div className="gjm-mobile-menu">
             <div className="gjm-mobile-links">
