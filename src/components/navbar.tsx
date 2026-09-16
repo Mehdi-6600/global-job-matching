@@ -13,6 +13,8 @@ import {
   Menu,
   UserRound,
   X,
+  ShieldAlert,
+  FileText,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -34,6 +36,9 @@ export default function Navbar() {
   const isLoggedIn =
     status === "authenticated" && !!session;
 
+  /* ----------------------------------------------------------------
+     Main navigation links (all users)
+     ---------------------------------------------------------------- */
   const links = [
     { href: "/jobs", label: t("Nav.jobs", "Jobs") },
     {
@@ -58,8 +63,35 @@ export default function Navbar() {
     },
   ];
 
+  /* ----------------------------------------------------------------
+     Account-only links (Career Risk & Resume Builder)
+     Only shown to authenticated users.
+     Routes:
+       /career-risk     → AI Career Risk page
+       /resume-builder  → AI Resume Builder page
+     ---------------------------------------------------------------- */
+  const accountLinks = [
+    {
+      href: "/career-risk",
+      label: t("CareerRisk.title", "AI Career Risk"),
+      icon: ShieldAlert,
+    },
+    {
+      href: "/resume-builder",
+      label: t("Resume.title", "Resume Builder"),
+      icon: FileText,
+    },
+  ];
+
   function closeMobile() {
     setMobileOpen(false);
+  }
+
+  function isActive(href: string) {
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`)
+    );
   }
 
   return (
@@ -87,9 +119,7 @@ export default function Navbar() {
           <div className="gjm-desktop-nav">
             <div className="gjm-main-links">
               {links.map((link) => {
-                const active =
-                  pathname === link.href ||
-                  pathname.startsWith(`${link.href}/`);
+                const active = isActive(link.href);
 
                 return (
                   <Link
@@ -103,6 +133,26 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+
+              {/* Career Risk & Resume Builder — only for logged-in users */}
+              {isLoggedIn &&
+                accountLinks.map((link) => {
+                  const Icon = link.icon;
+                  const active = isActive(link.href);
+
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`gjm-nav-link ${
+                        active ? "active" : ""
+                      }`}
+                    >
+                      <Icon size={14} />
+                      {link.label}
+                    </Link>
+                  );
+                })}
             </div>
 
             <div className="gjm-nav-actions">
@@ -213,9 +263,7 @@ export default function Navbar() {
           <div className="gjm-mobile-menu">
             <div className="gjm-mobile-links">
               {links.map((link) => {
-                const active =
-                  pathname === link.href ||
-                  pathname.startsWith(`${link.href}/`);
+                const active = isActive(link.href);
 
                 return (
                   <Link
@@ -230,6 +278,27 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+
+              {/* Career Risk & Resume Builder — only for logged-in users */}
+              {isLoggedIn &&
+                accountLinks.map((link) => {
+                  const Icon = link.icon;
+                  const active = isActive(link.href);
+
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`gjm-mobile-link ${
+                        active ? "active" : ""
+                      }`}
+                      onClick={closeMobile}
+                    >
+                      <Icon size={17} />
+                      {link.label}
+                    </Link>
+                  );
+                })}
             </div>
 
             <div className="gjm-mobile-account">
