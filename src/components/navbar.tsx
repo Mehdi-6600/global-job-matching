@@ -53,6 +53,7 @@ export default function Navbar() {
   const isEmployer = userRole === ROLES.EMPLOYER;
   const isLoggedIn = status === "authenticated" && !!session;
 
+  // 1–7: آیتم‌های عمومی (همیشه قابل مشاهده)
   const publicLinks: NavItem[] = [
     { href: "/", label: t("Nav.home", "Home"), show: true },
     { href: "/jobs", label: t("Nav.jobs", "Jobs"), show: true },
@@ -63,36 +64,38 @@ export default function Navbar() {
     { href: "/pricing", label: t("Nav.pricing", "Pricing"), show: true },
   ];
 
+  // 8–12: آیتم‌های وابسته به نقش/ورود (ترتیب دقیق طبق درخواست)
   const roleLinks: NavItem[] = [
     {
       href: "/admin",
       label: t("Nav.admin", "Admin"),
-      icon: <Shield size={17} />,
+      icon: <Shield size={16} />,
       show: isAdmin,
       accent: "admin",
     },
     {
       href: "/employer/dashboard",
       label: t("Nav.employer", "Employer"),
-      icon: <Building2 size={17} />,
+      icon: <Building2 size={16} />,
       show: isEmployer,
     },
     {
       href: "/career-risk",
       label: t("Nav.careerRisk", "AI Career Risk"),
-      icon: <Sparkles size={17} />,
+      icon: <Sparkles size={16} />,
       show: isLoggedIn,
+      accent: "cta",
     },
     {
       href: "/resume-builder",
       label: t("Nav.resume", "Resume Builder"),
-      icon: <FileText size={17} />,
+      icon: <FileText size={16} />,
       show: isLoggedIn,
     },
     {
       href: "/dashboard",
       label: t("Nav.dashboard", "Dashboard"),
-      icon: <LayoutDashboard size={17} />,
+      icon: <LayoutDashboard size={16} />,
       show: isLoggedIn,
     },
   ];
@@ -110,6 +113,7 @@ export default function Navbar() {
     <header className="gjm-header">
       <nav className="gjm-nav">
         <div className="gjm-nav-inner">
+          {/* برند */}
           <Link href="/" className="gjm-brand" onClick={closeMobile}>
             <BrandMark />
             <span className="gjm-brand-copy">
@@ -118,6 +122,7 @@ export default function Navbar() {
             </span>
           </Link>
 
+          {/* ناوبری دسکتاپ */}
           <div className="gjm-desktop-nav">
             <div className="gjm-main-links">
               {publicLinks
@@ -134,21 +139,50 @@ export default function Navbar() {
             </div>
 
             <div className="gjm-nav-actions">
+              {/* Employer — فقط کارفرما */}
               {isEmployer && (
-                <Link href="/employer/dashboard" className="gjm-nav-utility">
-                  <Building2 size={16} />
+                <Link
+                  href="/employer/dashboard"
+                  className={`ui-chip ${isActive("/employer/dashboard") ? "ui-chip-selected" : ""}`}
+                >
+                  <Building2 size={14} />
                   {t("Nav.employer", "Employer")}
                 </Link>
               )}
 
+              {/* Admin — فقط ادمین/مالک */}
               {isAdmin && (
                 <Link href="/admin" className="gjm-nav-admin">
+                  <Shield size={14} />
                   {t("Nav.admin", "Admin")}
+                </Link>
+              )}
+
+              {/* AI Career Risk — کاربر واردشده */}
+              {isLoggedIn && (
+                <Link
+                  href="/career-risk"
+                  className={`ui-chip ${isActive("/career-risk") ? "ui-chip-selected" : ""}`}
+                >
+                  <Sparkles size={14} />
+                  {t("Nav.careerRisk", "AI Career Risk")}
+                </Link>
+              )}
+
+              {/* Resume Builder — کاربر واردشده */}
+              {isLoggedIn && (
+                <Link
+                  href="/resume-builder"
+                  className={`ui-chip ${isActive("/resume-builder") ? "ui-chip-selected" : ""}`}
+                >
+                  <FileText size={14} />
+                  {t("Nav.resume", "Resume Builder")}
                 </Link>
               )}
 
               {isLoggedIn ? (
                 <>
+                  {/* اعلان‌ها */}
                   <Link
                     href="/notifications"
                     className="gjm-nav-icon"
@@ -156,15 +190,20 @@ export default function Navbar() {
                   >
                     <Bell size={18} />
                   </Link>
+
+                  {/* Dashboard — کاربر واردشده */}
                   <Link href="/dashboard" className="gjm-nav-profile">
                     <UserRound size={16} />
                     {t("Nav.dashboard", "Dashboard")}
                   </Link>
+
+                  {/* Logout — کاربر واردشده */}
                   <button
                     type="button"
                     className="gjm-nav-signout"
                     onClick={() => signOut({ callbackUrl: "/" })}
                   >
+                    <LogOut size={16} />
                     {t("Nav.logout", "Logout")}
                   </button>
                 </>
@@ -172,9 +211,11 @@ export default function Navbar() {
                 <Loader2 size={18} className="gjm-nav-loader" />
               ) : (
                 <>
+                  {/* Login — کاربر واردنشده */}
                   <Link href="/login" className="gjm-nav-login">
                     {t("Nav.login", "Login")}
                   </Link>
+                  {/* Sign up — کاربر واردنشده */}
                   <Link href="/register" className="gjm-nav-cta">
                     {t("Nav.register", "Sign up")}
                     <UserPlus size={15} />
@@ -186,6 +227,7 @@ export default function Navbar() {
             </div>
           </div>
 
+          {/* دکمه همبرگری موبایل */}
           <div className="gjm-mobile-actions">
             <LanguageSwitcher />
             <button
@@ -200,6 +242,7 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* منوی موبایل — همه‌ی ۱۵ آیتم به ترتیب دقیق */}
         {mobileOpen && (
           <div className="gjm-mobile-menu">
             <div className="gjm-mobile-links">
