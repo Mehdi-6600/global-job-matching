@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { BrandMark } from "@/components/brand-logo";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -36,40 +37,15 @@ export default function Navbar() {
   const isLoggedIn =
     status === "authenticated" && !!session;
 
-  /* ----------------------------------------------------------------
-     Main navigation links (all users)
-     ---------------------------------------------------------------- */
   const links = [
     { href: "/jobs", label: t("Nav.jobs", "Jobs") },
-    {
-      href: "/companies",
-      label: t("Nav.companies", "Companies"),
-    },
-    {
-      href: "/locations",
-      label: t("Nav.locations", "Locations"),
-    },
-    {
-      href: "/categories",
-      label: t("Nav.categories", "Categories"),
-    },
-    {
-      href: "/blog",
-      label: t("Nav.blog", "Blog"),
-    },
-    {
-      href: "/pricing",
-      label: t("Nav.pricing", "Pricing"),
-    },
+    { href: "/companies", label: t("Nav.companies", "Companies") },
+    { href: "/locations", label: t("Nav.locations", "Locations") },
+    { href: "/categories", label: t("Nav.categories", "Categories") },
+    { href: "/blog", label: t("Nav.blog", "Blog") },
+    { href: "/pricing", label: t("Nav.pricing", "Pricing") },
   ];
 
-  /* ----------------------------------------------------------------
-     Account-only links (Career Risk & Resume Builder)
-     Only shown to authenticated users.
-     Routes:
-       /career-risk     → AI Career Risk page
-       /resume-builder  → AI Resume Builder page
-     ---------------------------------------------------------------- */
   const accountLinks = [
     {
       href: "/career-risk",
@@ -104,10 +80,7 @@ export default function Navbar() {
             onClick={closeMobile}
           >
             <span className="gjm-brand-mark" aria-hidden="true">
-              <span className="gjm-brand-ring" />
-              <span className="gjm-brand-node node-a" />
-              <span className="gjm-brand-node node-b" />
-              <span className="gjm-brand-node node-c" />
+              <BrandMark size={36} />
             </span>
 
             <span className="gjm-brand-copy">
@@ -134,7 +107,6 @@ export default function Navbar() {
                 );
               })}
 
-              {/* Career Risk & Resume Builder — only for logged-in users */}
               {isLoggedIn &&
                 accountLinks.map((link) => {
                   const Icon = link.icon;
@@ -167,10 +139,7 @@ export default function Navbar() {
               )}
 
               {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="gjm-nav-admin"
-                >
+                <Link href="/admin" className="gjm-nav-admin">
                   Admin
                 </Link>
               )}
@@ -180,10 +149,7 @@ export default function Navbar() {
                   <Link
                     href="/notifications"
                     className="gjm-nav-icon"
-                    aria-label={t(
-                      "Nav.notifications",
-                      "Notifications"
-                    )}
+                    aria-label={t("Nav.notifications", "Notifications")}
                   >
                     <Bell size={18} />
                   </Link>
@@ -207,23 +173,14 @@ export default function Navbar() {
                   </button>
                 </>
               ) : status === "loading" ? (
-                <Loader2
-                  size={18}
-                  className="gjm-nav-loader"
-                />
+                <Loader2 size={18} className="gjm-nav-loader" />
               ) : (
                 <>
-                  <Link
-                    href="/login"
-                    className="gjm-nav-login"
-                  >
+                  <Link href="/login" className="gjm-nav-login">
                     {t("Nav.login", "Login")}
                   </Link>
 
-                  <Link
-                    href="/register"
-                    className="gjm-nav-cta"
-                  >
+                  <Link href="/register" className="gjm-nav-cta">
                     {t("Nav.register", "Get Started")}
                     <BriefcaseBusiness size={15} />
                   </Link>
@@ -244,9 +201,7 @@ export default function Navbar() {
                 setMobileOpen((value) => !value)
               }
               aria-label={
-                mobileOpen
-                  ? "Close menu"
-                  : "Open menu"
+                mobileOpen ? "Close menu" : "Open menu"
               }
               aria-expanded={mobileOpen}
             >
@@ -279,7 +234,6 @@ export default function Navbar() {
                 );
               })}
 
-              {/* Career Risk & Resume Builder — only for logged-in users */}
               {isLoggedIn &&
                 accountLinks.map((link) => {
                   const Icon = link.icon;
@@ -319,10 +273,7 @@ export default function Navbar() {
                     onClick={closeMobile}
                   >
                     <Bell size={17} />
-                    {t(
-                      "Nav.notifications",
-                      "Notifications"
-                    )}
+                    {t("Nav.notifications", "Notifications")}
                   </Link>
 
                   <button
@@ -351,10 +302,7 @@ export default function Navbar() {
                     className="gjm-mobile-cta"
                     onClick={closeMobile}
                   >
-                    {t(
-                      "Nav.register",
-                      "Get Started"
-                    )}
+                    {t("Nav.register", "Get Started")}
                   </Link>
                 </>
               )}
