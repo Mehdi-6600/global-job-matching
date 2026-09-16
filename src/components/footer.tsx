@@ -38,9 +38,7 @@ export function Footer() {
           </div>
 
           <div className="gjm-footer-column">
-            <h3>
-              {t("Footer.explore", "Explore")}
-            </h3>
+            <h3>{t("Footer.explore", "Explore")}</h3>
 
             <Link href="/jobs">
               {t("Nav.jobs", "Jobs")}
@@ -65,10 +63,7 @@ export function Footer() {
 
           <div className="gjm-footer-column">
             <h3>
-              {t(
-                "Footer.tools",
-                "Platform"
-              )}
+              {t("Footer.tools", "Platform")}
             </h3>
 
             <Link href="/search">
@@ -76,10 +71,7 @@ export function Footer() {
             </Link>
 
             <Link href="/saved-jobs">
-              {t(
-                "Footer.savedJobs",
-                "Saved Jobs"
-              )}
+              {t("Footer.savedJobs", "Saved Jobs")}
             </Link>
 
             <Link href="/my-applications">
@@ -103,7 +95,10 @@ export function Footer() {
 
           <div className="gjm-footer-column">
             <h3>
-              {t("Footer.forEmployers", "For Employers")}
+              {t(
+                "Footer.forEmployers",
+                "For Employers"
+              )}
             </h3>
 
             <Link href="/employer/dashboard">
