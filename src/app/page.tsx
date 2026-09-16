@@ -109,6 +109,13 @@ function salaryLabel(job: Job) {
   return null;
 }
 
+/* ----------------------------------------------------------------
+   SHOW_MAP_SECTION — toggle for the "Global Job Market" map block.
+   Set to `true` to re-enable. Kept as a constant so the JSX stays
+   intact (per project rule: never delete existing features).
+   ---------------------------------------------------------------- */
+const SHOW_MAP_SECTION = false;
+
 export default function HomePage() {
   const { t } = useLocale();
   const router = useRouter();
@@ -599,95 +606,101 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="gjm-map-section">
-        <div className="gjm-container">
-          <div className="gjm-map-heading">
-            <div>
-              <span className="gjm-section-kicker gjm-kicker-dark">
-                {t("Home.mapKicker", "GLOBAL JOB MARKET")}
-              </span>
-
-              <h2>
-                {t(
-                  "Home.mapTitle",
-                  "Explore opportunities around the world."
-                )}
-              </h2>
-
-              <p>
-                {t(
-                  "Home.mapDescription",
-                  "Search by location and discover where your next career opportunity could take you."
-                )}
-              </p>
-            </div>
-
-            <Link href="/locations" className="gjm-dark-link">
-              {t("Home.mapCta", "Explore locations")}
-              <ArrowRight size={17} />
-            </Link>
-          </div>
-
-          <div className="gjm-map-card">
-            <div className="gjm-map-background-grid" />
-
-            <div className="gjm-world-network">
-              <div className="gjm-continent continent-one" />
-              <div className="gjm-continent continent-two" />
-              <div className="gjm-continent continent-three" />
-              <div className="gjm-continent continent-four" />
-              <div className="gjm-continent continent-five" />
-
-              <span className="gjm-world-dot world-dot-one" />
-              <span className="gjm-world-dot world-dot-two" />
-              <span className="gjm-world-dot world-dot-three" />
-              <span className="gjm-world-dot world-dot-four" />
-              <span className="gjm-world-dot world-dot-five" />
-              <span className="gjm-world-dot world-dot-six" />
-              <span className="gjm-world-dot world-dot-seven" />
-
-              <svg
-                className="gjm-connections"
-                viewBox="0 0 1000 500"
-                preserveAspectRatio="none"
-              >
-                <path d="M185 250 C310 105 480 130 640 215" />
-                <path d="M250 310 C430 175 610 165 810 265" />
-                <path d="M440 365 C560 280 700 250 875 170" />
-              </svg>
-            </div>
-
-            <div className="gjm-map-badge gjm-map-badge-one">
-              <span className="gjm-map-badge-dot" />
-              Europe
-              <strong>Live jobs</strong>
-            </div>
-
-            <div className="gjm-map-badge gjm-map-badge-two">
-              <span className="gjm-map-badge-dot" />
-              North America
-              <strong>Live jobs</strong>
-            </div>
-
-            <div className="gjm-map-badge gjm-map-badge-three">
-              <span className="gjm-map-badge-dot" />
-              Asia Pacific
-              <strong>Live jobs</strong>
-            </div>
-
-            <div className="gjm-map-footer">
+      {/* ============================================================
+          MAP SECTION — Disabled via SHOW_MAP_SECTION flag.
+          Set to `true` at the top of this file to re-enable.
+          ============================================================ */}
+      {SHOW_MAP_SECTION && (
+        <section className="gjm-map-section">
+          <div className="gjm-container">
+            <div className="gjm-map-heading">
               <div>
-                <span className="gjm-live-dot" />
-                {t("Home.mapLive", "Live opportunity network")}
+                <span className="gjm-section-kicker gjm-kicker-dark">
+                  {t("Home.mapKicker", "GLOBAL JOB MARKET")}
+                </span>
+
+                <h2>
+                  {t(
+                    "Home.mapTitle",
+                    "Explore opportunities around the world."
+                  )}
+                </h2>
+
+                <p>
+                  {t(
+                    "Home.mapDescription",
+                    "Search by location and discover where your next career opportunity could take you."
+                  )}
+                </p>
               </div>
 
-              <span>
-                {t("Home.mapHint", "Select a location to start")}
-              </span>
+              <Link href="/locations" className="gjm-dark-link">
+                {t("Home.mapCta", "Explore locations")}
+                <ArrowRight size={17} />
+              </Link>
+            </div>
+
+            <div className="gjm-map-card">
+              <div className="gjm-map-background-grid" />
+
+              <div className="gjm-world-network">
+                <div className="gjm-continent continent-one" />
+                <div className="gjm-continent continent-two" />
+                <div className="gjm-continent continent-three" />
+                <div className="gjm-continent continent-four" />
+                <div className="gjm-continent continent-five" />
+
+                <span className="gjm-world-dot world-dot-one" />
+                <span className="gjm-world-dot world-dot-two" />
+                <span className="gjm-world-dot world-dot-three" />
+                <span className="gjm-world-dot world-dot-four" />
+                <span className="gjm-world-dot world-dot-five" />
+                <span className="gjm-world-dot world-dot-six" />
+                <span className="gjm-world-dot world-dot-seven" />
+
+                <svg
+                  className="gjm-connections"
+                  viewBox="0 0 1000 500"
+                  preserveAspectRatio="none"
+                >
+                  <path d="M185 250 C310 105 480 130 640 215" />
+                  <path d="M250 310 C430 175 610 165 810 265" />
+                  <path d="M440 365 C560 280 700 250 875 170" />
+                </svg>
+              </div>
+
+              <div className="gjm-map-badge gjm-map-badge-one">
+                <span className="gjm-map-badge-dot" />
+                Europe
+                <strong>Live jobs</strong>
+              </div>
+
+              <div className="gjm-map-badge gjm-map-badge-two">
+                <span className="gjm-map-badge-dot" />
+                North America
+                <strong>Live jobs</strong>
+              </div>
+
+              <div className="gjm-map-badge gjm-map-badge-three">
+                <span className="gjm-map-badge-dot" />
+                Asia Pacific
+                <strong>Live jobs</strong>
+              </div>
+
+              <div className="gjm-map-footer">
+                <div>
+                  <span className="gjm-live-dot" />
+                  {t("Home.mapLive", "Live opportunity network")}
+                </div>
+
+                <span>
+                  {t("Home.mapHint", "Select a location to start")}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="gjm-section gjm-section-soft">
         <div className="gjm-container">
