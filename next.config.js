@@ -33,16 +33,6 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
-  async redirects() {
-    return [
-      {
-        source: "/sitemap.xml",
-        destination: "/sitemaps.xml",
-        permanent: true,
-      },
-    ];
-  },
-
   async headers() {
     // Report-Only first: does not break the app; monitor in browser console / reports
     const cspReportOnly = [
@@ -64,7 +54,10 @@ const nextConfig = {
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
