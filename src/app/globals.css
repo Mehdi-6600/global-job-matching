@@ -476,6 +476,9 @@
   }
 
   .gjm-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
     padding: 0.5rem 0.875rem;
     border-radius: var(--radius-sm);
     font-size: 0.875rem;
@@ -2723,7 +2726,8 @@
 /* ============================================================
    LEGACY PAGE SUPPORT — Light theme overrides
    برای صفحه‌های داخلی که با Tailwind Dark classes ساخته شده‌اند:
-   pricing, dashboard, blog, notifications, categories, locations, companies
+   pricing, dashboard, blog, notifications, categories, locations, companies,
+   career-risk, resume-builder
    ============================================================ */
 
 /* ---------- Global backgrounds → light ---------- */
@@ -2937,7 +2941,7 @@ input.bg-white\/5::placeholder,
   color: var(--text-subtle) !important;
 }
 
-/* ---------- Code blocks (crypto address) ---------- */
+/* ---------- Code blocks ---------- */
 code.bg-white\/5,
 .bg-white\/5 code {
   background-color: var(--surface-2) !important;
@@ -2973,6 +2977,43 @@ code {
   background: var(--surface) !important;
   box-shadow: var(--shadow-2) !important;
   backdrop-filter: none !important;
+}
+
+/* ============================================================
+   MOBILE MENU — بهبود چیدمان و فاصله
+   ============================================================ */
+.gjm-mobile-menu {
+  max-height: calc(100vh - 72px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.gjm-mobile-links {
+  gap: 0.125rem;
+}
+
+.gjm-mobile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  justify-content: flex-start;
+  text-align: start;
+  width: 100%;
+}
+
+[dir="rtl"] .gjm-mobile-link {
+  text-align: right;
+}
+
+.gjm-mobile-link svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.gjm-mobile-link.active svg,
+.gjm-mobile-link:hover svg {
+  color: var(--brand-primary-hover);
 }
 
 /* ============================================================
