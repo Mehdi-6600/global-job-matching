@@ -1,16 +1,27 @@
+// employer-interviews-id-route.ts
 import { NextRequest, NextResponse } from "next/server";
+
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdminRole, isEmployerRole } from "@/lib/roles";
 import { getRequestIp } from "@/lib/client-ip";
 import { ratelimit } from "@/lib/ratelimit";
 import { interviewUpdateSchema } from "@/lib/validation/interview";
-import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
-// ---------------------------------------------------------------------------
-// PATCH /api/employer/interviews/[id]
-// ---------------------------------------------------------------------------
-
+/**
+ * PATCH /api/employer/interviews/[id]
+ *
+ * Updates an interview (status and/or notes) for the employer
+ * who owns the related company, or for an admin.
+ *
+ * - Requires authentication
+ * - Requires employer or admin role
+ * - Rate limited per user + IP
+ * - Validates request body with zod
+ * - Ensures ownership before mutating
+ * - Creates a notification when status changes
+ * - Performs update + notification in a single transaction
+ */
 export async function PATCH(
   req: NextRequest,
   {
@@ -19,34 +30,47 @@ export async function PATCH(
     params: Promise<{ id: string }>;
   }
 ) {
-  // -------------------------------------------------------------------------
-  // 1) Auth
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // 1. Authentication
+  // ---------------------------------------------------------------------------
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
-  if (!isEmployerRole(session.user.role) && !isAdminRole(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // ---------------------------------------------------------------------------
+  // 2. Authorization (role-based)
+  // ---------------------------------------------------------------------------
+  if (!isEmployerRole(session.user.role)) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403 }
+    );
   }
 
-  // -------------------------------------------------------------------------
-  // 2) Rate limit
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // 3. Rate limiting
+  // ---------------------------------------------------------------------------
   const ip = getRequestIp(req);
   const limited = await ratelimit.limit(
     `employer_interview_patch_${session.user.id}_${ip}`
   );
+
   if (!limited.success) {
-    return rateLimitedResponse(limited, "Too many requests");
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 }
+    );
   }
 
   try {
-    // -----------------------------------------------------------------------
-    // 3) Resolve route param
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 4. Validate route param
+    // -------------------------------------------------------------------------
     const { id } = await params;
 
     if (!id) {
@@ -56,21 +80,22 @@ export async function PATCH(
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 4) Parse JSON body
-    // -----------------------------------------------------------------------
-    const body = await readJsonBody(req);
-    if (body === null) {
+    // -------------------------------------------------------------------------
+    // 5. Parse and validate request body
+    // -------------------------------------------------------------------------
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json(
         { error: "Invalid JSON body" },
         { status: 400 }
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 5) Validate input
-    // -----------------------------------------------------------------------
     const parsed = interviewUpdateSchema.safeParse(body);
+
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -81,9 +106,9 @@ export async function PATCH(
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 6) Load interview + ownership context
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 6. Fetch interview with ownership-related relations
+    // -------------------------------------------------------------------------
     const interview = await db.interview.findUnique({
       where: { id },
       select: {
@@ -114,29 +139,28 @@ export async function PATCH(
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 7) Ownership / admin guard (IDOR protection)
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 7. Ownership / admin check
+    // -------------------------------------------------------------------------
     const isOwner = interview.company?.ownerId === session.user.id;
     const isAdmin = isAdminRole(session.user.role);
 
     if (!isOwner && !isAdmin) {
-      // عمداً 404 برمی‌گردانیم تا وجود منبع لو نرود
       return NextResponse.json(
-        { error: "Interview not found" },
-        { status: 404 }
+        { error: "Forbidden" },
+        { status: 403 }
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 8) Extract update fields
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 8. Extract validated fields
+    // -------------------------------------------------------------------------
     const { status, notes } = parsed.data;
 
     const statusChanged =
       status !== undefined && status !== interview.status;
 
-    // No-op guard: بدون فیلد معتبر، عملیات دیتابیس انجام نده
+    // No-op guard: nothing to update
     if (status === undefined && notes === undefined) {
       return NextResponse.json(
         { error: "No changes requested" },
@@ -144,9 +168,9 @@ export async function PATCH(
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 9) Atomic: update interview + notify candidate (if status changed)
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 9. Atomic update + notification
+    // -------------------------------------------------------------------------
     const updated = await db.$transaction(async (tx) => {
       const updatedInterview = await tx.interview.update({
         where: { id },
@@ -157,15 +181,12 @@ export async function PATCH(
       });
 
       if (statusChanged) {
-        // job.title ممکن است به‌خاطر FK موجود باشد، اما برای safety چک می‌کنیم
-        const jobTitle = interview.job?.title ?? "the position";
-
         await tx.notification.create({
           data: {
             userId: interview.userId,
             type: "interview",
             title: "Interview Updated",
-            message: `Your interview for "${jobTitle}" is now ${status}.`,
+            message: `Your interview for "${interview.job.title}" is now ${status}.`,
             actionUrl: "/my-interviews",
           },
         });
@@ -174,14 +195,17 @@ export async function PATCH(
       return updatedInterview;
     });
 
-    // -----------------------------------------------------------------------
-    // 10) Success
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 10. Success response
+    // -------------------------------------------------------------------------
     return NextResponse.json({
       success: true,
       interview: updated,
     });
   } catch (error: unknown) {
+    // -------------------------------------------------------------------------
+    // 11. Error handling
+    // -------------------------------------------------------------------------
     const err = error as { code?: string };
 
     if (err.code === "P2025") {
@@ -191,7 +215,8 @@ export async function PATCH(
       );
     }
 
-    console.error("[employer/interviews/:id] PATCH error:", error);
+    console.error("Update interview error:", error);
+
     return NextResponse.json(
       { error: "Failed to update interview" },
       { status: 500 }
