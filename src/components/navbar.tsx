@@ -9,7 +9,6 @@ import {
   Bell,
   BriefcaseBusiness,
   Building2,
-  FileText,
   Loader2,
   Menu,
   UserRound,
