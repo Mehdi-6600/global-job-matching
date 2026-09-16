@@ -9,6 +9,7 @@ import {
   Bell,
   BriefcaseBusiness,
   Building2,
+  FileText,
   Loader2,
   Menu,
   UserRound,
@@ -59,7 +60,10 @@ export default function Navbar() {
       href: "/categories",
       label: t("Nav.categories", "Categories"),
     },
-    { href: "/blog", label: t("Nav.blog", "Blog") },
+    {
+      href: "/blog",
+      label: t("Nav.blog", "Blog"),
+    },
     {
       href: "/pricing",
       label: t("Nav.pricing", "Pricing"),
@@ -74,7 +78,11 @@ export default function Navbar() {
     <header className="gjm-header">
       <nav className="gjm-nav">
         <div className="gjm-nav-inner">
-          <Link href="/" className="gjm-brand" onClick={closeMobile}>
+          <Link
+            href="/"
+            className="gjm-brand"
+            onClick={closeMobile}
+          >
             <BrandMark />
 
             <span className="gjm-brand-copy">
