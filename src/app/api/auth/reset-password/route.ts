@@ -3,14 +3,15 @@ import { db } from "@/lib/db";
 import { authRatelimit } from "@/lib/ratelimit";
 import { safeLimit } from "@/lib/safe-ratelimit";
 import { validatePassword, hashPassword } from "@/lib/password";
-import { consumePasswordResetToken } from "@/lib/auth/tokens";
+import { peekPasswordResetToken, hashToken } from "@/lib/auth/tokens";
 import { getRequestIp } from "@/lib/client-ip";
 import { bumpSessionVersionByEmail } from "@/lib/session-version";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 /**
  * Confirm password reset with token + new password.
- * Works for every user (not only admin).
+ * Token is only consumed inside the same transaction as the password update
+ * so a failed update does not burn the token.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -46,32 +47,57 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
     }
 
-    const consumed = await consumePasswordResetToken(token);
-    if (!consumed.ok) {
+    const peeked = await peekPasswordResetToken(token);
+    if (!peeked.ok) {
       return NextResponse.json(
-        { error: consumed.error },
-        { status: consumed.status }
+        { error: peeked.error },
+        { status: peeked.status }
       );
     }
 
     const hashed = await hashPassword(passwordCheck.password);
+    const tokenHash = peeked.tokenHash;
 
-    await db.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { email: consumed.email },
-        data: {
-          password: hashed,
-        },
+    try {
+      await db.$transaction(async (tx) => {
+        // Re-check token still exists (single-use / race protection)
+        const stillThere = await tx.verificationToken.findFirst({
+          where: {
+            identifier: peeked.identifier,
+            token: tokenHash,
+            expires: { gt: new Date() },
+          },
+        });
+        if (!stillThere) {
+          throw new Error("TOKEN_USED");
+        }
+
+        await tx.user.update({
+          where: { email: peeked.email },
+          data: { password: hashed },
+        });
+
+        await bumpSessionVersionByEmail(peeked.email, tx);
+
+        const deleted = await tx.verificationToken.deleteMany({
+          where: {
+            identifier: peeked.identifier,
+            token: tokenHash,
+          },
+        });
+        if (deleted.count !== 1) {
+          throw new Error("TOKEN_USED");
+        }
       });
-
-      await bumpSessionVersionByEmail(consumed.email, tx);
-
-      await tx.verificationToken.deleteMany({
-        where: {
-          identifier: `pw-reset:${consumed.email.toLowerCase().trim()}`,
-        },
-      });
-    });
+    } catch (err) {
+      if (err instanceof Error && err.message === "TOKEN_USED") {
+        return NextResponse.json(
+          { error: "Invalid or expired token" },
+          { status: 400 }
+        );
+      }
+      throw err;
+    }
 
     return NextResponse.json({
       success: true,
@@ -80,7 +106,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Reset password error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to reset password" },
       { status: 500 }
     );
   }
