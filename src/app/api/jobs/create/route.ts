@@ -1,31 +1,58 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { normalizeLocation } from "@/lib/location";
 import { createJobForUser } from "@/services/jobs/create-job";
+import { getRequestIp } from "@/lib/client-ip";
+import { ratelimit } from "@/lib/ratelimit";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
-/**
- * Legacy path — must not bypass plan or ownership checks.
- * Prefer: POST /api/employer/jobs
- */
-export async function POST(req: Request) {
+// ---------------------------------------------------------------------------
+// POST /api/jobs (Legacy)
+//
+// مسیر قدیمی — نباید بررسی‌های plan یا ownership را دور بزند.
+// مسیر ترجیحی: POST /api/employer/jobs
+// ---------------------------------------------------------------------------
+
+export async function POST(req: NextRequest) {
   try {
+    // -----------------------------------------------------------------------
+    // 1) Auth
+    // -----------------------------------------------------------------------
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    // -----------------------------------------------------------------------
+    // 2) Rate limit (per user + IP)
+    // -----------------------------------------------------------------------
+    const ip = getRequestIp(req);
+    const limit = await ratelimit.limit(
+      `jobs_create_${session.user.id}_${ip}`
+    );
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
     }
 
+    // -----------------------------------------------------------------------
+    // 3) Parse JSON body
+    // -----------------------------------------------------------------------
+    const body = await readJsonBody(req);
+    if (body === null) {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // 4) Delegate to service (plan + ownership checks enforced there)
+    // -----------------------------------------------------------------------
     const result = await createJobForUser(
       {
         id: session.user.id,
         role: session.user.role,
-        email: session.user.email,
+        email: session.user.email ?? null,
       },
       body
     );
@@ -43,6 +70,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // 5) Success response (normalize location for consistency)
+    // -----------------------------------------------------------------------
     const job = result.job;
     return NextResponse.json({
       success: true,
@@ -52,7 +82,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    console.error("Job create error:", error);
+    console.error("[jobs/create] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
