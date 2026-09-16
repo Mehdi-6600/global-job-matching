@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Vazirmatn, Noto_Kufi_Arabic } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import Navbar from "@/components/navbar";
@@ -13,12 +13,41 @@ import { jsonLdScript } from "@/lib/seo/core";
 import { LOCALE_COOKIE, isRtlLocale } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
 
+/* ----------------------------------------------------------------
+   Fonts — one per script family
+   - Inter        : Latin  (en, es, fr, de)
+   - Vazirmatn    : Arabic script for Persian (fa)
+   - Noto Kufi    : Arabic script for Arabic (ar)
+   Hindi falls back to Inter, which renders Devanagari correctly
+   via system fallback on modern OSes. If you want full Devanagari
+   coverage, we can add Noto_Sans_Devanagari later.
+   ---------------------------------------------------------------- */
+
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   preload: true,
   adjustFontFallback: true,
+  variable: "--font-inter",
   fallback: ["system-ui", "Segoe UI", "Arial", "sans-serif"],
+});
+
+const vazirmatn = Vazirmatn({
+  subsets: ["arabic"],
+  display: "swap",
+  preload: false,
+  adjustFontFallback: true,
+  variable: "--font-vazirmatn",
+  fallback: ["Tahoma", "system-ui", "sans-serif"],
+});
+
+const notoKufi = Noto_Kufi_Arabic({
+  subsets: ["arabic"],
+  display: "swap",
+  preload: false,
+  adjustFontFallback: true,
+  variable: "--font-noto-kufi",
+  fallback: ["Tahoma", "system-ui", "sans-serif"],
 });
 
 const siteUrl = (
@@ -109,11 +138,16 @@ export default async function RootLayout({
   const websiteLd = websiteJsonLd();
   const orgLd = organizationSiteJsonLd();
 
+  /* Build the font-class string. All three fonts are always
+     attached so that any locale change at runtime immediately
+     has its correct font available. */
+  const fontClasses = `${inter.variable} ${vazirmatn.variable} ${notoKufi.variable}`;
+
   return (
     <html
       lang={locale}
       dir={dir}
-      className="light"
+      className={`light ${fontClasses}`}
       suppressHydrationWarning
     >
       <head>
@@ -143,7 +177,11 @@ export default async function RootLayout({
       </head>
 
       <body
-        className={`${inter.className} antialiased min-h-screen flex flex-col bg-white text-slate-800`}
+        className="antialiased min-h-screen flex flex-col"
+        style={{
+          background: "var(--bg-page)",
+          color: "var(--text-body)",
+        }}
       >
         <Providers>
           <Navbar />
