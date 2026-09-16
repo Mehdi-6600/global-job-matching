@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { rankJobsByMatch } from "@/lib/job-matching";
-import { normalizeLocation } from "@/lib/jobs/sync-normalize";
+import { normalizeLocation } from "@/lib/location";
 import { getRequestIp } from "@/lib/client-ip";
 import { strictRatelimit } from "@/lib/ratelimit";
 
