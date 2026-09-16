@@ -5,45 +5,87 @@ import { isEmployerRole } from "@/lib/roles";
 import { interviewCreateSchema } from "@/lib/validation/interview";
 import { getRequestIp } from "@/lib/client-ip";
 import { ratelimit } from "@/lib/ratelimit";
-import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
-// ---------------------------------------------------------------------------
-// GET /api/employer/interviews
-// ---------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/*                                   Types                                    */
+/* -------------------------------------------------------------------------- */
 
-export async function GET(req: NextRequest) {
-  // -------------------------------------------------------------------------
-  // 1) Auth
-  // -------------------------------------------------------------------------
+type SessionUser = {
+  id: string;
+  role: string;
+};
+
+type ApiError = {
+  error: string;
+  details?: unknown;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              Helper Functions                              */
+/* -------------------------------------------------------------------------- */
+
+function jsonError(
+  message: string,
+  status: number,
+  details?: unknown
+): NextResponse<ApiError> {
+  return NextResponse.json(
+    details !== undefined ? { error: message, details } : { error: message },
+    { status }
+  );
+}
+
+async function authenticateEmployer(): Promise<
+  | { ok: true; user: SessionUser }
+  | { ok: false; response: NextResponse<ApiError> }
+> {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return { ok: false, response: jsonError("Unauthorized", 401) };
   }
 
   if (!isEmployerRole(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return { ok: false, response: jsonError("Forbidden", 403) };
   }
 
-  // -------------------------------------------------------------------------
-  // 2) Rate limit
-  // -------------------------------------------------------------------------
-  const ip = getRequestIp(req);
-  const limited = await ratelimit.limit(
-    `employer_interviews_get_${session.user.id}_${ip}`
-  );
+  return {
+    ok: true,
+    user: { id: session.user.id, role: session.user.role },
+  };
+}
+
+async function enforceRateLimit(
+  key: string
+): Promise<NextResponse<ApiError> | null> {
+  const limited = await ratelimit.limit(key);
   if (!limited.success) {
-    return rateLimitedResponse(limited, "Too many requests");
+    return jsonError("Too many requests", 429);
   }
+  return null;
+}
 
-  // -------------------------------------------------------------------------
-  // 3) Query interviews owned by this employer
-  // -------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/*                                    GET                                     */
+/* -------------------------------------------------------------------------- */
+
+export async function GET(req: NextRequest) {
+  const authResult = await authenticateEmployer();
+  if (!authResult.ok) return authResult.response;
+
+  const { user } = authResult;
+  const ip = getRequestIp(req);
+
+  const rateLimited = await enforceRateLimit(
+    `employer_interviews_get_${user.id}_${ip}`
+  );
+  if (rateLimited) return rateLimited;
+
   try {
     const interviews = await db.interview.findMany({
       where: {
         company: {
-          ownerId: session.user.id,
+          ownerId: user.id,
         },
       },
       orderBy: {
@@ -80,97 +122,60 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ interviews });
   } catch (error) {
-    console.error("[employer/interviews] GET error:", error);
-    return NextResponse.json(
-      { error: "Failed to load interviews" },
-      { status: 500 }
-    );
+    console.error("Get employer interviews error:", error);
+    return jsonError("Failed to load interviews", 500);
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /api/employer/interviews
-// ---------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/*                                    POST                                    */
+/* -------------------------------------------------------------------------- */
 
 export async function POST(req: NextRequest) {
-  // -------------------------------------------------------------------------
-  // 1) Auth
-  // -------------------------------------------------------------------------
-  const session = await auth();
+  const authResult = await authenticateEmployer();
+  if (!authResult.ok) return authResult.response;
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!isEmployerRole(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // -------------------------------------------------------------------------
-  // 2) Rate limit
-  // -------------------------------------------------------------------------
+  const { user } = authResult;
   const ip = getRequestIp(req);
-  const limited = await ratelimit.limit(
-    `employer_interviews_post_${session.user.id}_${ip}`
+
+  const rateLimited = await enforceRateLimit(
+    `employer_interviews_post_${user.id}_${ip}`
   );
-  if (!limited.success) {
-    return rateLimitedResponse(limited, "Too many requests");
+  if (rateLimited) return rateLimited;
+
+  /* ------------------------------ Parse body ------------------------------ */
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonError("Invalid JSON body", 400);
+  }
+
+  const parsed = interviewCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(
+      "Invalid input",
+      400,
+      parsed.error.flatten().fieldErrors
+    );
+  }
+
+  const { jobId, userId, scheduledAt, duration, type, notes, meetLink } =
+    parsed.data;
+
+  /* ------------------------- Business validations ------------------------- */
+
+  if (scheduledAt.getTime() <= Date.now()) {
+    return jsonError("Interview must be scheduled for a future date", 400);
   }
 
   try {
-    // -----------------------------------------------------------------------
-    // 3) Parse JSON body
-    // -----------------------------------------------------------------------
-    const body = await readJsonBody(req);
-    if (body === null) {
-      return NextResponse.json(
-        { error: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
-
-    // -----------------------------------------------------------------------
-    // 4) Validate input
-    // -----------------------------------------------------------------------
-    const parsed = interviewCreateSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid input",
-          details: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-
-    const {
-      jobId,
-      userId,
-      scheduledAt,
-      duration,
-      type,
-      notes,
-      meetLink,
-    } = parsed.data;
-
-    // -----------------------------------------------------------------------
-    // 5) Interview must be scheduled in the future
-    // -----------------------------------------------------------------------
-    if (scheduledAt.getTime() <= Date.now()) {
-      return NextResponse.json(
-        { error: "Interview must be scheduled for a future date" },
-        { status: 400 }
-      );
-    }
-
-    // -----------------------------------------------------------------------
-    // 6) Job ownership check
-    // -----------------------------------------------------------------------
     const job = await db.job.findFirst({
       where: {
         id: jobId,
         company: {
-          ownerId: session.user.id,
+          ownerId: user.id,
         },
       },
       select: {
@@ -188,24 +193,18 @@ export async function POST(req: NextRequest) {
     });
 
     if (!job) {
-      return NextResponse.json(
-        { error: "Job not found or you do not own this job" },
-        { status: 404 }
+      return jsonError(
+        "Job not found or you do not own this job",
+        404
       );
     }
 
     if (!job.companyId) {
-      return NextResponse.json(
-        { error: "This job is not associated with a company" },
-        { status: 400 }
-      );
+      return jsonError("This job is not associated with a company", 400);
     }
 
     const companyId = job.companyId;
 
-    // -----------------------------------------------------------------------
-    // 7) Candidate must have applied for this job
-    // -----------------------------------------------------------------------
     const application = await db.application.findUnique({
       where: {
         userId_jobId: {
@@ -222,25 +221,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (!application) {
-      return NextResponse.json(
-        { error: "Candidate has not applied for this job" },
-        { status: 400 }
-      );
+      return jsonError("Candidate has not applied for this job", 400);
     }
 
     if (application.status === "rejected") {
-      return NextResponse.json(
-        {
-          error:
-            "Cannot schedule an interview for a rejected application",
-        },
-        { status: 400 }
+      return jsonError(
+        "Cannot schedule an interview for a rejected application",
+        400
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 8) Candidate must exist
-    // -----------------------------------------------------------------------
     const candidate = await db.user.findUnique({
       where: { id: userId },
       select: {
@@ -251,15 +241,9 @@ export async function POST(req: NextRequest) {
     });
 
     if (!candidate) {
-      return NextResponse.json(
-        { error: "Candidate not found" },
-        { status: 404 }
-      );
+      return jsonError("Candidate not found", 404);
     }
 
-    // -----------------------------------------------------------------------
-    // 9) Prevent duplicate scheduled interview for same (candidate, job)
-    // -----------------------------------------------------------------------
     const existingInterview = await db.interview.findFirst({
       where: {
         userId,
@@ -270,28 +254,23 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingInterview) {
-      return NextResponse.json(
-        {
-          error:
-            "A scheduled interview already exists for this candidate and job",
-        },
-        { status: 409 }
+      return jsonError(
+        "A scheduled interview already exists for this candidate and job",
+        409
       );
     }
 
-    // -----------------------------------------------------------------------
-    // 10) Compose notes (structured, single text field in DB)
-    // -----------------------------------------------------------------------
+    /* --------------------------- Prepare notes --------------------------- */
+
     const notesParts = [
       notes?.trim() || null,
       duration != null ? `Duration: ${duration} min` : null,
       type ? `Type: ${type}` : null,
       meetLink?.trim() ? `Meet link: ${meetLink.trim()}` : null,
-    ].filter(Boolean);
+    ].filter((part): part is string => Boolean(part));
 
-    // -----------------------------------------------------------------------
-    // 11) Atomic: create interview + notify candidate
-    // -----------------------------------------------------------------------
+    /* --------------------------- Transaction ---------------------------- */
+
     const result = await db.$transaction(async (tx) => {
       const interview = await tx.interview.create({
         data: {
@@ -345,9 +324,6 @@ export async function POST(req: NextRequest) {
       return interview;
     });
 
-    // -----------------------------------------------------------------------
-    // 12) Success
-    // -----------------------------------------------------------------------
     return NextResponse.json(
       { success: true, interview: result },
       { status: 201 }
@@ -355,18 +331,11 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as { code?: string };
 
-    // Prisma unique constraint violation (race on duplicate interview)
     if (err.code === "P2002") {
-      return NextResponse.json(
-        { error: "A duplicate interview already exists" },
-        { status: 409 }
-      );
+      return jsonError("A duplicate interview already exists", 409);
     }
 
-    console.error("[employer/interviews] POST error:", error);
-    return NextResponse.json(
-      { error: "Failed to create interview" },
-      { status: 500 }
-    );
+    console.error("Create interview error:", error);
+    return jsonError("Failed to create interview", 500);
   }
 }
