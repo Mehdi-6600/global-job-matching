@@ -76,8 +76,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Global Job Matching",
-    description:
-      "Find jobs and hire talent worldwide on Global Job Matching.",
+    description: "Find jobs and hire talent worldwide on Global Job Matching.",
     images: ["/twitter-image"],
   },
   robots: {
@@ -112,36 +111,19 @@ export default async function RootLayout({
   const orgLd = organizationSiteJsonLd();
 
   return (
-    <html
-      lang={locale}
-      dir={dir}
-      className="light"
-      suppressHydrationWarning
-    >
+    <html lang={locale} dir={dir} className="light" suppressHydrationWarning>
       <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          rel="dns-prefetch"
-          href="https://fonts.gstatic.com"
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdScript(websiteLd),
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdScript(orgLd),
-          }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(orgLd) }}
         />
       </head>
-
       <body
         className={`${inter.className} antialiased min-h-screen flex flex-col bg-[#e8eef5] text-slate-800`}
       >
