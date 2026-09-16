@@ -72,7 +72,7 @@
     --container-max: 1200px;
     --container-pad: 1rem;
 
-    /* ---------- Compatibility aliases (existing code uses these) ---------- */
+    /* ---------- Compatibility aliases ---------- */
     --neu-bg: var(--bg-page);
     --neu-surface: var(--surface);
     --neu-text: var(--text-primary);
@@ -141,7 +141,6 @@
     height: auto;
   }
 
-  /* ---------- Multilingual font fallback ---------- */
   html[lang="fa"] body,
   html[lang="ar"] body {
     letter-spacing: 0;
@@ -167,7 +166,6 @@
     overflow-wrap: anywhere;
   }
 
-  /* ---------- Scrollbar ---------- */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -184,10 +182,6 @@
     background: #a8a29e;
   }
 }
-
-/* ============================================================
-   COMPONENTS
-   ============================================================ */
 
 @layer components {
   /* ---------- Container ---------- */
@@ -275,7 +269,6 @@
     transform: translateY(-1px);
   }
 
-  /* Legacy aliases */
   .btn-primary { @apply gjm-btn gjm-btn-primary; }
   .btn-secondary { @apply gjm-btn gjm-btn-secondary; }
 
@@ -405,7 +398,6 @@
     .gjm-nav-inner { padding: 1rem 2rem; }
   }
 
-  /* ---------- Brand ---------- */
   .gjm-brand {
     display: inline-flex;
     align-items: center;
@@ -465,7 +457,6 @@
     letter-spacing: 0.08em;
   }
 
-  /* ---------- Desktop nav ---------- */
   .gjm-desktop-nav {
     display: none;
     align-items: center;
@@ -614,7 +605,6 @@
     transform: translateY(-1px);
   }
 
-  /* ---------- Mobile actions ---------- */
   .gjm-mobile-actions {
     display: flex;
     align-items: center;
@@ -643,7 +633,6 @@
     border-color: #d6d3d1;
   }
 
-  /* ---------- Mobile menu ---------- */
   .gjm-mobile-menu {
     border-top: 1px solid var(--border-soft);
     background: var(--surface);
@@ -1049,7 +1038,6 @@
     flex-shrink: 0;
   }
 
-  /* ---------- Hero visual ---------- */
   .gjm-hero-visual {
     position: relative;
     min-height: 380px;
@@ -1137,7 +1125,6 @@
   .gjm-map-dot.dot-five   { top: 45%; left: 45%; }
   .gjm-map-dot.dot-six    { top: 75%; left: 40%; }
 
-  /* Floating job cards on hero */
   .gjm-floating-job {
     position: absolute;
     display: flex;
@@ -1265,7 +1252,6 @@
     opacity: 0.7;
   }
 
-  /* ---------- Search bar ---------- */
   .gjm-search-shell {
     position: relative;
     margin-top: 3rem;
@@ -1380,7 +1366,6 @@
     transform: translateY(-1px);
   }
 
-  /* ---------- Stats section ---------- */
   .gjm-stats-section {
     padding-block: 2.5rem 3rem;
   }
@@ -1447,7 +1432,6 @@
     text-overflow: ellipsis;
   }
 
-  /* ---------- Feature cards ---------- */
   .gjm-feature-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -1539,7 +1523,6 @@
     transform: scaleX(-1);
   }
 
-  /* ---------- Map section ---------- */
   .gjm-map-section {
     padding-block: 4rem;
     background: var(--text-primary);
@@ -1727,7 +1710,6 @@
     animation: gjm-pulse 1.5s ease-in-out infinite;
   }
 
-  /* ---------- Jobs grid ---------- */
   .gjm-jobs-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -1917,7 +1899,6 @@
     transform: scale(1.05);
   }
 
-  /* Job skeleton */
   .gjm-job-skeleton {
     display: flex;
     flex-direction: column;
@@ -1946,7 +1927,6 @@
     animation: gjm-shimmer 1.5s ease-in-out infinite;
   }
 
-  /* Empty jobs */
   .gjm-empty-jobs {
     grid-column: 1 / -1;
     display: flex;
@@ -1977,7 +1957,6 @@
     max-width: 32rem;
   }
 
-  /* ---------- Platform cards ---------- */
   .gjm-platform-section {
     padding-block: 4rem;
   }
@@ -2073,7 +2052,6 @@
   .gjm-platform-card.accent-pink .gjm-platform-icon { background: #fce7f3; color: #db2777; }
   .gjm-platform-card.accent-blue .gjm-platform-icon { background: #dbeafe; color: #2563eb; }
 
-  /* ---------- Employer section ---------- */
   .gjm-employer-section {
     padding-block: 4rem;
     background: var(--bg-page-soft);
@@ -2391,7 +2369,6 @@
     color: var(--success);
   }
 
-  /* ---------- Final CTA ---------- */
   .gjm-final-cta {
     position: relative;
     padding: 3rem 1.5rem;
@@ -2464,7 +2441,6 @@
     background: rgba(255, 255, 255, 0.15);
   }
 
-  /* ---------- Newsletter ---------- */
   .gjm-newsletter-section {
     padding-block: 3rem 4rem;
   }
@@ -2475,7 +2451,7 @@
   }
 
   /* ============================================================
-     CAREER RISK — preserved, restyled
+     CAREER RISK
      ============================================================ */
   .btn-career-risk {
     display: inline-flex;
@@ -2706,7 +2682,7 @@
 }
 
 /* ============================================================
-   RTL-AWARE POSITIONING (logical properties fallback)
+   RTL-AWARE POSITIONING
    ============================================================ */
 [dir="rtl"] .text-left { text-align: right; }
 [dir="rtl"] .text-right { text-align: left; }
@@ -2742,6 +2718,261 @@
 }
 .gjm-newsletter-section input::placeholder {
   color: var(--text-subtle);
+}
+
+/* ============================================================
+   LEGACY PAGE SUPPORT — Light theme overrides
+   برای صفحه‌های داخلی که با Tailwind Dark classes ساخته شده‌اند:
+   pricing, dashboard, blog, notifications, categories, locations, companies
+   ============================================================ */
+
+/* ---------- Global backgrounds → light ---------- */
+.bg-gradient-to-br.from-slate-900.via-slate-800.to-slate-900,
+.bg-gradient-to-b.from-slate-900.via-slate-800.to-slate-900,
+.bg-gradient-to-br.from-slate-900,
+.bg-gradient-to-r.from-slate-900,
+.bg-slate-900,
+.bg-slate-950,
+.bg-slate-800 {
+  background-image: none !important;
+  background-color: var(--bg-page) !important;
+}
+
+.bg-black {
+  background-color: var(--bg-page) !important;
+}
+
+.from-slate-900,
+.from-slate-950,
+.from-slate-800 {
+  --tw-gradient-from: var(--bg-page) !important;
+  --tw-gradient-to: rgba(245, 245, 244, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.via-slate-800,
+.via-slate-900 {
+  --tw-gradient-to: rgba(245, 245, 244, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--surface-2), var(--tw-gradient-to) !important;
+}
+
+.to-slate-800,
+.to-slate-900,
+.to-slate-950 {
+  --tw-gradient-to: var(--bg-page) !important;
+}
+
+/* ---------- Overlay (modal backdrop) ---------- */
+.bg-black\/60 {
+  background-color: rgba(28, 25, 23, 0.5) !important;
+}
+
+/* ---------- Cards & surfaces ---------- */
+.glass,
+.glass-strong {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-2) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.bg-white\/5,
+.bg-white\/10 {
+  background-color: var(--surface-2) !important;
+}
+
+.bg-white\/\[0\.03\] {
+  background-color: var(--surface-3) !important;
+}
+
+/* ---------- Text colors ---------- */
+.text-white {
+  color: var(--text-primary) !important;
+}
+
+.text-slate-50,
+.text-slate-100,
+.text-slate-200 {
+  color: var(--text-primary) !important;
+}
+
+.text-slate-300 {
+  color: var(--text-body) !important;
+}
+
+.text-slate-400,
+.text-slate-500,
+.text-slate-600 {
+  color: var(--text-muted) !important;
+}
+
+/* Keep white text on primary buttons */
+.bg-indigo-600 .text-white,
+.bg-indigo-600.text-white,
+button.bg-indigo-600,
+a.bg-indigo-600,
+.bg-indigo-600 *,
+.bg-indigo-500 *,
+.bg-cyan-500 *,
+.bg-sky-500 * {
+  color: #ffffff !important;
+}
+
+/* ---------- Borders ---------- */
+.border-white\/5,
+.border-white\/10,
+.border-white\/20,
+.border-slate-700,
+.border-slate-800 {
+  border-color: var(--border) !important;
+}
+
+/* ---------- Accent colors ---------- */
+.text-indigo-300,
+.text-indigo-400,
+.text-indigo-500,
+.text-cyan-300,
+.text-cyan-400,
+.text-cyan-500,
+.text-sky-400,
+.text-sky-500 {
+  color: var(--brand-primary-hover) !important;
+}
+
+.text-emerald-300,
+.text-emerald-400,
+.text-emerald-500 {
+  color: var(--brand-accent) !important;
+}
+
+.text-purple-400,
+.text-violet-400 {
+  color: #7c3aed !important;
+}
+
+.text-amber-300,
+.text-amber-400,
+.text-amber-500 {
+  color: #d97706 !important;
+}
+
+.text-red-400,
+.text-red-300,
+.text-red-500 {
+  color: var(--error) !important;
+}
+
+/* ---------- Primary buttons ---------- */
+.bg-indigo-600,
+.bg-indigo-500 {
+  background-color: var(--brand-primary) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-2) !important;
+}
+
+.bg-indigo-600:hover,
+.bg-indigo-500:hover {
+  background-color: var(--brand-primary-hover) !important;
+  box-shadow: var(--shadow-3) !important;
+}
+
+.bg-indigo-600:disabled,
+.bg-indigo-500:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.bg-indigo-500\/10,
+.bg-indigo-500\/15 {
+  background-color: var(--brand-primary-tint) !important;
+}
+
+/* ---------- Secondary buttons ---------- */
+.hover\:bg-white\/10:hover {
+  background-color: var(--surface-3) !important;
+}
+
+.hover\:text-white:hover {
+  color: var(--text-primary) !important;
+}
+
+/* ---------- Focus rings ---------- */
+.focus\:ring-indigo-500:focus,
+.focus\:ring-indigo-400:focus {
+  --tw-ring-color: var(--brand-primary) !important;
+}
+
+.focus\:border-indigo-500:focus {
+  border-color: var(--brand-primary) !important;
+}
+
+/* ---------- Shadows ---------- */
+.shadow-indigo-500\/10 {
+  --tw-shadow-color: rgba(6, 182, 212, 0.15) !important;
+  --tw-shadow: 0 8px 24px var(--tw-shadow-color) !important;
+  box-shadow: var(--tw-shadow) !important;
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-4) !important;
+}
+
+.shadow-xl {
+  box-shadow: var(--shadow-5) !important;
+}
+
+/* ---------- Inputs ---------- */
+.bg-white\/5 input,
+input.bg-white\/5,
+select.bg-white\/5 {
+  background-color: var(--surface-2) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+input.bg-white\/5::placeholder,
+.bg-white\/5 input::placeholder {
+  color: var(--text-subtle) !important;
+}
+
+/* ---------- Code blocks (crypto address) ---------- */
+code.bg-white\/5,
+.bg-white\/5 code {
+  background-color: var(--surface-2) !important;
+  color: var(--brand-primary-hover) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.hover\:underline:hover {
+  text-decoration: underline !important;
+}
+
+.bg-indigo-600.rounded-full,
+.bg-indigo-500.rounded-full {
+  background-color: var(--brand-primary) !important;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
+.max-h-\[90vh\] {
+  max-height: 90vh !important;
+}
+
+[dir="rtl"] svg.lucide-arrow-left {
+  transform: scaleX(-1);
+}
+
+.glass.gjm-container,
+.gjm-container .glass {
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-2) !important;
+  backdrop-filter: none !important;
 }
 
 /* ============================================================
