@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdminRole } from "@/lib/roles";
+import { getRequestIp } from "@/lib/client-ip";
+import { ratelimit } from "@/lib/ratelimit";
 import { securityLog } from "@/lib/security-log";
 import { z } from "zod";
 import { normalizeLocation } from "@/lib/location";
 import { jobStatusSchema } from "@/lib/validation/job";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 // ---------------------------------------------------------------------------
 // ثابت‌ها
@@ -127,11 +130,39 @@ async function requireAdmin(): Promise<AdminGuard> {
 }
 
 // ---------------------------------------------------------------------------
+// گارد مشترک: ادمین + rate limit
+// ---------------------------------------------------------------------------
+
+type AdminRateLimitedGuard =
+  | { ok: true; userId: string; role: string }
+  | { ok: false; response: NextResponse<JsonErrorBody> };
+
+async function requireAdminWithRateLimit(
+  req: NextRequest
+): Promise<AdminRateLimitedGuard> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const ip = getRequestIp(req);
+  const limited = await ratelimit.limit(
+    `admin_jobs_${guard.userId}_${ip}`
+  );
+  if (!limited.success) {
+    return {
+      ok: false,
+      response: rateLimitedResponse(limited, "Too many requests"),
+    };
+  }
+
+  return guard;
+}
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/jobs
 // ---------------------------------------------------------------------------
 
 export async function GET(req: NextRequest) {
-  const guard = await requireAdmin();
+  const guard = await requireAdminWithRateLimit(req);
   if (!guard.ok) return guard.response;
 
   try {
@@ -205,14 +236,12 @@ export async function GET(req: NextRequest) {
 // ---------------------------------------------------------------------------
 
 export async function PATCH(req: NextRequest) {
-  const guard = await requireAdmin();
+  const guard = await requireAdminWithRateLimit(req);
   if (!guard.ok) return guard.response;
 
   // Parse JSON
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
+  const body = await readJsonBody(req);
+  if (body === null) {
     return jsonError("Invalid JSON body", 400);
   }
 
@@ -305,7 +334,7 @@ export async function PATCH(req: NextRequest) {
 // ---------------------------------------------------------------------------
 
 export async function DELETE(req: NextRequest) {
-  const guard = await requireAdmin();
+  const guard = await requireAdminWithRateLimit(req);
   if (!guard.ok) return guard.response;
 
   const { searchParams } = new URL(req.url);
