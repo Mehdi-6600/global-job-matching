@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
+import "./ui-styleguide.css";
 import Navbar from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Providers } from "./providers";
@@ -29,7 +30,7 @@ const siteUrl = (
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#e8eef5" },
+    { media: "(prefers-color-scheme: light)", color: "#f7faf9" },
     { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
   width: "device-width",
@@ -125,7 +126,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} antialiased min-h-screen flex flex-col bg-[#e8eef5] text-slate-800`}
+        className={`${inter.className} antialiased min-h-screen flex flex-col bg-[#f7faf9] text-[#202b29]`}
       >
         <Providers>
           <Navbar />
