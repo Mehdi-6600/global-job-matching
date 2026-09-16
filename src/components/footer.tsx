@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Globe2 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { BrandMark } from "@/components/brand-logo";
 
 export function Footer() {
   const { t } = useLocale();
@@ -16,7 +17,7 @@ export function Footer() {
           <div className="gjm-footer-brand">
             <Link href="/" className="gjm-footer-logo">
               <span className="gjm-footer-symbol">
-                <Globe2 size={20} />
+                <BrandMark size={36} />
               </span>
 
               <span>
@@ -62,9 +63,7 @@ export function Footer() {
           </div>
 
           <div className="gjm-footer-column">
-            <h3>
-              {t("Footer.tools", "Platform")}
-            </h3>
+            <h3>{t("Footer.tools", "Platform")}</h3>
 
             <Link href="/search">
               {t("Nav.search", "Search")}
@@ -75,17 +74,11 @@ export function Footer() {
             </Link>
 
             <Link href="/my-applications">
-              {t(
-                "Footer.applications",
-                "Applications"
-              )}
+              {t("Footer.applications", "Applications")}
             </Link>
 
             <Link href="/job-alerts">
-              {t(
-                "Footer.jobAlerts",
-                "Job Alerts"
-              )}
+              {t("Footer.jobAlerts", "Job Alerts")}
             </Link>
 
             <Link href="/blog">
@@ -94,25 +87,14 @@ export function Footer() {
           </div>
 
           <div className="gjm-footer-column">
-            <h3>
-              {t(
-                "Footer.forEmployers",
-                "For Employers"
-              )}
-            </h3>
+            <h3>{t("Footer.forEmployers", "For Employers")}</h3>
 
             <Link href="/employer/dashboard">
-              {t(
-                "Footer.employerDashboard",
-                "Employer Dashboard"
-              )}
+              {t("Footer.employerDashboard", "Employer Dashboard")}
             </Link>
 
             <Link href="/employer/post-job">
-              {t(
-                "Footer.postJob",
-                "Post a Job"
-              )}
+              {t("Footer.postJob", "Post a Job")}
             </Link>
 
             <Link href="/about">
@@ -124,10 +106,7 @@ export function Footer() {
             </Link>
 
             <Link href="/privacy">
-              {t(
-                "Footer.privacy",
-                "Privacy Policy"
-              )}
+              {t("Footer.privacy", "Privacy Policy")}
             </Link>
           </div>
         </div>
@@ -137,25 +116,16 @@ export function Footer() {
         <div className="gjm-footer-bottom">
           <p>
             © {year} Global Job Matching.{" "}
-            {t(
-              "Footer.rights",
-              "All rights reserved."
-            )}
+            {t("Footer.rights", "All rights reserved.")}
           </p>
 
           <div className="gjm-footer-bottom-links">
             <Link href="/terms">
-              {t(
-                "Footer.terms",
-                "Terms of Service"
-              )}
+              {t("Footer.terms", "Terms of Service")}
             </Link>
 
             <Link href="/privacy">
-              {t(
-                "Footer.privacy",
-                "Privacy Policy"
-              )}
+              {t("Footer.privacy", "Privacy Policy")}
             </Link>
 
             <Link href="/contact">
@@ -163,10 +133,7 @@ export function Footer() {
             </Link>
 
             <Link href="/jobs">
-              {t(
-                "Footer.browseJobs",
-                "Browse jobs"
-              )}
+              {t("Footer.browseJobs", "Browse jobs")}
               <ArrowUpRight size={13} />
             </Link>
           </div>
