@@ -28,10 +28,7 @@ const siteUrl = (
 ).replace(/\/$/, "");
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7faf9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
-  ],
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -89,7 +86,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: { canonical: siteUrl },
+  alternates: {
+    canonical: siteUrl,
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -111,25 +110,48 @@ export default async function RootLayout({
   const orgLd = organizationSiteJsonLd();
 
   return (
-    <html lang={locale} dir={dir} className="light" suppressHydrationWarning>
+    <html
+      lang={locale}
+      dir={dir}
+      className="light"
+      suppressHydrationWarning
+    >
       <head>
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteLd) }}
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
         />
+        <link
+          rel="dns-prefetch"
+          href="https://fonts.gstatic.com"
+        />
+
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdScript(orgLd) }}
+          dangerouslySetInnerHTML={{
+            __html: jsonLdScript(websiteLd),
+          }}
+        />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: jsonLdScript(orgLd),
+          }}
         />
       </head>
+
       <body
-        className={`${inter.className} antialiased min-h-screen flex flex-col bg-[#f7faf9] text-[#202b29]`}
+        className={`${inter.className} antialiased min-h-screen flex flex-col bg-white text-slate-800`}
       >
         <Providers>
           <Navbar />
-          <main className="flex-1">{children}</main>
+
+          <main className="flex-1">
+            {children}
+          </main>
+
           <Footer />
         </Providers>
       </body>
