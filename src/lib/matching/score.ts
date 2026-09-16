@@ -1,5 +1,11 @@
+/**
+ * Canonical deterministic matching engine (single source of truth).
+ * Unicode-safe tokenization for en / fa / ar and mixed text.
+ */
+
 export type MatchProfileInput = {
   skills?: string | null;
+  title?: string | null;
   bio?: string | null;
   experience?: string | null;
   education?: string | null;
@@ -32,21 +38,44 @@ export type MatchResult = {
   missingFromRequirements: string[];
 };
 
-function tokenize(text: string | null | undefined): string[] {
-  if (!text) return [];
+const STOP = new Set([
+  "and", "or", "the", "a", "an", "to", "of", "in", "for", "with", "on", "at",
+  "by", "from", "as", "is", "are", "be", "this", "that", "your", "you", "we",
+  "our", "job", "role", "work", "years", "year", "experience",
+  "و", "در", "به", "از", "که", "را", "با", "برای",
+]);
+
+/** Normalize common Arabic/Persian letter variants */
+export function normalizeScript(text: string): string {
   return text
-    .toLowerCase()
-    .replace(/[^a-z0-9+#.\s\-]/g, " ")
-    .split(/[\s,;/|]+/)
+    .replace(/\u064A/g, "\u06CC") // ي → ی
+    .replace(/\u0643/g, "\u06A9") // ك → ک
+    .replace(/\u0629/g, "\u0647") // ة → ه
+    .replace(/\u200C/g, " ") // ZWNJ → space
+    .replace(/\u0640/g, ""); // tatweel
+}
+
+/**
+ * Unicode-aware tokenizer: keeps Latin, digits, CJK-safe marks, and Arabic block.
+ */
+export function tokenize(text: string | null | undefined): string[] {
+  if (!text) return [];
+  const normalized = normalizeScript(text.toLowerCase());
+  return normalized
+    .replace(/[^\p{L}\p{N}+#.\s\-]/gu, " ")
+    .split(/[\s,;/|·•]+/)
     .map((t) => t.trim())
-    .filter((t) => t.length >= 2);
+    .filter((t) => t.length >= 2 && !STOP.has(t));
 }
 
 function unique(tokens: string[]): string[] {
   return Array.from(new Set(tokens));
 }
 
-function overlapRatio(a: string[], b: string[]): { ratio: number; matched: string[] } {
+function overlapRatio(
+  a: string[],
+  b: string[]
+): { ratio: number; matched: string[] } {
   if (a.length === 0 || b.length === 0) return { ratio: 0, matched: [] };
   const setB = new Set(b);
   const matched = a.filter((t) => setB.has(t));
@@ -60,14 +89,12 @@ function locationScore(
   remote?: boolean | null
 ): number {
   if (remote) return 1;
-  const p = (profileLoc || "").toLowerCase().trim();
-  const j = (jobLoc || "").toLowerCase().trim();
+  const p = normalizeScript((profileLoc || "").toLowerCase().trim());
+  const j = normalizeScript((jobLoc || "").toLowerCase().trim());
   if (!p || !j) return 0.35;
   if (p === j) return 1;
   if (p.includes(j) || j.includes(p)) return 0.85;
-  const pParts = tokenize(p);
-  const jParts = tokenize(j);
-  const { ratio } = overlapRatio(pParts, jParts);
+  const { ratio } = overlapRatio(tokenize(p), tokenize(j));
   if (ratio >= 0.5) return 0.7;
   if (ratio > 0) return 0.45;
   return 0.15;
@@ -79,8 +106,8 @@ function experienceScore(
 ): number {
   if (!jobExp) return 0.55;
   if (!profileExp) return 0.3;
-  const p = profileExp.toLowerCase();
-  const j = jobExp.toLowerCase();
+  const p = normalizeScript(profileExp.toLowerCase());
+  const j = normalizeScript(jobExp.toLowerCase());
   if (p.includes(j) || j.includes(p)) return 0.9;
   const yearsIn = (s: string) => {
     const m = s.match(/(\d+)\s*\+?\s*(year|yr|سال)/i);
@@ -95,70 +122,85 @@ function experienceScore(
     return 0.25;
   }
   const { ratio } = overlapRatio(tokenize(p), tokenize(j));
-  return 0.35 + ratio * 0.5;
+  return Math.max(0.25, ratio);
 }
 
 function levelFromScore(score: number): MatchResult["level"] {
-  if (score >= 80) return "excellent";
-  if (score >= 60) return "high";
-  if (score >= 40) return "medium";
+  if (score >= 85) return "excellent";
+  if (score >= 70) return "high";
+  if (score >= 45) return "medium";
   return "low";
 }
 
 /**
- * Deterministic 0–100 match score between a job-seeker profile and a job.
+ * Canonical score 0–100. Same inputs always produce the same output.
  */
 export function computeMatchScore(
   profile: MatchProfileInput,
   job: MatchJobInput
 ): MatchResult {
-  const profileSkills = unique([
-    ...tokenize(profile.skills),
-    ...tokenize(profile.bio),
-  ]);
+  const profileSkillTokens = unique(
+    tokenize(
+      [profile.skills, profile.title, profile.bio, profile.experience, profile.education]
+        .filter(Boolean)
+        .join(" ")
+    )
+  );
 
-  const requirementTokens = unique([
-    ...(job.requirements || []).flatMap((r) => tokenize(r)),
-    ...(job.tags || []).flatMap((t) => tokenize(t)),
-    ...tokenize(job.title),
-  ]);
+  const requirementTokens = unique(
+    [
+      ...(job.requirements || []),
+      ...(job.tags || []),
+    ].flatMap((s) => tokenize(s))
+  );
 
-  const skillOverlap = overlapRatio(profileSkills, requirementTokens);
-  const skillsComponent = skillOverlap.ratio;
+  const jobTextTokens = unique(
+    tokenize(`${job.title} ${job.description || ""} ${job.type || ""}`)
+  );
+
+  const skillPool =
+    requirementTokens.length > 0 ? requirementTokens : jobTextTokens;
+
+  const skillOverlap = overlapRatio(profileSkillTokens, skillPool);
+  const keywordOverlap = overlapRatio(profileSkillTokens, jobTextTokens);
+
+  // Optional title affinity (only when profile has a real title, not skills dump)
+  let titleBoost = 0;
+  if (profile.title && profile.title.trim().length >= 2) {
+    const titleTokens = tokenize(profile.title);
+    const jobTitleTokens = tokenize(job.title);
+    const { ratio } = overlapRatio(titleTokens, jobTitleTokens);
+    titleBoost = ratio * 0.08;
+  }
+
+  const skillsPart = skillOverlap.ratio;
+  const locPart = locationScore(profile.location, job.location, job.remote);
+  const expPart = experienceScore(profile.experience, job.experience);
+  const kwPart = keywordOverlap.ratio;
+
+  const raw =
+    skillsPart * 0.45 +
+    locPart * 0.2 +
+    expPart * 0.15 +
+    kwPart * 0.2 +
+    titleBoost;
+
+  const score = Math.max(0, Math.min(100, Math.round(raw * 100)));
 
   const missingFromRequirements = requirementTokens
     .filter((t) => !skillOverlap.matched.includes(t))
     .slice(0, 12);
 
-  const locComponent = locationScore(profile.location, job.location, job.remote);
-  const expComponent = experienceScore(profile.experience, job.experience);
-
-  const keywordPool = unique([
-    ...tokenize(job.description).slice(0, 80),
-    ...tokenize(job.title),
-  ]);
-  const keywordOverlap = overlapRatio(profileSkills, keywordPool);
-  const keywordComponent = keywordOverlap.ratio;
-
-  // Weights: skills dominate
-  const weighted =
-    skillsComponent * 0.45 +
-    locComponent * 0.2 +
-    expComponent * 0.2 +
-    keywordComponent * 0.15;
-
-  const score = Math.round(Math.min(100, Math.max(0, weighted * 100)));
-
   return {
     score,
     level: levelFromScore(score),
     breakdown: {
-      skills: Math.round(skillsComponent * 100),
-      location: Math.round(locComponent * 100),
-      experience: Math.round(expComponent * 100),
-      keywords: Math.round(keywordComponent * 100),
+      skills: Math.round(skillsPart * 100),
+      location: Math.round(locPart * 100),
+      experience: Math.round(expPart * 100),
+      keywords: Math.round(kwPart * 100),
     },
-    matchedSkills: skillOverlap.matched.slice(0, 15),
+    matchedSkills: skillOverlap.matched.slice(0, 20),
     missingFromRequirements,
   };
 }
