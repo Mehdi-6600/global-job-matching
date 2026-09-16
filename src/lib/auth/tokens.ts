@@ -54,11 +54,11 @@ export async function issuePasswordResetToken(email: string): Promise<{
 }
 
 /**
- * Atomically consume a reset token.
- * Only one concurrent request can succeed (delete-then-check pattern).
+ * Validate a reset token WITHOUT consuming it.
+ * Use with resetPasswordWithToken so consume + password update are atomic.
  */
-export async function consumePasswordResetToken(rawToken: string): Promise<
-  | { ok: true; email: string; tokenHash: string }
+export async function peekPasswordResetToken(rawToken: string): Promise<
+  | { ok: true; email: string; tokenHash: string; identifier: string }
   | { ok: false; error: string; status: number }
 > {
   const tokenHash = hashToken(rawToken.trim());
@@ -76,10 +76,29 @@ export async function consumePasswordResetToken(rawToken: string): Promise<
     return { ok: false, error: "Invalid or expired token", status: 400 };
   }
 
+  const email = row.identifier.replace(/^pw-reset:/, "");
+  if (!email || !email.includes("@")) {
+    return { ok: false, error: "Invalid or expired token", status: 400 };
+  }
+
+  return { ok: true, email, tokenHash, identifier: row.identifier };
+}
+
+/**
+ * @deprecated Prefer peekPasswordResetToken + transactional delete after password update.
+ * Kept for compatibility: validates then deletes (same race window as before).
+ */
+export async function consumePasswordResetToken(rawToken: string): Promise<
+  | { ok: true; email: string; tokenHash: string }
+  | { ok: false; error: string; status: number }
+> {
+  const peeked = await peekPasswordResetToken(rawToken);
+  if (!peeked.ok) return peeked;
+
   const deleted = await db.verificationToken.deleteMany({
     where: {
-      identifier: row.identifier,
-      token: tokenHash,
+      identifier: peeked.identifier,
+      token: peeked.tokenHash,
     },
   });
 
@@ -87,12 +106,7 @@ export async function consumePasswordResetToken(rawToken: string): Promise<
     return { ok: false, error: "Token already used", status: 400 };
   }
 
-  const email = row.identifier.replace(/^pw-reset:/, "");
-  if (!email || !email.includes("@")) {
-    return { ok: false, error: "Invalid or expired token", status: 400 };
-  }
-
-  return { ok: true, email, tokenHash };
+  return { ok: true, email: peeked.email, tokenHash: peeked.tokenHash };
 }
 
 export async function markPasswordResetUsed(tokenHash: string): Promise<void> {
