@@ -64,6 +64,23 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
+      const allowed = await canMessageUser(
+        db,
+        session.user.id,
+        withUserId,
+        session.user.role
+      );
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            error:
+              "You can only view conversations with users related to your jobs/applications, or an existing conversation.",
+            code: "MESSAGE_NOT_ALLOWED",
+          },
+          { status: 403 }
+        );
+      }
+
       const take = parseListLimit(
         searchParams.get("limit"),
         LIST_LIMITS.messagesThread
