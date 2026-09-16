@@ -2,24 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdminRole } from "@/lib/roles";
+import { securityLog } from "@/lib/security-log";
 import { z } from "zod";
 import { normalizeLocation } from "@/lib/location";
 import { jobStatusSchema } from "@/lib/validation/job";
 
 // ---------------------------------------------------------------------------
-// Constants
+// ثابت‌ها
 // ---------------------------------------------------------------------------
 
 const DEFAULT_TAKE = 100;
 const MAX_TAKE = 500;
 const MIN_TAKE = 1;
 const MAX_ID_LENGTH = 64;
+const MAX_QUERY_LENGTH = 200;
 
 // ---------------------------------------------------------------------------
-// Schemas
+// Schemaها
 // ---------------------------------------------------------------------------
 
-/** Fields an admin is allowed to update on a job. */
+/** فیلدهایی که یک ادمین مجاز است روی یک job به‌روزرسانی کند. */
 const adminJobUpdateSchema = z
   .object({
     id: z.string().min(1).max(MAX_ID_LENGTH),
@@ -34,7 +36,7 @@ const adminJobUpdateSchema = z
 
 export type AdminJobUpdateInput = z.infer<typeof adminJobUpdateSchema>;
 
-/** Query schema for GET with coercion and bounds. */
+/** Query schema برای GET با coercion و کران‌ها. */
 const listQuerySchema = z.object({
   take: z.coerce
     .number()
@@ -44,13 +46,13 @@ const listQuerySchema = z.object({
     .catch(DEFAULT_TAKE),
   skip: z.coerce.number().int().min(0).catch(0),
   status: jobStatusSchema.optional(),
-  q: z.string().trim().min(1).max(200).optional(),
+  q: z.string().trim().min(1).max(MAX_QUERY_LENGTH).optional(),
 });
 
 const jobIdSchema = z.string().min(1).max(MAX_ID_LENGTH);
 
 // ---------------------------------------------------------------------------
-// Types
+// تایپ‌ها
 // ---------------------------------------------------------------------------
 
 type JsonErrorBody = { error: string; details?: unknown };
@@ -61,7 +63,7 @@ type PrismaLikeError = {
 };
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helperها
 // ---------------------------------------------------------------------------
 
 function jsonError(
@@ -85,8 +87,15 @@ function isPrismaError(
   return code === undefined || err.code === code;
 }
 
+/** فیلتر کردن fieldErrors zod به شکل قابل‌سریال‌سازی و امن. */
+function flattenFieldErrors(
+  error: z.ZodError
+): Record<string, string[] | undefined> {
+  return error.flatten().fieldErrors;
+}
+
 // ---------------------------------------------------------------------------
-// Auth guard
+// گارد ادمین
 // ---------------------------------------------------------------------------
 
 type AdminGuard =
@@ -118,51 +127,6 @@ async function requireAdmin(): Promise<AdminGuard> {
 }
 
 // ---------------------------------------------------------------------------
-// Audit log (best-effort, non-blocking)
-// ---------------------------------------------------------------------------
-
-async function writeAuditLog(entry: {
-  actorId: string;
-  action: "UPDATE_JOB" | "DELETE_JOB" | "RESTORE_JOB";
-  jobId: string;
-  companyId?: string | null;
-  changes?: Record<string, unknown>;
-}): Promise<void> {
-  try {
-    // Adjust to your audit model; here we assume db.auditLog exists.
-    // If it doesn't, this is a no-op and won't break the request.
-    if (
-      typeof (db as unknown as { auditLog?: { create?: unknown } }).auditLog
-        ?.create !== "function"
-    ) {
-      console.info("[admin/jobs] audit", JSON.stringify(entry));
-      return;
-    }
-
-    await (
-      db as unknown as {
-        auditLog: {
-          create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
-        };
-      }
-    ).auditLog.create({
-      data: {
-        actorId: entry.actorId,
-        action: entry.action,
-        entityType: "Job",
-        entityId: entry.jobId,
-        companyId: entry.companyId ?? null,
-        changes: entry.changes ?? {},
-        createdAt: new Date(),
-      },
-    });
-  } catch (err) {
-    // Never let audit failure break the API
-    console.error("[admin/jobs] audit log failed:", err);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // GET /api/admin/jobs
 // ---------------------------------------------------------------------------
 
@@ -182,7 +146,7 @@ export async function GET(req: NextRequest) {
 
     if (!parsedQuery.success) {
       return jsonError("Invalid query parameters", 400, {
-        fieldErrors: parsedQuery.error.flatten().fieldErrors,
+        fieldErrors: flattenFieldErrors(parsedQuery.error),
       });
     }
 
@@ -194,7 +158,12 @@ export async function GET(req: NextRequest) {
         ? {
             OR: [
               { title: { contains: q, mode: "insensitive" as const } },
-              { description: { contains: q, mode: "insensitive" as const } },
+              {
+                description: {
+                  contains: q,
+                  mode: "insensitive" as const,
+                },
+              },
             ],
           }
         : {}),
@@ -253,14 +222,14 @@ export async function PATCH(req: NextRequest) {
     return jsonError(
       "Invalid input",
       400,
-      parsed.error.flatten().fieldErrors
+      flattenFieldErrors(parsed.error)
     );
   }
 
   const { id, title, description, location, salary, type, status } =
     parsed.data;
 
-  // Build typed update payload up-front
+  // ساخت payload تایپ‌دار از قبل
   const updateData: Partial<{
     title: string;
     description: string;
@@ -284,7 +253,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    // Fetch previous state (for audit)
+    // واکشی وضعیت قبلی (برای audit)
     const previous = await db.job.findUnique({
       where: { id },
       select: {
@@ -299,7 +268,7 @@ export async function PATCH(req: NextRequest) {
       return jsonError("Job not found", 404);
     }
 
-    // Atomic update
+    // به‌روزرسانی اتمیک
     const job = await db.job.update({
       where: { id },
       data: updateData,
@@ -308,22 +277,15 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    // Audit (best-effort)
-    void writeAuditLog({
+    // Audit (best-effort structured log — بدون جدول AuditLog جداگانه)
+    securityLog("admin.job_update", {
       actorId: guard.userId,
-      action: "UPDATE_JOB",
-      jobId: id,
-      companyId: previous.companyId,
-      changes: {
-        fields: Object.keys(updateData),
-        before: {
-          title: previous.title,
-          status: previous.status,
-        },
-        after: {
-          title: updateData.title ?? previous.title,
-          status: updateData.status ?? previous.status,
-        },
+      targetId: id,
+      meta: {
+        companyId: previous.companyId ?? null,
+        fields: Object.keys(updateData).join(","),
+        beforeStatus: previous.status,
+        afterStatus: updateData.status ?? previous.status,
       },
     });
 
@@ -348,7 +310,7 @@ export async function DELETE(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
 
-  const idParsed = jobIdSchema.safeParse(searchParams.get("id"));
+  const idParsed = jobIdSchema.safeParse(searchParams.get("id") ?? undefined);
   if (!idParsed.success) {
     return jsonError("Invalid or missing job id", 400);
   }
@@ -369,30 +331,31 @@ export async function DELETE(req: NextRequest) {
     if (hard) {
       await db.job.delete({ where: { id } });
 
-      void writeAuditLog({
+      securityLog("admin.job_delete", {
         actorId: guard.userId,
-        action: "DELETE_JOB",
-        jobId: id,
-        companyId: existing.companyId,
-        changes: { mode: "hard", previousStatus: existing.status },
+        targetId: id,
+        meta: {
+          companyId: existing.companyId ?? null,
+          mode: "hard",
+          previousStatus: existing.status,
+        },
       });
 
       return NextResponse.json({ success: true, id, mode: "hard" });
     }
 
-    // Soft-delete: mark as archived
+    // Soft-delete: علامت‌گذاری به‌عنوان archived
     const job = await db.job.update({
       where: { id },
       data: { status: "archived" },
       select: { id: true, status: true },
     });
 
-    void writeAuditLog({
+    securityLog("admin.job_delete", {
       actorId: guard.userId,
-      action: "DELETE_JOB",
-      jobId: id,
-      companyId: existing.companyId,
-      changes: {
+      targetId: id,
+      meta: {
+        companyId: existing.companyId ?? null,
         mode: "soft",
         previousStatus: existing.status,
         newStatus: job.status,
