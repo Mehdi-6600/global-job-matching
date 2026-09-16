@@ -7,6 +7,8 @@ import {
   reconcileScoreWithSubScores,
   scoreToRiskLevel,
   toSuccessResponse,
+  normalizeCareerLocale,
+  languageNameForPrompt,
 } from "@/lib/career-risk";
 
 describe("scoreToRiskLevel", () => {
@@ -17,6 +19,19 @@ describe("scoreToRiskLevel", () => {
     expect(scoreToRiskLevel(64)).toBe("medium");
     expect(scoreToRiskLevel(65)).toBe("high");
     expect(scoreToRiskLevel(100)).toBe("high");
+  });
+});
+
+describe("normalizeCareerLocale", () => {
+  it("accepts all 7 product locales", () => {
+    for (const loc of ["en", "es", "ar", "fa", "hi", "fr", "de"] as const) {
+      expect(normalizeCareerLocale(loc)).toBe(loc);
+      expect(languageNameForPrompt(loc).length).toBeGreaterThan(2);
+    }
+  });
+  it("falls back to en", () => {
+    expect(normalizeCareerLocale("xx")).toBe("en");
+    expect(normalizeCareerLocale(undefined)).toBe("en");
   });
 });
 
@@ -86,24 +101,97 @@ describe("parseRiskJson", () => {
   });
 
   it("returns null on garbage", () => {
-    expect(parseRiskJson("not json", "X")).toBeNullگذاری
-1. `src/lib/ai.ts`  
-2. `src/types/career-risk.ts`  
-3. `src/lib/career-risk.ts`  
-4. `src/app/api/career/risk/route.ts`  
-5. `src/lib/job-matching.ts`  
-6. `src/lib/career-risk.test.ts`  
+    expect(parseRiskJson("not json", "X")).toBeNull();
+  });
+});
 
-بعد Redeploy.
+describe("compositeFromSubScores", () => {
+  it("is deterministic weighted average", () => {
+    const score = compositeFromSubScores({
+      taskAutomation: 100,
+      toolMaturity: 0,
+      marketAdoption: 0,
+      agenticExposure: 0,
+    });
+    expect(score).toBeGreaterThan(0);
+    expect(score).toBeLessThanOrEqual(100);
+  });
+});
 
-### چه چیزی عوض شد (خلاصه)
-| مورد | قبل | بعد |
-|------|-----|-----|
-| Quota infra fail | ادامه با heuristic | **۵۰۳** بدون AI |
-| Quota exceeded | گاهی heuristic ۲۰۰ | **۴۰۳** |
-| AI attempts | تا ۵ مدل × retry | حداکثر **۳** |
-| subScores ناقص | تبدیل به ۵۰ | **رد AI → heuristic** |
-| شهر/کشور | تقریباً نادیده | در summary و reasons |
-| معمار / فیزیوتراپ | generic | bucket جدا |
+describe("reconcileScoreWithSubScores", () => {
+  it("keeps score close to composite", () => {
+    const sub = {
+      taskAutomation: 50,
+      toolMaturity: 50,
+      marketAdoption: 50,
+      agenticExposure: 50,
+    };
+    const reconciled = reconcileScoreWithSubScores(90, sub);
+    expect(
+      Math.abs(reconciled - compositeFromSubScores(sub))
+    ).toBeLessThanOrEqual(15);
+  });
+});
 
-اگر صفحه هنوز `locale` را در body نمی‌فرستد، بگو تا `page.tsx` کامل را هم در پارت بعد بفرستم.
+describe("heuristicCareerRisk multilingual", () => {
+  const locales = ["en", "es", "ar", "fa", "hi", "fr", "de"] as const;
+
+  it("returns structured analysis for each locale", () => {
+    for (const locale of locales) {
+      const result = heuristicCareerRisk("Software Engineer", "TypeScript", {
+        location: "Berlin",
+        country: "Germany",
+        locale,
+      });
+      expect(result.jobTitle).toBe("Software Engineer");
+      expect(result.riskScore).toBeGreaterThanOrEqual(0);
+      expect(result.riskScore).toBeLessThanOrEqual(100);
+      expect(["low", "medium", "high"]).toContain(result.riskLevel);
+      expect(result.summary.length).toBeGreaterThan(5);
+      expect(result.timeHorizon).toBeTruthy();
+      expect(result.source).toBe("heuristic");
+      expect(result.skillsToBuild.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("uses Persian copy for fa locale", () => {
+    const fa = heuristicCareerRisk("لوله‌کش", "تعمیرات", {
+      location: "مشهد",
+      country: "ایران",
+      locale: "fa",
+    });
+    expect(fa.jobTitle).toBe("لوله‌کش");
+    expect(fa.timeHorizon).toContain("سال");
+  });
+
+  it("uses Spanish copy for es locale", () => {
+    const es = heuristicCareerRisk("Contable", "Excel", { locale: "es" });
+    expect(es.timeHorizon).toContain("años");
+  });
+
+  it("uses German copy for de locale", () => {
+    const de = heuristicCareerRisk("Krankenpfleger", "Pflege", {
+      locale: "de",
+    });
+    expect(de.timeHorizon).toContain("Jahre");
+  });
+});
+
+describe("toSuccessResponse", () => {
+  it("localizes upgrade message for all locales", () => {
+    const analysis = heuristicCareerRisk("Nurse", "patient care", {
+      locale: "en",
+    });
+    for (const locale of ["en", "es", "ar", "fa", "hi", "fr", "de"] as const) {
+      const res = toSuccessResponse({
+        analysis,
+        paid: false,
+        locale,
+      });
+      expect(res.message).toBeTruthy();
+      expect(res.message!.length).toBeGreaterThan(10);
+    }
+    const paid = toSuccessResponse({ analysis, paid: true, locale: "en" });
+    expect(paid.message).toBeUndefined();
+  });
+});
