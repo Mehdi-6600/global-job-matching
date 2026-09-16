@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { ROLES } from "@/lib/roles";
+import { isAdminRole, isEmployerRole } from "@/lib/roles";
 import {
   Bell,
   BriefcaseBusiness,
@@ -30,10 +30,9 @@ export default function Navbar() {
 
   const userRole = session?.user?.role as string | undefined;
 
-  const isAdmin =
-    userRole === ROLES.ADMIN || userRole === ROLES.OWNER;
-
-  const isEmployer = userRole === ROLES.EMPLOYER;
+  const isAdmin = isAdminRole(userRole);
+  // Employer nav: pure employers only (admin uses Admin link)
+  const isEmployer = isEmployerRole(userRole) && !isAdmin;
 
   const isLoggedIn =
     status === "authenticated" && !!session;
