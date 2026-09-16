@@ -9,7 +9,6 @@ import {
   Bell,
   BriefcaseBusiness,
   Building2,
-  FileText,
   Loader2,
   Menu,
   UserRound,
@@ -17,17 +16,6 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
-
-function BrandMark() {
-  return (
-    <span className="gjm-brand-mark" aria-hidden="true">
-      <span className="gjm-brand-ring" />
-      <span className="gjm-brand-node node-a" />
-      <span className="gjm-brand-node node-b" />
-      <span className="gjm-brand-node node-c" />
-    </span>
-  );
-}
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -60,7 +48,10 @@ export default function Navbar() {
       href: "/categories",
       label: t("Nav.categories", "Categories"),
     },
-    { href: "/blog", label: t("Nav.blog", "Blog") },
+    {
+      href: "/blog",
+      label: t("Nav.blog", "Blog"),
+    },
     {
       href: "/pricing",
       label: t("Nav.pricing", "Pricing"),
@@ -75,8 +66,17 @@ export default function Navbar() {
     <header className="gjm-header">
       <nav className="gjm-nav">
         <div className="gjm-nav-inner">
-          <Link href="/" className="gjm-brand" onClick={closeMobile}>
-            <BrandMark />
+          <Link
+            href="/"
+            className="gjm-brand"
+            onClick={closeMobile}
+          >
+            <span className="gjm-brand-mark" aria-hidden="true">
+              <span className="gjm-brand-ring" />
+              <span className="gjm-brand-node node-a" />
+              <span className="gjm-brand-node node-b" />
+              <span className="gjm-brand-node node-c" />
+            </span>
 
             <span className="gjm-brand-copy">
               <strong>GLOBAL JOB</strong>
