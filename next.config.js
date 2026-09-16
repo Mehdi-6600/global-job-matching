@@ -1,54 +1,102 @@
+// @ts-check
+/** @type {import('next').NextConfig} */
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** یک هفته بر حسب ثانیه */
+const ONE_WEEK_IN_SECONDS = 60 * 60 * 24 * 7;
+
+/** دو سال بر حسب ثانیه (برای HSTS) */
+const TWO_YEARS_IN_SECONDS = 60 * 60 * 24 * 365 * 2;
+
+/** هاست‌های مجاز برای تصاویر ریموت */
+const REMOTE_IMAGE_PATTERNS = [
+  { protocol: "https", hostname: "lh3.googleusercontent.com" },
+  { protocol: "https", hostname: "avatars.githubusercontent.com" },
+  { protocol: "https", hostname: "public.blob.vercel-storage.com" },
+  { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+  { protocol: "https", hostname: "images.unsplash.com" },
+  { protocol: "https", hostname: "remoteok.com" },
+  { protocol: "https", hostname: "www.arbeitnow.com" },
+];
+
+/**
+ * سیاست امنیتی محتوا (CSP) در حالت Report-Only.
+ *
+ * فعلاً به‌صورت Report-Only ارسال می‌شود تا اپ را نشکند؛
+ * مسیر تولید: تا زمانی که اسکریپت‌ها بر پایهٔ nonce سیم‌کشی نشوند،
+ * این حالت Report-Only باقی می‌ماند.
+ * موارد framing، plugins و base-uri از همان ابتدا fail-closed هستند.
+ */
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https:",
+  "worker-src 'self' blob:",
+  "child-src 'self'",
+  "frame-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
+// ---------------------------------------------------------------------------
+// Next.js Configuration
+// ---------------------------------------------------------------------------
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // -------------------------------------------------------------------------
+  // Experimental
+  // -------------------------------------------------------------------------
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
 
-  // Stay true until CI lint is fully clean across the whole repo.
+  // -------------------------------------------------------------------------
+  // Linting & Type Checking
+  // -------------------------------------------------------------------------
   eslint: {
+    // تا زمان پاک‌سازی کامل lint در CI در کل ریپو، خطاها build را متوقف نکنند.
     ignoreDuringBuilds: true,
   },
 
   typescript: {
+    // خطاهای تایپ باید build را متوقف کنند.
     ignoreBuildErrors: false,
   },
 
+  // -------------------------------------------------------------------------
+  // Images
+  // -------------------------------------------------------------------------
   images: {
     formats: ["image/avif", "image/webp"],
-    remotePatterns: [
-      { protocol: "https", hostname: "lh3.googleusercontent.com" },
-      { protocol: "https", hostname: "avatars.githubusercontent.com" },
-      { protocol: "https", hostname: "public.blob.vercel-storage.com" },
-      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "remoteok.com" },
-      { protocol: "https", hostname: "www.arbeitnow.com" },
-    ],
-    minimumCacheTTL: 60 * 60 * 24 * 7,
+    remotePatterns: REMOTE_IMAGE_PATTERNS,
+    minimumCacheTTL: ONE_WEEK_IN_SECONDS,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
+  // -------------------------------------------------------------------------
+  // General
+  // -------------------------------------------------------------------------
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
 
+  // -------------------------------------------------------------------------
+  // HTTP Headers
+  // -------------------------------------------------------------------------
   async headers() {
-    // Report-Only first: does not break the app; monitor in browser console / reports
-    const cspReportOnly = [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' https:",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "object-src 'none'",
-    ].join("; ");
-
     return [
+      // هدرهای امنیتی سراسری
       {
         source: "/:path*",
         headers: [
@@ -65,14 +113,16 @@ const nextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
           {
             key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload",
+            value: `max-age=${TWO_YEARS_IN_SECONDS}; includeSubDomains; preload`,
           },
           {
             key: "Content-Security-Policy-Report-Only",
-            value: cspReportOnly,
+            value: CSP_REPORT_ONLY,
           },
         ],
       },
+
+      // کش طولانی‌مدت برای assetهای استاتیک Next.js
       {
         source: "/_next/static/:path*",
         headers: [
@@ -82,12 +132,14 @@ const nextConfig = {
           },
         ],
       },
+
+      // کش هفتگی با stale-while-revalidate برای image optimizer
       {
         source: "/_next/image",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=604800, stale-while-revalidate=86400",
+            value: `public, max-age=${ONE_WEEK_IN_SECONDS}, stale-while-revalidate=86400`,
           },
         ],
       },
