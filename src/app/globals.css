@@ -407,7 +407,6 @@
   }
   .gjm-brand:hover { opacity: 0.85; }
 
-  /* ---------- Brand Mark (SVG-based) ---------- */
   .gjm-brand-mark {
     display: inline-flex;
     align-items: center;
@@ -759,7 +758,6 @@
     gap: 0.625rem;
   }
 
-  /* ---------- Footer Brand Symbol (SVG-based) ---------- */
   .gjm-footer-symbol {
     display: inline-flex;
     align-items: center;
@@ -1422,6 +1420,133 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* ============================================================
+     CAREER TOOLS — Home section
+     سه کارت دسترسی سریع: Career Risk / Roadmap / Migration
+     ============================================================ */
+  .gjm-career-tools-section {
+    padding-block: 3rem 4rem;
+  }
+
+  .gjm-career-tools-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .gjm-career-tools-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .gjm-career-tools-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+  }
+
+  .gjm-career-tool-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2);
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .gjm-career-tool-card:hover {
+    box-shadow: var(--shadow-4);
+    transform: translateY(-2px);
+  }
+
+  .gjm-career-tool-card h3 {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    padding-inline-end: 2rem;
+  }
+
+  .gjm-career-tool-card p {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  .gjm-career-tool-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    margin-bottom: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .gjm-career-tool-arrow {
+    position: absolute;
+    top: 1.5rem;
+    inset-inline-end: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-3);
+    color: var(--text-muted);
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+
+  .gjm-career-tool-card:hover .gjm-career-tool-arrow {
+    background: var(--brand-primary);
+    color: #ffffff;
+    transform: scale(1.05);
+  }
+
+  .gjm-career-tool-card.accent-cyan {
+    border-color: #cffafe;
+  }
+  .gjm-career-tool-card.accent-cyan:hover {
+    border-color: var(--brand-primary);
+  }
+  .gjm-career-tool-card.accent-cyan .gjm-career-tool-icon {
+    background: #cffafe;
+    color: #0891b2;
+  }
+
+  .gjm-career-tool-card.accent-orange {
+    border-color: #ffedd5;
+  }
+  .gjm-career-tool-card.accent-orange:hover {
+    border-color: #f97316;
+  }
+  .gjm-career-tool-card.accent-orange .gjm-career-tool-icon {
+    background: #ffedd5;
+    color: #ea580c;
+  }
+
+  .gjm-career-tool-card.accent-red {
+    border-color: #fee2e2;
+  }
+  .gjm-career-tool-card.accent-red:hover {
+    border-color: var(--error);
+  }
+  .gjm-career-tool-card.accent-red .gjm-career-tool-icon {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  [dir="rtl"] .gjm-career-tool-arrow svg {
+    transform: scaleX(-1);
   }
 
   .gjm-feature-grid {
@@ -2716,7 +2841,6 @@
    LEGACY PAGE SUPPORT — Light theme overrides
    ============================================================ */
 
-/* ---------- Global backgrounds → light ---------- */
 .bg-gradient-to-br.from-slate-900.via-slate-800.to-slate-900,
 .bg-gradient-to-b.from-slate-900.via-slate-800.to-slate-900,
 .bg-gradient-to-br.from-slate-900,
@@ -2752,12 +2876,10 @@
   --tw-gradient-to: var(--bg-page) !important;
 }
 
-/* ---------- Overlay ---------- */
 .bg-black\/60 {
   background-color: rgba(28, 25, 23, 0.5) !important;
 }
 
-/* ---------- Cards & surfaces ---------- */
 .glass,
 .glass-strong {
   background: var(--surface) !important;
@@ -2777,7 +2899,6 @@
   background-color: var(--surface-3) !important;
 }
 
-/* ---------- Text colors ---------- */
 .text-white {
   color: var(--text-primary) !important;
 }
@@ -2798,7 +2919,6 @@
   color: var(--text-muted) !important;
 }
 
-/* Keep white text on primary buttons */
 .bg-indigo-600 .text-white,
 .bg-indigo-600.text-white,
 button.bg-indigo-600,
@@ -2810,7 +2930,6 @@ a.bg-indigo-600,
   color: #ffffff !important;
 }
 
-/* ---------- Borders ---------- */
 .border-white\/5,
 .border-white\/10,
 .border-white\/20,
@@ -2819,7 +2938,6 @@ a.bg-indigo-600,
   border-color: var(--border) !important;
 }
 
-/* ---------- Accent colors ---------- */
 .text-indigo-300,
 .text-indigo-400,
 .text-indigo-500,
@@ -2854,7 +2972,6 @@ a.bg-indigo-600,
   color: var(--error) !important;
 }
 
-/* ---------- Primary buttons ---------- */
 .bg-indigo-600,
 .bg-indigo-500 {
   background-color: var(--brand-primary) !important;
@@ -2879,7 +2996,6 @@ a.bg-indigo-600,
   background-color: var(--brand-primary-tint) !important;
 }
 
-/* ---------- Secondary buttons ---------- */
 .hover\:bg-white\/10:hover {
   background-color: var(--surface-3) !important;
 }
@@ -2888,7 +3004,6 @@ a.bg-indigo-600,
   color: var(--text-primary) !important;
 }
 
-/* ---------- Focus rings ---------- */
 .focus\:ring-indigo-500:focus,
 .focus\:ring-indigo-400:focus {
   --tw-ring-color: var(--brand-primary) !important;
@@ -2898,7 +3013,6 @@ a.bg-indigo-600,
   border-color: var(--brand-primary) !important;
 }
 
-/* ---------- Shadows ---------- */
 .shadow-indigo-500\/10 {
   --tw-shadow-color: rgba(6, 182, 212, 0.15) !important;
   --tw-shadow: 0 8px 24px var(--tw-shadow-color) !important;
@@ -2913,7 +3027,6 @@ a.bg-indigo-600,
   box-shadow: var(--shadow-5) !important;
 }
 
-/* ---------- Inputs ---------- */
 .bg-white\/5 input,
 input.bg-white\/5,
 select.bg-white\/5 {
@@ -2927,7 +3040,6 @@ input.bg-white\/5::placeholder,
   color: var(--text-subtle) !important;
 }
 
-/* ---------- Code blocks ---------- */
 code.bg-white\/5,
 .bg-white\/5 code {
   background-color: var(--surface-2) !important;
