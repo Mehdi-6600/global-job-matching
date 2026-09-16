@@ -2,7 +2,7 @@
 /** @type {import('next').NextConfig} */
 
 // ---------------------------------------------------------------------------
-// Constants
+// ثابت‌ها
 // ---------------------------------------------------------------------------
 
 /** یک هفته بر حسب ثانیه */
@@ -23,14 +23,13 @@ const REMOTE_IMAGE_PATTERNS = [
 ];
 
 /**
- * سیاست امنیتی محتوا (CSP) در حالت Report-Only.
+ * سیاست امنیتی محتوا (CSP) در حالت Enforcing.
  *
- * فعلاً به‌صورت Report-Only ارسال می‌شود تا اپ را نشکند؛
- * مسیر تولید: تا زمانی که اسکریپت‌ها بر پایهٔ nonce سیم‌کشی نشوند،
- * این حالت Report-Only باقی می‌ماند.
+ * نکته: تا زمانی که اسکریپت‌ها بر پایهٔ nonce سیم‌کشی نشوند،
+ * استفاده از 'unsafe-inline' و 'unsafe-eval' در script-src اجتناب‌ناپذیر است.
  * موارد framing، plugins و base-uri از همان ابتدا fail-closed هستند.
  */
-const CSP_REPORT_ONLY = [
+const CSP_ENFORCE = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
@@ -48,7 +47,7 @@ const CSP_REPORT_ONLY = [
 ].join("; ");
 
 // ---------------------------------------------------------------------------
-// Next.js Configuration
+// پیکربندی Next.js
 // ---------------------------------------------------------------------------
 
 /** @type {import('next').NextConfig} */
@@ -116,8 +115,8 @@ const nextConfig = {
             value: `max-age=${TWO_YEARS_IN_SECONDS}; includeSubDomains; preload`,
           },
           {
-            key: "Content-Security-Policy-Report-Only",
-            value: CSP_REPORT_ONLY,
+            key: "Content-Security-Policy",
+            value: CSP_ENFORCE,
           },
         ],
       },
