@@ -21,6 +21,10 @@ const patchSchema = z
   })
   .strict();
 
+/**
+ * List users (paginated to 100 most recent) for the admin panel.
+ * Rate limited per admin + IP.
+ */
 export async function GET(req: NextRequest) {
   try {
     const authz = await requireAdmin();
@@ -101,6 +105,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
+    // Only OWNER may grant privileged roles.
     if (
       (role === ROLES.ADMIN || role === ROLES.OWNER) &&
       !isOwnerRole(authz.user.role)
@@ -120,45 +125,61 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Only OWNER may touch an existing OWNER (including demotion).
     if (
       normalizeRole(target.role) === ROLES.OWNER &&
-      role !== ROLES.OWNER
+      role !== ROLES.OWNER &&
+      !isOwnerRole(authz.user.role)
     ) {
-      const ownerCount = await db.user.count({
-        where: { role: ROLES.OWNER },
+      return NextResponse.json(
+        { error: "Only OWNER can change OWNER roles" },
+        { status: 403 }
+      );
+    }
+
+    const previousRole = target.role;
+
+    let updated;
+    try {
+      updated = await db.$transaction(async (tx) => {
+        // Serialize OWNER mutations so concurrent demotions cannot remove the last owner.
+        await tx.$executeRaw`SELECT id FROM "User" WHERE role = ${ROLES.OWNER} FOR UPDATE`;
+
+        if (
+          normalizeRole(target.role) === ROLES.OWNER &&
+          role !== ROLES.OWNER
+        ) {
+          const ownerCount = await tx.user.count({
+            where: { role: ROLES.OWNER },
+          });
+          if (ownerCount <= 1) {
+            throw new Error("LAST_OWNER");
+          }
+        }
+
+        const user = await tx.user.update({
+          where: { id: userId },
+          data: { role },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            plan: true,
+          },
+        });
+        await bumpSessionVersion(userId, tx);
+        return user;
       });
-      if (ownerCount <= 1) {
+    } catch (err) {
+      if (err instanceof Error && err.message === "LAST_OWNER") {
         return NextResponse.json(
           { error: "Cannot demote the last OWNER" },
           { status: 409 }
         );
       }
-
-      if (!isOwnerRole(authz.user.role)) {
-        return NextResponse.json(
-          { error: "Only OWNER can change OWNER roles" },
-          { status: 403 }
-        );
-      }
+      throw err;
     }
-
-    const previousRole = target.role;
-
-    const updated = await db.$transaction(async (tx) => {
-      const user = await tx.user.update({
-        where: { id: userId },
-        data: { role },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          plan: true,
-        },
-      });
-      await bumpSessionVersion(userId, tx);
-      return user;
-    });
 
     securityLog("admin.role_change", {
       actorId: authz.user.id,
