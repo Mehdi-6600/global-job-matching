@@ -30,9 +30,11 @@ export type MatchBreakdown = {
   keywords: number;
 };
 
+export type MatchLevel = "low" | "medium" | "high" | "excellent";
+
 export type MatchResult = {
   score: number;
-  level: "low" | "medium" | "high" | "excellent";
+  level: MatchLevel;
   breakdown: MatchBreakdown;
   matchedSkills: string[];
   missingFromRequirements: string[];
@@ -45,18 +47,19 @@ const STOP = new Set([
   "و", "در", "به", "از", "که", "را", "با", "برای",
 ]);
 
-/** Normalize common Arabic/Persian letter variants */
+/** Normalize common Arabic/Persian letter variants. */
 export function normalizeScript(text: string): string {
   return text
     .replace(/\u064A/g, "\u06CC") // ي → ی
     .replace(/\u0643/g, "\u06A9") // ك → ک
     .replace(/\u0629/g, "\u0647") // ة → ه
-    .replace(/\u200C/g, " ") // ZWNJ → space
-    .replace(/\u0640/g, ""); // tatweel
+    .replace(/\u200C/g, " ")      // ZWNJ → space
+    .replace(/\u0640/g, "");      // tatweel
 }
 
 /**
- * Unicode-aware tokenizer: keeps Latin, digits, CJK-safe marks, and Arabic block.
+ * Unicode-aware tokenizer: keeps Latin, digits, and Arabic block letters.
+ * Drops stopwords and tokens shorter than 2 characters.
  */
 export function tokenize(text: string | null | undefined): string[] {
   if (!text) return [];
@@ -74,23 +77,28 @@ function unique(tokens: string[]): string[] {
 
 function overlapRatio(
   a: string[],
-  b: string[]
+  b: string[],
 ): { ratio: number; matched: string[] } {
   if (a.length === 0 || b.length === 0) return { ratio: 0, matched: [] };
   const setB = new Set(b);
   const matched = a.filter((t) => setB.has(t));
-  const ratio = matched.length / Math.max(b.length, 1);
-  return { ratio: Math.min(1, ratio), matched: unique(matched) };
+  // Requirement coverage: share of job tokens covered by the candidate.
+  const coverage = matched.length / Math.max(b.length, 1);
+  // Jaccard softens "one job skill, huge candidate bag → perfect score".
+  const union = new Set([...a, ...b]).size;
+  const jaccard = matched.length / Math.max(union, 1);
+  const ratio = Math.min(1, coverage * 0.7 + jaccard * 0.3);
+  return { ratio, matched: unique(matched) };
 }
 
 function locationScore(
   profileLoc: string | null | undefined,
   jobLoc: string,
-  remote?: boolean | null
+  remote?: boolean | null,
 ): number {
   if (remote) return 1;
-  const p = normalizeScript((profileLoc || "").toLowerCase().trim());
-  const j = normalizeScript((jobLoc || "").toLowerCase().trim());
+  const p = normalizeScript((profileLoc ?? "").toLowerCase().trim());
+  const j = normalizeScript((jobLoc ?? "").toLowerCase().trim());
   if (!p || !j) return 0.35;
   if (p === j) return 1;
   if (p.includes(j) || j.includes(p)) return 0.85;
@@ -100,19 +108,48 @@ function locationScore(
   return 0.15;
 }
 
+function toAsciiDigits(s: string): string {
+  return s
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+}
+
+function yearsIn(s: string): number | null {
+  const t = toAsciiDigits(s);
+
+  // Ranges: "2-4 years", "2–4 سال"
+  const range = t.match(
+    /(\d+)\s*[-–—]\s*(\d+)\s*\+?\s*(year|yr|سال)?/i,
+  );
+  if (range) {
+    return (Number(range[1]) + Number(range[2])) / 2;
+  }
+
+  const m = t.match(/(\d+(?:\.\d+)?)\s*\+?\s*(year|yr|سال)/i);
+  if (m) return Number(m[1]);
+
+  // Level keywords (shared taxonomy).
+  if (/\b(intern|entry|junior|entry[- ]?level|تازه‌?کار|کارآموز)\b/i.test(t)) {
+    return 1;
+  }
+  if (/\b(mid[- ]?level|intermediate|میان)\b/i.test(t)) return 3;
+  if (/\b(senior|lead|principal|expert|ارشد|خبره)\b/i.test(t)) return 6;
+
+  return null;
+}
+
 function experienceScore(
   profileExp: string | null | undefined,
-  jobExp: string | null | undefined
+  jobExp: string | null | undefined,
 ): number {
   if (!jobExp) return 0.55;
   if (!profileExp) return 0.3;
-  const p = normalizeScript(profileExp.toLowerCase());
-  const j = normalizeScript(jobExp.toLowerCase());
+
+  const p = normalizeScript(toAsciiDigits(profileExp.toLowerCase()));
+  const j = normalizeScript(toAsciiDigits(jobExp.toLowerCase()));
+
   if (p.includes(j) || j.includes(p)) return 0.9;
-  const yearsIn = (s: string) => {
-    const m = s.match(/(\d+)\s*\+?\s*(year|yr|سال)/i);
-    return m ? Number(m[1]) : null;
-  };
+
   const py = yearsIn(p);
   const jy = yearsIn(j);
   if (py != null && jy != null) {
@@ -121,11 +158,12 @@ function experienceScore(
     if (py >= jy - 2) return 0.5;
     return 0.25;
   }
+
   const { ratio } = overlapRatio(tokenize(p), tokenize(j));
   return Math.max(0.25, ratio);
 }
 
-function levelFromScore(score: number): MatchResult["level"] {
+function levelFromScore(score: number): MatchLevel {
   if (score >= 85) return "excellent";
   if (score >= 70) return "high";
   if (score >= 45) return "medium";
@@ -137,25 +175,30 @@ function levelFromScore(score: number): MatchResult["level"] {
  */
 export function computeMatchScore(
   profile: MatchProfileInput,
-  job: MatchJobInput
+  job: MatchJobInput,
 ): MatchResult {
   const profileSkillTokens = unique(
     tokenize(
-      [profile.skills, profile.title, profile.bio, profile.experience, profile.education]
+      [
+        profile.skills,
+        profile.title,
+        profile.bio,
+        profile.experience,
+        profile.education,
+      ]
         .filter(Boolean)
-        .join(" ")
-    )
+        .join(" "),
+    ),
   );
 
   const requirementTokens = unique(
-    [
-      ...(job.requirements || []),
-      ...(job.tags || []),
-    ].flatMap((s) => tokenize(s))
+    [...(job.requirements ?? []), ...(job.tags ?? [])].flatMap((s) =>
+      tokenize(s),
+    ),
   );
 
   const jobTextTokens = unique(
-    tokenize(`${job.title} ${job.description || ""} ${job.type || ""}`)
+    tokenize(`${job.title} ${job.description || ""} ${job.type || ""}`),
   );
 
   const skillPool =
@@ -164,7 +207,7 @@ export function computeMatchScore(
   const skillOverlap = overlapRatio(profileSkillTokens, skillPool);
   const keywordOverlap = overlapRatio(profileSkillTokens, jobTextTokens);
 
-  // Optional title affinity (only when profile has a real title, not skills dump)
+  // Optional title affinity (only when profile has a real title).
   let titleBoost = 0;
   if (profile.title && profile.title.trim().length >= 2) {
     const titleTokens = tokenize(profile.title);
