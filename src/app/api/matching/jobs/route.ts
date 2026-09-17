@@ -49,6 +49,25 @@ function buildRateLimitKey(userId: string, ip: string): string {
   return `${RATELIMIT_KEY_PREFIX}_${userId}_${ip}`;
 }
 
+/**
+ * Detect whether the profile has enough signal to compute a meaningful match.
+ * We accept any of: skills, bio, experience, or title.
+ */
+function hasProfileSignal(profile: {
+  skills?: string | null;
+  bio?: string | null;
+  experience?: string | null;
+  title?: string | null;
+} | null): boolean {
+  if (!profile) return false;
+  return (
+    Boolean(profile.skills?.trim()) ||
+    Boolean(profile.bio?.trim()) ||
+    Boolean(profile.experience?.trim()) ||
+    Boolean(profile.title?.trim())
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Route handler                                                      */
 /* ------------------------------------------------------------------ */
@@ -63,8 +82,8 @@ function buildRateLimitKey(userId: string, ip: string): string {
  *   - minScore (0..100, default 0)  — minimum match score filter
  *
  * Responses:
- *   - 200: { jobs, profileComplete, count }        — success
- *   - 200: { jobs: [], message, profileComplete }  — incomplete profile
+ *   - 200: { jobs, profileComplete: true,  count }  — success
+ *   - 200: { jobs: [], message, profileComplete: false, count: 0 } — incomplete profile
  *   - 401: Unauthorized
  *   - 429: Too many requests
  *   - 500: Failed
@@ -107,7 +126,7 @@ export async function GET(req: NextRequest) {
       where: { userId: session.user.id },
       select: {
         skills: true,
-        title: true,       // included so titleBoost can apply
+        title: true,       // needed for titleBoost in computeMatchScore
         bio: true,
         experience: true,
         education: true,
@@ -115,13 +134,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Require at least one meaningful signal to compute a match.
-    const hasSignal =
-      Boolean(profile?.skills?.trim()) ||
-      Boolean(profile?.bio?.trim()) ||
-      Boolean(profile?.title?.trim());
-
-    if (!hasSignal) {
+    if (!hasProfileSignal(profile)) {
       return NextResponse.json({
         jobs: [],
         message:
