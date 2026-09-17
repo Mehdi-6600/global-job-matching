@@ -55,7 +55,7 @@ const QUOTA_KIND = "ai_career_risk";
 /* توابع کمکی                                                          */
 /* ------------------------------------------------------------------ */
 
-/** پاسخ ۵۰۳ برای خطاهای زیرساختی (مثلاً Rate Limit از کار افتاده). */
+/** پاسخ ۵۰۳ برای خطاهای زیرساختی. */
 function infraUnavailable(code: string, message: string) {
   return NextResponse.json({ error: message, code }, { status: 503 });
 }
@@ -209,19 +209,20 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) return unauthorized();
 
-    /* -------- Rate limit (سخت‌گیرانه) -------- */
+    /* -------- Rate limit (سخت‌گیرانه، اما Fail-Soft) -------- */
     const ip = getRequestIp(req);
     const limit = await strictAiLimit(
       aiRatelimit,
       `career_risk_${session.user.id}_${ip}`,
     );
+
     if (limit.infraFailed) {
-      return infraUnavailable(
-        "RATE_LIMIT_INFRA_ERROR",
-        "Service temporarily unavailable. Please try again shortly.",
+      // پس از fallback حافظه، این حالت نادر است. ۵۰۳ نکن —
+      // سهمیه + heuristic همچنان از محصول محافظت می‌کنند.
+      console.warn(
+        "[career/risk] rate limit infra degraded; continuing",
       );
-    }
-    if (!limit.success) {
+    } else if (!limit.success) {
       return rateLimitedResponse(limit, "Too many requests. Please wait.");
     }
 
@@ -297,7 +298,7 @@ export async function POST(req: NextRequest) {
     // سه حالت ممکن:
     // A) رزرو موفق → مجاز به فراخوانی AI
     // B) سهمیه تمام → فقط heuristic، بدون AI
-    // C) خطای زیرساختی → ۵۰۳، بدون AI
+    // C) خطای زیرساختی → فقط heuristic، بدون AI (محصول ۵۰۳ نمی‌شود)
     let allowAi = false;
     try {
       const reserveResult = await reserveAiUsageInTransaction(db, {
