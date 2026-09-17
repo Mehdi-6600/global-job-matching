@@ -16,21 +16,25 @@ import { careerRiskRequestSchema } from "@/types/career-risk";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import {
-  assertAndReserveAiUsage,
-  lockUserRow,
-  releaseUsageEventById,
+  reserveAiUsageInTransaction,
+  releaseUsageInTransaction,
+  logQuotaInfraError,
 } from "@/lib/quota";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 import { safeLimit, strictAiLimit } from "@/lib/safe-ratelimit";
 
 /* ------------------------------------------------------------------ */
-/* Constants                                                          */
+/* ثابت‌ها                                                             */
 /* ------------------------------------------------------------------ */
 
+/** حداکثر تعداد ارزیابی‌های بازگشتی در لیست. */
 const LIST_LIMIT = 20;
+
+/** تعداد بایت‌های تصادفی برای ساخت توکن اشتراک‌گذاری. */
 const SHARE_TOKEN_BYTES = 18;
 
+/** محدودیت طول ورودی‌ها برای جلوگیری از سوءاستفاده و کنترل هزینه. */
 const MAX_JOB_TITLE = 120;
 const MAX_SKILLS = 2_000;
 const MAX_INDUSTRY = 120;
@@ -38,48 +42,47 @@ const MAX_COUNTRY = 120;
 const MAX_LOCATION = 200;
 const MAX_EDUCATION = 200;
 
+/** پارامترهای فراخوانی مدل AI. */
 const AI_MAX_TOKENS = 1_600;
 const AI_TEMPERATURE = 0.35;
 const AI_TIMEOUT_MS = 18_000;
 const AI_MAX_ATTEMPTS = 2;
 
+/** نوع مصرف برای سیستم سهمیه. */
 const QUOTA_KIND = "ai_career_risk";
 
 /* ------------------------------------------------------------------ */
-/* Helpers                                                            */
+/* توابع کمکی                                                          */
 /* ------------------------------------------------------------------ */
 
+/** پاسخ ۵۰۳ برای خطاهای زیرساختی (مثلاً Rate Limit از کار افتاده). */
 function infraUnavailable(code: string, message: string) {
   return NextResponse.json({ error: message, code }, { status: 503 });
 }
 
+/** پاسخ ۴۰۱ برای کاربر احراز هویت‌نشده. */
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
 /**
- * Release a reserved AI usage event. Safe to call with null values.
- * Errors are logged but never thrown.
+ * آزادسازی یک رویداد مصرف رزروشده.
+ * اگر مقادیر null باشند، هیچ کاری انجام نمی‌دهد.
+ * خطاها فقط لاگ می‌شوند و هرگز پرتاب نمی‌شوند.
  */
 async function safeReleaseUsage(
   userId: string | null,
   eventId: string | null,
 ): Promise<void> {
   if (!userId || !eventId) return;
-  try {
-    await db.$transaction(async (tx) => {
-      await releaseUsageEventById(tx, {
-        userId,
-        usageEventId: eventId,
-      });
-    });
-  } catch (err) {
-    console.error("Failed to release AI quota reservation:", err);
-  }
+  await releaseUsageInTransaction(db, {
+    userId,
+    usageEventId: eventId,
+  });
 }
 
 /**
- * Build the system + user prompt pair for the career-risk AI call.
+ * ساخت جفت پرامپت system و user برای فراخوانی AI.
  */
 function buildPrompts(input: {
   languageName: string;
@@ -133,16 +136,19 @@ Education: ${input.education || "n/a"}`;
 }
 
 /* ------------------------------------------------------------------ */
-/* GET — list recent assessments                                      */
+/* GET — لیست ارزیابی‌های اخیر                                        */
 /* ------------------------------------------------------------------ */
 
 export async function GET(req: NextRequest) {
   try {
+    /* -------- احراز هویت -------- */
     const session = await auth();
     if (!session?.user?.id) return unauthorized();
 
+    /* -------- Rate limit (سبک، fail-open) -------- */
     const ip = getRequestIp(req);
-    // Cheap list endpoint: fail-open is acceptable for UX.
+    // این endpoint ارزان است؛ در صورت خرابی زیرساخت Rate Limit،
+    // به‌جای بلاک کردن کاربر، اجازه‌ی عبور می‌دهیم.
     const limit = await safeLimit(
       aiRatelimit,
       `career_risk_list_${session.user.id}_${ip}`,
@@ -151,6 +157,7 @@ export async function GET(req: NextRequest) {
       return rateLimitedResponse(limit, "Too many requests");
     }
 
+    /* -------- خواندن لیست -------- */
     try {
       const items = await db.careerRiskAssessment.findMany({
         where: { userId: session.user.id },
@@ -178,7 +185,7 @@ export async function GET(req: NextRequest) {
       });
     } catch (listErr) {
       console.error("Career risk list failed:", listErr);
-      // Degrade gracefully: empty list rather than 500.
+      // تخریب تدریجی: به‌جای ۵۰۰، لیست خالی برگردان.
       return NextResponse.json({ assessments: [] });
     }
   } catch (error) {
@@ -188,19 +195,21 @@ export async function GET(req: NextRequest) {
 }
 
 /* ------------------------------------------------------------------ */
-/* POST — analyze career risk                                         */
+/* POST — تحلیل ریسک شغلی                                              */
 /* ------------------------------------------------------------------ */
 
 export async function POST(req: NextRequest) {
+  /** شناسه‌ی رویداد مصرف رزروشده (برای آزادسازی در صورت خطا). */
   let reservedEventId: string | null = null;
+  /** شناسه‌ی کاربری که سهمیه برایش رزرو شده است. */
   let reservedUserId: string | null = null;
 
   try {
-    /* -------- Auth -------- */
+    /* -------- احراز هویت -------- */
     const session = await auth();
     if (!session?.user?.id) return unauthorized();
 
-    /* -------- Rate limit (strict) -------- */
+    /* -------- Rate limit (سخت‌گیرانه) -------- */
     const ip = getRequestIp(req);
     const limit = await strictAiLimit(
       aiRatelimit,
@@ -216,7 +225,7 @@ export async function POST(req: NextRequest) {
       return rateLimitedResponse(limit, "Too many requests. Please wait.");
     }
 
-    /* -------- Body parsing -------- */
+    /* -------- خواندن بدنه‌ی درخواست -------- */
     const body = await readJsonBody(req);
     if (body === null) {
       return NextResponse.json(
@@ -225,6 +234,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /* -------- اعتبارسنجی ورودی -------- */
     const parsed = careerRiskRequestSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -236,7 +246,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* -------- Sanitize inputs -------- */
+    /* -------- پاک‌سازی ورودی‌ها -------- */
     const jobTitle = neutralizeInstructionish(parsed.data.jobTitle).slice(
       0,
       MAX_JOB_TITLE,
@@ -263,7 +273,7 @@ export async function POST(req: NextRequest) {
     const locale = normalizeCareerLocale(parsed.data.locale);
     const languageName = languageNameForPrompt(locale);
 
-    /* -------- User + plan -------- */
+    /* -------- کاربر و پلن -------- */
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, plan: true },
@@ -277,28 +287,28 @@ export async function POST(req: NextRequest) {
       const effective = await getEffectivePlan(user.id);
       effectivePlan = effective.plan;
     } catch (planErr) {
+      // در صورت خطا در تعیین پلن، به پلن پیش‌فرض کاربر برمی‌گردیم.
       console.error("getEffectivePlan failed, using free:", planErr);
       effectivePlan = String(user.plan || "free").toLowerCase();
     }
     const paid = isPaidPlan(effectivePlan);
 
-    /* -------- Quota reservation -------- */
-    // A) reserved → may call AI
-    // B) exceeded → heuristic only, no AI
-    // C) infra failure → 503, no AI
+    /* -------- رزرو سهمیه -------- */
+    // سه حالت ممکن:
+    // A) رزرو موفق → مجاز به فراخوانی AI
+    // B) سهمیه تمام → فقط heuristic، بدون AI
+    // C) خطای زیرساختی → ۵۰۳، بدون AI
     let allowAi = false;
     try {
-      const reserveResult = await db.$transaction(async (tx) => {
-        await lockUserRow(tx, user.id);
-        return assertAndReserveAiUsage(tx, {
-          userId: user.id,
-          plan: effectivePlan,
-          kind: QUOTA_KIND,
-          meta: jobTitle,
-        });
+      const reserveResult = await reserveAiUsageInTransaction(db, {
+        userId: user.id,
+        plan: effectivePlan,
+        kind: QUOTA_KIND,
+        meta: jobTitle,
       });
 
       if (!reserveResult.ok) {
+        // محدودیت تجاری — هنوز تحلیل heuristic برگردان (بدون AI، بدون هزینه).
         allowAi = false;
         console.warn("Career risk quota exceeded; heuristic only", {
           code: reserveResult.code,
@@ -309,14 +319,15 @@ export async function POST(req: NextRequest) {
         reservedUserId = user.id;
       }
     } catch (quotaErr) {
-      console.error("Career risk quota infra failure:", quotaErr);
-      return infraUnavailable(
-        "QUOTA_INFRA_ERROR",
-        "Service temporarily unavailable. Please try again shortly.",
-      );
+      // خطای DB پس از تلاش مجدد — کل محصول را ۵۰۳ نکن.
+      // heuristic نیازی به سهمیه‌ی AI ندارد؛ فقط AI را برای این درخواست رد کن.
+      logQuotaInfraError("career_risk_reserve", quotaErr);
+      allowAi = false;
+      reservedEventId = null;
+      reservedUserId = null;
     }
 
-    /* -------- AI attempt -------- */
+    /* -------- تلاش برای فراخوانی AI -------- */
     let result: ReturnType<typeof heuristicCareerRisk> | null = null;
 
     if (allowAi) {
@@ -353,14 +364,14 @@ export async function POST(req: NextRequest) {
         console.error("Career risk AI failed:", aiErr);
       }
 
-      // AI failed after reservation → release quota, use heuristic.
+      // اگر AI پس از رزرو شکست خورد → سهمیه را آزاد کن و از heuristic استفاده کن.
       if (!result) {
         await safeReleaseUsage(reservedUserId, reservedEventId);
         reservedEventId = null;
       }
     }
 
-    /* -------- Heuristic fallback -------- */
+    /* -------- Fallback به heuristic -------- */
     if (!result) {
       result = heuristicCareerRisk(jobTitle, skills, {
         industry,
@@ -372,10 +383,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Ensure the title always reflects the (sanitized) user input.
+    // اطمینان از اینکه عنوان شغلی همیشه بازتاب ورودی (پاک‌سازی‌شده) کاربر است.
     result = { ...result, jobTitle };
 
-    /* -------- Persist -------- */
+    /* -------- ذخیره‌سازی -------- */
     const shareToken = randomBytes(SHARE_TOKEN_BYTES).toString("hex");
     let assessmentId: string | undefined;
     let savedShareToken: string | undefined = shareToken;
@@ -397,6 +408,7 @@ export async function POST(req: NextRequest) {
           summary: result.summary,
           reasons: result.reasons,
           skillsToBuild: result.skillsToBuild,
+          // جایگزین‌ها فقط برای کاربران پلن پرداختی ذخیره می‌شوند.
           alternatives: paid ? result.alternatives : [],
           source: result.source,
           paidSnapshot: paid,
@@ -411,12 +423,12 @@ export async function POST(req: NextRequest) {
         "Career risk save failed (returning analysis anyway):",
         saveErr,
       );
-      // Analysis still useful to the user even if persistence failed.
+      // حتی اگر ذخیره‌سازی شکست خورد، تحلیل برای کاربر مفید است.
       savedShareToken = undefined;
       assessmentId = undefined;
     }
 
-    /* -------- Success -------- */
+    /* -------- پاسخ موفق -------- */
     return NextResponse.json(
       toSuccessResponse({
         analysis: result,
@@ -429,7 +441,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Career risk error:", error);
 
-    // Best-effort quota release on unexpected failure.
+    // تلاش برای آزادسازی سهمیه در صورت خطای پیش‌بینی‌نشده.
     await safeReleaseUsage(reservedUserId, reservedEventId);
 
     return NextResponse.json(
