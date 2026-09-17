@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { normalizeLocation } from "@/lib/location";
 import { createJobForUser } from "@/services/jobs/create-job";
+import { getRequestIp } from "@/lib/client-ip";
+import { ratelimit } from "@/lib/ratelimit";
 
 const querySchema = z.object({
   page: z.coerce.number().min(1).max(1000).default(1),
@@ -39,7 +41,7 @@ function mapJob(job: {
   };
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const params = Object.fromEntries(searchParams.entries());
@@ -151,11 +153,19 @@ export async function GET(req: Request) {
 /**
  * Create job — same pipeline as /api/employer/jobs (no plan bypass).
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getRequestIp(req);
+    const limited = await ratelimit.limit(
+      `jobs_post_${session.user.id}_${ip}`
+    );
+    if (!limited.success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     let body: unknown;
