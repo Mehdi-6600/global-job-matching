@@ -7,9 +7,9 @@ import { buildTemplateResume, chatCompletionWithMeta } from "@/lib/ai";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import {
-  assertAndReserveAiUsage,
-  lockUserRow,
-  releaseUsageEventById,
+  reserveAiUsageInTransaction,
+  releaseUsageInTransaction,
+  logQuotaInfraError,
 } from "@/lib/quota";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
@@ -24,9 +24,10 @@ import {
 } from "@/lib/resume-ai";
 
 /* ------------------------------------------------------------------ */
-/* Constants                                                          */
+/* ثابت‌ها                                                             */
 /* ------------------------------------------------------------------ */
 
+/** محدودیت طول ورودی‌ها برای کنترل هزینه و جلوگیری از سوءاستفاده. */
 const MAX_FULL_NAME = 120;
 const MAX_EMAIL = 200;
 const MAX_PHONE = 40;
@@ -38,18 +39,26 @@ const MAX_EDUCATION = 4_000;
 const MAX_SKILLS = 2_000;
 const MAX_LANGUAGES = 500;
 
+/** پارامترهای فراخوانی مدل AI. */
 const AI_MAX_TOKENS = 1_800;
 const AI_TEMPERATURE = 0.35;
 const AI_TIMEOUT_MS = 18_000;
 const AI_MAX_ATTEMPTS = 2;
 
+/** نوع مصرف برای سیستم سهمیه. */
 const QUOTA_KIND = "ai_resume";
+
+/** پیشوند کلید Rate Limit. */
 const RATELIMIT_PREFIX = "resume_gen";
 
 /* ------------------------------------------------------------------ */
-/* Schema                                                             */
+/* اسکیمای اعتبارسنجی                                                  */
 /* ------------------------------------------------------------------ */
 
+/**
+ * یک فیلد رشته‌ای اختیاری که پس از trim شدن، حداکثر طول مشخصی دارد.
+ * اگر مقدار `undefined` یا رشته‌ی خالی باشد، به رشته‌ی خالی تبدیل می‌شود.
+ */
 const optionalTrimmed = (max: number) =>
   z
     .string()
@@ -80,44 +89,41 @@ const schema = z.object({
 });
 
 /* ------------------------------------------------------------------ */
-/* Helpers                                                            */
+/* توابع کمکی                                                          */
 /* ------------------------------------------------------------------ */
 
+/** پاسخ ۵۰۳ برای خطاهای زیرساختی (مثلاً Rate Limit از کار افتاده). */
 function infraUnavailable(code: string, message: string) {
   return NextResponse.json({ error: message, code }, { status: 503 });
 }
 
+/** پاسخ ۴۰۱ برای کاربر احراز هویت‌نشده. */
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
 /**
- * Release a reserved AI usage event. Safe to call with null values.
- * Errors are logged but never thrown.
+ * آزادسازی یک رویداد مصرف رزروشده.
+ * اگر مقادیر null باشند، هیچ کاری انجام نمی‌دهد.
+ * خطاها فقط لاگ می‌شوند و هرگز پرتاب نمی‌شوند.
  */
 async function safeReleaseUsage(
   userId: string | null,
   eventId: string | null,
 ): Promise<void> {
   if (!userId || !eventId) return;
-  try {
-    await db.$transaction(async (tx) => {
-      await releaseUsageEventById(tx, {
-        userId,
-        usageEventId: eventId,
-      });
-    });
-  } catch (err) {
-    console.error("Failed to release AI quota reservation:", err);
-  }
+  await releaseUsageInTransaction(db, {
+    userId,
+    usageEventId: eventId,
+  });
 }
 
 /**
- * Normalize + sanitize the parsed request payload for downstream use.
+ * نرمال‌سازی و پاک‌سازی payload درخواست برای استفاده‌ی downstream.
+ * همه‌ی فیلدهای رشته‌ای با `neutralizeInstructionish` پاک‌سازی و
+ * به محدودیت طول مربوطه بریده می‌شوند.
  */
-function sanitizePayload(
-  input: z.infer<typeof schema>,
-): {
+function sanitizePayload(input: z.infer<typeof schema>): {
   fullName: string;
   email: string;
   phone: string;
@@ -166,20 +172,22 @@ function sanitizePayload(
 }
 
 /* ------------------------------------------------------------------ */
-/* POST — generate resume                                             */
+/* POST — تولید رزومه                                                  */
 /* ------------------------------------------------------------------ */
 
 export async function POST(req: NextRequest) {
+  /** شناسه‌ی رویداد مصرف رزروشده (برای آزادسازی در صورت خطا). */
   let reservedEventId: string | null = null;
+  /** شناسه‌ی کاربری که سهمیه برایش رزرو شده است. */
   let reservedUserId: string | null = null;
 
   try {
-    /* -------- Auth -------- */
+    /* -------- احراز هویت -------- */
     const session = await auth();
     if (!session?.user?.id) return unauthorized();
     const userId = session.user.id;
 
-    /* -------- Rate limit (strict) -------- */
+    /* -------- Rate limit (سخت‌گیرانه) -------- */
     const ip = getRequestIp(req);
     const limit = await strictAiLimit(
       aiRatelimit,
@@ -195,7 +203,7 @@ export async function POST(req: NextRequest) {
       return rateLimitedResponse(limit, "Too many requests. Please wait.");
     }
 
-    /* -------- Body parsing -------- */
+    /* -------- خواندن بدنه‌ی درخواست -------- */
     const body = await readJsonBody(req);
     if (body === null) {
       return NextResponse.json(
@@ -204,6 +212,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /* -------- اعتبارسنجی ورودی -------- */
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -217,7 +226,7 @@ export async function POST(req: NextRequest) {
 
     const data = sanitizePayload(parsed.data);
 
-    /* -------- Plan -------- */
+    /* -------- پلن -------- */
     let effectivePlan = "free";
     try {
       const effective = await getEffectivePlan(userId, {
@@ -225,19 +234,22 @@ export async function POST(req: NextRequest) {
       });
       effectivePlan = effective.plan;
     } catch (planErr) {
+      // در صورت خطا، به پلن پیش‌فرض free برمی‌گردیم.
       console.error("Resume getEffectivePlan failed:", planErr);
     }
 
-    /* -------- Quota reservation -------- */
+    /* -------- رزرو سهمیه -------- */
+    // حالت‌های ممکن:
+    // A) رزرو موفق → مجاز به فراخوانی AI
+    // B) سهمیه تمام → پاسخ ۴۰۳ (بدون fallback، چون این endpoint مبتنی بر AI است)
+    // C) خطای زیرساختی → سرویس با قالب (template) و بدون AI پاسخ می‌دهد
+    let allowAi = false;
     try {
-      const reserveResult = await db.$transaction(async (tx) => {
-        await lockUserRow(tx, userId);
-        return assertAndReserveAiUsage(tx, {
-          userId,
-          plan: effectivePlan,
-          kind: QUOTA_KIND,
-          meta: data.targetRole || data.fullName,
-        });
+      const reserveResult = await reserveAiUsageInTransaction(db, {
+        userId,
+        plan: effectivePlan,
+        kind: QUOTA_KIND,
+        meta: data.targetRole || data.fullName,
       });
 
       if (!reserveResult.ok) {
@@ -254,15 +266,16 @@ export async function POST(req: NextRequest) {
 
       reservedEventId = reserveResult.usageEventId ?? null;
       reservedUserId = userId;
+      allowAi = true;
     } catch (quotaErr) {
-      console.error("Resume quota reserve failed:", quotaErr);
-      return infraUnavailable(
-        "QUOTA_INFRA_ERROR",
-        "Service temporarily unavailable. Please try again shortly.",
-      );
+      // قفل/تراکنش تایم‌اوت شده: بدون AI و بدون هزینه، قالب را برگردان.
+      logQuotaInfraError("resume_reserve", quotaErr);
+      allowAi = false;
+      reservedEventId = null;
+      reservedUserId = null;
     }
 
-    /* -------- AI attempt -------- */
+    /* -------- تلاش برای فراخوانی AI -------- */
     const systemPrompt = buildResumeSystemPrompt(data.tone);
     const userPrompt = buildResumeUserPrompt(data);
 
@@ -270,6 +283,11 @@ export async function POST(req: NextRequest) {
     let source: "ai" | "template" = "template";
 
     try {
+      if (!allowAi) {
+        // در صورت رد سهمیه‌ی زیرساختی، از فراخوانی AI صرف‌نظر می‌کنیم.
+        throw new Error("quota_infra_skip_ai");
+      }
+
       const { text: aiText, meta } = await chatCompletionWithMeta(
         [
           { role: "system", content: systemPrompt },
@@ -285,6 +303,8 @@ export async function POST(req: NextRequest) {
 
       if (aiText) {
         const scrubbed = scrubResumeText(aiText);
+
+        // فقط اگر خروجی ضعیف یا توهم‌آمیز نباشد، آن را می‌پذیریم.
         if (
           !isWeakResumeOutput(scrubbed) &&
           !looksHallucinated(scrubbed, data)
@@ -308,15 +328,16 @@ export async function POST(req: NextRequest) {
       text = null;
     }
 
-    /* -------- Template fallback + quota release -------- */
+    /* -------- Fallback به قالب + آزادسازی سهمیه -------- */
     if (!text) {
+      // AI نتیجه نداد → سهمیه‌ی رزروشده را آزاد کن و از قالب استفاده کن.
       await safeReleaseUsage(reservedUserId, reservedEventId);
       reservedEventId = null;
       text = buildTemplateResume(data);
       source = "template";
     }
 
-    /* -------- Optional save to profile -------- */
+    /* -------- ذخیره‌ی اختیاری در پروفایل -------- */
     let profileSaved = false;
     if (data.saveToProfile) {
       try {
@@ -329,12 +350,14 @@ export async function POST(req: NextRequest) {
           location: data.location || null,
         };
 
+        // ایجاد یا به‌روزرسانی پروفایل کاربر.
         await db.profile.upsert({
           where: { userId },
           create: { userId, ...profileData },
           update: profileData,
         });
 
+        // به‌روزرسانی نام کاربر در صورت وجود.
         if (data.fullName) {
           await db.user.update({
             where: { id: userId },
@@ -343,11 +366,12 @@ export async function POST(req: NextRequest) {
         }
         profileSaved = true;
       } catch (saveErr) {
+        // خطای ذخیره‌سازی مانع بازگشت رزومه نمی‌شود.
         console.error("Resume saveToProfile failed:", saveErr);
       }
     }
 
-    /* -------- Success -------- */
+    /* -------- پاسخ موفق -------- */
     return NextResponse.json({
       success: true,
       resume: text,
@@ -359,7 +383,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Resume generate error:", error);
+
+    // تلاش برای آزادسازی سهمیه در صورت خطای پیش‌بینی‌نشده.
     await safeReleaseUsage(reservedUserId, reservedEventId);
+
     return NextResponse.json(
       { error: "Failed to generate resume" },
       { status: 500 },
