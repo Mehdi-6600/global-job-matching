@@ -1,422 +1,211 @@
-import {
-  NextResponse,
-} from "next/server";
-
-import { auth } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { z } from "zod";
+import { normalizeLocation } from "@/lib/location";
+import { createJobForUser } from "@/services/jobs/create-job";
+import { getRequestIp } from "@/lib/client-ip";
+import { ratelimit } from "@/lib/ratelimit";
 
-import {
-  isEmployerRole,
-} from "@/lib/roles";
+const querySchema = z.object({
+  page: z.coerce.number().min(1).max(1000).default(1),
+  limit: z.coerce.number().min(1).max(100).default(12),
+  search: z.string().max(100).optional(),
+  location: z.string().max(100).optional(),
+  type: z.string().max(50).optional(),
+  experience: z.string().max(50).optional(),
+  remote: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  minSalary: z.coerce.number().optional(),
+  maxSalary: z.coerce.number().optional(),
+  tag: z.string().max(50).optional(),
+  company: z.string().optional(),
+});
 
-import {
-  normalizeLocation,
-} from "@/lib/location";
-
-import {
-  companyCreateSchema,
-} from "@/lib/validation/company";
-
-export async function POST(
-  req: Request
-) {
-  try {
-    const session =
-      await auth();
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
+function mapJob(job: {
+  location: string | null;
+  company?: { location: string | null } | null;
+  [key: string]: unknown;
+}) {
+  return {
+    ...job,
+    location: normalizeLocation(job.location) || job.location,
+    company: job.company
+      ? {
+          ...job.company,
+          location: normalizeLocation(job.company.location),
         }
-      );
-    }
-
-    if (
-      !isEmployerRole(
-        session.user.role
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Forbidden",
-        },
-        {
-          status: 403,
-        }
-      );
-    }
-
-    let body: unknown;
-
-    try {
-      body =
-        await req.json();
-    } catch {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid JSON body",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const parsed =
-      companyCreateSchema.safeParse(
-        body
-      );
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid input",
-
-          details:
-            parsed.error
-              .flatten()
-              .fieldErrors,
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const {
-      name,
-      description,
-      location,
-      website,
-    } = parsed.data;
-
-    const normalizedLocation =
-      location
-        ? normalizeLocation(
-            location
-          ) || location
-        : null;
-
-    const company =
-      await db.company.create({
-        data: {
-          name,
-
-          description:
-            description ??
-            null,
-
-          location:
-            normalizedLocation,
-
-          website:
-            website ?? null,
-
-          ownerId:
-            session.user.id,
-
-          email:
-            session.user.email ||
-            null,
-        },
-      });
-
-    return NextResponse.json(
-      {
-        success: true,
-
-        company: {
-          id:
-            company.id,
-
-          name:
-            company.name,
-
-          slug:
-            company.slug,
-
-          description:
-            company.description,
-
-          location:
-            normalizeLocation(
-              company.location
-            ) ||
-            company.location,
-
-          website:
-            company.website,
-
-          logo:
-            company.logo,
-
-          status:
-            company.status,
-
-          createdAt:
-            company.createdAt,
-
-          updatedAt:
-            company.updatedAt,
-        },
-      },
-      {
-        status: 201,
-      }
-    );
-  } catch (error) {
-    console.error(
-      "Company create error:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Internal server error",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
+      : job.company,
+  };
 }
 
-export async function GET(
-  req: Request
-) {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const params = Object.fromEntries(searchParams.entries());
+
+    const result = querySchema.safeParse(params);
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid query",
+          details: result.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
+
     const {
-      searchParams,
-    } = new URL(req.url);
+      page,
+      limit,
+      search,
+      location,
+      type,
+      experience,
+      remote,
+      tag,
+      company,
+      minSalary,
+      maxSalary,
+    } = result.data;
 
-    const rawPage =
-      searchParams.get(
-        "page"
-      );
-
-    const rawLimit =
-      searchParams.get(
-        "limit"
-      );
-
-    const pageNumber =
-      Number.parseInt(
-        rawPage || "1",
-        10
-      );
-
-    const limitNumber =
-      Number.parseInt(
-        rawLimit || "10",
-        10
-      );
-
-    const page =
-      Number.isFinite(
-        pageNumber
-      )
-        ? Math.max(
-            1,
-            pageNumber
-          )
-        : 1;
-
-    const limit =
-      Number.isFinite(
-        limitNumber
-      )
-        ? Math.min(
-            100,
-            Math.max(
-              1,
-              limitNumber
-            )
-          )
-        : 10;
-
-    const skip =
-      (page - 1) *
-      limit;
-
-    const search =
-      searchParams
-        .get("search")
-        ?.trim()
-        .slice(0, 100) ||
-      "";
-
-    const where: {
-      status: string;
-      OR?: Array<{
-        name?: {
-          contains: string;
-          mode: "insensitive";
-        };
-        location?: {
-          contains: string;
-          mode: "insensitive";
-        };
-        description?: {
-          contains: string;
-          mode: "insensitive";
-        };
-      }>;
-    } = {
-      status: "active",
-    };
+    const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = { status: "active" };
 
     if (search) {
       where.OR = [
-        {
-          name: {
-            contains:
-              search,
-            mode:
-              "insensitive",
-          },
-        },
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { company: { name: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+    if (location) where.location = { contains: location, mode: "insensitive" };
+    if (type) where.type = type;
+    if (experience) where.experience = experience;
+    if (remote) where.remote = true;
+    if (company) where.companyId = company;
+    if (tag) where.tags = { has: tag };
 
+    if (minSalary != null || maxSalary != null) {
+      const salaryFilter: Record<string, unknown> = {};
+      if (minSalary != null) salaryFilter.gte = minSalary;
+      if (maxSalary != null) salaryFilter.lte = maxSalary;
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : []),
         {
-          location: {
-            contains:
-              search,
-            mode:
-              "insensitive",
-          },
-        },
-
-        {
-          description: {
-            contains:
-              search,
-            mode:
-              "insensitive",
-          },
+          OR: [
+            { salaryMin: salaryFilter },
+            { salaryMax: salaryFilter },
+            {
+              AND: [
+                { salaryMin: { lte: maxSalary ?? 999999999 } },
+                { salaryMax: { gte: minSalary ?? 0 } },
+              ],
+            },
+          ],
         },
       ];
     }
 
-    const [
-      companies,
-      total,
-    ] = await Promise.all([
-      db.company.findMany({
+    const [jobs, total] = await Promise.all([
+      db.job.findMany({
         where,
-
+        orderBy: { createdAt: "desc" },
         skip,
-
         take: limit,
-
-        orderBy: {
-          createdAt:
-            "desc",
-        },
-
         include: {
-          _count: {
+          company: {
             select: {
-              jobs: {
-                where: {
-                  status:
-                    "active",
-                },
-              },
+              id: true,
+              name: true,
+              logo: true,
+              location: true,
             },
+          },
+          category: {
+            select: { id: true, name: true, slug: true, color: true },
           },
         },
       }),
-
-      db.company.count({
-        where,
-      }),
+      db.job.count({ where }),
     ]);
 
-    /*
-     * Public API deliberately does not expose:
-     * - owner
-     * - owner ID
-     * - company email
-     */
-    const serialized =
-      companies.map(
-        (company) => ({
-          id:
-            company.id,
+    return NextResponse.json({
+      jobs: jobs.map(mapJob),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    });
+  } catch (error) {
+    console.error("Jobs GET error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch jobs" },
+      { status: 500 }
+    );
+  }
+}
 
-          name:
-            company.name,
+/**
+ * Create job — same pipeline as /api/employer/jobs (no plan bypass).
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-          slug:
-            company.slug,
+    const ip = getRequestIp(req);
+    const limited = await ratelimit.limit(
+      `jobs_post_${session.user.id}_${ip}`
+    );
+    if (!limited.success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
 
-          website:
-            company.website,
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
-          location:
-            normalizeLocation(
-              company.location
-            ) ||
-            company.location,
+    const result = await createJobForUser(
+      {
+        id: session.user.id,
+        role: session.user.role,
+        email: session.user.email,
+      },
+      body
+    );
 
-          description:
-            company.description,
-
-          logo:
-            company.logo,
-
-          status:
-            company.status,
-
-          createdAt:
-            company.createdAt,
-
-          activeJobs:
-            company._count.jobs,
-        })
+    if (!result.ok) {
+      return NextResponse.json(
+        {
+          error: result.error,
+          code: result.code,
+          details: result.details,
+          limit: result.limit,
+          used: result.used,
+        },
+        { status: result.status }
       );
+    }
 
     return NextResponse.json(
-      {
-        companies:
-          serialized,
-
-        pagination: {
-          page,
-
-          limit,
-
-          total,
-
-          totalPages:
-            Math.ceil(
-              total / limit
-            ) || 1,
-        },
-      }
+      { success: true, job: mapJob(result.job) },
+      { status: 201 }
     );
   } catch (error) {
-    console.error(
-      "Companies fetch error:",
-      error
-    );
-
+    console.error("Job create error:", error);
     return NextResponse.json(
-      {
-        error:
-          "Internal server error",
-      },
-      {
-        status: 500,
-      }
+      { error: "Internal server error" },
+      { status: 500 }
     );
   }
 }
