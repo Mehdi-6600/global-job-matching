@@ -1,24 +1,18 @@
-import {
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-import {
-  isAdminRole,
-} from "@/lib/roles";
+import { isAdminRole } from "@/lib/roles";
 
-import {
-  normalizeLocation,
-} from "@/lib/location";
+import { normalizeLocation } from "@/lib/location";
 
-import {
-  companyUpdateSchema,
-} from "@/lib/validation/company";
+import { companyUpdateSchema } from "@/lib/validation/company";
+import { getRequestIp } from "@/lib/client-ip";
+import { ratelimit } from "@/lib/ratelimit";
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   {
     params,
   }: {
@@ -28,17 +22,12 @@ export async function GET(
   }
 ) {
   try {
-    const { id } =
-      await params;
+    const { id } = await params;
 
-    if (
-      !id ||
-      id.length > 100
-    ) {
+    if (!id || id.length > 100) {
       return NextResponse.json(
         {
-          error:
-            "Invalid company ID",
+          error: "Invalid company ID",
         },
         {
           status: 400,
@@ -46,72 +35,63 @@ export async function GET(
       );
     }
 
-    const company =
-      await db.company.findUnique({
-        where: {
-          id,
-        },
+    const company = await db.company.findUnique({
+      where: {
+        id,
+      },
 
-        include: {
-          jobs: {
-            where: {
-              status:
-                "active",
-            },
-
-            take: 10,
-
-            orderBy: {
-              createdAt:
-                "desc",
-            },
-
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              location: true,
-              salary: true,
-              salaryMin: true,
-              salaryMax: true,
-              currency: true,
-              type: true,
-              remote: true,
-              experience: true,
-              deadline: true,
-              status: true,
-              createdAt: true,
-              updatedAt: true,
-              requirements: true,
-              responsibilities: true,
-              benefits: true,
-              tags: true,
-              categoryId: true,
-            },
+      include: {
+        jobs: {
+          where: {
+            status: "active",
           },
 
-          _count: {
-            select: {
-              jobs: {
-                where: {
-                  status:
-                    "active",
-                },
+          take: 10,
+
+          orderBy: {
+            createdAt: "desc",
+          },
+
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            location: true,
+            salary: true,
+            salaryMin: true,
+            salaryMax: true,
+            currency: true,
+            type: true,
+            remote: true,
+            experience: true,
+            deadline: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            requirements: true,
+            responsibilities: true,
+            benefits: true,
+            tags: true,
+            categoryId: true,
+          },
+        },
+
+        _count: {
+          select: {
+            jobs: {
+              where: {
+                status: "active",
               },
             },
           },
         },
-      });
+      },
+    });
 
-    if (
-      !company ||
-      company.status !==
-        "active"
-    ) {
+    if (!company || company.status !== "active") {
       return NextResponse.json(
         {
-          error:
-            "Not found",
+          error: "Not found",
         },
         {
           status: 404,
@@ -121,66 +101,43 @@ export async function GET(
 
     return NextResponse.json({
       company: {
-        id:
-          company.id,
+        id: company.id,
 
-        name:
-          company.name,
+        name: company.name,
 
-        slug:
-          company.slug,
+        slug: company.slug,
 
-        description:
-          company.description,
+        description: company.description,
 
         location:
-          normalizeLocation(
-            company.location
-          ) ||
-          company.location,
+          normalizeLocation(company.location) || company.location,
 
-        website:
-          company.website,
+        website: company.website,
 
-        logo:
-          company.logo,
+        logo: company.logo,
 
-        status:
-          company.status,
+        status: company.status,
 
-        createdAt:
-          company.createdAt,
+        createdAt: company.createdAt,
 
-        updatedAt:
-          company.updatedAt,
+        updatedAt: company.updatedAt,
 
-        activeJobs:
-          company._count.jobs,
+        activeJobs: company._count.jobs,
 
-        jobs:
-          company.jobs.map(
-            (job) => ({
-              ...job,
+        jobs: company.jobs.map((job) => ({
+          ...job,
 
-              location:
-                normalizeLocation(
-                  job.location
-                ) ||
-                job.location,
-            })
-          ),
+          location:
+            normalizeLocation(job.location) || job.location,
+        })),
       },
     });
   } catch (error) {
-    console.error(
-      "Company get error:",
-      error
-    );
+    console.error("Company get error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Internal server error",
+        error: "Internal server error",
       },
       {
         status: 500,
@@ -190,7 +147,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   {
     params,
   }: {
@@ -200,14 +157,12 @@ export async function PATCH(
   }
 ) {
   try {
-    const session =
-      await auth();
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json(
         {
-          error:
-            "Unauthorized",
+          error: "Unauthorized",
         },
         {
           status: 401,
@@ -215,17 +170,23 @@ export async function PATCH(
       );
     }
 
-    const { id } =
-      await params;
+    const ip = getRequestIp(req);
+    const limited = await ratelimit.limit(
+      `companies_patch_${session.user.id}_${ip}`
+    );
+    if (!limited.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
 
-    if (
-      !id ||
-      id.length > 100
-    ) {
+    const { id } = await params;
+
+    if (!id || id.length > 100) {
       return NextResponse.json(
         {
-          error:
-            "Invalid company ID",
+          error: "Invalid company ID",
         },
         {
           status: 400,
@@ -233,24 +194,22 @@ export async function PATCH(
       );
     }
 
-    const company =
-      await db.company.findUnique({
-        where: {
-          id,
-        },
+    const company = await db.company.findUnique({
+      where: {
+        id,
+      },
 
-        select: {
-          id: true,
-          ownerId: true,
-          status: true,
-        },
-      });
+      select: {
+        id: true,
+        ownerId: true,
+        status: true,
+      },
+    });
 
     if (!company) {
       return NextResponse.json(
         {
-          error:
-            "Not found",
+          error: "Not found",
         },
         {
           status: 404,
@@ -258,23 +217,14 @@ export async function PATCH(
       );
     }
 
-    const isOwner =
-      company.ownerId ===
-      session.user.id;
+    const isOwner = company.ownerId === session.user.id;
 
-    const isAdmin =
-      isAdminRole(
-        session.user.role
-      );
+    const isAdmin = isAdminRole(session.user.role);
 
-    if (
-      !isOwner &&
-      !isAdmin
-    ) {
+    if (!isOwner && !isAdmin) {
       return NextResponse.json(
         {
-          error:
-            "Forbidden",
+          error: "Forbidden",
         },
         {
           status: 403,
@@ -285,13 +235,11 @@ export async function PATCH(
     let body: unknown;
 
     try {
-      body =
-        await req.json();
+      body = await req.json();
     } catch {
       return NextResponse.json(
         {
-          error:
-            "Invalid JSON body",
+          error: "Invalid JSON body",
         },
         {
           status: 400,
@@ -299,21 +247,14 @@ export async function PATCH(
       );
     }
 
-    const parsed =
-      companyUpdateSchema.safeParse(
-        body
-      );
+    const parsed = companyUpdateSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
         {
-          error:
-            "Invalid input",
+          error: "Invalid input",
 
-          details:
-            parsed.error
-              .flatten()
-              .fieldErrors,
+          details: parsed.error.flatten().fieldErrors,
         },
         {
           status: 400,
@@ -322,114 +263,74 @@ export async function PATCH(
     }
 
     const data = {
-      ...(parsed.data
-        .name !==
-      undefined
+      ...(parsed.data.name !== undefined
         ? {
-            name:
-              parsed.data
-                .name,
+            name: parsed.data.name,
           }
         : {}),
 
-      ...(parsed.data
-        .description !==
-      undefined
+      ...(parsed.data.description !== undefined
         ? {
-            description:
-              parsed.data
-                .description ??
-              null,
+            description: parsed.data.description ?? null,
           }
         : {}),
 
-      ...(parsed.data
-        .location !==
-      undefined
+      ...(parsed.data.location !== undefined
         ? {
-            location:
-              parsed.data
-                .location
-                ? normalizeLocation(
-                    parsed.data
-                      .location
-                  ) ||
-                  parsed.data
-                    .location
-                    .trim()
-                : null,
+            location: parsed.data.location
+              ? normalizeLocation(parsed.data.location) ||
+                parsed.data.location.trim()
+              : null,
           }
         : {}),
 
-      ...(parsed.data
-        .website !==
-      undefined
+      ...(parsed.data.website !== undefined
         ? {
-            website:
-              parsed.data
-                .website ??
-              null,
+            website: parsed.data.website ?? null,
           }
         : {}),
     };
 
-    const updated =
-      await db.company.update({
-        where: {
-          id,
-        },
+    const updated = await db.company.update({
+      where: {
+        id,
+      },
 
-        data,
-      });
+      data,
+    });
 
     return NextResponse.json({
       success: true,
 
       company: {
-        id:
-          updated.id,
+        id: updated.id,
 
-        name:
-          updated.name,
+        name: updated.name,
 
-        slug:
-          updated.slug,
+        slug: updated.slug,
 
-        description:
-          updated.description,
+        description: updated.description,
 
         location:
-          normalizeLocation(
-            updated.location
-          ) ||
-          updated.location,
+          normalizeLocation(updated.location) || updated.location,
 
-        website:
-          updated.website,
+        website: updated.website,
 
-        logo:
-          updated.logo,
+        logo: updated.logo,
 
-        status:
-          updated.status,
+        status: updated.status,
 
-        createdAt:
-          updated.createdAt,
+        createdAt: updated.createdAt,
 
-        updatedAt:
-          updated.updatedAt,
+        updatedAt: updated.updatedAt,
       },
     });
   } catch (error) {
-    console.error(
-      "Company patch error:",
-      error
-    );
+    console.error("Company patch error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Internal server error",
+        error: "Internal server error",
       },
       {
         status: 500,
@@ -439,7 +340,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: NextRequest,
   {
     params,
   }: {
@@ -449,14 +350,12 @@ export async function DELETE(
   }
 ) {
   try {
-    const session =
-      await auth();
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json(
         {
-          error:
-            "Unauthorized",
+          error: "Unauthorized",
         },
         {
           status: 401,
@@ -464,17 +363,23 @@ export async function DELETE(
       );
     }
 
-    const { id } =
-      await params;
+    const ip = getRequestIp(req);
+    const limited = await ratelimit.limit(
+      `companies_delete_${session.user.id}_${ip}`
+    );
+    if (!limited.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
 
-    if (
-      !id ||
-      id.length > 100
-    ) {
+    const { id } = await params;
+
+    if (!id || id.length > 100) {
       return NextResponse.json(
         {
-          error:
-            "Invalid company ID",
+          error: "Invalid company ID",
         },
         {
           status: 400,
@@ -482,23 +387,21 @@ export async function DELETE(
       );
     }
 
-    const company =
-      await db.company.findUnique({
-        where: {
-          id,
-        },
+    const company = await db.company.findUnique({
+      where: {
+        id,
+      },
 
-        select: {
-          id: true,
-          ownerId: true,
-        },
-      });
+      select: {
+        id: true,
+        ownerId: true,
+      },
+    });
 
     if (!company) {
       return NextResponse.json(
         {
-          error:
-            "Not found",
+          error: "Not found",
         },
         {
           status: 404,
@@ -506,23 +409,14 @@ export async function DELETE(
       );
     }
 
-    const isOwner =
-      company.ownerId ===
-      session.user.id;
+    const isOwner = company.ownerId === session.user.id;
 
-    const isAdmin =
-      isAdminRole(
-        session.user.role
-      );
+    const isAdmin = isAdminRole(session.user.role);
 
-    if (
-      !isOwner &&
-      !isAdmin
-    ) {
+    if (!isOwner && !isAdmin) {
       return NextResponse.json(
         {
-          error:
-            "Forbidden",
+          error: "Forbidden",
         },
         {
           status: 403,
@@ -546,15 +440,11 @@ export async function DELETE(
       success: true,
     });
   } catch (error) {
-    console.error(
-      "Company delete error:",
-      error
-    );
+    console.error("Company delete error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Internal server error",
+        error: "Internal server error",
       },
       {
         status: 500,
