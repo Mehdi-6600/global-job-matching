@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import { useSession, signIn } from "next-auth/react";
 import {
@@ -31,11 +37,21 @@ import { trackEvent } from "@/lib/track";
 import { useLocale } from "@/components/locale-provider";
 import { messageFromAiHttpError } from "@/lib/ai-client-errors";
 
+/* ------------------------------------------------------------------ */
+/* Constants                                                          */
+/* ------------------------------------------------------------------ */
+
+const HISTORY_DISPLAY_LIMIT = 8;
+
 const levelColor: Record<string, string> = {
   low: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
   medium: "text-amber-400 border-amber-500/30 bg-amber-500/10",
   high: "text-red-400 border-red-500/30 bg-red-500/10",
 };
+
+/* ------------------------------------------------------------------ */
+/* Types                                                              */
+/* ------------------------------------------------------------------ */
 
 type HistoryItem = {
   id: string;
@@ -75,25 +91,35 @@ type MigrationResult = {
   source: "ai" | "heuristic";
 };
 
+/* ------------------------------------------------------------------ */
+/* Safe parsing helpers                                               */
+/* ------------------------------------------------------------------ */
+
 function asRecord(data: unknown): Record<string, unknown> {
-  if (data && typeof data === "object") {
-    return data as Record<string, unknown>;
-  }
-  return {};
+  return data && typeof data === "object"
+    ? (data as Record<string, unknown>)
+    : {};
+}
+
+function toStrArray(v: unknown): string[] {
+  return Array.isArray(v)
+    ? v.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+}
+
+function toBoundedInt(v: unknown): number | null {
+  const x = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(x)) return null;
+  return Math.max(0, Math.min(100, Math.round(x)));
 }
 
 function parseSubScores(raw: unknown): CareerRiskSubScores | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const o = raw as Record<string, unknown>;
-  const n = (v: unknown) => {
-    const x = typeof v === "number" ? v : Number(v);
-    if (!Number.isFinite(x)) return null;
-    return Math.max(0, Math.min(100, Math.round(x)));
-  };
-  const taskAutomation = n(o.taskAutomation);
-  const toolMaturity = n(o.toolMaturity);
-  const marketAdoption = n(o.marketAdoption);
-  const agenticExposure = n(o.agenticExposure);
+  const taskAutomation = toBoundedInt(o.taskAutomation);
+  const toolMaturity = toBoundedInt(o.toolMaturity);
+  const marketAdoption = toBoundedInt(o.marketAdoption);
+  const agenticExposure = toBoundedInt(o.agenticExposure);
   if (
     taskAutomation == null ||
     toolMaturity == null ||
@@ -105,6 +131,17 @@ function parseSubScores(raw: unknown): CareerRiskSubScores | undefined {
   return { taskAutomation, toolMaturity, marketAdoption, agenticExposure };
 }
 
+function parseRiskLevel(raw: unknown): CareerRiskAnalysis["riskLevel"] {
+  const v = String(raw ?? "medium").toLowerCase();
+  return v === "low" || v === "high" || v === "medium" ? v : "medium";
+}
+
+function parseSource(raw: unknown): "ai" | "heuristic" {
+  return String(raw ?? "ai").toLowerCase() === "heuristic"
+    ? "heuristic"
+    : "ai";
+}
+
 function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
   if (!data || typeof data !== "object") return null;
   const root = data as Record<string, unknown>;
@@ -114,36 +151,18 @@ function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
       : root;
 
   const jobTitle = String(nested.jobTitle ?? root.jobTitle ?? "").trim();
-  const riskScoreRaw = nested.riskScore ?? root.riskScore;
-  const riskScore =
-    typeof riskScoreRaw === "number" ? riskScoreRaw : Number(riskScoreRaw);
-  if (!jobTitle || !Number.isFinite(riskScore)) return null;
-
-  const riskLevelRaw = String(
-    nested.riskLevel ?? root.riskLevel ?? "medium"
-  ).toLowerCase();
-  const riskLevel: CareerRiskAnalysis["riskLevel"] =
-    riskLevelRaw === "low" || riskLevelRaw === "high" || riskLevelRaw === "medium"
-      ? riskLevelRaw
-      : "medium";
-
-  const summary = String(nested.summary ?? root.summary ?? "").trim();
-  const toStrArr = (v: unknown): string[] =>
-    Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : [];
-
-  const sourceRaw = String(nested.source ?? root.source ?? "ai").toLowerCase();
-  const source: CareerRiskAnalysis["source"] =
-    sourceRaw === "heuristic" ? "heuristic" : "ai";
+  const riskScore = toBoundedInt(nested.riskScore ?? root.riskScore);
+  if (!jobTitle || riskScore == null) return null;
 
   return {
     jobTitle,
-    riskScore: Math.max(0, Math.min(100, Math.round(riskScore))),
-    riskLevel,
-    summary,
-    reasons: toStrArr(nested.reasons ?? root.reasons),
-    skillsToBuild: toStrArr(nested.skillsToBuild ?? root.skillsToBuild),
-    alternatives: toStrArr(nested.alternatives ?? root.alternatives),
-    source,
+    riskScore,
+    riskLevel: parseRiskLevel(nested.riskLevel ?? root.riskLevel),
+    summary: String(nested.summary ?? root.summary ?? "").trim(),
+    reasons: toStrArray(nested.reasons ?? root.reasons),
+    skillsToBuild: toStrArray(nested.skillsToBuild ?? root.skillsToBuild),
+    alternatives: toStrArray(nested.alternatives ?? root.alternatives),
+    source: parseSource(nested.source ?? root.source),
     subScores: parseSubScores(nested.subScores ?? root.subScores),
     timeHorizon:
       typeof (nested.timeHorizon ?? root.timeHorizon) === "string"
@@ -159,6 +178,72 @@ function parseAnalysisPayload(data: unknown): CareerRiskAnalysis | null {
         : undefined,
   };
 }
+
+function parseRoadmap(data: unknown): RoadmapResult | null {
+  const d = asRecord(data);
+  const weeksRaw = Array.isArray(d.weeks) ? d.weeks : [];
+  return {
+    title: String(d.title || ""),
+    weeks: weeksRaw.map((w) => {
+      const week = asRecord(w);
+      return {
+        week: String(week.week || ""),
+        focus: String(week.focus || ""),
+        actions: toStrArray(week.actions),
+      };
+    }),
+    resources: toStrArray(d.resources),
+    source: parseSource(d.source),
+  };
+}
+
+function parseMigration(data: unknown): MigrationResult | null {
+  const d = asRecord(data);
+  const countries = Array.isArray(d.countries)
+    ? d.countries.map((c) => {
+        const row = asRecord(c);
+        return {
+          country: String(row.country || ""),
+          demand: String(row.demand || ""),
+          pathway: String(row.pathway || ""),
+          notes: String(row.notes || ""),
+        };
+      })
+    : [];
+  return {
+    title: String(d.title || ""),
+    summary: String(d.summary || ""),
+    countries,
+    caveats: toStrArray(d.caveats),
+    source: parseSource(d.source),
+  };
+}
+
+function parseHistory(data: unknown): HistoryItem[] {
+  const raw =
+    asRecord(data).assessments ??
+    asRecord(data).items ??
+    asRecord(data).history;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      const h = asRecord(item);
+      return {
+        id: String(h.id || ""),
+        jobTitle: String(h.jobTitle || ""),
+        riskScore: Number(h.riskScore) || 0,
+        riskLevel: String(h.riskLevel || ""),
+        summary: String(h.summary || ""),
+        sharePath: h.sharePath ? String(h.sharePath) : undefined,
+        createdAt: String(h.createdAt || ""),
+      };
+    })
+    .filter((h) => h.id && h.jobTitle);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sub-components                                                     */
+/* ------------------------------------------------------------------ */
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
   const v = Math.max(0, Math.min(100, value));
@@ -178,10 +263,15 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Main component                                                     */
+/* ------------------------------------------------------------------ */
+
 export default function CareerRiskPage() {
   const { t, locale } = useLocale();
   const { status } = useSession();
 
+  /* -------- Form state -------- */
   const [jobTitle, setJobTitle] = useState("");
   const [skills, setSkills] = useState("");
   const [industry, setIndustry] = useState("");
@@ -190,6 +280,7 @@ export default function CareerRiskPage() {
   const [location, setLocation] = useState("");
   const [education, setEducation] = useState("");
 
+  /* -------- Analysis state -------- */
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<CareerRiskAnalysis | null>(null);
@@ -200,14 +291,17 @@ export default function CareerRiskPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
 
+  /* -------- Roadmap state -------- */
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapError, setRoadmapError] = useState("");
   const [roadmap, setRoadmap] = useState<RoadmapResult | null>(null);
 
+  /* -------- Migration state -------- */
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [migrationError, setMigrationError] = useState("");
   const [migration, setMigration] = useState<MigrationResult | null>(null);
 
+  /* -------- Derived -------- */
   const levelLabel = useCallback(
     (level: string) => {
       if (level === "low") return t("CareerRisk.levelLow", "Low");
@@ -215,16 +309,16 @@ export default function CareerRiskPage() {
       if (level === "high") return t("CareerRisk.levelHigh", "High");
       return level;
     },
-    [t]
+    [t],
   );
 
   const stepsAfterRiskHint = useMemo(
     () =>
       t(
         "CareerRisk.stepsAfterRisk",
-        "The steps below unlock after you run a risk analysis."
+        "The steps below unlock after you run a risk analysis.",
       ),
-    [t]
+    [t],
   );
 
   const currentForm = useCallback((): CareerRiskFormInput => {
@@ -251,29 +345,44 @@ export default function CareerRiskPage() {
     locale,
   ]);
 
+  const analysisContext = useMemo(
+    () => ({
+      jobTitle: analysis?.jobTitle,
+      skillsToBuild: analysis?.skillsToBuild,
+      reasons: analysis?.reasons,
+      riskScore: analysis?.riskScore,
+      riskLevel: analysis?.riskLevel,
+      summary: analysis?.summary,
+      country: country.trim() || undefined,
+      location: location.trim() || undefined,
+      experienceYears: experienceYears.trim()
+        ? Number(experienceYears)
+        : undefined,
+      industry: industry.trim() || undefined,
+      skills: skills.trim() || undefined,
+      education: education.trim() || undefined,
+      locale: locale || "en",
+    }),
+    [
+      analysis,
+      country,
+      location,
+      experienceYears,
+      industry,
+      skills,
+      education,
+      locale,
+    ],
+  );
+
+  /* -------- History loader -------- */
   const loadHistory = useCallback(async () => {
     if (status !== "authenticated") return;
     try {
       const res = await fetch("/api/career/risk", { credentials: "include" });
       if (!res.ok) return;
       const data = await res.json().catch(() => ({}));
-      const raw = asRecord(data).assessments ?? asRecord(data).items ?? asRecord(data).history;
-      if (!Array.isArray(raw)) return;
-      const items: HistoryItem[] = raw
-        .map((item: unknown) => {
-          const h = asRecord(item);
-          return {
-            id: String(h.id || ""),
-            jobTitle: String(h.jobTitle || ""),
-            riskScore: Number(h.riskScore) || 0,
-            riskLevel: String(h.riskLevel || ""),
-            summary: String(h.summary || ""),
-            sharePath: h.sharePath ? String(h.sharePath) : undefined,
-            createdAt: String(h.createdAt || ""),
-          };
-        })
-        .filter((h: HistoryItem) => h.id && h.jobTitle);
-      setHistory(items);
+      setHistory(parseHistory(data));
     } catch {
       /* ignore */
     }
@@ -283,7 +392,9 @@ export default function CareerRiskPage() {
     void loadHistory();
   }, [loadHistory]);
 
+  /* -------- Run analysis -------- */
   const runAnalysis = useCallback(async () => {
+    if (loading) return;
     setError("");
     setLoading(true);
     setAnalysis(null);
@@ -306,7 +417,6 @@ export default function CareerRiskPage() {
 
       if (res.status === 401) {
         setShowAuthGate(true);
-        setLoading(false);
         return;
       }
 
@@ -315,17 +425,15 @@ export default function CareerRiskPage() {
           messageFromAiHttpError(
             res.status,
             data as { error?: string; code?: string },
-            (k, fb) => t(k, fb)
-          ) || t("CareerRisk.failed", "Failed to analyze career risk")
+            (k, fb) => t(k, fb),
+          ) || t("CareerRisk.failed", "Failed to analyze career risk"),
         );
-        setLoading(false);
         return;
       }
 
       const parsed = parseAnalysisPayload(data);
       if (!parsed) {
         setError(t("Common.error", "Something went wrong"));
-        setLoading(false);
         return;
       }
 
@@ -346,8 +454,9 @@ export default function CareerRiskPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentForm, t, loadHistory]);
+  }, [currentForm, t, loadHistory, loading]);
 
+  /* -------- Roadmap -------- */
   const generateRoadmap = useCallback(async () => {
     if (!analysis) return;
     setRoadmapError("");
@@ -358,28 +467,11 @@ export default function CareerRiskPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          jobTitle: analysis.jobTitle,
-          skillsToBuild: analysis.skillsToBuild,
-          reasons: analysis.reasons,
-          riskScore: analysis.riskScore,
-          riskLevel: analysis.riskLevel,
-          summary: analysis.summary,
-          country: country.trim() || undefined,
-          location: location.trim() || undefined,
-          experienceYears: experienceYears.trim()
-            ? Number(experienceYears)
-            : undefined,
-          industry: industry.trim() || undefined,
-          skills: skills.trim() || undefined,
-          education: education.trim() || undefined,
-          locale: locale || "en",
-        }),
+        body: JSON.stringify(analysisContext),
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         setShowAuthGate(true);
-        setRoadmapLoading(false);
         return;
       }
       if (!res.ok) {
@@ -387,51 +479,26 @@ export default function CareerRiskPage() {
           messageFromAiHttpError(
             res.status,
             data as { error?: string; code?: string },
-            (k, fb) => t(k, fb)
-          ) || t("CareerRisk.roadmapFailed", "Failed to build roadmap")
+            (k, fb) => t(k, fb),
+          ) || t("CareerRisk.roadmapFailed", "Failed to build roadmap"),
         );
-        setRoadmapLoading(false);
         return;
       }
-      const d = asRecord(data);
-      const weeksRaw = Array.isArray(d.weeks) ? d.weeks : [];
-      setRoadmap({
-        title: String(d.title || ""),
-        weeks: weeksRaw.map((w) => {
-          const week = asRecord(w);
-          return {
-            week: String(week.week || ""),
-            focus: String(week.focus || ""),
-            actions: Array.isArray(week.actions)
-              ? week.actions.map((a) => String(a))
-              : [],
-          };
-        }),
-        resources: Array.isArray(d.resources)
-          ? d.resources.map((x) => String(x))
-          : [],
-        source: d.source === "heuristic" ? "heuristic" : "ai",
-      });
-      trackEvent("career_roadmap_success");
+      const parsed = parseRoadmap(data);
+      if (parsed) {
+        setRoadmap(parsed);
+        trackEvent("career_roadmap_success");
+      }
     } catch {
       setRoadmapError(
-        t("Auth.errors.network", "Network error. Please try again.")
+        t("Auth.errors.network", "Network error. Please try again."),
       );
     } finally {
       setRoadmapLoading(false);
     }
-  }, [
-    analysis,
-    country,
-    location,
-    experienceYears,
-    industry,
-    skills,
-    education,
-    locale,
-    t,
-  ]);
+  }, [analysis, analysisContext, t]);
 
+  /* -------- Migration -------- */
   const generateMigration = useCallback(async () => {
     if (!analysis) return;
     setMigrationError("");
@@ -442,28 +509,11 @@ export default function CareerRiskPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          jobTitle: analysis.jobTitle,
-          skillsToBuild: analysis.skillsToBuild,
-          reasons: analysis.reasons,
-          riskScore: analysis.riskScore,
-          riskLevel: analysis.riskLevel,
-          summary: analysis.summary,
-          country: country.trim() || undefined,
-          location: location.trim() || undefined,
-          experienceYears: experienceYears.trim()
-            ? Number(experienceYears)
-            : undefined,
-          industry: industry.trim() || undefined,
-          skills: skills.trim() || undefined,
-          education: education.trim() || undefined,
-          locale: locale || "en",
-        }),
+        body: JSON.stringify(analysisContext),
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         setShowAuthGate(true);
-        setMigrationLoading(false);
         return;
       }
       if (!res.ok) {
@@ -471,57 +521,30 @@ export default function CareerRiskPage() {
           messageFromAiHttpError(
             res.status,
             data as { error?: string; code?: string },
-            (k, fb) => t(k, fb)
+            (k, fb) => t(k, fb),
           ) ||
             t(
               "CareerRisk.migrationFailed",
-              "Failed to analyze migration options"
-            )
+              "Failed to analyze migration options",
+            ),
         );
-        setMigrationLoading(false);
         return;
       }
-      const d = asRecord(data);
-      const countries = Array.isArray(d.countries)
-        ? d.countries.map((c) => {
-            const row = asRecord(c);
-            return {
-              country: String(row.country || ""),
-              demand: String(row.demand || ""),
-              pathway: String(row.pathway || ""),
-              notes: String(row.notes || ""),
-            };
-          })
-        : [];
-      setMigration({
-        title: String(d.title || ""),
-        summary: String(d.summary || ""),
-        countries,
-        caveats: Array.isArray(d.caveats)
-          ? d.caveats.map((x) => String(x))
-          : [],
-        source: d.source === "heuristic" ? "heuristic" : "ai",
-      });
-      trackEvent("career_migration_success");
+      const parsed = parseMigration(data);
+      if (parsed) {
+        setMigration(parsed);
+        trackEvent("career_migration_success");
+      }
     } catch {
       setMigrationError(
-        t("Auth.errors.network", "Network error. Please try again.")
+        t("Auth.errors.network", "Network error. Please try again."),
       );
     } finally {
       setMigrationLoading(false);
     }
-  }, [
-    analysis,
-    skills,
-    industry,
-    experienceYears,
-    country,
-    location,
-    education,
-    locale,
-    t,
-  ]);
+  }, [analysis, analysisContext, t]);
 
+  /* -------- Draft restore -------- */
   useEffect(() => {
     const draft = loadCareerRiskDraft();
     if (!draft?.form) return;
@@ -530,7 +553,7 @@ export default function CareerRiskPage() {
     setSkills(f.skills || "");
     setIndustry(f.industry || "");
     setExperienceYears(
-      f.experienceYears != null ? String(f.experienceYears) : ""
+      f.experienceYears != null ? String(f.experienceYears) : "",
     );
     setCountry(f.country || "");
     setLocation(f.location || "");
@@ -542,14 +565,15 @@ export default function CareerRiskPage() {
     }
   }, [status, runAnalysis]);
 
+  /* -------- Handlers -------- */
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (jobTitle.trim().length < 2) {
       setError(
         t(
           "CareerRisk.jobTitleRequired",
-          "Please enter a job title (min 2 characters)."
-        )
+          "Please enter a job title (min 2 characters).",
+        ),
       );
       return;
     }
@@ -595,6 +619,7 @@ export default function CareerRiskPage() {
 
   const canSecondary = Boolean(analysis) && !loading;
 
+  /* -------- Render -------- */
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <div className="max-w-3xl mx-auto">
@@ -617,7 +642,7 @@ export default function CareerRiskPage() {
             <p className="text-slate-400 text-sm mt-1">
               {t(
                 "CareerRisk.subtitle",
-                "See how exposed your role is to AI and automation — then unlock a 90-day roadmap and migration paths."
+                "See how exposed your role is to AI and automation — then unlock a 90-day roadmap and migration paths.",
               )}
             </p>
           </div>
@@ -637,7 +662,7 @@ export default function CareerRiskPage() {
               className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
               placeholder={t(
                 "CareerRisk.jobTitlePlaceholder",
-                "e.g. Frontend Developer"
+                "e.g. Frontend Developer",
               )}
               required
               minLength={2}
@@ -655,7 +680,7 @@ export default function CareerRiskPage() {
                 className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                 placeholder={t(
                   "CareerRisk.skillsPlaceholder",
-                  "React, TypeScript, ..."
+                  "React, TypeScript, ...",
                 )}
               />
             </div>
@@ -669,7 +694,7 @@ export default function CareerRiskPage() {
                 className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                 placeholder={t(
                   "CareerRisk.industryPlaceholder",
-                  "SaaS, Healthcare, ..."
+                  "SaaS, Healthcare, ...",
                 )}
               />
             </div>
@@ -699,7 +724,7 @@ export default function CareerRiskPage() {
                 className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                 placeholder={t(
                   "CareerRisk.educationPlaceholder",
-                  "BSc Computer Science"
+                  "BSc Computer Science",
                 )}
               />
             </div>
@@ -793,8 +818,13 @@ export default function CareerRiskPage() {
           </div>
         </form>
 
+        {/* Auth gate modal */}
         {showAuthGate && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-xl">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-lg font-semibold text-white">
@@ -812,7 +842,7 @@ export default function CareerRiskPage() {
               <p className="text-sm text-slate-400 mb-5">
                 {t(
                   "CareerRisk.authBody",
-                  "Create a free account or sign in so we can save your analysis and unlock roadmap tools."
+                  "Create a free account or sign in so we can save your analysis and unlock roadmap tools.",
                 )}
               </p>
               <div className="space-y-3">
@@ -835,6 +865,7 @@ export default function CareerRiskPage() {
           </div>
         )}
 
+        {/* Analysis section */}
         {analysis && (
           <section className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6 space-y-5">
             <div className="flex flex-wrap items-center gap-3 justify-between">
@@ -901,10 +932,7 @@ export default function CareerRiskPage() {
                 </h3>
                 <ul className="space-y-1.5">
                   {analysis.reasons.map((r, i) => (
-                    <li
-                      key={i}
-                      className="text-sm text-slate-300 flex gap-2"
-                    >
+                    <li key={i} className="text-sm text-slate-300 flex gap-2">
                       <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                       <span>{r}</span>
                     </li>
@@ -951,7 +979,7 @@ export default function CareerRiskPage() {
                       {upgradeMessage ||
                         t(
                           "CareerRisk.alternativesLocked",
-                          "Upgrade to Pro to unlock alternative role recommendations."
+                          "Upgrade to Pro to unlock alternative role recommendations.",
                         )}
                     </p>
                     <Link
@@ -967,6 +995,7 @@ export default function CareerRiskPage() {
           </section>
         )}
 
+        {/* Roadmap section */}
         {(roadmapLoading || roadmapError || roadmap) && (
           <section className="mt-6 rounded-2xl border border-orange-500/20 bg-orange-500/5 p-5 sm:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -1030,6 +1059,7 @@ export default function CareerRiskPage() {
           </section>
         )}
 
+        {/* Migration section */}
         {(migrationLoading || migrationError || migration) && (
           <section className="mt-6 rounded-2xl border border-red-500/25 bg-red-500/5 p-5 sm:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -1041,7 +1071,7 @@ export default function CareerRiskPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
                 {t(
                   "CareerRisk.migrationLoading",
-                  "Analyzing migration paths…"
+                  "Analyzing migration paths…",
                 )}
               </p>
             )}
@@ -1098,6 +1128,7 @@ export default function CareerRiskPage() {
           </section>
         )}
 
+        {/* History section */}
         {history.length > 0 && (
           <section className="mt-8">
             <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -1105,16 +1136,14 @@ export default function CareerRiskPage() {
               {t("CareerRisk.history", "Recent analyses")}
             </h2>
             <ul className="space-y-2">
-              {history.slice(0, 8).map((h) => (
+              {history.slice(0, HISTORY_DISPLAY_LIMIT).map((h) => (
                 <li
                   key={h.id}
                   className="text-sm text-slate-300 border border-white/10 rounded-xl px-3 py-2 flex justify-between gap-2"
                 >
                   <span className="truncate">
                     {h.jobTitle}{" "}
-                    <span className="text-slate-500">
-                      ({h.riskScore}/100)
-                    </span>
+                    <span className="text-slate-500">({h.riskScore}/100)</span>
                   </span>
                   <span className="text-xs text-slate-500 shrink-0">
                     {h.createdAt
