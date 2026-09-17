@@ -1,7 +1,17 @@
 /**
  * Canonical deterministic matching engine (single source of truth).
  * Unicode-safe tokenization for en / fa / ar and mixed text.
+ *
+ * Design goals:
+ *  - Deterministic: same inputs → same output, always.
+ *  - Unicode-aware: correct handling of Latin, Arabic, Persian, digits.
+ *  - Explainable: every score decomposes into weighted parts.
+ *  - Conservative: avoids false positives from substring or calendar years.
  */
+
+/* ------------------------------------------------------------------ */
+/* Types                                                              */
+/* ------------------------------------------------------------------ */
 
 export type MatchProfileInput = {
   skills?: string | null;
@@ -40,12 +50,25 @@ export type MatchResult = {
   missingFromRequirements: string[];
 };
 
+/* ------------------------------------------------------------------ */
+/* Constants                                                          */
+/* ------------------------------------------------------------------ */
+
 const STOP = new Set([
+  // English
   "and", "or", "the", "a", "an", "to", "of", "in", "for", "with", "on", "at",
   "by", "from", "as", "is", "are", "be", "this", "that", "your", "you", "we",
   "our", "job", "role", "work", "years", "year", "experience",
+  // Persian / Arabic
   "و", "در", "به", "از", "که", "را", "با", "برای",
 ]);
+
+const MAX_MATCHED_SKILLS = 20;
+const MAX_MISSING_REQUIREMENTS = 12;
+
+/* ------------------------------------------------------------------ */
+/* Normalization                                                      */
+/* ------------------------------------------------------------------ */
 
 /** Normalize common Arabic/Persian letter variants. */
 export function normalizeScript(text: string): string {
@@ -56,6 +79,17 @@ export function normalizeScript(text: string): string {
     .replace(/\u200C/g, " ")      // ZWNJ → space
     .replace(/\u0640/g, "");      // tatweel
 }
+
+/** Convert Persian/Arabic digits to ASCII digits. */
+function toAsciiDigits(s: string): string {
+  return s
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+}
+
+/* ------------------------------------------------------------------ */
+/* Tokenization                                                       */
+/* ------------------------------------------------------------------ */
 
 /**
  * Unicode-aware tokenizer: keeps Latin, digits, and Arabic block letters.
@@ -75,65 +109,139 @@ function unique(tokens: string[]): string[] {
   return Array.from(new Set(tokens));
 }
 
+/* ------------------------------------------------------------------ */
+/* Overlap scoring                                                    */
+/* ------------------------------------------------------------------ */
+
 function overlapRatio(
   a: string[],
   b: string[],
 ): { ratio: number; matched: string[] } {
   if (a.length === 0 || b.length === 0) return { ratio: 0, matched: [] };
+
   const setB = new Set(b);
   const matched = a.filter((t) => setB.has(t));
+
   // Requirement coverage: share of job tokens covered by the candidate.
   const coverage = matched.length / Math.max(b.length, 1);
+
   // Jaccard softens "one job skill, huge candidate bag → perfect score".
   const union = new Set([...a, ...b]).size;
   const jaccard = matched.length / Math.max(union, 1);
+
   const ratio = Math.min(1, coverage * 0.7 + jaccard * 0.3);
   return { ratio, matched: unique(matched) };
 }
 
+/* ------------------------------------------------------------------ */
+/* Location                                                           */
+/* ------------------------------------------------------------------ */
+
 function locationScore(
   profileLoc: string | null | undefined,
-  jobLoc: string,
+  jobLoc: string | null | undefined,
   remote?: boolean | null,
 ): number {
-  if (remote) return 1;
+  // Remote jobs are location-flexible; do not award a perfect 1.0 so location
+  // weight cannot alone push overall score into "excellent".
+  if (remote) return 0.9;
+
   const p = normalizeScript((profileLoc ?? "").toLowerCase().trim());
   const j = normalizeScript((jobLoc ?? "").toLowerCase().trim());
   if (!p || !j) return 0.35;
   if (p === j) return 1;
-  if (p.includes(j) || j.includes(p)) return 0.85;
-  const { ratio } = overlapRatio(tokenize(p), tokenize(j));
-  if (ratio >= 0.5) return 0.7;
-  if (ratio > 0) return 0.45;
+
+  // Token overlap handles "Tehran" vs "Tehran, Iran" without raw substring traps
+  // like matching a short city name inside an unrelated longer string.
+  const pTok = tokenize(p);
+  const jTok = tokenize(j);
+  if (pTok.length && jTok.length) {
+    const setJ = new Set(jTok);
+    const hits = pTok.filter((t) => setJ.has(t) && t.length >= 2);
+    if (hits.length > 0) {
+      const coverage =
+        hits.length / Math.max(Math.min(pTok.length, jTok.length), 1);
+      if (coverage >= 0.5) return 0.9;
+      return 0.7;
+    }
+  }
+
+  // Conservative substring only when the shorter side is long enough (≥4).
+  const shorter = p.length <= j.length ? p : j;
+  const longer = p.length <= j.length ? j : p;
+  if (shorter.length >= 4 && longer.includes(shorter)) return 0.8;
+
   return 0.15;
 }
 
-function toAsciiDigits(s: string): string {
-  return s
-    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
-    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
-}
+/* ------------------------------------------------------------------ */
+/* Experience                                                         */
+/* ------------------------------------------------------------------ */
 
-function yearsIn(s: string): number | null {
+/**
+ * Parse years-of-experience from free text.
+ * Numeric values require an explicit year-unit (years/yrs/سال) so that
+ * "2026", "5000 USD", "2 projects" are NOT treated as experience.
+ */
+export function yearsIn(s: string): number | null {
   const t = toAsciiDigits(s);
 
-  // Ranges: "2-4 years", "2–4 سال"
+  // Ranges with unit: "2-4 years", "2 to 4 years", "۲ تا ۴ سال"
   const range = t.match(
-    /(\d+)\s*[-–—]\s*(\d+)\s*\+?\s*(year|yr|سال)?/i,
+    /(\d+(?:\.\d+)?)\s*(?:to|تا|[-–—])\s*(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال)/i,
   );
   if (range) {
-    return (Number(range[1]) + Number(range[2])) / 2;
+    const a = Number(range[1]);
+    const b = Number(range[2]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return (a + b) / 2;
   }
 
-  const m = t.match(/(\d+(?:\.\d+)?)\s*\+?\s*(year|yr|سال)/i);
-  if (m) return Number(m[1]);
+  // "at least / more than / minimum / حداقل / بیش از N years"
+  const floor = t.match(
+    /(?:at\s+least|more\s+than|minimum|min\.?|حداقل|بیش\s+از)\s*(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال)/i,
+  );
+  if (floor) {
+    const n = Number(floor[1]);
+    return Number.isFinite(n) ? n : null;
+  }
 
-  // Level keywords (shared taxonomy).
-  if (/\b(intern|entry|junior|entry[- ]?level|تازه‌?کار|کارآموز)\b/i.test(t)) {
+  // "N+ years" / "N years of experience" / "N سال سابقه"
+  const plain = t.match(
+    /(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال)(?:\s*(?:of\s+experience|سابقه(?:\s*کار)?))?/i,
+  );
+  if (plain) {
+    const n = Number(plain[1]);
+    // Reject calendar years and absurd values.
+    if (!Number.isFinite(n) || n > 50) return null;
+    return n;
+  }
+
+  // Level taxonomy → approximate years (deterministic).
+  if (
+    /\b(intern|trainee|entry[- ]?level|junior|associate)\b/i.test(t) ||
+    /مبتدی|تازه.?کار|کارآموز|جونیور/.test(t)
+  ) {
     return 1;
   }
-  if (/\b(mid[- ]?level|intermediate|میان)\b/i.test(t)) return 3;
-  if (/\b(senior|lead|principal|expert|ارشد|خبره)\b/i.test(t)) return 6;
+  if (
+    /\b(mid[- ]?level|intermediate)\b/i.test(t) ||
+    /میان.?سطح/.test(t)
+  ) {
+    return 3;
+  }
+  if (
+    /\b(senior|lead|principal|staff|expert)\b/i.test(t) ||
+    /ارشد|خبره|متخصص|کارشناس\s*ارشد/.test(t)
+  ) {
+    return 6;
+  }
+  if (
+    /\b((senior|executive)\s+)?(manager|director|head)\b/i.test(t) ||
+    /مدیر\s*(ارشد|عامل|فنی)/.test(t)
+  ) {
+    return 8;
+  }
 
   return null;
 }
@@ -163,6 +271,10 @@ function experienceScore(
   return Math.max(0.25, ratio);
 }
 
+/* ------------------------------------------------------------------ */
+/* Level mapping                                                      */
+/* ------------------------------------------------------------------ */
+
 function levelFromScore(score: number): MatchLevel {
   if (score >= 85) return "excellent";
   if (score >= 70) return "high";
@@ -170,8 +282,19 @@ function levelFromScore(score: number): MatchLevel {
   return "low";
 }
 
+/* ------------------------------------------------------------------ */
+/* Main entry point                                                   */
+/* ------------------------------------------------------------------ */
+
 /**
  * Canonical score 0–100. Same inputs always produce the same output.
+ *
+ * Weights:
+ *   skills    45%
+ *   location  20%
+ *   keywords  20%
+ *   experience 15%
+ *   + optional title boost (≤ 8%)
  */
 export function computeMatchScore(
   profile: MatchProfileInput,
@@ -228,11 +351,14 @@ export function computeMatchScore(
     kwPart * 0.2 +
     titleBoost;
 
-  const score = Math.max(0, Math.min(100, Math.round(raw * 100)));
+  const score = Math.max(
+    0,
+    Math.min(100, Math.round(Number.isFinite(raw) ? raw * 100 : 0)),
+  );
 
   const missingFromRequirements = requirementTokens
     .filter((t) => !skillOverlap.matched.includes(t))
-    .slice(0, 12);
+    .slice(0, MAX_MISSING_REQUIREMENTS);
 
   return {
     score,
@@ -243,7 +369,7 @@ export function computeMatchScore(
       experience: Math.round(expPart * 100),
       keywords: Math.round(kwPart * 100),
     },
-    matchedSkills: skillOverlap.matched.slice(0, 20),
+    matchedSkills: skillOverlap.matched.slice(0, MAX_MATCHED_SKILLS),
     missingFromRequirements,
   };
 }
