@@ -63,8 +63,8 @@ const nextConfig = {
   // Linting & Type Checking
   // -------------------------------------------------------------------------
   eslint: {
-    // تا زمان پاک‌سازی کامل lint در CI در کل ریپو، خطاها build را متوقف نکنند.
-    ignoreDuringBuilds: true,
+    // Lint errors fail the production build (ESLint build gate).
+    ignoreDuringBuilds: false,
   },
 
   typescript: {
