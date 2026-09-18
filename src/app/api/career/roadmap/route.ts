@@ -40,6 +40,8 @@ const bodySchema = z.object({
   education: z.string().max(200).optional(),
   targetRole: z.string().max(120).optional(),
   careerGoal: z.string().max(200).optional(),
+  responsibilities: z.string().max(2000).optional(),
+  languages: z.string().max(300).optional(),
   locale: z
     .enum(["en", "fa", "ar", "es", "fr", "hi", "de"])
     .optional()
@@ -257,13 +259,21 @@ Return ONLY JSON:
 Provide 4 blocks covering ~90 days. Be specific to the job title, location, and skills.`;
 
     const userPrompt = `Job: ${jobTitle}
+Target role: ${parsed.data.targetRole || "n/a"}
+Career goal: ${parsed.data.careerGoal || "n/a"}
+Skills: ${parsed.data.skills || "n/a"}
+Skills to build: ${skillsToBuild.join(", ") || "n/a"}
+Responsibilities: ${parsed.data.responsibilities || "n/a"}
+Industry: ${parsed.data.industry || "n/a"}
+Education: ${parsed.data.education || "n/a"}
+Languages (proficiency): ${parsed.data.languages || "n/a"}
 Risk: ${parsed.data.riskLevel ?? "n/a"} (${parsed.data.riskScore ?? "n/a"})
 Summary: ${parsed.data.summary || "n/a"}
-Skills to build: ${skillsToBuild.join(", ") || "n/a"}
 Reasons: ${(parsed.data.reasons || []).join(" | ") || "n/a"}
 Country: ${parsed.data.country || "n/a"}
 City: ${parsed.data.location || "n/a"}
 Experience years: ${parsed.data.experienceYears ?? "n/a"}
+Build a CURRENT→TARGET gap plan when target role is provided. Do not invent missing facts.
 CRITICAL: Reply language = ${languageName} only.
 Language: ${languageName}`;
 
@@ -321,6 +331,8 @@ Language: ${languageName}`;
         education: parsed.data.education,
         targetRole: parsed.data.targetRole,
         careerGoal: parsed.data.careerGoal,
+        responsibilities: parsed.data.responsibilities,
+        languages: parsed.data.languages,
         locale,
       });
     }
