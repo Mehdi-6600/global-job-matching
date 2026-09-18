@@ -37,6 +37,7 @@ const bodySchema = z.object({
   targetRole: z.string().max(120).optional(),
   careerGoal: z.string().max(200).optional(),
   languages: z.string().max(300).optional(),
+  responsibilities: z.string().max(2000).optional(),
   riskScore: z.number().min(0).max(100).optional(),
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
   locale: z
@@ -296,14 +297,19 @@ Return ONLY JSON:
     const userPrompt = `CRITICAL: Reply language = ${languageName} only.
 Language: ${languageName}
 Job title: ${jobTitle}
+Target role: ${parsed.data.targetRole || "n/a"}
+Career goal: ${parsed.data.careerGoal || "n/a"}
 Skills: ${skills || "n/a"}
 Skills to build: ${(parsed.data.skillsToBuild || []).join(", ") || "n/a"}
+Responsibilities: ${parsed.data.responsibilities || "n/a"}
 Industry: ${industry || "n/a"}
 Experience years: ${experienceYears ?? "n/a"}
 Origin country: ${country || "n/a"}
 City: ${location || "n/a"}
 Education: ${education || "n/a"}
-Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
+Languages (proficiency, not UI locale): ${parsed.data.languages || "n/a"}
+Automation risk level: ${parsed.data.riskLevel ?? "n/a"}
+Rank destinations by THIS profile fit. Do not invent visa law or guarantee eligibility.`;
 
     /* -------- تلاش برای فراخوانی AI -------- */
     let result: MigrationResult | null = null;
@@ -358,6 +364,7 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
         targetRole: parsed.data.targetRole,
         careerGoal: parsed.data.careerGoal,
         languages: parsed.data.languages,
+        responsibilities: parsed.data.responsibilities,
         locale,
       });
     }
