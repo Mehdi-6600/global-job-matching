@@ -290,8 +290,9 @@ Language: ${languageName}`;
           {
             maxTokens: 1400,
             temperature: 0.4,
-            timeoutMs: 22_000,
-            maxAttempts: 3,
+            // Total wall-clock budget (ai.ts clamps ≤18s); 2 attempts max — no retry storm
+            timeoutMs: 18_000,
+            maxAttempts: 2,
           }
         );
 
