@@ -11,13 +11,17 @@ import {
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import {
-  assertAndReserveAiUsage,
-  lockUserRow,
-  releaseUsageEventById,
+  reserveAiUsageInTransaction,
+  releaseUsageInTransaction,
+  logQuotaInfraError,
 } from "@/lib/quota";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 import { strictAiLimit } from "@/lib/safe-ratelimit";
+
+/* ------------------------------------------------------------------ */
+/* اسکیمای اعتبارسنجی                                                  */
+/* ------------------------------------------------------------------ */
 
 const bodySchema = z.object({
   jobTitle: z.string().trim().min(2).max(120),
@@ -35,8 +39,18 @@ const bodySchema = z.object({
     .default("en"),
 });
 
-type WeekPlan = { week: string; focus: string; actions: string[] };
+/* ------------------------------------------------------------------ */
+/* انواع داده                                                          */
+/* ------------------------------------------------------------------ */
 
+/** یک بلوک هفتگی در نقشه‌ی راه. */
+type WeekPlan = {
+  week: string;
+  focus: string;
+  actions: string[];
+};
+
+/** نتیجه‌ی نهایی نقشه‌ی راه. */
 type RoadmapResult = {
   title: string;
   weeks: WeekPlan[];
@@ -44,15 +58,32 @@ type RoadmapResult = {
   source: "ai" | "heuristic";
 };
 
+/* ------------------------------------------------------------------ */
+/* نقشه‌ی راه heuristic (آفلاین)                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * تولید نقشه‌ی راه ۹۰روزه به‌صورت آفلاین و بر اساس قواعد.
+ *
+ * این تابع زمانی استفاده می‌شود که:
+ * - سهمیه‌ی AI تمام شده باشد.
+ * - خطای زیرساختی رخ داده باشد.
+ * - خروجی AI نامعتبر باشد.
+ *
+ * خروجی آن حداقل ۴ بلوک هفتگی و چند منبع پیشنهادی دارد.
+ */
 function heuristicRoadmap(
   jobTitle: string,
   skills: string[],
   locale: string
 ): RoadmapResult {
   const fa = locale === "fa";
+
+  // انتخاب ۳ مهارت کلیدی (یا پیش‌فرض‌های منطقی).
   const s1 = skills[0] || (fa ? "مهارت تخصصی اصلی" : "core specialist skill");
   const s2 = skills[1] || (fa ? "ابزار دیجیتال" : "digital tools");
-  const s3 = skills[2] || (fa ? "ارتباط حرفه‌ای" : "professional communication");
+  const s3 =
+    skills[2] || (fa ? "ارتباط حرفه‌ای" : "professional communication");
 
   return {
     title: fa
@@ -82,7 +113,7 @@ function heuristicRoadmap(
             ? `هر روز ۳۰–۴۵ دقیقه روی ${s2} تمرین کنید`
             : `Practice ${s2} 30–45 minutes daily`,
           fa
-            ? "یک خروجی قابل اشتراک در لینکدین/پورتفolio بسازید"
+            ? "یک خروجی قابل اشتراک در لینکدین/پورتفولیو بسازید"
             : "Ship one shareable output for portfolio/LinkedIn",
         ],
       },
@@ -126,23 +157,42 @@ function heuristicRoadmap(
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* پارس خروجی AI                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * پارس خروجی JSON مدل AI برای نقشه‌ی راه.
+ *
+ * استراتژی:
+ * 1) حذف بلوک‌های ```json ... ```
+ * 2) استخراج اولین { ... } معتبر
+ * 3) اعتبارسنجی: حداقل ۲ بلوک هفتگی معتبر مورد نیاز است
+ */
 function parseRoadmapJson(
   text: string,
   jobTitle: string,
   _locale: string
 ): RoadmapResult | null {
   let jsonStr = text.trim();
+
+  // حذف بلوک‌های ```json ... ```
   const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) jsonStr = fence[1].trim();
+
+  // استخراج اولین { ... } معتبر
   const start = jsonStr.indexOf("{");
   const end = jsonStr.lastIndexOf("}");
   if (start === -1 || end <= start) return null;
+
   try {
     const raw = JSON.parse(jsonStr.slice(start, end + 1)) as {
       title?: string;
       weeks?: Array<{ week?: string; focus?: string; actions?: string[] }>;
       resources?: string[];
     };
+
+    /* -------- نرمال‌سازی بلوک‌های هفتگی -------- */
     const weeks = (raw.weeks || [])
       .map((w) => ({
         week: String(w.week || "").slice(0, 80),
@@ -154,7 +204,10 @@ function parseRoadmapJson(
       }))
       .filter((w) => w.week && w.actions.length > 0)
       .slice(0, 6);
+
+    // حداقل ۲ بلوک هفتگی معتبر مورد نیاز است.
     if (weeks.length < 2) return null;
+
     return {
       title: String(raw.title || `90-day roadmap for ${jobTitle}`).slice(
         0,
@@ -172,39 +225,45 @@ function parseRoadmapJson(
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* POST — تولید نقشه‌ی راه                                              */
+/* ------------------------------------------------------------------ */
+
 export async function POST(req: NextRequest) {
+  /** شناسه‌ی رویداد مصرف رزروشده (برای آزادسازی در صورت خطا). */
   let reservedEventId: string | null = null;
+  /** شناسه‌ی کاربری که سهمیه برایش رزرو شده است. */
   let reservedUserId: string | null = null;
 
   try {
+    /* -------- احراز هویت -------- */
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    /* -------- Rate limit (سخت‌گیرانه، اما Fail-Soft) -------- */
     const ip = getRequestIp(req);
     const limit = await strictAiLimit(
       aiRatelimit,
       `career_roadmap_${session.user.id}_${ip}`
     );
+
     if (limit.infraFailed) {
-      return NextResponse.json(
-        {
-          error: "Service temporarily unavailable. Please try again shortly.",
-          code: "RATE_LIMIT_INFRA_ERROR",
-        },
-        { status: 503 }
-      );
-    }
-    if (!limit.success) {
+      // پس از fallback حافظه، این حالت نادر است. ۵۰۳ نکن —
+      // سهمیه + heuristic همچنان از محصول محافظت می‌کنند.
+      console.warn("[career/roadmap] rate limit infra degraded; continuing");
+    } else if (!limit.success) {
       return rateLimitedResponse(limit, "Too many requests");
     }
 
+    /* -------- خواندن بدنه‌ی درخواست -------- */
     const body = await readJsonBody(req);
     if (body === null) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
+    /* -------- اعتبارسنجی ورودی -------- */
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -213,6 +272,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /* -------- پاک‌سازی ورودی‌ها -------- */
     const jobTitle = neutralizeInstructionish(parsed.data.jobTitle).slice(
       0,
       120
@@ -220,9 +280,11 @@ export async function POST(req: NextRequest) {
     const skillsToBuild = parsed.data.skillsToBuild
       .map((s) => neutralizeInstructionish(s).slice(0, 200))
       .filter(Boolean);
+
     const locale = normalizeCareerLocale(parsed.data.locale);
     const languageName = languageNameForPrompt(locale);
 
+    /* -------- کاربر و پلن -------- */
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, plan: true },
@@ -236,49 +298,43 @@ export async function POST(req: NextRequest) {
       const effective = await getEffectivePlan(user.id);
       plan = effective.plan;
     } catch {
-      /* keep */
+      // در صورت خطا، پلن پیش‌فرض کاربر را نگه می‌داریم.
     }
 
+    /* -------- رزرو سهمیه -------- */
+    // سه حالت ممکن:
+    // A) رزرو موفق → مجاز به فراخوانی AI
+    // B) سهمیه تمام → فقط heuristic، بدون AI و بدون هزینه
+    // C) خطای زیرساختی → فقط heuristic، بدون AI (محصول ۵۰۳ نمی‌شود)
     let allowAi = false;
     try {
-      const quota = await db.$transaction(async (tx) => {
-        try {
-          await lockUserRow(tx, user.id);
-        } catch {
-          /* lock best-effort */
-        }
-        return assertAndReserveAiUsage(tx, {
-          userId: user.id,
-          plan,
-          kind: "ai_roadmap",
-          meta: `roadmap:${jobTitle}`,
-        });
+      const quota = await reserveAiUsageInTransaction(db, {
+        userId: user.id,
+        plan,
+        kind: "ai_roadmap",
+        meta: `roadmap:${jobTitle}`,
       });
+
       if (!quota.ok) {
-        return NextResponse.json(
-          {
-            error: quota.error,
-            code: quota.code,
-            limit: quota.limit,
-            used: quota.used,
-          },
-          { status: 403 }
-        );
+        // محدودیت تجاری — هنوز نقشه‌ی راه heuristic برگردان (بدون هزینه).
+        allowAi = false;
+        console.warn("Roadmap quota exceeded; heuristic only", {
+          code: quota.code,
+        });
+      } else {
+        allowAi = true;
+        reservedEventId = quota.usageEventId ?? null;
+        reservedUserId = user.id;
       }
-      allowAi = true;
-      reservedEventId = quota.usageEventId ?? null;
-      reservedUserId = user.id;
     } catch (err) {
-      console.error("Roadmap quota infra failure:", err);
-      return NextResponse.json(
-        {
-          error: "Service temporarily unavailable. Please try again shortly.",
-          code: "QUOTA_INFRA_ERROR",
-        },
-        { status: 503 }
-      );
+      // خطای DB پس از تلاش مجدد — کل محصول را ۵۰۳ نکن.
+      logQuotaInfraError("roadmap_reserve", err);
+      allowAi = false;
+      reservedEventId = null;
+      reservedUserId = null;
     }
 
+    /* -------- ساخت پرامپت‌ها -------- */
     const systemPrompt = `You are a practical career coach.
 Write ALL human-readable text ENTIRELY in ${languageName} (not English unless language is English).
 Every week title, focus, action and resource must be in ${languageName}.
@@ -303,6 +359,7 @@ Experience years: ${parsed.data.experienceYears ?? "n/a"}
 CRITICAL: Reply language = ${languageName} only.
 Language: ${languageName}`;
 
+    /* -------- تلاش برای فراخوانی AI -------- */
     let result: RoadmapResult | null = null;
 
     if (allowAi) {
@@ -319,6 +376,7 @@ Language: ${languageName}`;
             maxAttempts: 3,
           }
         );
+
         if (text) {
           const parsedAi = parseRoadmapJson(text, jobTitle, locale);
           if (parsedAi) result = parsedAi;
@@ -328,33 +386,39 @@ Language: ${languageName}`;
       }
     }
 
+    /* -------- Fallback به heuristic + آزادسازی سهمیه -------- */
     if (!result) {
+      // AI نتیجه نداد → سهمیه را آزاد کن و از heuristic استفاده کن.
       if (reservedEventId && reservedUserId) {
         try {
-          await releaseUsageEventById(db, {
+          await releaseUsageInTransaction(db, {
             userId: reservedUserId,
             usageEventId: reservedEventId,
           });
         } catch {
-          /* ignore */
+          // خطای آزادسازی مانع بازگشت پاسخ نمی‌شود.
         }
       }
       result = heuristicRoadmap(jobTitle, skillsToBuild, locale);
     }
 
+    /* -------- پاسخ موفق -------- */
     return NextResponse.json(result);
   } catch (error) {
     console.error("Roadmap error:", error);
+
+    // تلاش برای آزادسازی سهمیه در صورت خطای پیش‌بینی‌نشده.
     if (reservedEventId && reservedUserId) {
       try {
-        await releaseUsageEventById(db, {
+        await releaseUsageInTransaction(db, {
           userId: reservedUserId,
           usageEventId: reservedEventId,
         });
       } catch {
-        /* ignore */
+        // خطای آزادسازی مانع بازگشت پاسخ نمی‌شود.
       }
     }
+
     return NextResponse.json(
       { error: "Failed to generate roadmap" },
       { status: 500 }
