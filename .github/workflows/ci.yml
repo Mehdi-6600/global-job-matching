@@ -12,13 +12,27 @@ concurrency:
 
 jobs:
   quality:
-    name: Typecheck · Lint · Test
+    name: Typecheck · Lint · Test · Production Build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     env:
-      # Dummy values so modules that read env at import time do not crash CI.
-      # Full production build is intentionally NOT run here (needs real DB).
+      # Ephemeral CI database only — never production credentials.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
       AUTH_SECRET: ci-auth-secret-at-least-32-characters-long
       AUTH_URL: http://localhost:3000
@@ -45,6 +59,9 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      - name: Prisma migrate deploy (CI database)
+        run: npx prisma migrate deploy
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -53,3 +70,11 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      # Validates the same production compile path as Vercel (prisma generate is
+      # already done; migrate already applied against CI Postgres). next build only.
+      - name: Production build (next build)
+        run: npx next build
+        env:
+          # next build must not re-run migrate against missing host if script wraps it
+          SKIP_ENV_VALIDATION: "1"
