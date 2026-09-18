@@ -294,7 +294,7 @@ Return ONLY JSON:
   "caveats": ["string"]
 }`;
 
-    const userPrompt = `CRITICAL: Reply language = ${languageName} only.
+    const userPrompt = `CRITICAL: Reply language = ${languageName} only. Never mix English words into non-English sentences. All user-visible text must be entirely in ${languageName}.
 Language: ${languageName}
 Job title: ${jobTitle}
 Target role: ${parsed.data.targetRole || "n/a"}
