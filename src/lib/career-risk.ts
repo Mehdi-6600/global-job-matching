@@ -14,7 +14,7 @@ import {
   taskAutomationExposure,
   humanMoatScore,
   taskLabel,
-  type CareerProfile,
+  toolMaturityFromProfile,
 } from "@/lib/career-intelligence/profile";
 
 /* ------------------------------------------------------------------ */
@@ -525,11 +525,14 @@ export function heuristicCareerRisk(
     location?: string;
     education?: string;
     locale?: string;
+    targetRole?: string;
+    careerGoal?: string;
+    languages?: string;
   }
 ): CareerRiskAnalysis {
   const locale = normalizeCareerLocale(extra?.locale);
 
-  const profile: CareerProfile = buildCareerProfile({
+  const profile = buildCareerProfile({
     jobTitle,
     skills,
     industry: extra?.industry,
@@ -538,6 +541,9 @@ export function heuristicCareerRisk(
     location: extra?.location,
     education: extra?.education,
     locale,
+    targetRole: extra?.targetRole,
+    careerGoal: extra?.careerGoal,
+    languages: extra?.languages,
   });
 
   const auto = taskAutomationExposure(profile);
@@ -547,7 +553,7 @@ export function heuristicCareerRisk(
 
   /* -------- محاسبه‌ی زیرامتیازها از شواهد پروفایل (قطعی) -------- */
   let taskAutomation = auto;
-  let toolMaturity = Math.min(90, 40 + Math.round(profile.tools.length * 4));
+  let toolMaturity = toolMaturityFromProfile(profile);
   let marketAdoption = 40 + (profile.country || profile.location ? 8 : 0);
   let agenticExposure = Math.round(auto * 0.55 + (100 - moat) * 0.25);
 
