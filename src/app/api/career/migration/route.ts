@@ -34,6 +34,9 @@ const bodySchema = z.object({
   country: z.string().max(120).optional(),
   location: z.string().max(200).optional(),
   education: z.string().max(200).optional(),
+  targetRole: z.string().max(120).optional(),
+  careerGoal: z.string().max(200).optional(),
+  languages: z.string().max(300).optional(),
   riskScore: z.number().min(0).max(100).optional(),
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
   locale: z
@@ -352,6 +355,9 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
         country: country || undefined,
         location: location || undefined,
         education: education || undefined,
+        targetRole: parsed.data.targetRole,
+        careerGoal: parsed.data.careerGoal,
+        languages: parsed.data.languages,
         locale,
       });
     }
