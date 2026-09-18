@@ -324,8 +324,8 @@ Rank destinations by THIS profile fit. Do not invent visa law or guarantee eligi
           {
             maxTokens: 1600,
             temperature: 0.35,
-            timeoutMs: 28_000,
-            maxAttempts: 3,
+            timeoutMs: 18_000,
+            maxAttempts: 2,
           }
         );
 
