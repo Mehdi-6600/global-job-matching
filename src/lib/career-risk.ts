@@ -9,7 +9,7 @@ import type {
 import { careerRiskAiOutputSchema } from "@/types/career-risk";
 
 /* ------------------------------------------------------------------ */
-/* Re-exports                                                         */
+/* Re-exports                                                          */
 /* ------------------------------------------------------------------ */
 
 export type { CareerRiskAnalysis, CareerRiskLevel, CareerRiskSource };
@@ -195,7 +195,11 @@ function summaryFor(
 function defaultSkills(locale: CareerRiskLocale): string[] {
   return {
     en: ["Digital literacy", "Problem-solving", "Domain specialization"],
-    es: ["Alfabetización digital", "Resolución de problemas", "Especialización de dominio"],
+    es: [
+      "Alfabetización digital",
+      "Resolución de problemas",
+      "Especialización de dominio",
+    ],
     ar: ["محو الأمية الرقمية", "حل المشكلات", "تخصص المجال"],
     fa: ["سواد دیجیتال", "حل مسئله", "تخصص حوزه‌ای"],
     hi: ["डिजिटल साक्षरता", "समस्या समाधान", "क्षेत्र विशेषज्ञता"],
@@ -205,15 +209,46 @@ function defaultSkills(locale: CareerRiskLocale): string[] {
 }
 
 /** مسیرهای جایگزین پیش‌فرض به‌ازای هر لوکال. */
-function defaultAlternatives(locale: CareerRiskLocale, title: string): string[] {
+function defaultAlternatives(
+  locale: CareerRiskLocale,
+  title: string
+): string[] {
   return {
-    en: [`Hybrid ${title} + AI roles`, "Training or supervising automated tools", "Roles leaning on interpersonal skills"],
-    es: [`Roles híbridos ${title} + IA`, "Formación o supervisión de herramientas automatizadas", "Roles basados en habilidades interpersonales"],
-    ar: [`أدوار هجينة ${title} + ذكاء اصطناعي`, "التدريب أو الإشراف على الأدوات المؤتمتة", "أدوار تعتمد على المهارات الشخصية"],
-    fa: [`نقش‌های ترکیبی ${title} + هوش مصنوعی`, "آموزش یا نظارت بر ابزارهای خودکار", "نقش‌هایی متکی بر مهارت‌های بین‌فردی"],
-    hi: [`हाइब्रिड ${title} + AI भूमिकाएँ`, "स्वचालित उपकरणों का प्रशिक्षण/पर्यवेक्षण", "पारस्परिक कौशल वाली भूमिकाएँ"],
-    fr: [`Rôles hybrides ${title} + IA`, "Formation ou supervision d'outils automatisés", "Rôles axés sur les compétences interpersonnelles"],
-    de: [`Hybride ${title}+KI-Rollen`, "Schulung oder Aufsicht automatisierter Tools", "Rollen mit Fokus auf Zwischenmenschliche Fähigkeiten"],
+    en: [
+      `Hybrid ${title} + AI roles`,
+      "Training or supervising automated tools",
+      "Roles leaning on interpersonal skills",
+    ],
+    es: [
+      `Roles híbridos ${title} + IA`,
+      "Formación o supervisión de herramientas automatizadas",
+      "Roles basados en habilidades interpersonales",
+    ],
+    ar: [
+      `أدوار هجينة ${title} + ذكاء اصطناعي`,
+      "التدريب أو الإشراف على الأدوات المؤتمتة",
+      "أدوار تعتمد على المهارات الشخصية",
+    ],
+    fa: [
+      `نقش‌های ترکیبی ${title} + هوش مصنوعی`,
+      "آموزش یا نظارت بر ابزارهای خودکار",
+      "نقش‌هایی متکی بر مهارت‌های بین‌فردی",
+    ],
+    hi: [
+      `हाइब्रिड ${title} + AI भूमिकाएँ`,
+      "स्वचालित उपकरणों का प्रशिक्षण/पर्यवेक्षण",
+      "पारस्परिक कौशल वाली भूमिकाएँ",
+    ],
+    fr: [
+      `Rôles hybrides ${title} + IA`,
+      "Formation ou supervision d'outils automatisés",
+      "Rôles axés sur les compétences interpersonnelles",
+    ],
+    de: [
+      `Hybride ${title}+KI-Rollen`,
+      "Schulung oder Aufsicht automatisierter Tools",
+      "Rollen mit Fokus auf zwischenmenschliche Fähigkeiten",
+    ],
   }[locale];
 }
 
@@ -349,7 +384,9 @@ function parseSubScoresSoft(raw: unknown): CareerRiskSubScores | undefined {
 
 /**
  * محاسبه‌ی امتیاز ترکیبی از زیرامتیازها.
- * فرمول: taskAutomation × (0.45 + 0.3 × toolMaturity + 0.25 × marketAdoption) + 0.1 × agenticExposure
+ * فرمول:
+ *   taskAutomation × (0.45 + 0.3 × toolMaturity + 0.25 × marketAdoption)
+ *   + 0.1 × agenticExposure
  */
 export function compositeFromSubScores(s: CareerRiskSubScores): number {
   const base =
@@ -359,8 +396,10 @@ export function compositeFromSubScores(s: CareerRiskSubScores): number {
 }
 
 /**
- * اگر اختلاف بین امتیاز AI و امتیاز ترکیبی بیش از ۳۵ باشد،
- * امتیاز ترکیبی ترجیح داده می‌شود.
+ * هماهنگ‌سازی امتیاز ریسک با زیرامتیازها.
+ *
+ * اگر اختلاف زیاد باشد، مدل ناسازگار است و امتیاز ترکیبی ترجیح داده می‌شود.
+ * اختلاف متوسط نیز به سمت امتیاز ترکیبی Blend می‌شود.
  */
 export function reconcileScoreWithSubScores(
   riskScore: number,
@@ -368,8 +407,20 @@ export function reconcileScoreWithSubScores(
 ): number {
   const composite = compositeFromSubScores(subScores);
   const raw = clampScore(riskScore);
-  if (Math.abs(raw - composite) > 35) return composite;
+  const gap = Math.abs(raw - composite);
+  // ناسازگاری شدید: به امتیاز ترکیبی اعتماد کن
+  if (gap > 30) return composite;
+  // ناسازگاری خفیف: به سمت ترکیبی Blend کن
+  if (gap > 15) return clampScore(Math.round(raw * 0.4 + composite * 0.6));
   return raw;
+}
+
+/** فاصله‌ی امتیاز AI از امتیاز ترکیبی زیرامتیازها (۰ = هماهنگ). */
+export function scoreSubScoreGap(
+  riskScore: number,
+  subScores: CareerRiskSubScores
+): number {
+  return Math.abs(clampScore(riskScore) - compositeFromSubScores(subScores));
 }
 
 /**
@@ -418,7 +469,7 @@ export function parseRiskJson(
     if (!Number.isFinite(rawScore)) return null;
 
     /* -------- زیرامتیازها -------- */
-    let subScores =
+    const subScores =
       parseSubScoresStrict(
         strict.success ? strict.data.subScores : obj.subScores
       ) || parseSubScoresSoft(obj.subScores);
@@ -444,13 +495,32 @@ export function parseRiskJson(
       return null;
     }
 
-    /* -------- اعتماد -------- */
+    /* -------- اعتماد + سازگاری امتیاز -------- */
     const confidenceRaw = Number(
       strict.success ? strict.data.confidence : obj.confidence
     );
-    const confidence = Number.isFinite(confidenceRaw)
+    let confidence = Number.isFinite(confidenceRaw)
       ? clampScore(confidenceRaw)
-      : 60;
+      : 55;
+    let confidenceSource: "model" | "repaired" = "model";
+
+    // SubScores برای مسیر قابل‌اعتماد AI الزامی است؛ soft-only ضعیف‌تر است.
+    if (!subScores) {
+      confidence = Math.min(confidence, 45);
+      confidenceSource = "repaired";
+    } else {
+      const gapBefore = scoreSubScoreGap(clampScore(rawScore), subScores);
+      if (gapBefore > 15) {
+        confidence = Math.min(confidence, gapBefore > 30 ? 40 : 55);
+        confidenceSource = "repaired";
+      }
+    }
+
+    // دلایل بسیار کوتاه یا عمومی را به‌عنوان کیفیت پایین رد کن.
+    const meaningfulReasons = reasons.filter((r) => r.length >= 24);
+    if (meaningfulReasons.length === 0 && skillsToBuild.length < 2) {
+      return null;
+    }
 
     /* -------- افق زمانی -------- */
     const timeHorizon = String(
@@ -464,9 +534,11 @@ export function parseRiskJson(
       riskLevel: scoreToRiskLevel(riskScore),
       summary: summary.slice(0, 2500),
       reasons:
-        reasons.length > 0
-          ? reasons
-          : ["Analysis based on role characteristics and provided context."],
+        meaningfulReasons.length > 0
+          ? meaningfulReasons.slice(0, 8)
+          : reasons.length > 0
+            ? reasons
+            : ["Analysis based on role characteristics and provided context."],
       skillsToBuild:
         skillsToBuild.length > 0
           ? skillsToBuild
@@ -479,6 +551,7 @@ export function parseRiskJson(
       subScores,
       timeHorizon,
       confidence,
+      confidenceSource,
       industryOutlook: (() => {
         const v = strict.success
           ? strict.data.industryOutlook
@@ -810,7 +883,8 @@ export function heuristicCareerRisk(
     source: "heuristic",
     subScores,
     timeHorizon: L(locale, TIME_HORIZON),
-    confidence: bucket === "generic" ? 52 : 64,
+    confidence: bucket === "generic" ? 48 : 58,
+    confidenceSource: "offline_estimate",
     industryOutlook:
       industry || place
         ? industryOutlookLine(locale, industry, place)
