@@ -5,6 +5,10 @@
  *   LEGAL > QUALITY > FRESHNESS > COVERAGE > RAW VOLUME
  */
 
+/* -------------------------------------------------------------------------- */
+/*                              Source governance                             */
+/* -------------------------------------------------------------------------- */
+
 export type LicenseStatus =
   | "APPROVED"
   | "NEEDS_PERMISSION"
@@ -24,19 +28,14 @@ export type FreshnessStatus =
   | "AGING"
   | "STALE"
   | "EXPIRED"
-  | "ARCHIVED"
-  | "fresh"
-  | "aging"
-  | "stale"
-  | "expired"
-  | "archived";
+  | "ARCHIVED";
 
 export type SyncCompleteness = "FULL" | "PARTIAL" | "FAILED";
 
-/**
- * Normalized record produced by any adapter before central persist.
- * Draft fields are immutable once constructed by the adapter.
- */
+/* -------------------------------------------------------------------------- */
+/*                                Ingest drafts                               */
+/* -------------------------------------------------------------------------- */
+
 export type IngestJobDraft = {
   readonly sourceKey: string;
   readonly sourceJobId: string;
@@ -63,6 +62,10 @@ export type IngestJobDraft = {
   readonly raw?: unknown;
 };
 
+/* -------------------------------------------------------------------------- */
+/*                              Adapter contract                              */
+/* -------------------------------------------------------------------------- */
+
 export type AdapterFetchOptions = {
   readonly page?: number;
   readonly perPage?: number;
@@ -83,6 +86,10 @@ export type JobSourceAdapter = {
   fetchPage(options?: AdapterFetchOptions): Promise<AdapterFetchResult>;
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                  Dedup                                     */
+/* -------------------------------------------------------------------------- */
+
 export type DedupLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 export type DedupMatch = {
@@ -92,11 +99,14 @@ export type DedupMatch = {
   readonly reason: string;
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                Ingest stats                                */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Mutable run counters — pipeline increments these during a sync.
- * Do NOT mark counter fields as readonly.
+ * Mutable accumulator used ONLY inside the pipeline while a sync is running.
  */
-export type IngestStats = {
+export type IngestStatsAccumulator = {
   sourceKey: string;
   startedAt: string;
   finishedAt?: string;
@@ -113,3 +123,8 @@ export type IngestStats = {
   completeness: SyncCompleteness;
   errors: string[];
 };
+
+/**
+ * Immutable snapshot of a completed sync.
+ */
+export type IngestStats = Readonly<IngestStatsAccumulator>;
