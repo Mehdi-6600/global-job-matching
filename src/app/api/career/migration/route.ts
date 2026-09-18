@@ -18,6 +18,7 @@ import {
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 import { strictAiLimit } from "@/lib/safe-ratelimit";
+import { buildOfflineMigration } from "@/lib/career-intelligence/offline-migration";
 
 /* ------------------------------------------------------------------ */
 /* اسکیمای اعتبارسنجی                                                  */
@@ -62,377 +63,6 @@ type MigrationResult = {
 };
 
 /* ------------------------------------------------------------------ */
-/* تحلیل heuristic (آفلاین) — ۷ زبان                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * تولید تحلیل مهاجرت به‌صورت آفلاین و بر اساس بسته‌های زبانی.
- *
- * این تابع زمانی استفاده می‌شود که:
- * - سهمیه‌ی AI تمام شده باشد.
- * - خطای زیرساختی رخ داده باشد.
- * - خروجی AI نامعتبر باشد.
- *
- * هر بسته‌ی زبانی شامل ۴ کشور مقصد و caveats اختصاصی است.
- */
-function heuristicMigration(
-  jobTitle: string,
-  originCountry: string | undefined,
-  locale: string
-): MigrationResult {
-  const L = locale || "en";
-
-  const packs: Record<
-    string,
-    {
-      originFallback: string;
-      title: (j: string) => string;
-      summary: (j: string, o: string) => string;
-      countries: Array<{
-        country: string;
-        demand: string;
-        pathway: string;
-        notes: string;
-      }>;
-      caveats: string[];
-    }
-  > = {
-    /* -------- فارسی -------- */
-    fa: {
-      originFallback: "کشور مبدأ",
-      title: (j) => `گزینه‌های مهاجرت شغلی برای ${j}`,
-      summary: (j, o) =>
-        `بر اساس نقش «${j}» و مبدأ «${o}»، چند بازار که معمولاً به مهارت‌های مشابه نیاز دارند فهرست شده‌اند. این راهنمای کلی است و جایگزین مشاوره حقوقی یا مهاجرتی نیست.`,
-      countries: [
-        {
-          country: "آلمان / اتحادیه اروپا",
-          demand:
-            "تقاضای پایدار برای تخصص‌های فنی، بهداشت، ساخت‌وساز و IT در بسیاری از ایالت‌ها.",
-          pathway:
-            "ویزای مهارت / کارت آبی اتحادیه اروپا (بسته به مدرک، پیشنهاد شغلی و سطح زبان).",
-          notes:
-            "معمولاً نیاز به مدرک به‌رسمیت‌شناخته‌شده و حداقل سطح زبان دارد.",
-        },
-        {
-          country: "کانادا",
-          demand:
-            "سیستم امتیازمحور برای نیروی کار ماهر؛ مشاغل فهرست‌شده در NOC شانس بهتری دارند.",
-          pathway: "Express Entry / برنامه‌های استانی (PNP).",
-          notes:
-            "آزمون زبان (IELTS/TEF) و ارزیابی مدرک (ECA) معمولاً لازم است.",
-        },
-        {
-          country: "استرالیا",
-          demand:
-            "فهرست مهارت‌های مورد نیاز نقش مهمی در واجد شرایط بودن دارد.",
-          pathway: "ویزای مهارت مستقل یا حمایت کارفرما.",
-          notes:
-            "ارزیابی مهارت توسط نهاد مربوطه و امتیاز سن/زبان مهم است.",
-        },
-        {
-          country: "کشورهای حوزه خلیج (امارات، قطر، عمان)",
-          demand: "تقاضای پروژه‌محور برای ساخت، انرژی، سلامت و فناوری.",
-          pathway: "ویزای کار با پیشنهاد شغلی کارفرما.",
-          notes:
-            "معمولاً قراردادمحور است؛ مسیر اقامت دائم محدودتر است.",
-        },
-      ],
-      caveats: [
-        "قوانین مهاجرت دائماً تغییر می‌کنند؛ منبع رسمی کشور مقصد را چک کنید.",
-        "تحریم‌ها، محدودیت بانکی یا گذرنامه می‌تواند مسیر را سخت‌تر کند.",
-        "این خروجی مشاوره حقوقی نیست.",
-      ],
-    },
-
-    /* -------- عربی -------- */
-    ar: {
-      originFallback: "بلد المنشأ",
-      title: (j) => `خيارات الهجرة المهنية لـ ${j}`,
-      summary: (j, o) =>
-        `بناءً على دور «${j}» ومنشأ «${o}»، هذه أسواق غالباً تحتاج مهارات مشابهة. توجيه عام فقط وليس استشارة قانونية.`,
-      countries: [
-        {
-          country: "ألمانيا / الاتحاد الأوروبي",
-          demand:
-            "طلب مستمر على المهارات التقنية والرعاية الصحية والبناء وتقنية المعلومات.",
-          pathway: "تأشيرة المهارات / البطاقة الزرقاء الأوروبية.",
-          notes: "غالباً يتطلب اعترافاً بالمؤهلات ومستوى لغة أدنى.",
-        },
-        {
-          country: "كندا",
-          demand: "هجرة قائمة على النقاط للعمالة الماهرة.",
-          pathway: "Express Entry / برامج الترشيح الإقليمية (PNP).",
-          notes: "اختبارات اللغة وتقييم الشهادات شائعة.",
-        },
-        {
-          country: "أستراليا",
-          demand: "قوائم المهن المطلوبة تؤثر بقوة على الأهلية.",
-          pathway: "تأشيرة مهارات مستقلة أو رعاية صاحب عمل.",
-          notes: "تقييم المهارات ونقاط العمر/اللغة مهمة.",
-        },
-        {
-          country: "دول الخليج (الإمارات، قطر، عمان)",
-          demand:
-            "طلب مرتبط بالمشاريع في البناء والطاقة والصحة والتقنية.",
-          pathway: "تأشيرة عمل برعاية صاحب العمل.",
-          notes:
-            "غالباً قائمة على العقود؛ مسارات الإقامة الدائمة محدودة.",
-        },
-      ],
-      caveats: [
-        "تتغير قوانين الهجرة باستمرار؛ راجع المصادر الرسمية.",
-        "العقوبات أو قيود جواز السفر قد تعيق المسار.",
-        "هذا ليس استشارة قانونية.",
-      ],
-    },
-
-    /* -------- آلمانی -------- */
-    de: {
-      originFallback: "Herkunftsland",
-      title: (j) => `Berufliche Migrationsoptionen für ${j}`,
-      summary: (j, o) =>
-        `Basierend auf der Rolle „${j}“ und Herkunft „${o}“ Märkte, die ähnliche Skills oft suchen. Nur Orientierung – keine Rechtsberatung.`,
-      countries: [
-        {
-          country: "Deutschland / EU",
-          demand:
-            "Stetige Nachfrage nach Technik, Gesundheit, Bau und IT.",
-          pathway: "Fachkräfteeinwanderung / EU Blue Card.",
-          notes:
-            "Anerkennung der Abschlüsse und Sprachniveau oft nötig.",
-        },
-        {
-          country: "Kanada",
-          demand: "Punktebasiertes System für Fachkräfte.",
-          pathway: "Express Entry / Provincial Nominee (PNP).",
-          notes: "Sprachtests und Credential Assessment üblich.",
-        },
-        {
-          country: "Australien",
-          demand: "Skilled-Occupation-Listen steuern die Eignung.",
-          pathway:
-            "Unabhängiges Skilled Visa oder Arbeitgeber-Sponsoring.",
-          notes:
-            "Skills Assessment und Punkte für Alter/Sprache zählen.",
-        },
-        {
-          country: "Golfstaaten (VAE, Katar, Oman)",
-          demand:
-            "Projektbezogene Nachfrage in Bau, Energie, Health, Tech.",
-          pathway: "Arbeitgeber-gesponsertes Work Visa.",
-          notes:
-            "Meist vertragsbasiert; dauerhafte Aufenthaltspfade begrenzt.",
-        },
-      ],
-      caveats: [
-        "Einwanderungsregeln ändern sich; offizielle Quellen prüfen.",
-        "Sanktionen oder Passbeschränkungen können Wege blockieren.",
-        "Keine Rechtsberatung.",
-      ],
-    },
-
-    /* -------- اسپانیایی -------- */
-    es: {
-      originFallback: "país de origen",
-      title: (j) => `Opciones de migración laboral para ${j}`,
-      summary: (j, o) =>
-        `Según el rol «${j}» y el origen «${o}», mercados que suelen contratar habilidades similares. Orientación general, no asesoría legal.`,
-      countries: [
-        {
-          country: "Alemania / UE",
-          demand: "Demanda estable en técnica, salud, construcción e IT.",
-          pathway: "Visado de cualificados / Tarjeta Azul UE.",
-          notes: "Suele exigir títulos reconocidos y nivel de idioma.",
-        },
-        {
-          country: "Canadá",
-          demand:
-            "Inmigración por puntos para trabajadores cualificados.",
-          pathway: "Express Entry / Programas provinciales (PNP).",
-          notes:
-            "Pruebas de idioma y evaluación de títulos son comunes.",
-        },
-        {
-          country: "Australia",
-          demand:
-            "Listas de ocupaciones cualificadas influyen en la elegibilidad.",
-          pathway: "Visado independiente o patrocinio del empleador.",
-          notes:
-            "Evaluación de skills y puntos por edad/idioma importan.",
-        },
-        {
-          country: "Golfo (EAU, Catar, Omán)",
-          demand:
-            "Demanda por proyectos en construcción, energía, salud y tech.",
-          pathway: "Visado de trabajo patrocinado por empleador.",
-          notes:
-            "Suele ser por contrato; residencia permanente limitada.",
-        },
-      ],
-      caveats: [
-        "Las normas migratorias cambian; consulta fuentes oficiales.",
-        "Sanciones o límites de pasaporte pueden bloquear vías.",
-        "Esto no es asesoría legal.",
-      ],
-    },
-
-    /* -------- فرانسوی -------- */
-    fr: {
-      originFallback: "pays d'origine",
-      title: (j) => `Options de migration professionnelle pour ${j}`,
-      summary: (j, o) =>
-        `Selon le rôle « ${j} » et l'origine « ${o} », marchés qui recrutent souvent des compétences proches. Orientation générale, pas un conseil juridique.`,
-      countries: [
-        {
-          country: "Allemagne / UE",
-          demand:
-            "Demande stable en technique, santé, construction et IT.",
-          pathway: "Visa travailleurs qualifiés / Carte bleue UE.",
-          notes:
-            "Reconnaissance des diplômes et niveau de langue souvent requis.",
-        },
-        {
-          country: "Canada",
-          demand:
-            "Immigration à points pour les travailleurs qualifiés.",
-          pathway: "Express Entry / Programmes provinciaux (PNP).",
-          notes:
-            "Tests de langue et évaluation des diplômes courants.",
-        },
-        {
-          country: "Australie",
-          demand:
-            "Listes d'occupations qualifiées influencent l'éligibilité.",
-          pathway: "Visa indépendant ou parrainage employeur.",
-          notes:
-            "Évaluation des skills et points âge/langue comptent.",
-        },
-        {
-          country: "Golfe (EAU, Qatar, Oman)",
-          demand:
-            "Demande liée aux projets (construction, énergie, santé, tech).",
-          pathway: "Visa de travail parrainé par l'employeur.",
-          notes:
-            "Souvent contractuel ; résidence permanente limitée.",
-        },
-      ],
-      caveats: [
-        "Les règles changent ; consultez les sources officielles.",
-        "Sanctions ou limites de passeport peuvent bloquer le parcours.",
-        "Ce n'est pas un conseil juridique.",
-      ],
-    },
-
-    /* -------- هندی -------- */
-    hi: {
-      originFallback: "मूल देश",
-      title: (j) => `${j} के लिए कौशल-आधारित प्रवास विकल्प`,
-      summary: (j, o) =>
-        `भूमिका «${j}» और मूल «${o}» के आधार पर वे बाज़ार जो अक्सर मिलते-जुलते कौशल चाहते हैं। सामान्य मार्गदर्शन — कानूनी सलाह नहीं।`,
-      countries: [
-        {
-          country: "जर्मनी / EU",
-          demand:
-            "तकनीक, स्वास्थ्य, निर्माण और IT में स्थिर माँग।",
-          pathway: "कुशल कार्यकर्ता वीज़ा / EU ब्लू कार्ड।",
-          notes:
-            "मान्य योग्यता और न्यूनतम भाषा स्तर अक्सर ज़रूरी।",
-        },
-        {
-          country: "कनाडा",
-          demand:
-            "कुशल कामगारों के लिए पॉइंट-आधारित आव्रजन।",
-          pathway: "Express Entry / प्रांतीय (PNP)।",
-          notes: "भाषा परीक्षा और क्रेडेंशियल मूल्यांकन आम।",
-        },
-        {
-          country: "ऑस्ट्रेलिया",
-          demand:
-            "स्किल्ड ऑक्यूपेशन सूची पात्रता तय करती है।",
-          pathway: "स्वतंत्र स्किल्ड वीज़ा या नियोक्ता प्रायोजन।",
-          notes:
-            "स्किल्स असेसमेंट और आयु/भाषा अंक मायने रखते हैं।",
-        },
-        {
-          country: "खाड़ी देश (UAE, कतर, ओमान)",
-          demand:
-            "निर्माण, ऊर्जा, स्वास्थ्य, टेक में प्रोजेक्ट माँग।",
-          pathway: "नियोक्ता-प्रायोजित वर्क वीज़ा।",
-          notes:
-            "अक्सर अनुबंध आधारित; स्थायी निवास सीमित।",
-        },
-      ],
-      caveats: [
-        "नियम बदलते रहते हैं; आधिकारिक स्रोत देखें।",
-        "प्रतिबंध या पासपोर्ट सीमाएँ मार्ग रोक सकती हैं।",
-        "यह कानूनी सलाह नहीं है।",
-      ],
-    },
-
-    /* -------- انگلیسی (پیش‌فرض) -------- */
-    en: {
-      originFallback: "origin country",
-      title: (j) => `Skill-based migration options for ${j}`,
-      summary: (j, o) =>
-        `Based on the role “${j}” and origin “${o}”, markets that often hire similar skills. General orientation only — not legal advice.`,
-      countries: [
-        {
-          country: "Germany / EU",
-          demand:
-            "Steady demand for technical, healthcare, construction and IT skills.",
-          pathway:
-            "Skilled worker visa / EU Blue Card (credentials, job offer, language).",
-          notes:
-            "Often requires recognized credentials and minimum language level.",
-        },
-        {
-          country: "Canada",
-          demand:
-            "Points-based skilled immigration; NOC-listed occupations fare better.",
-          pathway:
-            "Express Entry / Provincial Nominee Programs (PNP).",
-          notes:
-            "Language tests and credential assessment (ECA) are common.",
-        },
-        {
-          country: "Australia",
-          demand:
-            "Skilled occupation lists strongly influence eligibility.",
-          pathway: "Independent skilled visa or employer sponsorship.",
-          notes:
-            "Skills assessment and points for age/language matter.",
-        },
-        {
-          country: "Gulf states (UAE, Qatar, Oman)",
-          demand:
-            "Project-driven demand in construction, energy, health and tech.",
-          pathway: "Employer-sponsored work visa.",
-          notes:
-            "Usually contract-based; permanent residency paths are limited.",
-        },
-      ],
-      caveats: [
-        "Immigration rules change often; check official sources.",
-        "Sanctions, banking limits or passport constraints can block pathways.",
-        "This output is not legal advice.",
-      ],
-    },
-  };
-
-  // انتخاب بسته‌ی زبانی مناسب (fallback به انگلیسی).
-  const pack = packs[L] || packs.en;
-  const origin = originCountry || pack.originFallback;
-
-  return {
-    title: pack.title(jobTitle),
-    summary: pack.summary(jobTitle, origin),
-    countries: pack.countries,
-    caveats: pack.caveats,
-    source: "heuristic",
-  };
-}
-
-/* ------------------------------------------------------------------ */
 /* پارس خروجی AI                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -448,6 +78,8 @@ function parseMigrationJson(
   text: string,
   jobTitle: string
 ): MigrationResult | null {
+  if (!text || typeof text !== "string") return null;
+
   let jsonStr = text.trim();
 
   // حذف بلوک‌های ```json ... ```
@@ -457,7 +89,7 @@ function parseMigrationJson(
   // استخراج اولین { ... } معتبر
   const start = jsonStr.indexOf("{");
   const end = jsonStr.lastIndexOf("}");
-  if (start === -1 || end <= start) return null;
+  if (start === -1 || end === -1 || end <= start) return null;
 
   try {
     const raw = JSON.parse(jsonStr.slice(start, end + 1)) as {
@@ -473,12 +105,12 @@ function parseMigrationJson(
     };
 
     /* -------- نرمال‌سازی کشورها -------- */
-    const countries = (raw.countries || [])
+    const countries: MigrationCountry[] = (raw.countries || [])
       .map((c) => ({
-        country: String(c.country || "").slice(0, 120),
-        demand: String(c.demand || "").slice(0, 500),
-        pathway: String(c.pathway || "").slice(0, 500),
-        notes: String(c.notes || "").slice(0, 500),
+        country: String(c.country || "").trim().slice(0, 120),
+        demand: String(c.demand || "").trim().slice(0, 500),
+        pathway: String(c.pathway || "").trim().slice(0, 500),
+        notes: String(c.notes || "").trim().slice(0, 500),
       }))
       .filter((c) => c.country && (c.demand || c.pathway))
       .slice(0, 8);
@@ -489,11 +121,13 @@ function parseMigrationJson(
     return {
       title: String(
         raw.title || `Skill-based migration options for ${jobTitle}`
-      ).slice(0, 200),
-      summary: String(raw.summary || "").slice(0, 1200),
+      )
+        .trim()
+        .slice(0, 200),
+      summary: String(raw.summary || "").trim().slice(0, 1200),
       countries,
       caveats: (raw.caveats || [])
-        .map((x) => String(x).trim())
+        .map((x) => String(x ?? "").trim())
         .filter(Boolean)
         .slice(0, 8),
       source: "ai",
@@ -577,6 +211,7 @@ export async function POST(req: NextRequest) {
     const education = neutralizeInstructionish(
       parsed.data.education || ""
     ).slice(0, 200);
+    const experienceYears = parsed.data.experienceYears;
 
     const locale = normalizeCareerLocale(parsed.data.locale);
     const languageName = languageNameForPrompt(locale);
@@ -660,7 +295,7 @@ Job title: ${jobTitle}
 Skills: ${skills || "n/a"}
 Skills to build: ${(parsed.data.skillsToBuild || []).join(", ") || "n/a"}
 Industry: ${industry || "n/a"}
-Experience years: ${parsed.data.experienceYears ?? "n/a"}
+Experience years: ${experienceYears ?? "n/a"}
 Origin country: ${country || "n/a"}
 City: ${location || "n/a"}
 Education: ${education || "n/a"}
@@ -702,12 +337,22 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
           // خطای آزادسازی مانع بازگشت پاسخ نمی‌شود.
         }
         reservedEventId = null;
+        reservedUserId = null;
       }
     }
 
     /* -------- Fallback به heuristic -------- */
     if (!result) {
-      result = heuristicMigration(jobTitle, country, locale);
+      result = buildOfflineMigration({
+        jobTitle,
+        skills: skills || undefined,
+        industry: industry || undefined,
+        experienceYears,
+        country: country || undefined,
+        location: location || undefined,
+        education: education || undefined,
+        locale,
+      });
     }
 
     /* -------- پاسخ موفق -------- */
