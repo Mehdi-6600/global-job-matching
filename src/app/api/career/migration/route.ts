@@ -11,23 +11,26 @@ import {
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import {
-  assertAndReserveAiUsage,
-  lockUserRow,
-  releaseUsageEventById,
+  reserveAiUsageInTransaction,
+  releaseUsageInTransaction,
+  logQuotaInfraError,
 } from "@/lib/quota";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 import { strictAiLimit } from "@/lib/safe-ratelimit";
 
+/* ------------------------------------------------------------------ */
+/* توابع کمکی                                                          */
+/* ------------------------------------------------------------------ */
+
+/** پاسخ ۵۰۳ برای خطاهای زیرساختی. */
 function infraUnavailable(code: string, message: string) {
-  return NextResponse.json(
-    {
-      error: message,
-      code,
-    },
-    { status: 503 }
-  );
+  return NextResponse.json({ error: message, code }, { status: 503 });
 }
+
+/* ------------------------------------------------------------------ */
+/* اسکیمای اعتبارسنجی                                                  */
+/* ------------------------------------------------------------------ */
 
 const bodySchema = z.object({
   jobTitle: z.string().trim().min(2).max(120),
@@ -46,6 +49,11 @@ const bodySchema = z.object({
     .default("en"),
 });
 
+/* ------------------------------------------------------------------ */
+/* انواع داده                                                          */
+/* ------------------------------------------------------------------ */
+
+/** یک کشور مقصد در تحلیل مهاجرت. */
 type MigrationCountry = {
   country: string;
   demand: string;
@@ -53,6 +61,7 @@ type MigrationCountry = {
   notes: string;
 };
 
+/** نتیجه‌ی نهایی تحلیل مهاجرت. */
 type MigrationResult = {
   title: string;
   summary: string;
@@ -61,12 +70,27 @@ type MigrationResult = {
   source: "ai" | "heuristic";
 };
 
+/* ------------------------------------------------------------------ */
+/* تحلیل heuristic (آفلاین) — ۷ زبان                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * تولید تحلیل مهاجرت به‌صورت آفلاین و بر اساس بسته‌های زبانی.
+ *
+ * این تابع زمانی استفاده می‌شود که:
+ * - سهمیه‌ی AI تمام شده باشد.
+ * - خطای زیرساختی رخ داده باشد.
+ * - خروجی AI نامعتبر باشد.
+ *
+ * هر بسته‌ی زبانی شامل ۴ کشور مقصد و caveats اختصاصی است.
+ */
 function heuristicMigration(
   jobTitle: string,
   originCountry: string | undefined,
   locale: string
 ): MigrationResult {
   const L = locale || "en";
+
   const packs: Record<
     string,
     {
@@ -82,6 +106,7 @@ function heuristicMigration(
       caveats: string[];
     }
   > = {
+    /* -------- فارسی -------- */
     fa: {
       originFallback: "کشور مبدأ",
       title: (j) => `گزینه‌های مهاجرت شغلی برای ${j}`,
@@ -102,19 +127,23 @@ function heuristicMigration(
           demand:
             "سیستم امتیازمحور برای نیروی کار ماهر؛ مشاغل فهرست‌شده در NOC شانس بهتری دارند.",
           pathway: "Express Entry / برنامه‌های استانی (PNP).",
-          notes: "آزمون زبان (IELTS/TEF) و ارزیابی مدرک (ECA) معمولاً لازم است.",
+          notes:
+            "آزمون زبان (IELTS/TEF) و ارزیابی مدرک (ECA) معمولاً لازم است.",
         },
         {
           country: "استرالیا",
-          demand: "فهرست مهارت‌های مورد نیاز نقش مهمی در واجد شرایط بودن دارد.",
+          demand:
+            "فهرست مهارت‌های مورد نیاز نقش مهمی در واجد شرایط بودن دارد.",
           pathway: "ویزای مهارت مستقل یا حمایت کارفرما.",
-          notes: "ارزیابی مهارت توسط نهاد مربوطه و امتیاز سن/زبان مهم است.",
+          notes:
+            "ارزیابی مهارت توسط نهاد مربوطه و امتیاز سن/زبان مهم است.",
         },
         {
           country: "کشورهای حوزه خلیج (امارات، قطر، عمان)",
           demand: "تقاضای پروژه‌محور برای ساخت، انرژی، سلامت و فناوری.",
           pathway: "ویزای کار با پیشنهاد شغلی کارفرما.",
-          notes: "معمولاً قراردادمحور است؛ مسیر اقامت دائم محدودتر است.",
+          notes:
+            "معمولاً قراردادمحور است؛ مسیر اقامت دائم محدودتر است.",
         },
       ],
       caveats: [
@@ -123,6 +152,8 @@ function heuristicMigration(
         "این خروجی مشاوره حقوقی نیست.",
       ],
     },
+
+    /* -------- عربی -------- */
     ar: {
       originFallback: "بلد المنشأ",
       title: (j) => `خيارات الهجرة المهنية لـ ${j}`,
@@ -150,9 +181,11 @@ function heuristicMigration(
         },
         {
           country: "دول الخليج (الإمارات، قطر، عمان)",
-          demand: "طلب مرتبط بالمشاريع في البناء والطاقة والصحة والتقنية.",
+          demand:
+            "طلب مرتبط بالمشاريع في البناء والطاقة والصحة والتقنية.",
           pathway: "تأشيرة عمل برعاية صاحب العمل.",
-          notes: "غالباً قائمة على العقود؛ مسارات الإقامة الدائمة محدودة.",
+          notes:
+            "غالباً قائمة على العقود؛ مسارات الإقامة الدائمة محدودة.",
         },
       ],
       caveats: [
@@ -161,6 +194,8 @@ function heuristicMigration(
         "هذا ليس استشارة قانونية.",
       ],
     },
+
+    /* -------- آلمانی -------- */
     de: {
       originFallback: "Herkunftsland",
       title: (j) => `Berufliche Migrationsoptionen für ${j}`,
@@ -169,9 +204,11 @@ function heuristicMigration(
       countries: [
         {
           country: "Deutschland / EU",
-          demand: "Stetige Nachfrage nach Technik, Gesundheit, Bau und IT.",
+          demand:
+            "Stetige Nachfrage nach Technik, Gesundheit, Bau und IT.",
           pathway: "Fachkräfteeinwanderung / EU Blue Card.",
-          notes: "Anerkennung der Abschlüsse und Sprachniveau oft nötig.",
+          notes:
+            "Anerkennung der Abschlüsse und Sprachniveau oft nötig.",
         },
         {
           country: "Kanada",
@@ -182,14 +219,18 @@ function heuristicMigration(
         {
           country: "Australien",
           demand: "Skilled-Occupation-Listen steuern die Eignung.",
-          pathway: "Unabhängiges Skilled Visa oder Arbeitgeber-Sponsoring.",
-          notes: "Skills Assessment und Punkte für Alter/Sprache zählen.",
+          pathway:
+            "Unabhängiges Skilled Visa oder Arbeitgeber-Sponsoring.",
+          notes:
+            "Skills Assessment und Punkte für Alter/Sprache zählen.",
         },
         {
           country: "Golfstaaten (VAE, Katar, Oman)",
-          demand: "Projektbezogene Nachfrage in Bau, Energie, Health, Tech.",
+          demand:
+            "Projektbezogene Nachfrage in Bau, Energie, Health, Tech.",
           pathway: "Arbeitgeber-gesponsertes Work Visa.",
-          notes: "Meist vertragsbasiert; dauerhafte Aufenthaltspfade begrenzt.",
+          notes:
+            "Meist vertragsbasiert; dauerhafte Aufenthaltspfade begrenzt.",
         },
       ],
       caveats: [
@@ -198,6 +239,8 @@ function heuristicMigration(
         "Keine Rechtsberatung.",
       ],
     },
+
+    /* -------- اسپانیایی -------- */
     es: {
       originFallback: "país de origen",
       title: (j) => `Opciones de migración laboral para ${j}`,
@@ -212,23 +255,27 @@ function heuristicMigration(
         },
         {
           country: "Canadá",
-          demand: "Inmigración por puntos para trabajadores cualificados.",
+          demand:
+            "Inmigración por puntos para trabajadores cualificados.",
           pathway: "Express Entry / Programas provinciales (PNP).",
-          notes: "Pruebas de idioma y evaluación de títulos son comunes.",
+          notes:
+            "Pruebas de idioma y evaluación de títulos son comunes.",
         },
         {
           country: "Australia",
           demand:
             "Listas de ocupaciones cualificadas influyen en la elegibilidad.",
           pathway: "Visado independiente o patrocinio del empleador.",
-          notes: "Evaluación de skills y puntos por edad/idioma importan.",
+          notes:
+            "Evaluación de skills y puntos por edad/idioma importan.",
         },
         {
           country: "Golfo (EAU, Catar, Omán)",
           demand:
             "Demanda por proyectos en construcción, energía, salud y tech.",
           pathway: "Visado de trabajo patrocinado por empleador.",
-          notes: "Suele ser por contrato; residencia permanente limitada.",
+          notes:
+            "Suele ser por contrato; residencia permanente limitada.",
         },
       ],
       caveats: [
@@ -237,6 +284,8 @@ function heuristicMigration(
         "Esto no es asesoría legal.",
       ],
     },
+
+    /* -------- فرانسوی -------- */
     fr: {
       originFallback: "pays d'origine",
       title: (j) => `Options de migration professionnelle pour ${j}`,
@@ -245,30 +294,35 @@ function heuristicMigration(
       countries: [
         {
           country: "Allemagne / UE",
-          demand: "Demande stable en technique, santé, construction et IT.",
+          demand:
+            "Demande stable en technique, santé, construction et IT.",
           pathway: "Visa travailleurs qualifiés / Carte bleue UE.",
           notes:
             "Reconnaissance des diplômes et niveau de langue souvent requis.",
         },
         {
           country: "Canada",
-          demand: "Immigration à points pour les travailleurs qualifiés.",
+          demand:
+            "Immigration à points pour les travailleurs qualifiés.",
           pathway: "Express Entry / Programmes provinciaux (PNP).",
-          notes: "Tests de langue et évaluation des diplômes courants.",
+          notes:
+            "Tests de langue et évaluation des diplômes courants.",
         },
         {
           country: "Australie",
           demand:
             "Listes d'occupations qualifiées influencent l'éligibilité.",
           pathway: "Visa indépendant ou parrainage employeur.",
-          notes: "Évaluation des skills et points âge/langue comptent.",
+          notes:
+            "Évaluation des skills et points âge/langue comptent.",
         },
         {
           country: "Golfe (EAU, Qatar, Oman)",
           demand:
             "Demande liée aux projets (construction, énergie, santé, tech).",
           pathway: "Visa de travail parrainé par l'employeur.",
-          notes: "Souvent contractuel ; résidence permanente limitée.",
+          notes:
+            "Souvent contractuel ; résidence permanente limitée.",
         },
       ],
       caveats: [
@@ -277,6 +331,8 @@ function heuristicMigration(
         "Ce n'est pas un conseil juridique.",
       ],
     },
+
+    /* -------- هندی -------- */
     hi: {
       originFallback: "मूल देश",
       title: (j) => `${j} के लिए कौशल-आधारित प्रवास विकल्प`,
@@ -285,27 +341,34 @@ function heuristicMigration(
       countries: [
         {
           country: "जर्मनी / EU",
-          demand: "तकनीक, स्वास्थ्य, निर्माण और IT में स्थिर माँग।",
+          demand:
+            "तकनीक, स्वास्थ्य, निर्माण और IT में स्थिर माँग।",
           pathway: "कुशल कार्यकर्ता वीज़ा / EU ब्लू कार्ड।",
-          notes: "मान्य योग्यता और न्यूनतम भाषा स्तर अक्सर ज़रूरी।",
+          notes:
+            "मान्य योग्यता और न्यूनतम भाषा स्तर अक्सर ज़रूरी।",
         },
         {
           country: "कनाडा",
-          demand: "कुशल कामगारों के लिए पॉइंट-आधारित आव्रजन।",
+          demand:
+            "कुशल कामगारों के लिए पॉइंट-आधारित आव्रजन।",
           pathway: "Express Entry / प्रांतीय (PNP)।",
           notes: "भाषा परीक्षा और क्रेडेंशियल मूल्यांकन आम।",
         },
         {
           country: "ऑस्ट्रेलिया",
-          demand: "स्किल्ड ऑक्यूपेशन सूची पात्रता तय करती है।",
+          demand:
+            "स्किल्ड ऑक्यूपेशन सूची पात्रता तय करती है।",
           pathway: "स्वतंत्र स्किल्ड वीज़ा या नियोक्ता प्रायोजन।",
-          notes: "स्किल्स असेसमेंट और आयु/भाषा अंक मायने रखते हैं।",
+          notes:
+            "स्किल्स असेसमेंट और आयु/भाषा अंक मायने रखते हैं।",
         },
         {
           country: "खाड़ी देश (UAE, कतर, ओमान)",
-          demand: "निर्माण, ऊर्जा, स्वास्थ्य, टेक में प्रोजेक्ट माँग।",
+          demand:
+            "निर्माण, ऊर्जा, स्वास्थ्य, टेक में प्रोजेक्ट माँग।",
           pathway: "नियोक्ता-प्रायोजित वर्क वीज़ा।",
-          notes: "अक्सर अनुबंध आधारित; स्थायी निवास सीमित।",
+          notes:
+            "अक्सर अनुबंध आधारित; स्थायी निवास सीमित।",
         },
       ],
       caveats: [
@@ -314,6 +377,8 @@ function heuristicMigration(
         "यह कानूनी सलाह नहीं है।",
       ],
     },
+
+    /* -------- انگلیسی (پیش‌فرض) -------- */
     en: {
       originFallback: "origin country",
       title: (j) => `Skill-based migration options for ${j}`,
@@ -333,14 +398,18 @@ function heuristicMigration(
           country: "Canada",
           demand:
             "Points-based skilled immigration; NOC-listed occupations fare better.",
-          pathway: "Express Entry / Provincial Nominee Programs (PNP).",
-          notes: "Language tests and credential assessment (ECA) are common.",
+          pathway:
+            "Express Entry / Provincial Nominee Programs (PNP).",
+          notes:
+            "Language tests and credential assessment (ECA) are common.",
         },
         {
           country: "Australia",
-          demand: "Skilled occupation lists strongly influence eligibility.",
+          demand:
+            "Skilled occupation lists strongly influence eligibility.",
           pathway: "Independent skilled visa or employer sponsorship.",
-          notes: "Skills assessment and points for age/language matter.",
+          notes:
+            "Skills assessment and points for age/language matter.",
         },
         {
           country: "Gulf states (UAE, Qatar, Oman)",
@@ -359,8 +428,10 @@ function heuristicMigration(
     },
   };
 
+  // انتخاب بسته‌ی زبانی مناسب (fallback به انگلیسی).
   const pack = packs[L] || packs.en;
   const origin = originCountry || pack.originFallback;
+
   return {
     title: pack.title(jobTitle),
     summary: pack.summary(jobTitle, origin),
@@ -370,16 +441,33 @@ function heuristicMigration(
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* پارس خروجی AI                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * پارس خروجی JSON مدل AI برای تحلیل مهاجرت.
+ *
+ * استراتژی:
+ * 1) حذف بلوک‌های ```json ... ```
+ * 2) استخراج اولین { ... } معتبر
+ * 3) اعتبارسنجی: حداقل ۲ کشور معتبر مورد نیاز است
+ */
 function parseMigrationJson(
   text: string,
   jobTitle: string
 ): MigrationResult | null {
   let jsonStr = text.trim();
+
+  // حذف بلوک‌های ```json ... ```
   const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) jsonStr = fence[1].trim();
+
+  // استخراج اولین { ... } معتبر
   const start = jsonStr.indexOf("{");
   const end = jsonStr.lastIndexOf("}");
   if (start === -1 || end <= start) return null;
+
   try {
     const raw = JSON.parse(jsonStr.slice(start, end + 1)) as {
       title?: string;
@@ -392,6 +480,8 @@ function parseMigrationJson(
       }>;
       caveats?: string[];
     };
+
+    /* -------- نرمال‌سازی کشورها -------- */
     const countries = (raw.countries || [])
       .map((c) => ({
         country: String(c.country || "").slice(0, 120),
@@ -401,7 +491,10 @@ function parseMigrationJson(
       }))
       .filter((c) => c.country && (c.demand || c.pathway))
       .slice(0, 8);
+
+    // حداقل ۲ کشور معتبر مورد نیاز است.
     if (countries.length < 2) return null;
+
     return {
       title: String(
         raw.title || `Skill-based migration options for ${jobTitle}`
@@ -419,36 +512,47 @@ function parseMigrationJson(
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* POST — تحلیل گزینه‌های مهاجرت                                        */
+/* ------------------------------------------------------------------ */
+
 export async function POST(req: NextRequest) {
+  /** شناسه‌ی رویداد مصرف رزروشده (برای آزادسازی در صورت خطا). */
   let reservedEventId: string | null = null;
+  /** شناسه‌ی کاربری که سهمیه برایش رزرو شده است. */
   let reservedUserId: string | null = null;
 
   try {
+    /* -------- احراز هویت -------- */
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    /* -------- Rate limit (سخت‌گیرانه، اما Fail-Soft) -------- */
     const ip = getRequestIp(req);
     const limit = await strictAiLimit(
       aiRatelimit,
       `career_migration_${session.user.id}_${ip}`
     );
+
     if (limit.infraFailed) {
-      return infraUnavailable(
-        "RATE_LIMIT_INFRA_ERROR",
-        "Service temporarily unavailable. Please try again shortly."
+      // پس از fallback حافظه، این حالت نادر است. ۵۰۳ نکن —
+      // سهمیه + heuristic همچنان از محصول محافظت می‌کنند.
+      console.warn(
+        "[career/migration] rate limit infra degraded; continuing"
       );
-    }
-    if (!limit.success) {
+    } else if (!limit.success) {
       return rateLimitedResponse(limit, "Too many requests. Please wait.");
     }
 
+    /* -------- خواندن بدنه‌ی درخواست -------- */
     const body = await readJsonBody(req);
     if (body === null) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
+    /* -------- اعتبارسنجی ورودی -------- */
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -460,6 +564,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /* -------- پاک‌سازی ورودی‌ها -------- */
     const jobTitle = neutralizeInstructionish(parsed.data.jobTitle).slice(
       0,
       120
@@ -481,9 +586,11 @@ export async function POST(req: NextRequest) {
     const education = neutralizeInstructionish(
       parsed.data.education || ""
     ).slice(0, 200);
+
     const locale = normalizeCareerLocale(parsed.data.locale);
     const languageName = languageNameForPrompt(locale);
 
+    /* -------- کاربر و پلن -------- */
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, plan: true },
@@ -497,21 +604,25 @@ export async function POST(req: NextRequest) {
       const effective = await getEffectivePlan(user.id);
       plan = effective.plan;
     } catch {
-      /* keep */
+      // در صورت خطا، پلن پیش‌فرض کاربر را نگه می‌داریم.
     }
 
+    /* -------- رزرو سهمیه -------- */
+    // سه حالت ممکن:
+    // A) رزرو موفق → مجاز به فراخوانی AI
+    // B) سهمیه تمام → فقط heuristic، بدون AI و بدون هزینه
+    // C) خطای زیرساختی → فقط heuristic، بدون AI (محصول ۵۰۳ نمی‌شود)
     let allowAi = false;
     try {
-      const quota = await db.$transaction(async (tx) => {
-        await lockUserRow(tx, user.id);
-        return assertAndReserveAiUsage(tx, {
-          userId: user.id,
-          plan,
-          kind: "ai_migration",
-          meta: `migration:${jobTitle}`,
-        });
+      const quota = await reserveAiUsageInTransaction(db, {
+        userId: user.id,
+        plan,
+        kind: "ai_migration",
+        meta: `migration:${jobTitle}`,
       });
+
       if (!quota.ok) {
+        // محدودیت تجاری — هنوز تحلیل heuristic برگردان (بدون هزینه).
         allowAi = false;
         console.warn("Migration quota exceeded; heuristic only", {
           code: quota.code,
@@ -522,13 +633,14 @@ export async function POST(req: NextRequest) {
         reservedUserId = user.id;
       }
     } catch (err) {
-      console.error("Migration quota infra failure:", err);
-      return infraUnavailable(
-        "QUOTA_INFRA_ERROR",
-        "Service temporarily unavailable. Please try again shortly."
-      );
+      // خطای DB پس از تلاش مجدد — کل محصول را ۵۰۳ نکن.
+      logQuotaInfraError("migration_reserve", err);
+      allowAi = false;
+      reservedEventId = null;
+      reservedUserId = null;
     }
 
+    /* -------- ساخت پرامپت‌ها -------- */
     const systemPrompt = `You are a careful international labor-mobility analyst.
 Write ALL human-readable fields ENTIRELY in ${languageName} (not English unless language is English).
 JSON keys stay in English.
@@ -563,6 +675,7 @@ City: ${location || "n/a"}
 Education: ${education || "n/a"}
 Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
 
+    /* -------- تلاش برای فراخوانی AI -------- */
     let result: MigrationResult | null = null;
 
     if (allowAi) {
@@ -579,6 +692,7 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
             maxAttempts: 3,
           }
         );
+
         if (text) {
           result = parseMigrationJson(text, jobTitle);
         }
@@ -586,40 +700,46 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
         console.error("Migration AI failed:", err);
       }
 
+      // اگر AI نتیجه نداد → سهمیه را آزاد کن.
       if (!result && reservedEventId && reservedUserId) {
         try {
           await db.$transaction(async (tx) => {
-            await releaseUsageEventById(tx, {
+            await releaseUsageInTransaction(tx, {
               userId: reservedUserId!,
               usageEventId: reservedEventId!,
             });
           });
         } catch {
-          /* ignore */
+          // خطای آزادسازی مانع بازگشت پاسخ نمی‌شود.
         }
         reservedEventId = null;
       }
     }
 
+    /* -------- Fallback به heuristic -------- */
     if (!result) {
       result = heuristicMigration(jobTitle, country, locale);
     }
 
+    /* -------- پاسخ موفق -------- */
     return NextResponse.json(result);
   } catch (error) {
     console.error("Migration error:", error);
+
+    // تلاش برای آزادسازی سهمیه در صورت خطای پیش‌بینی‌نشده.
     if (reservedEventId && reservedUserId) {
       try {
         await db.$transaction(async (tx) => {
-          await releaseUsageEventById(tx, {
+          await releaseUsageInTransaction(tx, {
             userId: reservedUserId!,
             usageEventId: reservedEventId!,
           });
         });
       } catch {
-        /* ignore */
+        // خطای آزادسازی مانع بازگشت پاسخ نمی‌شود.
       }
     }
+
     return NextResponse.json(
       { error: "Failed to analyze migration options" },
       { status: 500 }
