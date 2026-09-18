@@ -87,20 +87,20 @@ export default function AdminUsersPage() {
             onChange={(e) => setRoleFilter(e.target.value)}
             className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
           >
-            <option value="all">{t("Jobs.filters", "All roles")}</option>
-            <option value="job_seeker">Job Seeker</option>
-            <option value="employer">Employer</option>
-            <option value="admin">Admin</option>
+            <option value="all">{t("Admin.roleAll", "All roles")}</option>
+            <option value="job_seeker">{t("Admin.roleJobSeeker", "Job Seeker")}</option>
+            <option value="employer">{t("Admin.roleEmployer", "Employer")}</option>
+            <option value="admin">{t("Admin.roleAdmin", "Admin")}</option>
           </select>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
           >
-            <option value="all">{t("Jobs.filters", "All status")}</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="banned">Banned</option>
+            <option value="all">{t("Admin.statusAll", "All status")}</option>
+            <option value="active">{t("Admin.statusActive", "Active")}</option>
+            <option value="pending">{t("Admin.statusPending", "Pending")}</option>
+            <option value="banned">{t("Admin.statusBanned", "Banned")}</option>
           </select>
         </div>
 
