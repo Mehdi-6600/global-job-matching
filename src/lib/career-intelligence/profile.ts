@@ -32,12 +32,22 @@ export type Seniority =
   | "manager"
   | "unknown";
 
+/**
+ * برچسب یک وظیفه.
+ * می‌تواند یک رشته‌ی ثابت یا یک نگاشت چندزبانه باشد.
+ */
+export type TaskLabel = string | Partial<Record<CareerRiskLocale, string>>;
+
 export type TaskExposure = {
   id: string;
-  label: Record<CareerRiskLocale, string> | string;
-  automation: number; // 0-100
+  label: TaskLabel;
+  /** 0-100: میزان مواجهه‌ی وظیفه با اتوماسیون. */
+  automation: number;
+  /** 0-100: وابستگی به قضاوت انسانی. */
   judgment: number;
+  /** 0-100: وابستگی به مهارت‌های بین‌فردی. */
   interpersonal: number;
+  /** 0-100: وابستگی به تنظیم‌گری/انطباق. */
   regulatory: number;
 };
 
@@ -60,7 +70,9 @@ export type CareerProfile = {
   tasks: TaskExposure[];
   transferableSkills: string[];
   missingSkills: string[];
-  profileCompleteness: number; // 0-100
+  /** 0-100: میزان کامل بودن پروفایل. */
+  profileCompleteness: number;
+  /** فیلدهای ناقص؛ برای شفافیت در تحلیل. */
   uncertainty: string[];
 };
 
@@ -120,7 +132,7 @@ const TECHNICAL_KEYWORDS = new Set<string>([
   "graphql", "rest", "grpc", "websocket",
   // data / ml
   "pandas", "numpy", "scipy", "matplotlib", "seaborn", "plotly",
-  "etl", "elt", "ml", "ai", "nlp", "cv", "llm", "rag", "sql",
+  "etl", "elt", "ml", "ai", "nlp", "cv", "llm", "rag",
   // infra / security
   "devops", "sre", "cicd", "iac", "linux", "unix", "nginx", "apache",
   "security", "appsec", "pentest", "siem", "oauth", "jwt",
@@ -128,9 +140,9 @@ const TECHNICAL_KEYWORDS = new Set<string>([
   "accounting", "bookkeeping", "reconciliation", "audit", "tax", "vat",
   "ifrs", "gaap", "fpa", "forecasting", "budgeting", "payroll",
   // healthcare
-  "triage", "icu", "phlebotomy", "ehr", "emr", "hipaa", "bls", "acls",
-  // education
-  "curriculum", "pedagogy", "assessment", "differentiation",
+  "triage", "icu", "phlebotomy", "ehr", "em automationr", "hipaa", "bls:", "acls",
+  // education 
+ 45 "curriculum", "pedag,ogy", "assessment", "differentiation judgment",
   // trades
   "welding", "plumbing", "electrical", "hvac", "carpentry",
   // sales / marketing
@@ -204,44 +216,60 @@ function detectSeniority(title: string, years: number | null): Seniority {
   return "unknown";
 }
 
-function detectFamily(title: string, skills: string[], industry: string): RoleFamily {
+function detectFamily(
+  title: string,
+  skills: string[],
+  industry: string
+): RoleFamily {
   const blob = `${norm(title)} ${skills.map(norm).join(" ")} ${norm(industry)}`;
+
   if (
-    /nurse|پزشک|پرستار|doctor|clinician|therapist|healthcare|مراقبت|بیمار/.test(blob)
+    /nurse|پزشک|پرستار|doctor|clinician|therapist|healthcare|مراقبت|بیمار/.test(
+      blob
+    )
   )
     return "healthcare";
+
   if (
     /teacher|معلم|آموزش|tutor|instructor|professor|آموزگار|مدرس/.test(blob)
   )
     return "education";
+
   if (
     /account|finance|مالی|حسابدار|tax|audit|bookkeep|cfo|controller/.test(blob)
   )
     return "accounting_finance";
+
   if (
     /design|figma|photoshop|illustrator|ui|ux|گرافیک|طراح|branding/.test(blob)
   )
     return "design";
+
   if (
     /data engineer|data scien|ml engineer|analyst|بیگ دیتا|machine learning/.test(
       blob
     )
   )
     return "data";
+
   if (
     /devop|sre|backend|frontend|full.?stack|software|developer|engineer|react|node|typescript|python|java|برنامه|نرم.?افزار/.test(
       blob
     )
   )
     return "software_engineering";
+
   if (
     /electric|plumber|welder|hvac|لوله|جوش|برقکار|نجار|trades/.test(blob)
   )
     return "trades";
+
   if (/sales|marketing|بازاریاب|فروش|seo|content/.test(blob))
     return "sales_marketing";
+
   if (/manager|operations|admin|منشی|دفتری|clerical|coordinator/.test(blob))
     return "operations_clerical";
+
   return "generic";
 }
 
@@ -251,6 +279,7 @@ function detectSpecialization(
   skills: string[]
 ): string | null {
   const blob = `${norm(title)} ${skills.map(norm).join(" ")}`;
+
   if (family === "software_engineering") {
     if (/frontend|react|vue|angular|next\.?js|css/.test(blob)) return "frontend";
     if (/backend|node|java|spring|\.net|django|api/.test(blob)) return "backend";
@@ -260,24 +289,29 @@ function detectSpecialization(
     if (/security|secur|appsec/.test(blob)) return "security";
     if (/qa|test|cypress|selenium/.test(blob)) return "qa";
   }
+
   if (family === "accounting_finance") {
     if (/tax|مالیات/.test(blob)) return "tax";
     if (/audit|حسابرسی/.test(blob)) return "audit";
     if (/management account|بهای تمام/.test(blob)) return "management_accounting";
   }
+
   if (family === "education") {
     if (/primary|ابتدایی|elementary/.test(blob)) return "primary";
     if (/secondary|متوسطه|high school/.test(blob)) return "secondary";
     if (/edtech|technology|فناوری/.test(blob)) return "edtech";
   }
+
   if (family === "design") {
     if (/ux|ui|product design|فیگما|figma/.test(blob)) return "ux_ui";
     if (/brand|identity|لوگو/.test(blob)) return "branding";
   }
+
   if (family === "healthcare") {
     if (/icu|special|تخصص/.test(blob)) return "specialized";
     if (/hospital|بیمارستان/.test(blob)) return "hospital";
   }
+
   return null;
 }
 
@@ -285,7 +319,14 @@ function detectSpecialization(
 /*                              Task Definitions                              */
 /* -------------------------------------------------------------------------- */
 
-function tasksForFamily(family: RoleFamily, spec: string | null): TaskExposure[] {
+/**
+ * وظایف پایه به‌ازای هر خانواده‌ی شغلی.
+ * برچسب‌ها می‌توانند چندزبانه باشند (فعلاً انگلیسی، قابل‌گسترش).
+ */
+function tasksForFamily(
+  family: RoleFamily,
+  spec: string | null
+): TaskExposure[] {
   const base: Record<RoleFamily, TaskExposure[]> = {
     software_engineering: [
       { id: "impl", label: "Feature implementation / coding", automation: 70, judgment: 40, interpersonal: 20, regulatory: 10 },
@@ -305,7 +346,7 @@ function tasksForFamily(family: RoleFamily, spec: string | null): TaskExposure[]
     ],
     education: [
       { id: "lesson", label: "Lesson delivery / facilitation", automation: 25, judgment: 75, interpersonal: 90, regulatory: 40 },
-      { id: "plan", label: "Lesson planning", automation: 45, judgment: 70, interpersonal: 30, regulatory: 35 },
+      { id: "plan", label: "Lesson planning",: 70, interpersonal: 30, regulatory: 35 },
       { id: "assess", label: "Assessment & feedback", automation: 50, judgment: 70, interpersonal: 60, regulatory: 40 },
       { id: "admin", label: "Admin / attendance / reports", automation: 70, judgment: 25, interpersonal: 25, regulatory: 30 },
       { id: "pastoral", label: "Pastoral / parent communication", automation: 15, judgment: 80, interpersonal: 95, regulatory: 45 },
@@ -360,7 +401,9 @@ function tasksForFamily(family: RoleFamily, spec: string | null): TaskExposure[]
       { id: "docs", label: "Documentation", automation: 60, judgment: 35, interpersonal: 20, regulatory: 20 },
     ],
   };
-  let tasks = base[family] || base.generic;
+
+  let tasks = base[family] ?? base.generic;
+
   if (family === "software_engineering" && spec === "devops") {
     tasks = [
       { id: "infra", label: "Infrastructure as code", automation: 50, judgment: 65, interpersonal: 25, regulatory: 20 },
@@ -369,6 +412,7 @@ function tasksForFamily(family: RoleFamily, spec: string | null): TaskExposure[]
       { id: "sec", label: "Security hardening", automation: 35, judgment: 80, interpersonal: 35, regulatory: 40 },
     ];
   }
+
   return tasks;
 }
 
@@ -460,7 +504,7 @@ function classifySkill(skill: string): "tool" | "technical" | "soft" {
   const n = norm(skill);
   const tokens = tokenize(skill);
 
-  // Direct tool match (whole normalized string)
+  // Direct tool match (whole normalized string, spaces removed)
   if (KNOWN_TOOLS.has(n.replace(/\s+/g, ""))) return "tool";
 
   // Tool match on any token
@@ -483,7 +527,11 @@ function classifySkill(skill: string): "tool" | "technical" | "soft" {
  * Return true if the growth skill is already covered by any user skill.
  * Uses token overlap with a threshold to avoid false positives.
  */
-function isSkillCovered(growth: string, userSkillsNorm: string[], userTokens: Set<string>): boolean {
+function isSkillCovered(
+  growth: string,
+  userSkillsNorm: string[],
+  userTokens: Set<string>
+): boolean {
   const gNorm = norm(growth);
   const gTokens = tokenize(growth);
   if (gTokens.length === 0) return false;
@@ -536,7 +584,11 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
 
   /* ------------------------- Family & Seniority ------------------------ */
   const roleFamily = detectFamily(currentRole, skills, industry || "");
-  const specialization = detectSpecialization(roleFamily, currentRole, skills);
+  const specialization = detectSpecialization(
+    roleFamily,
+    currentRole,
+    skills
+  );
   const seniority = detectSeniority(currentRole, years);
   const tasks = tasksForFamily(roleFamily, specialization);
 
@@ -564,7 +616,8 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
     for (const t of tokenize(s)) userTokens.add(t);
   }
 
-  const growth = FAMILY_GROWTH_SKILLS[roleFamily] || FAMILY_GROWTH_SKILLS.generic;
+  const growth =
+    FAMILY_GROWTH_SKILLS[roleFamily] ?? FAMILY_GROWTH_SKILLS.generic;
   const missingSkills = growth.filter(
     (g) => !isSkillCovered(g, userSkillsNorm, userTokens)
   );
@@ -574,10 +627,12 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
   const highJudgmentThemes = tasks
     .filter((t) => t.judgment >= 75)
     .map((t) => {
-      const raw = typeof t.label === "string" ? t.label : t.label.en;
+      const raw =
+        typeof t.label === "string" ? t.label : t.label.en || "";
       // Strip to a short, transferable theme (first clause)
       return raw.split(/[/&]/)[0].trim();
-    });
+    })
+    .filter(Boolean);
 
   const transferableSkills = Array.from(
     new Set([...technicalSkills.slice(0, 8), ...highJudgmentThemes])
@@ -715,11 +770,25 @@ export function highAutomationTasks(profile: CareerProfile): TaskExposure[] {
 
 export function resilientTasks(profile: CareerProfile): TaskExposure[] {
   return profile.tasks.filter(
-    (t) => t.judgment >= 70 || t.interpersonal >= 75 || t.regulatory >= 70
+    (t) =>
+      t.judgment >= 70 || t.interpersonal >= 75 || t.regulatory >= 70
   );
 }
 
-export function taskLabel(t: TaskExposure, locale: CareerRiskLocale): string {
+/**
+ * برچسب یک وظیفه را بر اساس لوکال برمی‌گرداند.
+ * اگر برچسب چندزبانه باشد، ابتدا لوکال درخواستی، سپس `en`، و در نهایت
+ * اولین مقدار موجود را برمی‌گرداند.
+ */
+export function taskLabel(
+  t: TaskExposure,
+  locale: CareerRiskLocale
+): string {
   if (typeof t.label === "string") return t.label;
-  return t.label[locale] || t.label.en;
+  return (
+    t.label[locale] ||
+    t.label.en ||
+    Object.values(t.label).find((v) => typeof v === "string") ||
+    t.id
+  );
 }
