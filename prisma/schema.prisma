@@ -110,32 +110,45 @@ model Company {
 }
 
 model Job {
-  id               String    @id @default(cuid())
-  title            String
-  description      String    @db.Text
-  location         String
-  salary           String?
-  type             String
-  remote           Boolean   @default(false)
-  experience       String?
-  salaryMin        Int?
-  salaryMax        Int?
-  currency         String    @default("USD")
-  requirements     String[]  @default([])
-  responsibilities String[]  @default([])
-  benefits         String[]  @default([])
-  tags             String[]  @default([])
-  status           String    @default("active")
-  deadline         DateTime?
-  viewCount        Int       @default(0)
-  companyId        String?
-  postedById       String?
-  categoryId       String?
-  externalId       String?
-  externalUrl      String?
-  source           String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @default(now()) @updatedAt
+  id                   String    @id @default(cuid())
+  title                String
+  description          String    @db.Text
+  location             String
+  salary               String?
+  type                 String
+  remote               Boolean   @default(false)
+  experience           String?
+  salaryMin            Int?
+  salaryMax            Int?
+  currency             String    @default("USD")
+  requirements         String[]  @default([])
+  responsibilities     String[]  @default([])
+  benefits             String[]  @default([])
+  tags                 String[]  @default([])
+  status               String    @default("active")
+  deadline             DateTime?
+  viewCount            Int       @default(0)
+  companyId            String?
+  postedById           String?
+  categoryId           String?
+  externalId           String?
+  externalUrl          String?
+  source               String?
+  applyUrl             String?
+  publishedAt          DateTime?
+  firstSeenAt          DateTime?
+  lastSeenAt           DateTime?
+  lastVerifiedAt       DateTime?
+  expiresAt            DateTime?
+  freshnessStatus      String?   @default("fresh")
+  occupation           String?
+  occupationFamily     String?
+  seniority            String?
+  descriptionIsSnippet Boolean   @default(false)
+  qualityScore         Float?
+  attribution          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @default(now()) @updatedAt
 
   company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
   postedBy     User?         @relation("PostedBy", fields: [postedById], references: [id], onDelete: SetNull)
@@ -150,6 +163,44 @@ model Job {
   @@index([categoryId])
   @@index([createdAt])
   @@index([externalId])
+  @@index([source])
+  @@index([freshnessStatus])
+}
+
+model JobSource {
+  id                     String    @id @default(cuid())
+  key                    String    @unique
+  name                   String
+  type                   String    @default("aggregator")
+  baseUrl                String?
+  apiUrl                 String?
+  licenseStatus          String    @default("UNKNOWN")
+  commercialAllowed      Boolean   @default(false)
+  redistributionAllowed  Boolean   @default(false)
+  attributionRequired    Boolean   @default(true)
+  canonicalApplyRequired Boolean   @default(true)
+  countries              String[]  @default([])
+  supportedOccupations   String[]  @default([])
+  refreshIntervalMinutes Int       @default(1440)
+  rateLimitPerMinute     Int?
+  enabled                Boolean   @default(false)
+  healthStatus           String    @default("unknown")
+  qualityScore           Float     @default(0.5)
+  lastSyncAt             DateTime?
+  lastSuccessAt          DateTime?
+  lastErrorAt            DateTime?
+  lastError              String?
+  jobsFetched            Int       @default(0)
+  jobsCreated            Int       @default(0)
+  jobsUpdated            Int       @default(0)
+  jobsSkipped            Int       @default(0)
+  duplicateRate          Float?
+  staleRate              Float?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([enabled])
+  @@index([licenseStatus])
 }
 
 model Application {
