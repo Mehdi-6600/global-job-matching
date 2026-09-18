@@ -274,7 +274,7 @@ Country: ${parsed.data.country || "n/a"}
 City: ${parsed.data.location || "n/a"}
 Experience years: ${parsed.data.experienceYears ?? "n/a"}
 Build a CURRENT→TARGET gap plan when target role is provided. Do not invent missing facts.
-CRITICAL: Reply language = ${languageName} only.
+CRITICAL: Reply language = ${languageName} only. Never mix English words into non-English sentences. All user-visible text must be entirely in ${languageName}.
 Language: ${languageName}`;
 
     /* -------- تلاش برای فراخوانی AI -------- */
