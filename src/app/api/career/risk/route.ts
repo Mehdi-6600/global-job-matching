@@ -93,14 +93,20 @@ function buildPrompts(input: {
   country: string;
   location: string;
   education: string;
+  targetRole?: string;
+  careerGoal?: string;
+  languages?: string;
+  responsibilities?: string;
 }): { system: string; user: string } {
   const system = `You are a careful career-risk analyst for the next 5–10 years.
 
 CRITICAL LANGUAGE RULE:
 - Write summary, reasons, skillsToBuild, alternatives, and industryOutlook ENTIRELY in ${input.languageName}.
 - JSON keys stay in English.
-- Write 3–5 concrete reasons, not one vague sentence.
-- Skills must be specific to THIS job title and location (not generic only).
+- Write 3–5 concrete reasons grounded in THIS person's profile — not generic career advice.
+- Use responsibilities and target role when provided. Do not invent missing facts.
+- Distinguish current-role automation risk from target-transition gaps when target role differs.
+- Skills recommendations must fit this profile (current skills + target).
 
 Return ONLY valid JSON:
 {
@@ -130,7 +136,11 @@ Industry: ${input.industry || "n/a"}
 Experience years: ${input.experienceYears ?? "n/a"}
 Country: ${input.country || "n/a"}
 City: ${input.location || "n/a"}
-Education: ${input.education || "n/a"}`;
+Education: ${input.education || "n/a"}
+Target role: ${input.targetRole || "n/a"}
+Career goal: ${input.careerGoal || "n/a"}
+Languages (proficiency, not UI locale): ${input.languages || "n/a"}
+Responsibilities: ${input.responsibilities || "n/a"}`;
 
   return { system, user };
 }
@@ -279,6 +289,9 @@ export async function POST(req: NextRequest) {
     const languages = neutralizeInstructionish(
       parsed.data.languages || "",
     ).slice(0, 300);
+    const responsibilities = neutralizeInstructionish(
+      (parsed.data as { responsibilities?: string }).responsibilities || "",
+    ).slice(0, 2000);
 
     const locale = normalizeCareerLocale(parsed.data.locale);
     const languageName = languageNameForPrompt(locale);
@@ -350,6 +363,10 @@ export async function POST(req: NextRequest) {
         country,
         location,
         education,
+        targetRole: targetRole || undefined,
+        careerGoal: careerGoal || undefined,
+        languages: languages || undefined,
+        responsibilities: responsibilities || undefined,
       });
 
       try {
@@ -393,6 +410,7 @@ export async function POST(req: NextRequest) {
         targetRole: targetRole || undefined,
         careerGoal: careerGoal || undefined,
         languages: languages || undefined,
+        responsibilities: responsibilities || undefined,
       });
     }
 
