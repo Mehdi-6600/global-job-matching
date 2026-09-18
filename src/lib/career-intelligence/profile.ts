@@ -341,9 +341,8 @@ function detectFamily(
     return "design";
   }
   if (
-    /data engineer|data scien|ml engineer|analyst|بیگ دیتا|machine learning/.test(
-      blob
-    )
+    /\b(ai engineer|ml engineer|machine learning|data scien|llm|nlp)\b/.test(blob) ||
+    /data engineer|analyst|بیگ دیتا|هوش مصنوعی/.test(blob)
   ) {
     return "data";
   }
@@ -383,6 +382,14 @@ function detectSpecialization(
   skills: string[]
 ): string | null {
   const blob = `${norm(title)} ${skills.map(norm).join(" ")}`;
+
+  // Domain keywords from TITLE (and optional skill hints) — not from unrelated current stack
+  if (/\b(ai|ml|machine learning|deep learning|llm|data scien|nlp|computer vision|هوش مصنوعی)\b/.test(blob)) {
+    return "ai_ml";
+  }
+  if (/\b(data engineer|etl|analytics engineer)\b/.test(blob)) {
+    return "data_engineering";
+  }
 
   if (family === "software_engineering") {
     if (/full.?stack/.test(blob)) return "full_stack";
@@ -734,8 +741,13 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
   const targetRoleFamily = targetRole
     ? detectFamily(targetRole, [], industry || "")
     : null;
+  // Target specialization from target role (+ career goal text), NEVER from current skill stack
   const targetSpecialization = targetRole
-    ? detectSpecialization(targetRoleFamily || "generic", targetRole, [])
+    ? detectSpecialization(
+        targetRoleFamily || "generic",
+        `${targetRole} ${careerGoal || ""}`.trim(),
+        []
+      )
     : null;
 
   const missingSkills = computeSkillGaps(
