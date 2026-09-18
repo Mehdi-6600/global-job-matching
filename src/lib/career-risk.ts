@@ -528,6 +528,7 @@ export function heuristicCareerRisk(
     targetRole?: string;
     careerGoal?: string;
     languages?: string;
+    responsibilities?: string;
   }
 ): CareerRiskAnalysis {
   const locale = normalizeCareerLocale(extra?.locale);
@@ -544,6 +545,7 @@ export function heuristicCareerRisk(
     targetRole: extra?.targetRole,
     careerGoal: extra?.careerGoal,
     languages: extra?.languages,
+    responsibilities: extra?.responsibilities,
   });
 
   const auto = taskAutomationExposure(profile);
