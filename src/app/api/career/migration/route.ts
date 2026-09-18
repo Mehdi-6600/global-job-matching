@@ -20,15 +20,6 @@ import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 import { strictAiLimit } from "@/lib/safe-ratelimit";
 
 /* ------------------------------------------------------------------ */
-/* توابع کمکی                                                          */
-/* ------------------------------------------------------------------ */
-
-/** پاسخ ۵۰۳ برای خطاهای زیرساختی. */
-function infraUnavailable(code: string, message: string) {
-  return NextResponse.json({ error: message, code }, { status: 503 });
-}
-
-/* ------------------------------------------------------------------ */
 /* اسکیمای اعتبارسنجی                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -703,11 +694,9 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
       // اگر AI نتیجه نداد → سهمیه را آزاد کن.
       if (!result && reservedEventId && reservedUserId) {
         try {
-          await db.$transaction(async (tx) => {
-            await releaseUsageInTransaction(tx, {
-              userId: reservedUserId!,
-              usageEventId: reservedEventId!,
-            });
+          await releaseUsageInTransaction(db, {
+            userId: reservedUserId,
+            usageEventId: reservedEventId,
           });
         } catch {
           // خطای آزادسازی مانع بازگشت پاسخ نمی‌شود.
@@ -729,11 +718,9 @@ Automation risk level: ${parsed.data.riskLevel ?? "n/a"}`;
     // تلاش برای آزادسازی سهمیه در صورت خطای پیش‌بینی‌نشده.
     if (reservedEventId && reservedUserId) {
       try {
-        await db.$transaction(async (tx) => {
-          await releaseUsageInTransaction(tx, {
-            userId: reservedUserId!,
-            usageEventId: reservedEventId!,
-          });
+        await releaseUsageInTransaction(db, {
+          userId: reservedUserId,
+          usageEventId: reservedEventId,
         });
       } catch {
         // خطای آزادسازی مانع بازگشت پاسخ نمی‌شود.
