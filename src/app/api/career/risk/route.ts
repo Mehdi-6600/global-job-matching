@@ -101,7 +101,7 @@ function buildPrompts(input: {
   const system = `You are a careful career-risk analyst for the next 5–10 years.
 
 CRITICAL LANGUAGE RULE:
-- Write summary, reasons, skillsToBuild, alternatives, and industryOutlook ENTIRELY in ${input.languageName}.
+- Write summary, reasons, skillsToBuild, alternatives, and industryOutlook ENTIRELY in ${input.languageName}. Never mix English into non-English text.
 - JSON keys stay in English.
 - Write 3–5 concrete reasons grounded in THIS person's profile — not generic career advice.
 - Use responsibilities and target role when provided. Do not invent missing facts.
