@@ -757,5 +757,21 @@
     "activeJobs": "emplois actifs",
     "viewAllJobs": "Voir tous les emplois →",
     "browseCategories": "Parcourir les catégories →"
+  },
+  "Admin": {
+    "roleAll": "Tous les rôles",
+    "roleJobSeeker": "Candidat",
+    "roleEmployer": "Employeur",
+    "roleAdmin": "Admin",
+    "statusAll": "Tous les statuts",
+    "statusActive": "Actif",
+    "statusPending": "En attente",
+    "statusBanned": "Banni",
+    "statusRejected": "Rejeté",
+    "statusClosed": "Fermé",
+    "month": "Mois",
+    "usersTitle": "Utilisateurs",
+    "jobsTitle": "Offres",
+    "companiesTitle": "Entreprises"
   }
 }
