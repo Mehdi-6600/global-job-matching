@@ -381,6 +381,9 @@ export async function POST(req: NextRequest) {
         location,
         education,
         locale,
+        targetRole: targetRole || undefined,
+        careerGoal: careerGoal || undefined,
+        languages: languages || undefined,
       });
     }
 
