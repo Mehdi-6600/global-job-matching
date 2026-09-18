@@ -757,5 +757,21 @@
     "activeJobs": "شغل فعال",
     "viewAllJobs": "مشاهده همه شغل‌ها ←",
     "browseCategories": "مرور دسته‌بندی‌ها ←"
+  },
+  "Admin": {
+    "roleAll": "همه نقش‌ها",
+    "roleJobSeeker": "کارجو",
+    "roleEmployer": "کارفرما",
+    "roleAdmin": "ادمین",
+    "statusAll": "همه وضعیت‌ها",
+    "statusActive": "فعال",
+    "statusPending": "در انتظار",
+    "statusBanned": "مسدود",
+    "statusRejected": "رد شده",
+    "statusClosed": "بسته",
+    "month": "ماه",
+    "usersTitle": "کاربران",
+    "jobsTitle": "شغل‌ها",
+    "companiesTitle": "شرکت‌ها"
   }
 }
