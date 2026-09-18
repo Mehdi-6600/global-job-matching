@@ -35,6 +35,11 @@ const bodySchema = z.object({
   country: z.string().max(120).optional(),
   location: z.string().max(200).optional(),
   experienceYears: z.number().min(0).max(50).optional(),
+  skills: z.string().max(1500).optional(),
+  industry: z.string().max(120).optional(),
+  education: z.string().max(200).optional(),
+  targetRole: z.string().max(120).optional(),
+  careerGoal: z.string().max(200).optional(),
   locale: z
     .enum(["en", "fa", "ar", "es", "fr", "hi", "de"])
     .optional()
@@ -307,11 +312,15 @@ Language: ${languageName}`;
 
       result = buildOfflineRoadmap({
         jobTitle,
-        skills: skillsToBuild.join(", "),
+        skills: parsed.data.skills || skillsToBuild.join(", "),
         skillsToBuild,
         country: parsed.data.country,
         location: parsed.data.location,
         experienceYears: parsed.data.experienceYears,
+        industry: parsed.data.industry,
+        education: parsed.data.education,
+        targetRole: parsed.data.targetRole,
+        careerGoal: parsed.data.careerGoal,
         locale,
       });
     }
