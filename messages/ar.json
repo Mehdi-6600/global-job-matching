@@ -1,4 +1,4 @@
-{
+```js{
   "Nav": {
     "home": "الرئيسية",
     "jobs": "الوظائف",
@@ -757,5 +757,22 @@
     "activeJobs": "وظيفة نشطة",
     "viewAllJobs": "عرض كل الوظائف ←",
     "browseCategories": "تصفح الفئات ←"
+  },
+  "Admin": {
+    "roleAll": "كل الأدوار",
+    "roleJobSeeker": "باحث عن عمل",
+    "roleEmployer": "صاحب عمل",
+    "roleAdmin": "مسؤول",
+    "statusAll": "كل الحالات",
+    "statusActive": "نشط",
+    "statusPending": "قيد الانتظار",
+    "statusBanned": "محظور",
+    "statusRejected": "مرفوض",
+    "statusClosed": "مغلق",
+    "month": "الشهر",
+    "usersTitle": "المستخدمون",
+    "jobsTitle": "الوظائف",
+    "companiesTitle": "الشركات"
   }
 }
+```
