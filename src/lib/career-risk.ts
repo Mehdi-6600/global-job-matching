@@ -34,6 +34,9 @@ export {
 
 /**
  * بررسی می‌کند که آیا پلن کاربر از نوع پرداختی است یا خیر.
+ *
+ * پلن‌های پرداختی: `pro`, `business`, `enterprise`.
+ * هر مقدار دیگری (شامل `null` و `undefined`) → `free`.
  */
 export function isPaidPlan(plan: string | null | undefined): boolean {
   const p = String(plan || "free").toLowerCase();
@@ -42,7 +45,9 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
 
 /**
  * یک عدد را به بازه‌ی ۰ تا ۱۰۰ محدود و به نزدیک‌ترین عدد صحیح گرد می‌کند.
- * اگر عدد نامعتبر باشد، مقدار پیش‌فرض ۵۰ برگردانده می‌شود.
+ *
+ * اگر عدد نامعتبر باشد (`NaN`, `Infinity`, `-Infinity`)، مقدار پیش‌فرض
+ * `50` برگردانده می‌شود که یک امتیاز میانی محافظه‌کارانه است.
  */
 export function clampScore(n: number): number {
   if (!Number.isFinite(n)) return 50;
@@ -51,9 +56,10 @@ export function clampScore(n: number): number {
 
 /**
  * بر اساس امتیاز ریسک، سطح ریسک را تعیین می‌کند:
- * - کمتر از ۳۵ → low
- * - بین ۳۵ تا ۶۵ → medium
- * - ۶۵ و بالاتر → high
+ *
+ * - کمتر از ۳۵ → `low`
+ * - بین ۳۵ تا ۶۴ → `medium`
+ * - ۶۵ و بالاتر → `high`
  */
 export function scoreToRiskLevel(score: number): CareerRiskLevel {
   const s = clampScore(score);
@@ -64,7 +70,10 @@ export function scoreToRiskLevel(score: number): CareerRiskLevel {
 
 /**
  * لوکال درخواست را نرمال‌سازی می‌کند.
- * فقط لوکال‌های پشتیبانی‌شده پذیرفته می‌شوند؛ در غیر این صورت `en`.
+ *
+ * فقط لوکال‌های پشتیبانی‌شده پذیرفته می‌شوند:
+ * `fa`, `ar`, `es`, `fr`, `hi`, `de`.
+ * در غیر این صورت → `en`.
  */
 export function normalizeCareerLocale(
   raw: string | null | undefined
@@ -112,7 +121,9 @@ export function languageNameForPrompt(locale: CareerRiskLocale): string {
 /** نگاشت لوکال به یک رشته‌ی متنی. */
 type LocaleCopy = Record<CareerRiskLocale, string>;
 
-/** انتخاب مقدار مناسب از جدول بر اساس لوکال، با fallback به انگلیسی. */
+/**
+ * انتخاب مقدار مناسب از جدول بر اساس لوکال، با fallback به انگلیسی.
+ */
 function L(locale: CareerRiskLocale, table: LocaleCopy): string {
   return table[locale] || table.en;
 }
@@ -151,7 +162,11 @@ function defaultSkills(locale: CareerRiskLocale): string[] {
     ar: ["محو الأمية الرقمية", "حل المشكلات", "تخصص المجال"],
     fa: ["سواد دیجیتال", "حل مسئله", "تخصص حوزه‌ای"],
     hi: ["डिजिटल साक्षरता", "समस्या समाधान", "क्षेत्र विशेषज्ञता"],
-    fr: ["Culture numérique", "Résolution de problèmes", "Spécialisation métier"],
+    fr: [
+      "Culture numérique",
+      "Résolution de problèmes",
+      "Spécialisation métier",
+    ],
     de: ["Digitale Kompetenz", "Problemlösung", "Fachspezialisierung"],
   }[locale];
 }
@@ -225,7 +240,9 @@ function industryOutlookLine(
 
 /**
  * یک مقدار ناشناخته را به آرایه‌ای از رشته‌های غیرخالی تبدیل می‌کند.
- * حداکثر `max` آیتم برگردانده می‌شود.
+ *
+ * - هر آیتم به رشته تبدیل، trim و فیلتر می‌شود.
+ * - حداکثر `max` آیتم برگردانده می‌شود.
  */
 function asStringArray(value: unknown, max = 12): string[] {
   if (!Array.isArray(value)) return [];
@@ -237,7 +254,9 @@ function asStringArray(value: unknown, max = 12): string[] {
 
 /**
  * پارس سخت‌گیرانه‌ی زیرامتیازها.
- * اگر هر یک از مقادیر نامعتبر باشد، `null` برگردانده می‌شود.
+ *
+ * اگر هر یک از مقادیر نامعتبر باشد (`NaN`, خارج از بازه، غیرعدد)،
+ * `null` برگردانده می‌شود.
  */
 export function parseSubScoresStrict(
   raw: unknown
@@ -267,11 +286,13 @@ export function parseSubScoresStrict(
 function parseSubScoresSoft(raw: unknown): CareerRiskSubScores | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const o = raw as Record<string, unknown>;
-  const one = (v: unknown, fallback: number) => {
+
+  const one = (v: unknown, fallback: number): number => {
     const n = Number(v);
     if (!Number.isFinite(n) || n < 0 || n > 100) return fallback;
     return Math.round(n);
   };
+
   return {
     taskAutomation: one(o.taskAutomation, 45),
     toolMaturity: one(o.toolMaturity, 45),
@@ -282,9 +303,15 @@ function parseSubScoresSoft(raw: unknown): CareerRiskSubScores | undefined {
 
 /**
  * محاسبه‌ی امتیاز ترکیبی از زیرامتیازها.
+ *
  * فرمول:
- *   taskAutomation × (0.45 + 0.3 × toolMaturity + 0.25 × marketAdoption)
- *   + 0.1 × agenticExposure
+ * ```
+ * base = taskAutomation × (0.45 + 0.3 × toolMaturity/100 + 0.25 × marketAdoption/100)
+ * score = clampScore(base + 0.1 × agenticExposure)
+ * ```
+ *
+ * وزن اصلی روی `taskAutomation` است و `toolMaturity` و `marketAdoption`
+ * آن را تعدیل می‌کنند. `agenticExposure` وزن کمی (۰.۱) دارد.
  */
 export function compositeFromSubScores(s: CareerRiskSubScores): number {
   const base =
@@ -296,8 +323,9 @@ export function compositeFromSubScores(s: CareerRiskSubScores): number {
 /**
  * هماهنگ‌سازی امتیاز ریسک با زیرامتیازها.
  *
- * اگر اختلاف زیاد باشد، مدل ناسازگار است و امتیاز ترکیبی ترجیح داده می‌شود.
- * اختلاف متوسط نیز به سمت امتیاز ترکیبی Blend می‌شود.
+ * - اگر اختلاف `> 30` → مدل ناسازگار است؛ امتیاز ترکیبی ترجیح داده می‌شود.
+ * - اگر اختلاف `> 15` → Blend با وزن `0.4` برای raw و `0.6` برای composite.
+ * - در غیر این صورت → raw حفظ می‌شود.
  */
 export function reconcileScoreWithSubScores(
   riskScore: number,
@@ -306,12 +334,15 @@ export function reconcileScoreWithSubScores(
   const composite = compositeFromSubScores(subScores);
   const raw = clampScore(riskScore);
   const gap = Math.abs(raw - composite);
+
   if (gap > 30) return composite;
   if (gap > 15) return clampScore(Math.round(raw * 0.4 + composite * 0.6));
   return raw;
 }
 
-/** فاصله‌ی امتیاز AI از امتیاز ترکیبی زیرامتیازها (۰ = هماهنگ). */
+/**
+ * فاصله‌ی امتیاز AI از امتیاز ترکیبی زیرامتیازها (۰ = کاملاً هماهنگ).
+ */
 export function scoreSubScoreGap(
   riskScore: number,
   subScores: CareerRiskSubScores
@@ -323,9 +354,21 @@ export function scoreSubScoreGap(
  * پارس خروجی JSON مدل AI.
  *
  * استراتژی:
- * 1) ابتدا با Zod (سخت‌گیرانه) اعتبارسنجی کن.
- * 2) اگر Zod شکست خورد، با پارس نرم ادامه بده تا مدل‌های ضعیف‌تر هم قابل استفاده باشند.
- * 3) حداقل به summary معتبر و امتیاز عددی نیاز داریم.
+ * 1. حذف بلوک‌های ```json ... ```.
+ * 2. استخراج اولین `{ ... }` معتبر.
+ * 3. `JSON.parse`.
+ * 4. اعتبارسنجی سخت‌گیرانه با Zod (`careerRiskAiOutputSchema.safeParse`).
+ * 5. اگر Zod شکست خورد → استفاده از مقادیر خام `obj`.
+ * 6. استخراج `summary` (حداقل ۱۰ کاراکتر).
+ * 7. استخراج `riskScore` (باید عددی باشد).
+ * 8. پارس زیرامتیازها (اول strict، سپس soft).
+ * 9. هماهنگ‌سازی امتیاز با `reconcileScoreWithSubScores`.
+ * 10. استخراج `reasons` و `skillsToBuild`.
+ * 11. شرط رد: اگر `reasons` و `skillsToBuild` هر دو خالی باشند → `null`.
+ * 12. تنظیم `confidence` و `confidenceSource`.
+ * 13. شرط رد دوم: اگر دلایل معنادار (`≥ 24` کاراکتر) صفر و
+ *     `skillsToBuild < 2` باشد → `null`.
+ * 14. ساخت شیء نهایی با `source: "ai"`.
  */
 export function parseRiskJson(
   text: string,
@@ -394,6 +437,7 @@ export function parseRiskJson(
     const confidenceRaw = Number(
       strict.success ? strict.data.confidence : obj.confidence
     );
+
     let confidence = Number.isFinite(confidenceRaw)
       ? clampScore(confidenceRaw)
       : 55;
@@ -484,6 +528,7 @@ export function heuristicCareerRisk(
   }
 ): CareerRiskAnalysis {
   const locale = normalizeCareerLocale(extra?.locale);
+
   const profile: CareerProfile = buildCareerProfile({
     jobTitle,
     skills,
@@ -500,12 +545,13 @@ export function heuristicCareerRisk(
   const exposed = highAutomationTasks(profile);
   const resilient = resilientTasks(profile);
 
-  // Sub-scores from profile evidence (deterministic)
+  /* -------- محاسبه‌ی زیرامتیازها از شواهد پروفایل (قطعی) -------- */
   let taskAutomation = auto;
   let toolMaturity = Math.min(90, 40 + Math.round(profile.tools.length * 4));
   let marketAdoption = 40 + (profile.country || profile.location ? 8 : 0);
   let agenticExposure = Math.round(auto * 0.55 + (100 - moat) * 0.25);
 
+  /* -------- تعدیلات بر اساس خانواده‌ی شغلی -------- */
   if (profile.roleFamily === "software_engineering") {
     toolMaturity = Math.min(95, toolMaturity + 20);
     agenticExposure = Math.min(90, agenticExposure + 12);
@@ -530,6 +576,7 @@ export function heuristicCareerRisk(
     marketAdoption: clampScore(marketAdoption),
     agenticExposure: clampScore(agenticExposure),
   };
+
   const score = compositeFromSubScores(subScores);
 
   const place = [profile.location, profile.country]
@@ -538,7 +585,7 @@ export function heuristicCareerRisk(
 
   const reasons: string[] = [];
 
-  // Evidence from high-automation tasks
+  /* -------- شواهد از کارهای پرخطر -------- */
   for (const task of exposed.slice(0, 2)) {
     const label = taskLabel(task, locale);
     if (locale === "fa") {
@@ -552,7 +599,7 @@ export function heuristicCareerRisk(
     }
   }
 
-  // Evidence from resilient tasks
+  /* -------- شواهد از کارهای مقاوم -------- */
   for (const task of resilient.slice(0, 2)) {
     const label = taskLabel(task, locale);
     if (locale === "fa") {
@@ -566,6 +613,7 @@ export function heuristicCareerRisk(
     }
   }
 
+  /* -------- شواهد از تجربه و سطح -------- */
   if (profile.yearsExperience != null) {
     if (locale === "fa") {
       reasons.push(
@@ -578,6 +626,7 @@ export function heuristicCareerRisk(
     }
   }
 
+  /* -------- شواهد از مهارت‌ها -------- */
   if (profile.skills.length > 0) {
     const sample = profile.skills
       .slice(0, 4)
@@ -593,6 +642,7 @@ export function heuristicCareerRisk(
     }
   }
 
+  /* -------- شواهد از اطلاعات ناقص -------- */
   if (profile.uncertainty.length) {
     if (locale === "fa") {
       reasons.push(
@@ -605,7 +655,7 @@ export function heuristicCareerRisk(
     }
   }
 
-  // اطمینان از حداقل تعداد دلایل
+  /* -------- اطمینان از حداقل ۳ دلیل -------- */
   while (reasons.length < 3) {
     reasons.push(
       locale === "fa"
@@ -621,7 +671,7 @@ export function heuristicCareerRisk(
 
   const alternatives = defaultAlternatives(locale, profile.currentRole);
 
-  // خلاصه‌ی شرطی‌شده بر اساس پروفایل (نه یک قالب یکسان)
+  /* -------- خلاصه‌ی شرطی‌شده بر اساس پروفایل (نه یک قالب یکسان) -------- */
   const topExposed = exposed[0] ? taskLabel(exposed[0], locale) : null;
   const topResilient = resilient[0] ? taskLabel(resilient[0], locale) : null;
 
@@ -696,6 +746,14 @@ export function heuristicCareerRisk(
 /* پاسخ نهایی موفقیت                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * ساخت پاسخ نهایی موفقیت.
+ *
+ * - امتیاز و سطح ریسک را نرمال می‌کند.
+ * - مسیرهای جایگزین را فقط برای کاربران پرداختی آزاد می‌کند.
+ * - برای کاربران رایگان پیام ارتقا اضافه می‌کند.
+ * - `sharePath` را در صورت وجود `shareToken` می‌سازد.
+ */
 export function toSuccessResponse(params: {
   analysis: CareerRiskAnalysis;
   paid: boolean;
