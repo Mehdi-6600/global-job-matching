@@ -48,43 +48,43 @@ export default function EmployerApplicationsPage() {
     { label: string; color: string; icon: React.ReactNode }
   > = {
     pending: {
-      label: t("Common.loading", "Pending"),
+      label: t("Applications.statusPending", "Pending"),
       color: "text-amber-400 bg-amber-500/10",
       icon: <Clock className="w-4 h-4" />,
     },
     applied: {
-      label: t("Common.loading", "Pending"),
+      label: t("Applications.statusPending", "Pending"),
       color: "text-amber-400 bg-amber-500/10",
       icon: <Clock className="w-4 h-4" />,
     },
     viewed: {
-      label: t("Common.view", "Viewed"),
+      label: t("Applications.statusViewed", "Viewed"),
       color: "text-blue-400 bg-blue-500/10",
       icon: <Eye className="w-4 h-4" />,
     },
     interview: {
-      label: t("Nav.dashboard", "Interview"),
+      label: t("Applications.statusInterview", "Interview"),
       color: "text-cyan-400 bg-cyan-500/10",
       icon: <Users className="w-4 h-4" />,
     },
     hired: {
-      label: t("Common.success", "Hired"),
+      label: t("Applications.statusHired", "Hired"),
       color: "text-emerald-400 bg-emerald-500/10",
       icon: <CheckCircle2 className="w-4 h-4" />,
     },
     rejected: {
-      label: t("Common.cancel", "Rejected"),
+      label: t("Applications.statusRejected", "Rejected"),
       color: "text-red-400 bg-red-500/10",
       icon: <XCircle className="w-4 h-4" />,
     },
   };
 
   const STATUS_OPTIONS = [
-    { value: "pending", label: t("Common.loading", "Pending") },
-    { value: "viewed", label: t("Common.view", "Viewed") },
-    { value: "interview", label: t("Nav.dashboard", "Interview") },
-    { value: "hired", label: t("Common.success", "Hired") },
-    { value: "rejected", label: t("Common.cancel", "Rejected") },
+    { value: "pending", label: t("Applications.statusPending", "Pending") },
+    { value: "viewed", label: t("Applications.statusViewed", "Viewed") },
+    { value: "interview", label: t("Applications.statusInterview", "Interview") },
+    { value: "hired", label: t("Applications.statusHired", "Hired") },
+    { value: "rejected", label: t("Applications.statusRejected", "Rejected") },
   ] as const;
 
   useEffect(() => {
