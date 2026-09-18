@@ -1,39 +1,76 @@
-import { describe, it, expect } from "vitest";
-import { getRequestIp } from "./client-ip";
+import { describe, expect, it } from "vitest";
+import { getRequestIp } from "@/lib/client-ip";
 
-function req(headers: Record<string, string>) {
-  return new Request("http://localhost", { headers });
+function req(headers: Record<string, string>): Request {
+  return new Request("https://example.com/api", { headers });
 }
 
 describe("getRequestIp", () => {
-  it("prefers x-vercel-forwarded-for", () => {
+  it("prefers x-vercel-forwarded-for first hop", () => {
+    const ip = getRequestIp(
+      req({
+        "x-vercel-forwarded-for": "203.0.113.10, 10.0.0.1",
+        "x-forwarded-for": "198.51.100.1",
+        "x-real-ip": "192.0.2.1",
+      })
+    );
+    expect(ip).toBe("203.0.113.10");
+  });
+
+  it("uses x-real-ip when vercel header missing", () => {
     expect(
       getRequestIp(
         req({
-          "x-vercel-forwarded-for": "1.2.3.4, 5.6.7.8",
-          "x-forwarded-for": "9.9.9.9",
+          "x-real-ip": "192.0.2.55",
+          "x-forwarded-for": "198.51.100.9",
         })
       )
-    ).toBe("1.2.3.4");
+    ).toBe("192.0.2.55");
   });
 
-  it("falls back to x-real-ip", () => {
-    expect(getRequestIp(req({ "x-real-ip": "8.8.8.8" }))).toBe("8.8.8.8");
-  });
-
-  it("falls back to first x-forwarded-for hop", () => {
-    expect(getRequestIp(req({ "x-forwarded-for": "10.0.0.1, 10.0.0.2" }))).toBe(
-      "10.0.0.1"
-    );
+  it("uses first hop of x-forwarded-for as last resort", () => {
+    expect(
+      getRequestIp(req({ "x-forwarded-for": "198.51.100.2, 10.1.1.1" }))
+    ).toBe("198.51.100.2");
   });
 
   it("returns fallback when headers missing", () => {
-    expect(getRequestIp(req({}), "unknown")).toBe("unknown");
+    expect(getRequestIp(req({}))).toBe("unknown");
+    expect(getRequestIp(req({}), "0.0.0.0")).toBe("0.0.0.0");
   });
 
-  it("rejects garbage values", () => {
+  it("rejects malformed / garbage values and falls through", () => {
     expect(
-      getRequestIp(req({ "x-real-ip": "not an ip with spaces" }), "unknown")
-    ).toBe("unknown");
+      getRequestIp(
+        req({
+          "x-vercel-forwarded-for": "not-an-ip",
+          "x-real-ip": "also bad",
+          "x-forwarded-for": "203.0.113.8",
+        })
+      )
+    ).toBe("203.0.113.8");
+  });
+
+  it("trims whitespace on hops", () => {
+    expect(
+      getRequestIp(req({ "x-forwarded-for": "  203.0.113.20  , 10.0.0.1" }))
+    ).toBe("203.0.113.20");
+  });
+
+  it("accepts plausible IPv6 shape", () => {
+    expect(getRequestIp(req({ "x-real-ip": "2001:db8::1" }))).toBe(
+      "2001:db8::1"
+    );
+  });
+
+  it("rejects unknown/null tokens", () => {
+    expect(
+      getRequestIp(
+        req({
+          "x-real-ip": "unknown",
+          "x-forwarded-for": "203.0.113.30",
+        })
+      )
+    ).toBe("203.0.113.30");
   });
 });
