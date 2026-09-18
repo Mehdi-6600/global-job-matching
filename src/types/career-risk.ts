@@ -125,6 +125,7 @@ export const careerRiskRequestSchema = z.object({
   targetRole: optionalTrimmedString(120),
   careerGoal: optionalTrimmedString(200),
   languages: optionalTrimmedString(300),
+  responsibilities: optionalTrimmedString(2000),
   locale: z.enum(CAREER_RISK_LOCALES).optional().default("en"),
 });
 
