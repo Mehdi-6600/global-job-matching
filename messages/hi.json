@@ -649,10 +649,10 @@
     "readMore": "और पढ़ें",
     "backToBlog": "ब्लॉग पर वापस",
     "publishedOn": "प्रकाशित",
-    "back": "ब्लॉग पर वापस"
+    "back": "ब्लॉग पर वापस":"
   },
   "Terms": {
-    "title": "सेवा की शर्तें",
+    " "title": "सेवा कीन शर्तें",
     "lastUpdated": "अंतिम अपडेट",
     "intro": "Global Job Matching का उपयोग करके, आप इन शर्तों से सहमत होते हैं। कृपया इन्हें ध्यान से पढ़ें।",
     "s1Title": "1. शर्तों की स्वीकृति",
@@ -699,7 +699,7 @@
     "company": "कंपनी",
     "location": "स्थान",
     "salary": "वेतन",
-    "type": "नौकरी का प्रकार",
+    "typeौकरी का प्रकार",
     "posted": "पोस्ट किया",
     "description": "विवरण",
     "requirements": "आवश्यकताएँ",
@@ -757,5 +757,21 @@
     "activeJobs": "सक्रिय नौकरियाँ",
     "viewAllJobs": "सभी नौकरियाँ देखें →",
     "browseCategories": "श्रेणियाँ ब्राउज़ करें →"
+  },
+  "Admin": {
+    "roleAll": "सभी भूमिकाएँ",
+    "roleJobSeeker": "नौकरी खोजने वाला",
+    "roleEmployer": "नियोक्ता",
+    "roleAdmin": "एडमिन",
+    "statusAll": "सभी स्थिति",
+    "statusActive": "सक्रिय",
+    "statusPending": "लंबित",
+    "statusBanned": "प्रतिबंधित",
+    "statusRejected": "अस्वीकृत",
+    "statusClosed": "बंद",
+    "month": "महीना",
+    "usersTitle": "उपयोगकर्ता",
+    "jobsTitle": "नौकरियाँ",
+    "companiesTitle": "कंपनियाँ"
   }
 }
