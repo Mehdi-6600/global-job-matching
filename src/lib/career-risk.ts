@@ -141,8 +141,6 @@ function T(
   return s;
 }
 
-
-
 /** افق زمانی پیش‌فرض به‌ازای هر لوکال. */
 const TIME_HORIZON: LocaleCopy = {
   en: "5–10 years",
@@ -244,11 +242,6 @@ function defaultAlternatives(
   const pack = tables[f] || tables.generic;
   return pack[locale] || pack.en;
 }
-
-
-/** خط چشم‌انداز صنعت + مکان به‌ازای هر لوکال. */
-function industryOutlookLine
-
 
 /** خط چشم‌انداز صنعت + مکان به‌ازای هر لوکال. */
 function industryOutlookLine(
@@ -765,7 +758,7 @@ export function heuristicCareerRisk(
     );
   }
 
-    while (reasons.length < 3) {
+  while (reasons.length < 3) {
     reasons.push(
       T(
         locale,
@@ -788,12 +781,16 @@ export function heuristicCareerRisk(
       ? profile.missingSkills
       : defaultSkills(locale);
 
-  const alternatives = defaultAlternatives(locale, profile.currentRole, profile.roleFamily);
+  const alternatives = defaultAlternatives(
+    locale,
+    profile.currentRole,
+    profile.roleFamily
+  );
 
   const topExposed = exposed[0] ? taskLabel(exposed[0], locale) : null;
   const topResilient = resilient[0] ? taskLabel(resilient[0], locale) : null;
 
-  let summary = T(
+  const summary = T(
     locale,
     {
       en: `Offline analysis for «{role}»{place}{spec}. {exposed}{resilient}{years}{skills}Composite score {score}/100 comes from a task/tool model — not a one-size template. This is an offline estimate, not specialist advice.`,
@@ -913,7 +910,7 @@ export function heuristicCareerRisk(
     }
   );
 
-    return {
+  return {
     jobTitle: profile.currentRole.slice(0, 120),
     riskScore: score,
     riskLevel: scoreToRiskLevel(score),
