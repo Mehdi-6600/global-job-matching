@@ -616,7 +616,6 @@ function notesLine(
 /* تابع اصلی                                                           */
 /* ------------------------------------------------------------------ */
 
-
 function personalFitScore(
   profile: ReturnType<typeof buildCareerProfile>,
   destCountry: string
