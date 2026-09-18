@@ -616,16 +616,37 @@ const FAMILY_GROWTH_SKILLS: Record<RoleFamily, string[]> = {
   ],
 };
 
+
+/** Finer growth targets by specialization — reduces identical gaps for whole families */
+const SPEC_GROWTH: Record<string, string[]> = {
+  frontend: ["Accessibility", "Design systems collaboration", "Web performance"],
+  backend: ["API reliability", "Data modeling", "Observability"],
+  full_stack: ["End-to-end ownership", "System design", "Product sense"],
+  devops: ["Infrastructure as code", "Incident response", "Security hardening"],
+  ai_ml: ["Python for ML", "Experiment tracking", "Model evaluation"],
+  data_engineering: ["Pipeline reliability", "SQL depth", "Data quality tests"],
+  ux_ui: ["User research synthesis", "Interaction design", "Accessibility"],
+  tax: ["Tax research depth", "Advisory communication", "Automation of routine filings"],
+  audit: ["Controls design", "Exception investigation", "Stakeholder reporting"],
+  primary: ["Differentiated instruction", "Classroom analytics", "Parent communication"],
+  edtech: ["Learning product design", "Content systems", "Facilitation online"],
+};
+
 /** Target-role gaps: growth skills for target family not present in current skills */
 function computeSkillGaps(
   currentSkills: string[],
   currentFamily: RoleFamily,
-  targetFamily: RoleFamily | null
+  targetFamily: RoleFamily | null,
+  targetSpec: string | null,
+  currentSpec: string | null
 ): string[] {
   const have = new Set(currentSkills.map(canonicalSkill));
   const family = targetFamily || currentFamily;
-  const growth = FAMILY_GROWTH_SKILLS[family] || FAMILY_GROWTH_SKILLS.generic;
-  // Exact canonical match only — no substring (Java ≠ JavaScript)
+  const spec = targetSpec || currentSpec;
+  const fromSpec = (spec && SPEC_GROWTH[spec]) || [];
+  const fromFamily = FAMILY_GROWTH_SKILLS[family] || FAMILY_GROWTH_SKILLS.generic;
+  // Prefer specialization-specific gaps first (more relevant than generic family list)
+  const growth = [...fromSpec, ...fromFamily.filter((g) => !fromSpec.includes(g))];
   return growth.filter((g) => !have.has(canonicalSkill(g)));
 }
 
@@ -753,7 +774,9 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
   const missingSkills = computeSkillGaps(
     skills,
     roleFamily,
-    targetRoleFamily
+    targetRoleFamily,
+    targetSpecialization,
+    specialization
   ).slice(0, 8);
 
   const transferableSkills = Array.from(
@@ -844,7 +867,25 @@ export function resilientTasks(profile: CareerProfile): TaskExposure[] {
   );
 }
 
-export function taskLabel(t: TaskExposure, _locale?: CareerRiskLocale): string {
+const TASK_LABEL_I18N: Record<string, Partial<Record<CareerRiskLocale, string>>> = {
+  impl: { fa: "پیاده‌سازی قابلیت / کدنویسی", ar: "تنفيذ الميزات / البرمجة", es: "Implementación de funciones", fr: "Implémentation de fonctionnalités", de: "Feature-Implementierung", hi: "फीचर इम्प्लीमेंटेशन" },
+  boilerplate: { fa: "کارهای تکراری و CRUD", ar: "أعمال متكررة وCRUD", es: "Trabajo repetitivo y CRUD", fr: "Tâches répétitives et CRUD", de: "Boilerplate und CRUD", hi: "दोहराव और CRUD" },
+  design: { fa: "طراحی سیستم / API", ar: "تصميم النظام / API", es: "Diseño de sistema / API", fr: "Conception système / API", de: "System-/API-Design", hi: "सिस्टम / API डिज़ाइन" },
+  review: { fa: "بازبینی کد و منتورینگ", ar: "مراجعة الكود والإرشاد", es: "Code review y mentoring", fr: "Revue de code et mentorat", de: "Code-Review und Mentoring", hi: "कोड रिव्यू और मेंटरिंग" },
+  incident: { fa: "حوادث پروداکشن", ar: "حوادث الإنتاج", es: "Incidentes de producción", fr: "Incidents de production", de: "Produktionsvorfälle", hi: "प्रोडक्शन घटनाएँ" },
+  entry: { fa: "ورود داده / فاکتور", ar: "إدخال بيانات / فواتير", es: "Entrada de datos / facturas", fr: "Saisie de données / factures", de: "Dateneingabe / Rechnungen", hi: "डेटा एंट्री / इनवॉइस" },
+  recon: { fa: "مغایرت‌گیری", ar: "المطابقة", es: "Conciliación", fr: "Rapprochement", de: "Abstimmung", hi: "सुलह" },
+  report: { fa: "بسته گزارش مالی", ar: "حزم التقارير المالية", es: "Paquetes de reporting financiero", fr: "Reporting financier", de: "Finanzreporting", hi: "वित्तीय रिपोर्टिंग" },
+  lesson: { fa: "تدریس و تسهیل کلاس", ar: "تقديم الدروس", es: "Impartición de clases", fr: "Animation de cours", de: "Unterrichtsführung", hi: "पाठ वितरण" },
+  hands: { fa: "مراقبت مستقیم از بیمار", ar: "رعاية مباشرة للمريض", es: "Atención directa al paciente", fr: "Soins directs au patient", de: "Direkte Patientenversorgung", hi: "प्रत्यक्ष रोगी देखभाल" },
+  people: { fa: "رهبری افراد", ar: "قيادة الأشخاص", es: "Liderazgo de personas", fr: "Leadership d'équipe", de: "Personalführung", hi: "लोगों का नेतृत्व" },
+};
+
+export function taskLabel(t: TaskExposure, locale?: CareerRiskLocale): string {
+  if (locale && locale !== "en") {
+    const mapped = TASK_LABEL_I18N[t.id]?.[locale];
+    if (mapped) return mapped;
+  }
   return t.label;
 }
 
