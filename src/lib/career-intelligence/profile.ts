@@ -60,6 +60,7 @@ export type CareerProfile = {
   targetRoleFamily: RoleFamily | null;
   targetSpecialization: string | null;
   careerGoal: string | null;
+  responsibilities: string[];
   tasks: TaskExposure[];
   transferableSkills: string[];
   missingSkills: string[];
@@ -382,7 +383,6 @@ function detectSpecialization(
   skills: string[]
 ): string | null {
   const blob = `${norm(title)} ${skills.map(norm).join(" ")}`;
-  const cans = skills.map(canonicalSkill);
 
   if (family === "software_engineering") {
     if (/full.?stack/.test(blob)) return "full_stack";
@@ -618,20 +618,68 @@ function computeSkillGaps(
   const have = new Set(currentSkills.map(canonicalSkill));
   const family = targetFamily || currentFamily;
   const growth = FAMILY_GROWTH_SKILLS[family] || FAMILY_GROWTH_SKILLS.generic;
-  return growth.filter((g) => {
-    const cg = canonicalSkill(g);
-    // Avoid false match: java vs javascript
-    for (const h of have) {
-      if (h === cg) return false;
-      if (h.length >= 4 && cg.length >= 4 && (h.includes(cg) || cg.includes(h))) {
-        // block java ⊂ javascript style
-        if (h === "java" && cg.startsWith("javascript")) continue;
-        if (cg === "java" && h.startsWith("javascript")) continue;
-        if (h === cg) return false;
-      }
+  // Exact canonical match only — no substring (Java ≠ JavaScript)
+  return growth.filter((g) => !have.has(canonicalSkill(g)));
+}
+
+/** Extract task signals from free-text responsibilities */
+function tasksFromResponsibilities(raw?: string | null): TaskExposure[] {
+  if (!raw?.trim()) return [];
+  const lines = raw
+    .split(/[\n;•\-]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 8)
+    .slice(0, 12);
+  const out: TaskExposure[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const n = norm(line);
+    let automation = 40;
+    let judgment = 50;
+    let interpersonal = 40;
+    let regulatory = 20;
+    if (/report|repetitive|data entry|گزارش تکراری|ورود داده|copy.?paste/.test(n)) {
+      automation = 85;
+      judgment = 20;
     }
-    return !have.has(cg);
-  });
+    if (/architect|design system|طراحی معماری|system design/.test(n)) {
+      automation = 30;
+      judgment = 85;
+    }
+    if (/code review|review|بازبینی/.test(n)) {
+      automation = 35;
+      judgment = 75;
+      interpersonal = 60;
+    }
+    if (/manage|leadership|team|مدیریت|رهبری|mentoring/.test(n)) {
+      automation = 20;
+      judgment = 80;
+      interpersonal = 90;
+    }
+    if (/client|stakeholder|parent|بیمار|مذاکره|customer/.test(n)) {
+      interpersonal = 90;
+      judgment = 70;
+      automation = 25;
+    }
+    if (/compliance|safety|protocol|regulatory|مقررات/.test(n)) {
+      regulatory = 85;
+      judgment = 75;
+      automation = 30;
+    }
+    if (/performance|optim|بهینه/.test(n)) {
+      judgment = 70;
+      automation = 40;
+    }
+    out.push({
+      id: `resp_${i}`,
+      label: line.slice(0, 120),
+      automation,
+      judgment,
+      interpersonal,
+      regulatory,
+    });
+  }
+  return out;
 }
 
 export function buildCareerProfile(input: ProfileInput): CareerProfile {
@@ -665,15 +713,29 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
   const roleFamily = detectFamily(currentRole, skills, industry || "");
   const specialization = detectSpecialization(roleFamily, currentRole, skills);
   const seniority = detectSeniority(currentRole, years);
-  const tasks = tasksForFamily(roleFamily, specialization);
+  const familyTasks = tasksForFamily(roleFamily, specialization);
+  const respTasks = tasksFromResponsibilities(input.responsibilities);
+  // Actual responsibilities override/enrich family defaults
+  const tasks =
+    respTasks.length > 0
+      ? [...respTasks, ...familyTasks.filter((ft) => !respTasks.some((r) => r.id === ft.id))].slice(0, 10)
+      : familyTasks;
+
+  const responsibilityLines = respTasks.map((t) => t.label);
+  if (responsibilityLines.length === 0 && input.responsibilities?.trim()) {
+    uncertainty.push("responsibilities_unparsed");
+  } else if (!input.responsibilities?.trim()) {
+    uncertainty.push("missing_responsibilities");
+  }
 
   const classified = classifySkills(skills);
 
+  // Target family/spec from TARGET ROLE text only — current skills must not rewrite target
   const targetRoleFamily = targetRole
-    ? detectFamily(targetRole, skills, industry || "")
+    ? detectFamily(targetRole, [], industry || "")
     : null;
   const targetSpecialization = targetRole
-    ? detectSpecialization(targetRoleFamily || roleFamily, targetRole, skills)
+    ? detectSpecialization(targetRoleFamily || "generic", targetRole, [])
     : null;
 
   const missingSkills = computeSkillGaps(
@@ -725,6 +787,7 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
     targetRoleFamily,
     targetSpecialization,
     careerGoal,
+    responsibilities: responsibilityLines || [],
     tasks,
     transferableSkills,
     missingSkills,
