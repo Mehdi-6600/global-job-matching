@@ -757,5 +757,21 @@
     "activeJobs": "active jobs",
     "viewAllJobs": "View all jobs →",
     "browseCategories": "Browse categories →"
+  },
+  "Admin": {
+    "roleAll": "All roles",
+    "roleJobSeeker": "Job Seeker",
+    "roleEmployer": "Employer",
+    "roleAdmin": "Admin",
+    "statusAll": "All status",
+    "statusActive": "Active",
+    "statusPending": "Pending",
+    "statusBanned": "Banned",
+    "statusRejected": "Rejected",
+    "statusClosed": "Closed",
+    "month": "Month",
+    "usersTitle": "Users",
+    "jobsTitle": "Jobs",
+    "companiesTitle": "Companies"
   }
 }
