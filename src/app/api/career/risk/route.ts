@@ -270,6 +270,15 @@ export async function POST(req: NextRequest) {
       parsed.data.education || "",
     ).slice(0, MAX_EDUCATION);
     const experienceYears = parsed.data.experienceYears;
+    const targetRole = neutralizeInstructionish(
+      parsed.data.targetRole || "",
+    ).slice(0, 120);
+    const careerGoal = neutralizeInstructionish(
+      parsed.data.careerGoal || "",
+    ).slice(0, 200);
+    const languages = neutralizeInstructionish(
+      parsed.data.languages || "",
+    ).slice(0, 300);
 
     const locale = normalizeCareerLocale(parsed.data.locale);
     const languageName = languageNameForPrompt(locale);
