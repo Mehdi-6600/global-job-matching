@@ -616,6 +616,41 @@ function notesLine(
 /* تابع اصلی                                                           */
 /* ------------------------------------------------------------------ */
 
+
+function personalFitScore(
+  profile: ReturnType<typeof buildCareerProfile>,
+  destCountry: string
+): number {
+  let score = 40;
+  // specialization / target
+  if (profile.targetRole) score += 12;
+  if (profile.specialization) score += 6;
+  if (profile.targetSpecialization) score += 8;
+  // experience
+  const y = profile.yearsExperience ?? 0;
+  if (y >= 8) score += 10;
+  else if (y >= 4) score += 6;
+  else if (y > 0 && y < 2) score -= 4;
+  // skills density
+  score += Math.min(12, profile.skills.length * 2);
+  // languages explicit
+  const langs = profile.languages.map((l) => l.toLowerCase()).join(" ");
+  if (destCountry === "Germany" && /german|deutsch|آلمانی/.test(langs)) score += 14;
+  if (destCountry === "Canada" && /english|français|french|انگلیسی|فرانسوی/.test(langs))
+    score += 10;
+  if (destCountry === "Netherlands" && /english|dutch|انگلیسی/.test(langs)) score += 8;
+  if (destCountry === "UAE" && /english|arabic|انگلیسی|عربی/.test(langs)) score += 8;
+  // responsibilities leadership signal
+  const resp = profile.responsibilities.join(" ").toLowerCase();
+  if (/manage|leadership|team|مدیریت|رهبری/.test(resp)) score += 6;
+  if (/architect|architecture|معماری/.test(resp)) score += 4;
+  // frontend vs backend soft preference (deterministic tie-break)
+  if (profile.specialization === "frontend" && destCountry === "Netherlands") score += 3;
+  if (profile.specialization === "backend" && destCountry === "Germany") score += 3;
+  if ((profile.yearsExperience ?? 0) < 2 && destCountry === "Germany") score -= 5;
+  return score;
+}
+
 export function buildOfflineMigration(input: ProfileInput): OfflineMigration {
   const locale = normalizeCareerLocale(input.locale);
   const profile = buildCareerProfile(input);
