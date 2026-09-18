@@ -13,10 +13,6 @@ import {
   type RoleFamily,
 } from "@/lib/career-intelligence/profile";
 
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
-
 export type OfflineRoadmap = {
   title: string;
   weeks: Array<{ week: string; focus: string; actions: string[] }>;
@@ -24,58 +20,79 @@ export type OfflineRoadmap = {
   source: "heuristic";
 };
 
-export type OfflineRoadmapInput = ProfileInput & {
-  skillsToBuild?: string[] | null;
-};
-
-/* -------------------------------------------------------------------------- */
-/*                            Locale Helper Tables                            */
-/* -------------------------------------------------------------------------- */
-
-const FAMILY_LABEL_FA: Record<RoleFamily, string> = {
-  software_engineering: "مهندسی نرم‌افزار",
-  data: "داده و تحلیل",
-  design: "طراحی",
-  education: "آموزش",
-  healthcare: "سلامت و درمان",
-  accounting_finance: "مالی و حسابداری",
-  trades: "مشاغل فنی و صنعتی",
-  operations_clerical: "عملیات و امور اداری",
-  sales_marketing: "فروش و بازاریابی",
-  management: "مدیریت",
-  generic: "عمومی",
-};
-
-const FAMILY_LABEL_EN: Record<RoleFamily, string> = {
-  software_engineering: "software engineering",
-  data: "data & analytics",
-  design: "design",
-  education: "education",
-  healthcare: "healthcare",
-  accounting_finance: "accounting & finance",
-  trades: "skilled trades",
-  operations_clerical: "operations & clerical",
-  sales_marketing: "sales & marketing",
-  management: "management",
-  generic: "general",
+const FAMILY_RESOURCES_EN: Record<RoleFamily, string[]> = {
+  software_engineering: [
+    "Deep software engineering resources (system design, architecture, testing)",
+    "Contribute to one real open-source or work project",
+    "Code review feedback from a senior engineer",
+  ],
+  data: [
+    "Data resources (modeling, experimentation, storytelling)",
+    "Analytical project on real organizational data",
+    "Feedback from a senior analyst or data scientist",
+  ],
+  design: [
+    "Product design and user research resources",
+    "Redesign one real flow in Figma",
+    "Critique session with a senior designer or UX mentor",
+  ],
+  education: [
+    "Teaching and learning-design resources",
+    "Run one differentiated lesson in a real classroom",
+    "Feedback from an experienced teacher or coach",
+  ],
+  healthcare: [
+    "Clinical resources and current protocols",
+    "High-quality clinical documentation practice",
+    "Feedback from a senior clinical colleague",
+  ],
+  accounting_finance: [
+    "Finance/accounting practice resources (reporting, controls)",
+    "Automate one real reporting workflow",
+    "Feedback from a senior accountant or FP&A mentor",
+  ],
+  trades: [
+    "Trade-specific safety and code updates",
+    "Document one diagnostic case end-to-end",
+    "Mentorship from an experienced tradesperson",
+  ],
+  operations_clerical: [
+    "Process and no-code automation resources",
+    "Improve one repetitive office workflow",
+    "Feedback from an operations lead",
+  ],
+  sales_marketing: [
+    "Consultative selling / marketing resources",
+    "Run one measurable campaign or pipeline experiment",
+    "Feedback from a senior commercial peer",
+  ],
+  management: [
+    "People-leadership and prioritization resources",
+    "Practice one coaching conversation with structure",
+    "Feedback from a trusted leadership mentor",
+  ],
+  generic: [
+    "Role-family learning resources",
+    "Hands-on project on real work artifacts",
+    "Feedback from one peer or mentor in the same field",
+  ],
 };
 
 const FAMILY_RESOURCES_FA: Record<RoleFamily, string[]> = {
   software_engineering: [
     "منابع عمیق مهندسی نرم‌افزار (طراحی سیستم، معماری، تست)",
-    "مشارکت در یک پروژهٔ open-source واقعی",
+    "مشارکت در یک پروژه open-source یا کاری واقعی",
     "بازخورد کد از یک مهندس ارشد",
   ],
   data: [
-    "منابع تخصصی داده (مدل‌سازی، آزمایش، روایت‌گری داده)",
-    "پروژهٔ تحلیلی روی دادهٔ واقعی سازمانی",
-    "بازخورد از یک تحلیلگر ارشد یا)
- دانشمند داده",
+    "منابع تخصصی داده (مدل‌سازی، آزمایش، روایت داده)",
+    "پروژه تحلیلی روی داده واقعی سازمانی",
+    "بازخورد از یک تحلیلگر ارشد یا دانشمند داده",
   ],
-     design: [
-    "منابع . طراحی محصول و پژوهش کاربر",
-    "بازطراحیslice یک ج(ریان واقعی در Figma",
-    "0نقد طرح از یک طراح ارشد یا منتور UX",
+  design: [
+    "منابع طراحی محصول و پژوهش کاربر",
+    "بازطراحی یک جریان واقعی در Figma",
+    "نقد طرح از یک طراح ارشد یا منتور UX",
   ],
   education: [
     "منابع آموزش و طراحی یادگیری",
@@ -88,230 +105,118 @@ const FAMILY_RESOURCES_FA: Record<RoleFamily, string[]> = {
     "بازخورد از یک همکار بالینی ارشد",
   ],
   accounting_finance: [
-    "منابع مالی و گزارش‌گری (IFRS/GAAP، مالیات)",
-    "پروژهٔ واقعی گزارش‌گری یا تحلیل مالی",
-    "بازخورد از یک حسابدار ارشد یا مدیر مالی",
+    "منابع مالی/حسابداری (گزارش‌گری، کنترل‌ها)",
+    "اتوماسیون یک جریان گزارش‌دهی واقعی",
+    "بازخورد از حسابدار ارشد یا منتور FP&A",
   ],
   trades: [
-    "منابع فنی و آیین‌نامه‌های ایمنی به‌روز",
-    "کار میدانی واقعی روی یک پروژهٔ کوچک",
-    "بازخورد از یک استادکار باتجربه",
+    "به‌روزرسانی ایمنی و مقررات تخصصی",
+    "مستندسازی یک مورد عیب‌یابی از ابتدا تا انتها",
+    "منتورشیپ از فرد باتجربه هم‌حرفه",
   ],
   operations_clerical: [
-    "منابع اتوماسیون فرآیند و ابزارهای no-code",
-    "بهینه‌سازی یک فرآیند اداری واقعی",
-    "بازخورد از یک هماهنگ‌کننده یا سرپرست عملیات",
+    "منابع فرایند و اتوماسیون بدون‌کد",
+    "بهبود یک جریان تکراری اداری",
+    "بازخورد از مسئول عملیات",
   ],
   sales_marketing: [
-    "منابع فروش مشورتی و تحلیل قیف",
-    "کمپین واقعی کوچک با سنجش نتیجه",
-    "بازخورد از یک مدیر فروش یا بازاریابی",
+    "منابع فروش مشاوره‌ای / بازاریابی",
+    "اجرای یک کمپین یا آزمایش قیف قابل اندازه‌گیری",
+    "بازخورد از همکار ارشد تجاری",
   ],
   management: [
-    "منابع رهبری و مربی‌گری",
-    "تمرین گفت‌وگوی مربی‌گری با یک همکار",
-    "بازخورد ۳۶۰ درجه از تیم",
+    "منابع رهبری افراد و اولویت‌بندی",
+    "تمرین یک گفت‌وگوی کوچینگ ساخت‌یافته",
+    "بازخورد از منتور رهبری مورد اعتماد",
   ],
   generic: [
-    "منابع تخصصی مرتبط با حوزهٔ کاری شما",
-    "پروژهٔ عملی روی کار واقعی (نه فقط گواهی)",
+    "منابع مرتبط با خانواده شغلی",
+    "پروژه عملی روی کار واقعی",
     "بازخورد از یک همکار یا منتور هم‌حوزه",
   ],
 };
 
-const FAMILY_RESOURCES_EN: Record<RoleFamily, string[]> = {
-  software_engineering: [
-    "Deep software engineering resources (system design, architecture, testing)",
-    "Contribute to a real open-source project",
-    "Code feedback from a senior engineer",
-  ],
-  data: [
-    "Data-specific resources (modeling, experimentation, storytelling)",
-    "Analytics project on real organizational data",
-    "Feedback from a senior analyst or data scientist",
-  ],
-  design: [
-    "Product design & user research resources",
-    "Redesign a real user flow in Figma",
-    "Critique from a senior designer or UX mentor",
-  ],
-  education: [
-    "Learning design & pedagogy resources",
-    "Run a differentiated lesson in a real classroom",
-    "Feedback from an experienced teacher or coach",
-  ],
-  healthcare: [
-    "Clinical & up-to-date protocol resources",
-    "Practice high-quality clinical documentation",
-    "Feedback from a senior clinical peer",
-  ],
-  accounting_finance: [
-    "Finance & reporting resources (IFRS/GAAP, tax)",
-    "Real reporting or financial analysis project",
-    "Feedback from a senior accountant or finance manager",
-  ],
-  trades: [
-    "Up-to-date technical & safety code resources",
-    "Real field work on a small project",
-    "Feedback from an experienced tradesperson",
-  ],
-  operations_clerical: [
-    "Process automation & no-code tool resources",
-    "Optimize a real administrative process",
-    "Feedback from an operations coordinator or supervisor",
-  ],
-  sales_marketing: [
-    "Consultative selling & funnel analytics resources",
-    "Small real campaign with measured outcome",
-    "Feedback from a sales or marketing manager",
-  ],
-  management: [
-    "Leadership & coaching resources",
-    "Practice a coaching conversation with a peer",
-    "360° feedback from your team",
-  ],
-  generic: [
-    "Domain-specific resources relevant to your field",
-    "Hands-on project on real work artifacts",
-    "Feedback from one peer/mentor in the same field",
-  ],
-};
-
-/* -------------------------------------------------------------------------- */
-/*                              Helper Utilities                              */
-/* -------------------------------------------------------------------------- */
-
-function sanitizeSkillsToBuild(raw?: string[] | null): string[] {
-  if (!raw || raw.length === 0) return [];
-  return raw
-    .map((s) => (typeof s === "string" ? s.trim() : ""))
-    .filter((s) => s.length >= 2, 6);
-}
-
-function pickTopExposure(profile: ReturnType<typeof buildCareerProfile>) {
-  const exposed = highAutomationTasks(profile);
-  if (exposed.length === 0) return null;
-  // Highest automation first; stable tie-break by id.
-  return [...exposed].sort((a, b) =>
-    b.automation - a.automation || a.id.localeCompare(b.id)
-  )[0];
-}
-
-function joinNatural(items: string[], fa: boolean): string {
-  const list = items.filter(Boolean);
-  if (list.length === 0) return "";
-  if (list.length === 1) return list[0];
-  const conj = fa ? " و " : " and ";
-  if (list.length === 2) return `${list[0]}${conj}${list[1]}`;
-  return `${list.slice(0, -1).join(fa ? "، " : ", ")}${conj}${list[list.length - 1]}`;
-}
-
-/* -------------------------------------------------------------------------- */
-/*                              Main Builder                                  */
-/* -------------------------------------------------------------------------- */
-
 export function buildOfflineRoadmap(
-  input: OfflineRoadmapInput
+  input: ProfileInput & { skillsToBuild?: string[] }
 ): OfflineRoadmap {
-  const locale: CareerRiskLocale = normalizeCareerLocale(input.locale);
-  const fa = locale === "fa";
-
+  const locale = normalizeCareerLocale(input.locale);
   const profile = buildCareerProfile(input);
-  const topExposure = pickTopExposure(profile);
-
-  /* ------------------------------ Skill Gaps ----------------------------- */
-  const providedGaps = sanitizeSkillsToBuild(input.skillsToBuild);
+  const fa = locale === "fa";
+  const exposed = highAutomationTasks(profile);
   const gaps =
-    providedGaps.length > 0
-      ? providedGaps
+    input.skillsToBuild && input.skillsToBuild.length > 0
+      ? input.skillsToBuild.slice(0, 6)
       : profile.missingSkills.slice(0, 6);
-
   const g1 = gaps[0] || (fa ? "مهارت تخصصی مکمل" : "adjacent specialist skill");
   const g2 = gaps[1] || (fa ? "اتوماسیون جریان‌کار" : "workflow automation");
   const g3 = gaps[2] || (fa ? "مستندسازی نتایج" : "outcome documentation");
-
-  const exposeLabel = topExposure
-    ? taskLabel(topExposure, locale)
+  const exposeLabel = exposed[0]
+    ? taskLabel(exposed[0], locale)
     : fa
       ? "وظایف تکراری"
       : "repetitive tasks";
 
-  const familyFa = FAMILY_LABEL_FA[profile.roleFamily] ?? FAMILY_LABEL_FA.generic;
-  const familyEn = FAMILY_LABEL_EN[profile.roleFamily] ?? FAMILY_LABEL_EN.generic;
-
-  const primarySkill = profile.skills[0] || null;
-  const gapsTwo = joinNatural(gaps.slice(0, 2), fa);
-
-  /* -------------------------------- Title -------------------------------- */
   const title = fa
     ? `نقشه راه ۹۰روزه برای ${profile.currentRole}`
     : `90-day roadmap for ${profile.currentRole}`;
 
-  /* -------------------------------- Weeks -------------------------------- */
-  const week1: OfflineRoadmap["weeks"][number] = {
-    week: fa ? "روزهای ۱–۳۰" : "Days 1–30",
-    focus: fa ? `پایه: ${g1}` : `Foundation: ${g1}`,
-    actions: [
-      fa
-        ? `شکاف «${g1}» را نسبت به نقش فعلی «${profile.currentRole}» در یک صفحه بنویسید`
-        : `Write a one-pager mapping gap «${g1}» to your current role «${profile.currentRole}»`,
-      fa
-        ? `برای وظیفهٔ پرریسک «${exposeLabel}» یک نمونهٔ قبل/بعد با معیار زمان و خطا ثبت کنید`
-        : `Baseline metrics (time/errors) for high-exposure task «${exposeLabel}»`,
-      fa
-        ? `۲ منبع آموزشی مشخص برای ${g1} انتخاب و هفته‌ای ۳ جلسه تمرین کنید`
-        : `Pick 2 concrete learning resources for ${g1}; practice 3 sessions/week`,
-    ],
-  };
-
-  const week2: OfflineRoadmap["weeks"][number] = {
-    week: fa ? "روزهای ۳۱–۶۰" : "Days 31–60",
-    focus: fa ? `کاربردی‌سازی: ${g2}` : `Apply: ${g2}`,
-    actions: [
-      fa
-        ? `یک جریان‌کار کوچک بسازید که بخشی از «${exposeLabel}» را نیمه‌خودکار کند`
-        : `Ship a small workflow that partially automates «${exposeLabel}»`,
-      fa
-        ? `مهارت ${g2} را روی داده/پروژهٔ واقعی خودتان اعمال کنید (نه فقط دوره)`
-        : `Apply ${g2} on your real work artifacts — not only a course`,
-      primarySkill
-        ? fa
-          ? `مهارت فعلی «${primarySkill}» را با ${g2} ترکیب و در نمونه‌کار نشان دهید`
-          : `Combine existing skill «${primarySkill}» with ${g2} in a portfolio piece`
-        : fa
-          ? `یک نمونه‌کار کوتاه از بهبود فرآیند تهیه کنید`
-          : `Produce a short before/after process improvement artifact`,
-    ],
-  };
-
-  const week3: OfflineRoadmap["weeks"][number] = {
-    week: fa ? "روزهای ۶۱–۹۰" : "Days 61–90",
-    focus: fa ? `آمادگی بازار کار و ${g3}` : `Market readiness & ${g3}`,
-    actions: [
-      fa
-        ? gapsTwo
-          ? `رزومه را حول نتایج «${exposeLabel}» و مهارت‌های ${gapsTwo} بازنویسی کنید`
-          : `رزومه را حول نتایج «${exposeLabel}» بازنویسی کنید`
-        : gapsTwo
-          ? `Rewrite resume bullets around outcomes on «${exposeLabel}» and ${gapsTwo}`
-          : `Rewrite resume bullets around outcomes on «${exposeLabel}»`,
-      fa
-        ? `۳ موقعیت هم‌تراز با حوزهٔ «${familyFa}» را هدف بگیرید`
-        : `Target 3 roles aligned with «${familyEn}»`,
-      fa
-        ? `داستان مصاحبه: مشکل → اقدام روی ${g1} و ${g2} → نتیجهٔ قابل اندازه‌گیری`
-        : `Interview story: problem → action on ${g1} & ${g2} → measurable result`,
-    ],
-  };
-
-  /* ------------------------------ Resources ------------------------------ */
   const resources = fa
-    ? FAMILY_RESOURCES_FA[profile.roleFamily] ?? FAMILY_RESOURCES_FA.generic
-    : FAMILY_RESOURCES_EN[profile.roleFamily] ?? FAMILY_RESOURCES_EN.generic;
+    ? FAMILY_RESOURCES_FA[profile.roleFamily] || FAMILY_RESOURCES_FA.generic
+    : FAMILY_RESOURCES_EN[profile.roleFamily] || FAMILY_RESOURCES_EN.generic;
 
   return {
     title,
-    weeks: [week1, week2, week3],
+    weeks: [
+      {
+        week: fa ? "روزهای ۱–۳۰" : "Days 1–30",
+        focus: fa ? `پایه: ${g1}` : `Foundation: ${g1}`,
+        actions: [
+          fa
+            ? `شکاف «${g1}» را نسبت به نقش فعلی «${profile.currentRole}» در یک صفحه بنویسید`
+            : `Write a one-pager mapping gap «${g1}» to your current role «${profile.currentRole}»`,
+          fa
+            ? `برای وظیفه پرریسک «${exposeLabel}» یک نمونه قبل/بعد اندازه‌گیری کنید`
+            : `Baseline metrics for high-exposure task «${exposeLabel}» (time/errors)`,
+          fa
+            ? `۲ منبع آموزشی مشخص برای ${g1} انتخاب و هفته‌ای ۳ جلسه تمرین کنید`
+            : `Pick 2 concrete learning resources for ${g1}; practice 3 sessions/week`,
+        ],
+      },
+      {
+        week: fa ? "روزهای ۳۱–۶۰" : "Days 31–60",
+        focus: fa ? `کاربردی‌سازی: ${g2}` : `Apply: ${g2}`,
+        actions: [
+          fa
+            ? `یک جریان‌کار کوچک بسازید که بخشی از «${exposeLabel}» را نیمه‌خودکار کند`
+            : `Ship a small workflow that partially automates «${exposeLabel}»`,
+          fa
+            ? `مهارت ${g2} را روی داده یا پروژه واقعی خودتان اعمال کنید (نه فقط دوره)`
+            : `Apply ${g2} on your real work artifacts — not only a course`,
+          profile.skills[0]
+            ? fa
+              ? `مهارت فعلی «${profile.skills[0]}» را با ${g2} ترکیب و در نمونه‌کار نشان دهید`
+              : `Combine existing skill «${profile.skills[0]}» with ${g2} in a portfolio piece`
+            : fa
+              ? `یک نمونه‌کار کوتاه از بهبود فرآیند تهیه کنید`
+              : `Produce a short before/after process improvement artifact`,
+        ],
+      },
+      {
+        week: fa ? "روزهای ۶۱–۹۰" : "Days 61–90",
+        focus: fa ? `بازار کار و ${g3}` : `Market readiness and ${g3}`,
+        actions: [
+          fa
+            ? `رزومه را حول نتایج «${exposeLabel}» و مهارت‌های ${gaps.slice(0, 2).join(" و ")} بازنویسی کنید`
+            : `Rewrite resume bullets around outcomes on «${exposeLabel}» and ${gaps.slice(0, 2).join(", ")}`,
+          fa
+            ? `۳ موقعیت هم‌تراز با خانواده شغلی ${profile.roleFamily} را هدف بگیرید`
+            : `Target 3 roles aligned with family «${profile.roleFamily}»`,
+          fa
+            ? `داستان مصاحبه: مشکل → اقدام روی ${g1}/${g2} → نتیجه`
+            : `Interview story: problem → action on ${g1}/${g2} → measurable result`,
+        ],
+      },
+    ],
     resources,
     source: "heuristic",
   };
