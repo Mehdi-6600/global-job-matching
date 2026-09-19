@@ -1,7 +1,8 @@
 export * from "./types";
 export * from "./registry";
 export * from "./quality";
-export * from "./dedup";
+export { scoreDedup } from "./dedup";
+export type { ExistingJobRef } from "./dedup";
 export * from "./occupation";
 export {
   computeFreshnessStatus,
@@ -9,12 +10,13 @@ export {
   DEFAULT_FRESHNESS_POLICY,
 } from "./freshness";
 export type { FreshnessPolicy } from "./freshness";
-export { computeHealthStatus } from "./health";
+export { computeHealthStatus, HEALTH_THRESHOLDS } from "./health";
 export type { HealthInput } from "./health";
+export { isValidHttpUrl, normalizeJobUrl } from "./url";
 export {
-  isValidHttpUrl,
-  normalizeJobUrl,
-} from "./url";
+  makeNamespacedExternalId,
+  parseNamespacedExternalId,
+} from "./identity";
 export { runIngestion } from "./pipeline";
 export { fetchWithRetry } from "./http";
 export { tryAcquireSourceQuota } from "./rate-limit";
