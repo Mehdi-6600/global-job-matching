@@ -30,6 +30,7 @@ import { getRunnableSources } from "./registry";
 import { recordSourceRun } from "./source-run";
 import { upsertSourceListing } from "./provenance";
 import { applyAbsenceFreshness } from "./absence-freshness";
+import { makeNamespacedExternalId } from "./identity";
 
 /* -------------------------------------------------------------------------- */
 /*  Configuration                                                             */
@@ -239,7 +240,42 @@ async function findDedupCandidate(
   draft: IngestJobDraft,
 ): Promise<{ ref: ExistingJobRef; confidence: number } | null> {
   /* ---------------------------------------------------------------------- */
-  /* Level 1 — externalId                                                   */
+  /* Level 1a — JobSourceListing (sourceKey + sourceJobId)                  */
+  /* ---------------------------------------------------------------------- */
+  const listingClient = (
+    db as unknown as {
+      jobSourceListing?: {
+        findUnique: (args: unknown) => Promise<{ jobId: string } | null>;
+      };
+    }
+  ).jobSourceListing;
+
+  if (listingClient && draft.sourceKey && draft.sourceJobId) {
+    try {
+      const listing = await listingClient.findUnique({
+        where: {
+          sourceKey_sourceJobId: {
+            sourceKey: draft.sourceKey,
+            sourceJobId: draft.sourceJobId,
+          },
+        },
+      });
+      if (listing?.jobId) {
+        const byListing = await db.job.findFirst({
+          where: { id: listing.jobId, postedById: null },
+          select: existingJobSelect,
+        });
+        if (byListing) {
+          return { ref: toExistingJobRef(byListing), confidence: 1.0 };
+        }
+      }
+    } catch {
+      // listing table may be missing before migrate
+    }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Level 1b — namespaced externalId                                        */
   /* ---------------------------------------------------------------------- */
   const externalId = draft.externalId?.trim();
   if (externalId) {
@@ -336,8 +372,18 @@ async function persistDraft(
 
   stats.validated++;
 
-  /* 2. Strict 3-level dedup */
-  const existing = await findDedupCandidate(draft);
+  /* Normalize source-scoped external identity (never cross-source collide). */
+  const namespacedExternalId = makeNamespacedExternalId(
+    draft.sourceKey,
+    draft.sourceJobId || draft.externalId,
+  );
+  const draftForDedup: IngestJobDraft = {
+    ...draft,
+    externalId: namespacedExternalId,
+  };
+
+  /* 2. Strict dedup (listing L1 + URL levels) */
+  const existing = await findDedupCandidate(draftForDedup);
 
   const { city, country } = parseLocation(draft.location);
   const location = formatLocation(city, country);
@@ -370,7 +416,7 @@ async function persistDraft(
         externalUrl: draft.externalUrl,
         applyUrl: draft.applyUrl,
         source: draft.sourceKey,
-        externalId: draft.externalId,
+        externalId: namespacedExternalId,
         lastSeenAt: now,
         lastVerifiedAt: now,
         freshnessStatus: "fresh",
@@ -401,11 +447,11 @@ async function persistDraft(
 
     stats.updated++;
     try {
-      await upsertSourceListing(existing.ref.id, draft);
+      await upsertSourceListing(existing.ref.id, draftForDedup);
     } catch {
       // provenance best-effort
     }
-    return draft.externalId;
+    return namespacedExternalId;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -449,7 +495,7 @@ async function persistDraft(
          * imported jobs must never become employer-owned.
          */
         postedById: null,
-        externalId: draft.externalId,
+        externalId: namespacedExternalId,
         externalUrl: draft.externalUrl,
         applyUrl: draft.applyUrl,
         source: draft.sourceKey,
@@ -470,11 +516,11 @@ async function persistDraft(
 
     stats.created++;
     try {
-      await upsertSourceListing(created.id, draft);
+      await upsertSourceListing(created.id, draftForDedup);
     } catch {
       // provenance best-effort
     }
-    return draft.externalId;
+    return namespacedExternalId;
   } catch (error) {
     /*
      * A race can occur when two ingestion workers process the same
