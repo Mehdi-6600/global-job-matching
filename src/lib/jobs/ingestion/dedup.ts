@@ -1,74 +1,75 @@
-import type { IngestJobDraft, DedupMatch } from "./types";
-
-function norm(s: string): string {
-  return (s || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\u0600-\u06ff]+/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url.trim());
-    u.hash = "";
-    // strip common tracking params
-    ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].forEach(
-      (k) => u.searchParams.delete(k)
-    );
-    return u.toString().replace(/\/$/, "").toLowerCase();
-  } catch {
-    return url.trim().toLowerCase().slice(0, 500);
-  }
-}
+/**
+ * Dedup scoring for imported jobs only.
+ * L1–L3: identity/URL (pipeline queries).
+ * L4+: title+company+location must not merge different cities/teams lightly.
+ */
+import type { IngestJobDraft } from "./types";
 
 export type ExistingJobRef = {
   id: string;
   externalId: string | null;
-  externalUrl: string | null;
+  externalUrl?: string | null;
   applyUrl?: string | null;
   title: string;
   location: string;
-  companyName?: string | null;
   postedById: string | null;
+  companyName?: string | null;
 };
 
-/**
- * Multi-level dedup. Never merges solely on title.
- * Employer-owned jobs (postedById != null) are never returned as matches
- * for imported drafts — callers must also enforce this in SQL.
- */
+export type DedupMatch = {
+  jobId: string;
+  confidence: number;
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+  reason: string;
+};
+
+function norm(s: string | null | undefined): string {
+  return (s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0600-\u06ff\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function locationKey(loc: string): string {
+  const n = norm(loc);
+  if (!n || n === "remote") return "remote";
+  // last token often country/city
+  const parts = n.split(" ").filter(Boolean);
+  return parts.slice(-2).join(" ") || n;
+}
+
+/** Score existing candidate against draft. Employer refs should never be passed. */
 export function scoreDedup(
   draft: IngestJobDraft,
-  existing: ExistingJobRef
+  existing: ExistingJobRef,
 ): DedupMatch | null {
-  // Never treat employer jobs as import duplicates to update
   if (existing.postedById) return null;
 
-  if (existing.externalId && existing.externalId === draft.externalId) {
+  const draftExt = draft.externalId?.trim();
+  if (draftExt && existing.externalId && draftExt === existing.externalId) {
     return {
       jobId: existing.id,
-      confidence: 0.99,
+      confidence: 1,
       level: 1,
-      reason: "source+sourceJobId",
+      reason: "external_id",
     };
   }
 
-  const draftUrl = normUrl(draft.externalUrl || draft.applyUrl);
-  const existUrl = normUrl(existing.externalUrl || existing.applyUrl || null);
-  if (draftUrl && existUrl && draftUrl === existUrl) {
+  const dUrl = (draft.externalUrl || "").trim();
+  const eUrl = (existing.externalUrl || "").trim();
+  if (dUrl && eUrl && dUrl === eUrl) {
     return {
       jobId: existing.id,
-      confidence: 0.97,
+      confidence: 0.98,
       level: 2,
-      reason: "canonical_url",
+      reason: "external_url",
     };
   }
 
-  const draftApply = normUrl(draft.applyUrl);
-  const existApply = normUrl(existing.applyUrl || null);
-  if (draftApply && existApply && draftApply === existApply) {
+  const dApply = (draft.applyUrl || "").trim();
+  const eApply = (existing.applyUrl || "").trim();
+  if (dApply && eApply && dApply === eApply) {
     return {
       jobId: existing.id,
       confidence: 0.95,
@@ -77,36 +78,28 @@ export function scoreDedup(
     };
   }
 
+  // L4: same company + title + location key (not title alone)
   const sameCompany =
     norm(draft.company) &&
-    norm(existing.companyName || "") &&
-    norm(draft.company) === norm(existing.companyName || "");
+    norm(existing.companyName) &&
+    norm(draft.company) === norm(existing.companyName);
   const sameTitle = norm(draft.title) === norm(existing.title);
-  const sameLocation = norm(draft.location) === norm(existing.location);
+  const sameLoc =
+    locationKey(draft.location) === locationKey(existing.location);
 
-  if (sameCompany && sameTitle && sameLocation) {
+  if (sameCompany && sameTitle && sameLoc) {
     return {
       jobId: existing.id,
       confidence: 0.9,
       level: 4,
-      reason: "company+title+location",
+      reason: "company_title_location",
     };
   }
 
-  // Same title different location → keep separate (explicit non-match)
-  if (sameCompany && sameTitle && !sameLocation) {
+  // Different location → never merge on title alone
+  if (sameCompany && sameTitle && !sameLoc) {
     return null;
   }
 
   return null;
-}
-
-export function descriptionFingerprint(text: string): string {
-  const n = norm(text).slice(0, 400);
-  // simple stable hash
-  let h = 0;
-  for (let i = 0; i < n.length; i++) {
-    h = (h * 31 + n.charCodeAt(i)) | 0;
-  }
-  return `fp:${h}`;
 }
