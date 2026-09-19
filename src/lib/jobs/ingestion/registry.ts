@@ -19,6 +19,9 @@ export type SourceRegistryEntry = {
   refreshIntervalMinutes: number;
   rateLimitPerMinute?: number | null;
   notes: string;
+  /** Runtime health fields from JobSource (optional) */
+  consecutiveFailures?: number;
+  lastErrorAt?: Date | null;
 };
 
 export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
@@ -135,6 +138,13 @@ export async function getRunnableSources(
         row?.rateLimitPerMinute ?? meta.rateLimitPerMinute ?? null,
       refreshIntervalMinutes:
         row?.refreshIntervalMinutes ?? meta.refreshIntervalMinutes,
+      consecutiveFailures:
+        typeof (row as { consecutiveFailures?: number } | undefined)
+          ?.consecutiveFailures === "number"
+          ? (row as { consecutiveFailures: number }).consecutiveFailures
+          : 0,
+      lastErrorAt:
+        (row as { lastErrorAt?: Date | null } | undefined)?.lastErrorAt ?? null,
     };
     if (isProductionIngestAllowed(entry)) out.push(entry);
   }
