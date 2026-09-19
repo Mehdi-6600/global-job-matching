@@ -21,12 +21,13 @@ import { assessJobQuality } from "./quality";
 import { scoreDedup, type ExistingJobRef } from "./dedup";
 import { inferOccupation } from "./occupation";
 import {
-  getEnabledSources,
   isProductionIngestAllowed,
   SOURCE_REGISTRY,
 } from "./registry";
 import { arbeitnowAdapter } from "./adapters/arbeitnow";
 import type { IngestJobDraft, IngestStats, JobSourceAdapter } from "./types";
+import { getRunnableSources } from "./registry";
+import { recordSourceRun } from "./source-run";
 
 /* -------------------------------------------------------------------------- */
 /*  Configuration                                                             */
@@ -521,12 +522,7 @@ export async function runIngestion(
   const requestedKeys = options?.sourceKeys;
   const maxPages = clampMaxPages(options?.maxPages);
 
-  const enabled = getEnabledSources().filter((source) => {
-    if (requestedKeys?.length) {
-      return requestedKeys.includes(source.key);
-    }
-    return true;
-  });
+  const enabled = await getRunnableSources(requestedKeys);
 
   const allStats: IngestStats[] = [];
   const processedKeys = new Set<string>();
@@ -656,6 +652,11 @@ export async function runIngestion(
       new Date(stats.startedAt).getTime();
     stats.completeness = computeCompleteness(stats);
     allStats.push(stats);
+    try {
+      await recordSourceRun(stats);
+    } catch {
+      // best-effort: metrics must never fail the ingestion run
+    }
   }
 
   /* ---------------------------------------------------------------------- */
