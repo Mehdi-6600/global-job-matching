@@ -156,6 +156,7 @@ model Job {
   applications Application[]
   savedJobs    SavedJob[]
   interviews   Interview[]
+  sourceListings JobSourceListing[]
 
   @@index([status])
   @@index([companyId])
@@ -196,11 +197,38 @@ model JobSource {
   jobsSkipped            Int       @default(0)
   duplicateRate          Float?
   staleRate              Float?
+  consecutiveFailures    Int       @default(0)
+  lastSyncStatus         String?
+  syncCursor             String?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
   @@index([enabled])
   @@index([licenseStatus])
+}
+
+model JobSourceListing {
+  id              String    @id @default(cuid())
+  jobId           String
+  sourceKey       String
+  sourceJobId     String
+  externalId      String?
+  sourceUrl       String?
+  applyUrl        String?
+  firstSeenAt     DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
+  lastVerifiedAt  DateTime?
+  sourceUpdatedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceKey, sourceJobId])
+  @@index([jobId])
+  @@index([sourceKey])
+  @@index([externalId])
+  @@index([lastSeenAt])
 }
 
 model Application {
