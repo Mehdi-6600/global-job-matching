@@ -92,6 +92,13 @@ export type DedupMatch = {
   readonly reason: string;
 };
 
+/** Result of the quality gate before persist. */
+export type QualityResult = {
+  ok: boolean;
+  score: number;
+  reasons: string[];
+};
+
 /**
  * Mutable run counters — pipeline increments these during a sync.
  * Do NOT mark counter fields as readonly.
