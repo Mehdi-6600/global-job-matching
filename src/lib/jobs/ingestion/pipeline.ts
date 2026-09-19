@@ -27,36 +27,48 @@ import {
 } from "./registry";
 import { arbeitnowAdapter } from "./adapters/arbeitnow";
 import type { IngestJobDraft, IngestStats, JobSourceAdapter } from "./types";
+
 /* -------------------------------------------------------------------------- */
 /*  Configuration                                                             */
 /* -------------------------------------------------------------------------- */
+
 const ADAPTERS: Record<string, JobSourceAdapter> = {
   arbeitnow: arbeitnowAdapter,
 };
+
 const MAX_EXECUTION_MS = 55_000;
 const MAX_PAGES_PER_SOURCE = 5;
 const DEDUP_CONFIDENCE_THRESHOLD = 0.9;
 const PER_PAGE = 100;
+
 /* -------------------------------------------------------------------------- */
 /*  Helpers                                                                   */
 /* -------------------------------------------------------------------------- */
+
 function isTimedOut(started: number): boolean {
   return Date.now() - started >= MAX_EXECUTION_MS;
 }
+
 function remainingTimeMs(started: number): number {
   return Math.max(0, MAX_EXECUTION_MS - (Date.now() - started));
 }
-function safeTags(base: string[] | undefined, extras: string[]): string[] {
+
+function safeTags(
+  base: readonly string[] | undefined | null,
+  extras: readonly string[] = [],
+): string[] {
   return Array.from(
-    new Set([...(base ?? []), ...extras].filter(Boolean)),
+    new Set([...(base ?? []), ...extras].filter((t): t is string => Boolean(t))),
   );
 }
+
 function formatLocation(city: string, country: string): string {
   const joined = `${city ?? ""}, ${country ?? ""}`
     .replace(/^,\s*|,\s*$/g, "")
     .trim();
   return joined || "Remote";
 }
+
 function emptyStats(sourceKey: string): IngestStats {
   return {
     sourceKey,
@@ -74,13 +86,14 @@ function emptyStats(sourceKey: string): IngestStats {
     errors: [],
   };
 }
+
 function clampMaxPages(value: number | undefined): number {
-  if (!Number.isFinite(value)) return MAX_PAGES_PER_SOURCE;
-  return Math.max(
-    1,
-    Math.min(Math.floor(value), MAX_PAGES_PER_SOURCE),
-  );
+  if (value === undefined || !Number.isFinite(value)) {
+    return MAX_PAGES_PER_SOURCE;
+  }
+  return Math.max(1, Math.min(Math.floor(value), MAX_PAGES_PER_SOURCE));
 }
+
 function pushError(
   stats: IngestStats,
   error: unknown,
@@ -92,9 +105,11 @@ function pushError(
       : fallback;
   stats.errors.push(message);
 }
+
 /* -------------------------------------------------------------------------- */
 /*  Company resolution                                                        */
 /* -------------------------------------------------------------------------- */
+
 async function resolveCompany(
   name: string,
   location: string,
@@ -103,9 +118,11 @@ async function resolveCompany(
   if (!cleanName) {
     throw new Error("company_name_missing");
   }
+
   const baseSlug =
     generateSlug(cleanName) ||
     `company-${Date.now().toString(36)}`;
+
   /*
    * Prefer an existing company by slug, then by case-insensitive name.
    * Never create a company with an empty name.
@@ -123,7 +140,9 @@ async function resolveCompany(
       ],
     },
   });
+
   if (existing) return existing;
+
   /*
    * The random suffix prevents most concurrent slug collisions.
    * If the database schema enforces slug uniqueness and a concurrent
@@ -131,6 +150,7 @@ async function resolveCompany(
    */
   const uniqueSlug =
     `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
+
   try {
     return await db.company.create({
       data: {
@@ -154,13 +174,16 @@ async function resolveCompany(
         ],
       },
     });
+
     if (concurrent) return concurrent;
     throw error;
   }
 }
+
 /* -------------------------------------------------------------------------- */
 /*  Dedup helpers                                                             */
 /* -------------------------------------------------------------------------- */
+
 function toExistingJobRef(
   job: {
     id: string;
@@ -184,6 +207,7 @@ function toExistingJobRef(
     companyName: job.company?.name,
   };
 }
+
 const existingJobSelect = {
   id: true,
   externalId: true,
@@ -198,6 +222,7 @@ const existingJobSelect = {
     },
   },
 } as const;
+
 /**
  * Strict 3-level dedup:
  *
@@ -222,6 +247,7 @@ async function findDedupCandidate(
       },
       select: existingJobSelect,
     });
+
     if (byExternalId) {
       return {
         ref: toExistingJobRef(byExternalId),
@@ -229,6 +255,7 @@ async function findDedupCandidate(
       };
     }
   }
+
   /* ---------------------------------------------------------------------- */
   /* Level 2 — externalUrl                                                   */
   /* ---------------------------------------------------------------------- */
@@ -241,6 +268,7 @@ async function findDedupCandidate(
       },
       select: existingJobSelect,
     });
+
     if (byExternalUrl) {
       const ref = toExistingJobRef(byExternalUrl);
       const match = scoreDedup(draft, ref);
@@ -255,6 +283,7 @@ async function findDedupCandidate(
       }
     }
   }
+
   /* ---------------------------------------------------------------------- */
   /* Level 3 — applyUrl                                                      */
   /* ---------------------------------------------------------------------- */
@@ -267,6 +296,7 @@ async function findDedupCandidate(
       },
       select: existingJobSelect,
     });
+
     if (byApplyUrl) {
       const ref = toExistingJobRef(byApplyUrl);
       const match = scoreDedup(draft, ref);
@@ -281,11 +311,14 @@ async function findDedupCandidate(
       }
     }
   }
+
   return null;
 }
+
 /* -------------------------------------------------------------------------- */
 /*  Persistence                                                               */
 /* -------------------------------------------------------------------------- */
+
 async function persistDraft(
   draft: IngestJobDraft,
   stats: IngestStats,
@@ -297,14 +330,18 @@ async function persistDraft(
     stats.skipped++;
     return;
   }
+
   stats.validated++;
+
   /* 2. Strict 3-level dedup */
   const existing = await findDedupCandidate(draft);
+
   const { city, country } = parseLocation(draft.location);
   const location = formatLocation(city, country);
   const occupation = inferOccupation(draft.title);
   const now = new Date();
   const syncTag = `synced:${now.toISOString().slice(0, 10)}`;
+
   /* ---------------------------------------------------------------------- */
   /* Existing imported job                                                   */
   /* ---------------------------------------------------------------------- */
@@ -346,6 +383,7 @@ async function persistDraft(
         ]),
       },
     });
+
     if (updated.count === 0) {
       /*
        * The job may have been converted to an employer-owned job
@@ -357,9 +395,11 @@ async function persistDraft(
       stats.duplicates++;
       return;
     }
+
     stats.updated++;
     return;
   }
+
   /* ---------------------------------------------------------------------- */
   /* New imported job                                                        */
   /* ---------------------------------------------------------------------- */
@@ -367,6 +407,7 @@ async function persistDraft(
     draft.company,
     draft.location,
   );
+
   try {
     await db.job.create({
       data: {
@@ -418,6 +459,7 @@ async function persistDraft(
         expiresAt: draft.expiresAt ?? null,
       },
     });
+
     stats.created++;
   } catch (error) {
     /*
@@ -436,32 +478,39 @@ async function persistDraft(
     throw error;
   }
 }
+
 /* -------------------------------------------------------------------------- */
 /*  Completeness evaluation                                                   */
 /* -------------------------------------------------------------------------- */
+
 function computeCompleteness(
   stats: IngestStats,
 ): IngestStats["completeness"] {
   if (stats.timedOut) {
     return "PARTIAL";
   }
+
   if (
     stats.fetched === 0 &&
     (stats.failed > 0 || stats.errors.length > 0)
   ) {
     return "FAILED";
   }
+
   if (
     stats.failed === 0 &&
     stats.errors.length === 0
   ) {
     return "FULL";
   }
+
   return "PARTIAL";
 }
+
 /* -------------------------------------------------------------------------- */
 /*  Public entrypoint                                                         */
 /* -------------------------------------------------------------------------- */
+
 export async function runIngestion(
   options?: {
     sourceKeys?: string[];
@@ -471,14 +520,17 @@ export async function runIngestion(
   const started = Date.now();
   const requestedKeys = options?.sourceKeys;
   const maxPages = clampMaxPages(options?.maxPages);
+
   const enabled = getEnabledSources().filter((source) => {
     if (requestedKeys?.length) {
       return requestedKeys.includes(source.key);
     }
     return true;
   });
+
   const allStats: IngestStats[] = [];
   const processedKeys = new Set<string>();
+
   for (const source of enabled) {
     /*
      * Once the global hard budget is exhausted, stop starting new sources.
@@ -486,7 +538,9 @@ export async function runIngestion(
     if (isTimedOut(started)) {
       break;
     }
+
     processedKeys.add(source.key);
+
     /* -------------------------------------------------------------------- */
     /* License gate                                                         */
     /* -------------------------------------------------------------------- */
@@ -500,6 +554,7 @@ export async function runIngestion(
       allStats.push(blocked);
       continue;
     }
+
     /* -------------------------------------------------------------------- */
     /* Adapter resolution                                                    */
     /* -------------------------------------------------------------------- */
@@ -512,7 +567,9 @@ export async function runIngestion(
       allStats.push(missing);
       continue;
     }
+
     const stats = emptyStats(source.key);
+
     try {
       for (
         let page = 1;
@@ -523,6 +580,7 @@ export async function runIngestion(
           stats.timedOut = true;
           break;
         }
+
         /*
          * No adapter fetch is allowed to start if there is effectively
          * no execution budget left.
@@ -531,6 +589,7 @@ export async function runIngestion(
           stats.timedOut = true;
           break;
         }
+
         let result;
         try {
           result = await adapter.fetchPage({
@@ -546,7 +605,9 @@ export async function runIngestion(
           );
           break;
         }
+
         stats.fetched += result.fetched;
+
         if (result.errors?.length) {
           stats.errors.push(
             ...result.errors
@@ -554,6 +615,7 @@ export async function runIngestion(
               .filter(Boolean),
           );
         }
+
         /* -------------------------------------------------------------- */
         /* Persist fetched jobs                                            */
         /* -------------------------------------------------------------- */
@@ -562,6 +624,7 @@ export async function runIngestion(
             stats.timedOut = true;
             break;
           }
+
           try {
             await persistDraft(draft, stats);
           } catch (error) {
@@ -573,6 +636,7 @@ export async function runIngestion(
             );
           }
         }
+
         if (stats.timedOut || !result.hasMore) {
           break;
         }
@@ -585,6 +649,7 @@ export async function runIngestion(
         "source_failed",
       );
     }
+
     stats.finishedAt = new Date().toISOString();
     stats.durationMs =
       new Date(stats.finishedAt).getTime() -
@@ -592,6 +657,7 @@ export async function runIngestion(
     stats.completeness = computeCompleteness(stats);
     allStats.push(stats);
   }
+
   /* ---------------------------------------------------------------------- */
   /* Requested-but-not-processed registry sources                           */
   /* ---------------------------------------------------------------------- */
@@ -600,12 +666,15 @@ export async function runIngestion(
       if (processedKeys.has(key)) {
         continue;
       }
+
       const reg = SOURCE_REGISTRY.find(
         (source) => source.key === key,
       );
+
       if (!reg) {
         continue;
       }
+
       const skipped = emptyStats(key);
       skipped.finishedAt = new Date().toISOString();
       skipped.completeness = "FAILED";
@@ -617,5 +686,6 @@ export async function runIngestion(
       allStats.push(skipped);
     }
   }
+
   return allStats;
 }
