@@ -1,9 +1,9 @@
 /**
  * Dedup scoring for imported jobs only.
  * L1–L3: identity/URL (pipeline queries).
- * L4+: title+company+location must not merge different cities/teams lightly.
+ * L4+: title+company+location must not merge different cities lightly.
  */
-import type { IngestJobDraft } from "./types";
+import type { DedupMatch, IngestJobDraft } from "./types";
 
 export type ExistingJobRef = {
   id: string;
@@ -14,13 +14,6 @@ export type ExistingJobRef = {
   location: string;
   postedById: string | null;
   companyName?: string | null;
-};
-
-export type DedupMatch = {
-  jobId: string;
-  confidence: number;
-  level: 1 | 2 | 3 | 4 | 5 | 6;
-  reason: string;
 };
 
 function norm(s: string | null | undefined): string {
@@ -34,7 +27,6 @@ function norm(s: string | null | undefined): string {
 function locationKey(loc: string): string {
   const n = norm(loc);
   if (!n || n === "remote") return "remote";
-  // last token often country/city
   const parts = n.split(" ").filter(Boolean);
   return parts.slice(-2).join(" ") || n;
 }
@@ -78,7 +70,6 @@ export function scoreDedup(
     };
   }
 
-  // L4: same company + title + location key (not title alone)
   const sameCompany =
     norm(draft.company) &&
     norm(existing.companyName) &&
@@ -96,7 +87,6 @@ export function scoreDedup(
     };
   }
 
-  // Different location → never merge on title alone
   if (sameCompany && sameTitle && !sameLoc) {
     return null;
   }
