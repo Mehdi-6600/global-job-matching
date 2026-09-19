@@ -31,6 +31,11 @@ import { recordSourceRun } from "./source-run";
 import { upsertSourceListing } from "./provenance";
 import { applyAbsenceFreshness } from "./absence-freshness";
 import { makeNamespacedExternalId } from "./identity";
+import {
+  loadSourceCheckpoint,
+  saveSourceCheckpoint,
+  clearSourceCheckpoint,
+} from "./checkpoint";
 
 /* -------------------------------------------------------------------------- */
 /*  Configuration                                                             */
@@ -575,6 +580,8 @@ export async function runIngestion(
   options?: {
     sourceKeys?: string[];
     maxPages?: number;
+    /** When true, ignore saved cursor and start at page 1. */
+    resetCheckpoint?: boolean;
   },
 ): Promise<IngestStats[]> {
   const started = Date.now();
@@ -626,9 +633,22 @@ export async function runIngestion(
     const stats = emptyStats(source.key);
     const seenExternalIds: string[] = [];
 
+    let startPage = 1;
+    if (!options?.resetCheckpoint) {
+      const cp = await loadSourceCheckpoint(source.key);
+      if (cp && cp.page > 1) {
+        startPage = cp.page;
+      }
+    } else {
+      await clearSourceCheckpoint(source.key);
+    }
+
+    // Pages processed this invocation (for cursor math)
+    let pagesThisRun = 0;
+
     try {
       for (
-        let page = 1;
+        let page = startPage;
         page <= maxPages;
         page++
       ) {
@@ -694,9 +714,21 @@ export async function runIngestion(
           }
         }
 
-        if (stats.timedOut || !result.hasMore) {
+        pagesThisRun += 1;
+
+        if (stats.timedOut) {
+          // Resume from this page next time (may partially re-process; persist is idempotent)
+          await saveSourceCheckpoint(source.key, page);
           break;
         }
+
+        if (!result.hasMore) {
+          await clearSourceCheckpoint(source.key);
+          break;
+        }
+
+        // Next page to resume from
+        await saveSourceCheckpoint(source.key, page + 1);
       }
     } catch (error) {
       stats.failed++;
@@ -713,6 +745,13 @@ export async function runIngestion(
       new Date(stats.startedAt).getTime();
     stats.completeness = computeCompleteness(stats);
     allStats.push(stats);
+
+    if (stats.completeness === "FULL") {
+      await clearSourceCheckpoint(source.key);
+    } else if (stats.completeness === "FAILED" && pagesThisRun === 0) {
+      // Hard fail before any page — do not advance cursor
+    }
+
     try {
       await recordSourceRun(stats);
     } catch {
