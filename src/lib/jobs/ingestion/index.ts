@@ -17,6 +17,13 @@ export {
   makeNamespacedExternalId,
   parseNamespacedExternalId,
 } from "./identity";
+export {
+  loadSourceCheckpoint,
+  saveSourceCheckpoint,
+  clearSourceCheckpoint,
+  parseCheckpoint,
+} from "./checkpoint";
+export type { SyncCheckpoint } from "./checkpoint";
 export { runIngestion } from "./pipeline";
 export { fetchWithRetry } from "./http";
 export { tryAcquireSourceQuota } from "./rate-limit";
