@@ -418,7 +418,7 @@ async function persistDraft(
         type: mapJobType(draft.employmentType),
         experience: guessExperience(
           draft.title,
-          draft.tags,
+          [...draft.tags],
           draft.description,
         ),
         currency:
