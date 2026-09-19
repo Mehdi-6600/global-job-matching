@@ -2,15 +2,7 @@
  * Freshness lifecycle for imported jobs.
  * Absence-based stale/expire ONLY after a FULL successful source sync.
  */
-
-export type FreshnessStatus =
-  | "fresh"
-  | "aging"
-  | "stale"
-  | "expired"
-  | "archived";
-
-export type SyncCompleteness = "FULL" | "PARTIAL" | "FAILED";
+import type { FreshnessStatus, SyncCompleteness } from "./types";
 
 export type FreshnessPolicy = {
   freshMs: number;
