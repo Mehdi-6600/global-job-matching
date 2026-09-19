@@ -1,25 +1,59 @@
 /**
- * Per-source resumable sync checkpoint stored on JobSource.syncCursor.
- * Format: {"page":number,"updatedAt":string}
- * Only PARTIAL runs leave a cursor; FULL clears it.
- * Resume never skips jobs already on earlier pages (idempotent persist).
+ * Resumable sync checkpoint on JobSource.syncCursor.
+ * Supports page and opaque cursor/token (adapter-agnostic).
+ * FULL clears; PARTIAL resumes; corrupted payload ignored safely.
  */
 import { db } from "@/lib/db";
 
 export type SyncCheckpoint = {
-  page: number;
+  v: 1;
+  page?: number;
+  cursor?: string | null;
+  token?: string | null;
   updatedAt: string;
 };
 
-export function parseCheckpoint(raw: string | null | undefined): SyncCheckpoint | null {
+const MAX_TOKEN_LEN = 512;
+
+export function parseCheckpoint(
+  raw: string | null | undefined,
+): SyncCheckpoint | null {
   if (!raw || !raw.trim()) return null;
   try {
-    const o = JSON.parse(raw) as { page?: unknown; updatedAt?: unknown };
-    const page = typeof o.page === "number" ? Math.floor(o.page) : NaN;
-    if (!Number.isFinite(page) || page < 1) return null;
+    const o = JSON.parse(raw) as Record<string, unknown>;
+    const updatedAt =
+      typeof o.updatedAt === "string"
+        ? o.updatedAt
+        : new Date().toISOString();
+
+    let page: number | undefined;
+    if (typeof o.page === "number" && Number.isFinite(o.page)) {
+      page = Math.max(1, Math.floor(o.page));
+    }
+
+    let cursor: string | null | undefined;
+    if (typeof o.cursor === "string") {
+      cursor = o.cursor.slice(0, MAX_TOKEN_LEN);
+    } else if (o.cursor === null) {
+      cursor = null;
+    }
+
+    let token: string | null | undefined;
+    if (typeof o.token === "string") {
+      token = o.token.slice(0, MAX_TOKEN_LEN);
+    }
+
+    // Legacy { page, updatedAt } without v
+    if (page == null && cursor == null && token == null) {
+      return null;
+    }
+
     return {
+      v: 1,
       page,
-      updatedAt: typeof o.updatedAt === "string" ? o.updatedAt : new Date().toISOString(),
+      cursor: cursor ?? undefined,
+      token: token ?? undefined,
+      updatedAt,
     };
   } catch {
     return null;
@@ -35,7 +69,6 @@ export async function loadSourceCheckpoint(
       select: { syncCursor: true, lastSyncStatus: true },
     });
     if (!row) return null;
-    // Only resume after PARTIAL; FULL/FAILED start clean
     if (row.lastSyncStatus && row.lastSyncStatus !== "PARTIAL") {
       return null;
     }
@@ -47,20 +80,34 @@ export async function loadSourceCheckpoint(
 
 export async function saveSourceCheckpoint(
   sourceKey: string,
-  page: number,
+  state: { page?: number; cursor?: string | null; token?: string | null },
 ): Promise<void> {
-  const payload = JSON.stringify({
-    page: Math.max(1, Math.floor(page)),
+  const payload: SyncCheckpoint = {
+    v: 1,
+    page:
+      state.page != null && Number.isFinite(state.page)
+        ? Math.max(1, Math.floor(state.page))
+        : undefined,
+    cursor: state.cursor?.slice(0, MAX_TOKEN_LEN) ?? undefined,
+    token: state.token?.slice(0, MAX_TOKEN_LEN) ?? undefined,
     updatedAt: new Date().toISOString(),
-  } satisfies SyncCheckpoint);
+  };
   try {
     await db.jobSource.update({
       where: { key: sourceKey },
-      data: { syncCursor: payload },
+      data: { syncCursor: JSON.stringify(payload) },
     });
   } catch {
-    // column may be missing before migrate — ignore
+    // ignore if column missing
   }
+}
+
+/** @deprecated prefer saveSourceCheckpoint with object — kept for call sites */
+export async function saveSourceCheckpointPage(
+  sourceKey: string,
+  page: number,
+): Promise<void> {
+  return saveSourceCheckpoint(sourceKey, { page });
 }
 
 export async function clearSourceCheckpoint(sourceKey: string): Promise<void> {
