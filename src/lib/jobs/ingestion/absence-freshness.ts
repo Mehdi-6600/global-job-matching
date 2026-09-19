@@ -1,5 +1,5 @@
 /**
- * Mark imported jobs as aging/stale ONLY after a FULL successful source sync.
+ * Absence-based freshness only after FULL sync. Cursor-batched — no take:2000 cap.
  * Never touches employer jobs (postedById != null).
  */
 import { db } from "@/lib/db";
@@ -9,10 +9,11 @@ import {
 } from "./freshness";
 import type { SyncCompleteness } from "./types";
 
+const BATCH = 500;
+
 export async function applyAbsenceFreshness(options: {
   sourceKey: string;
   completeness: SyncCompleteness;
-  /** Jobs seen in this FULL run (externalId list). */
   seenExternalIds: string[];
 }): Promise<{ updated: number }> {
   if (!mayApplyAbsenceFreshness(options.completeness)) {
@@ -20,32 +21,43 @@ export async function applyAbsenceFreshness(options: {
   }
 
   const now = new Date();
-  // Candidates: imported jobs from this source, not seen this run
-  const candidates = await db.job.findMany({
-    where: {
-      postedById: null,
-      source: options.sourceKey,
-      status: "active",
-      externalId: {
-        notIn:
-          options.seenExternalIds.length > 0
-            ? options.seenExternalIds
-            : ["__none__"],
-      },
-    },
-    select: { id: true, lastSeenAt: true },
-    take: 2000,
-  });
-
+  const seen = new Set(options.seenExternalIds.filter(Boolean));
   let updated = 0;
-  for (const job of candidates) {
-    const status = computeFreshnessStatus(job.lastSeenAt, now);
-    if (status === "fresh") continue;
-    await db.job.updateMany({
-      where: { id: job.id, postedById: null },
-      data: { freshnessStatus: status },
+  let cursor: string | undefined;
+
+  for (;;) {
+    const batch = await db.job.findMany({
+      where: {
+        postedById: null,
+        source: options.sourceKey,
+        status: "active",
+      },
+      select: { id: true, lastSeenAt: true, externalId: true },
+      orderBy: { id: "asc" },
+      take: BATCH,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     });
-    updated += 1;
+
+    if (batch.length === 0) break;
+
+    for (const job of batch) {
+      if (job.externalId && seen.has(job.externalId)) continue;
+
+      const status = computeFreshnessStatus(job.lastSeenAt, now);
+      const normalized =
+        typeof status === "string" ? status.toLowerCase() : String(status);
+      if (normalized === "fresh") continue;
+
+      const result = await db.job.updateMany({
+        where: { id: job.id, postedById: null },
+        data: { freshnessStatus: normalized },
+      });
+      updated += result.count;
+    }
+
+    cursor = batch[batch.length - 1]?.id;
+    if (batch.length < BATCH) break;
   }
+
   return { updated };
 }
