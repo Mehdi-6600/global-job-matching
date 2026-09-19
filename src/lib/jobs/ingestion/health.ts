@@ -2,8 +2,7 @@
  * Source health from consecutive failures + last run metrics.
  * One failure does not disable; repeated failures escalate.
  */
-
-export type HealthStatus = "HEALTHY" | "DEGRADED" | "FAILING" | "DISABLED";
+import type { SourceHealth } from "./types";
 
 export type HealthInput = {
   enabled: boolean;
@@ -14,7 +13,7 @@ export type HealthInput = {
   lastError?: string | null;
 };
 
-export function computeHealthStatus(input: HealthInput): HealthStatus {
+export function computeHealthStatus(input: HealthInput): SourceHealth {
   if (!input.enabled) return "DISABLED";
   if (input.consecutiveFailures >= 5) return "FAILING";
   if (input.consecutiveFailures >= 2 || input.timedOut) return "DEGRADED";
