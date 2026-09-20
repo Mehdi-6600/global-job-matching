@@ -11,6 +11,9 @@
  *  - Source lease is fail-closed: if ownership cannot be confirmed, the
  *    worker stops instead of silently continuing without a valid lease.
  *  - Adapter resolution goes through the registry (single source of truth).
+ *  - Cursor-based pagination is loop-protected: a repeated nextCursor
+ *    stops the source with `pagination_loop_detected` instead of burning
+ *    budget on identical pages.
  */
 import { db } from "@/lib/db";
 import {
@@ -626,11 +629,6 @@ export async function runIngestion(
       continue;
     }
 
-    /*
-     * Adapter resolution goes through the registry (single source of
-     * truth). A missing adapter is a configuration error, not a runtime
-     * crash — record and continue with the next source.
-     */
     const adapter = source.adapter;
     if (!adapter) {
       const missing = emptyStats(source.key);
@@ -697,6 +695,26 @@ export async function runIngestion(
       await clearSourceCheckpoint(source.key);
     }
 
+    /*
+     * Loop protection for cursor-based adapters.
+     *
+     * If an adapter ever returns a nextCursor we have already seen in
+     * this run, we stop the source immediately instead of burning the
+     * remaining budget on identical pages. We keep the checkpoint so the
+     * next run can resume from the correct page (the loop is a source
+     * bug, not a checkpoint bug).
+     *
+     * A page-token is only added when it is a non-empty string; null
+     * and "" mean "no cursor" and are not treated as loop signals.
+     */
+    const seenCursors = new Set<string>();
+
+    // If the resumed cursor is already known, it means the last run ended
+    // at a bad cursor. Seed the set so the very next fetch is protected.
+    if (typeof resumeCursor === "string" && resumeCursor.length > 0) {
+      seenCursors.add(resumeCursor);
+    }
+
     let pagesThisRun = 0;
 
     try {
@@ -732,8 +750,40 @@ export async function runIngestion(
           break;
         }
 
-        if (result.nextCursor !== undefined) {
+        /*
+         * Loop protection: reject a cursor we have already consumed.
+         * We validate BEFORE renewing the lease and BEFORE persisting
+         * so we don't touch the database for a page we already saw.
+         */
+        if (
+          result.nextCursor !== undefined &&
+          result.nextCursor !== null &&
+          result.nextCursor !== ""
+        ) {
+          if (seenCursors.has(result.nextCursor)) {
+            stats.errors.push("pagination_loop_detected");
+            /*
+             * Save checkpoint at the current page so the next run
+             * can resume cleanly (the source will likely return a
+             * different cursor on a fresh run).
+             */
+            try {
+              await saveSourceCheckpoint(source.key, {
+                page,
+                cursor: result.nextCursor,
+              });
+            } catch {
+              // best-effort
+            }
+            break;
+          }
+          seenCursors.add(result.nextCursor);
           resumeCursor = result.nextCursor;
+        } else if (result.nextCursor === undefined) {
+          // Adapter has no cursor concept — nothing to track.
+        } else {
+          // nextCursor === null or "" → end of pagination.
+          resumeCursor = result.nextCursor ?? null;
         }
 
         const renewed = await renewSourceLease(lease);
