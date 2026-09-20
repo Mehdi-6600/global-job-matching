@@ -39,7 +39,7 @@ export type TxVerificationResult = {
   amountMatched?: boolean;
 };
 
-/** Tolerance for fee/rounding: accept 2% under, 4% over. pending */
+/** Tolerance for fee/rounding: accept 2% under, 4% over. */
 const AMOUNT_TOLERANCE_UNDER = 0.02;
 const AMOUNT_TOLERANCE_OVER = 0.04;
 
@@ -189,8 +189,6 @@ async function verifyBtc(
     const confirmed = Boolean(data?.status?.confirmed);
     const need = minConfirmations("BTC");
 
-    // Confirmations: Blockstream gives only confirmed flag + block height.
-    // Fetch tip height only when confirmed, to compute real confirmations.
     let confirmations = 0;
     if (confirmed && data.status?.block_height) {
       try {
@@ -221,11 +219,10 @@ async function verifyBtc(
     }
 
     const amountMatched =
-      expectedAmount != pool null && receivedAmount > 0
-       
- ? amountCloseEnough(receivedAmount,    expectedAmount)
-        : if expectedAmount != null
- (          ? false
+      expectedAmount != null && receivedAmount > 0
+        ? amountCloseEnough(receivedAmount, expectedAmount)
+        : expectedAmount != null
+          ? false
           : undefined;
 
     if (recipientMatched === false) {
@@ -451,7 +448,7 @@ async function verifyEvm(
       };
     }
 
-    // No receipt → checkreceiptResp.result == null) {
+    if (receiptResp.result == null) {
       const txResp = await rpcCall<unknown>(rpcUrl, "eth_getTransactionByHash", [hash], 2);
       if (txResp.result) {
         return {
@@ -481,7 +478,6 @@ async function verifyEvm(
     const receipt = receiptResp.result;
     const isTokenish = assetHint === "USDC" || assetHint === "USDT";
 
-    // Parse ERC-20 Transfer log for the first matching transfer
     let tokenTransferTo: string | undefined;
     let tokenRawValue: bigint | undefined;
     for (const log of receipt.logs ?? []) {
@@ -502,7 +498,6 @@ async function verifyEvm(
 
     const effectiveToken = isTokenish || Boolean(tokenTransferTo);
 
-    // ---- Recipient check ----
     let recipientMatched: boolean | undefined;
     if (expectedRecipient) {
       const exp = expectedRecipient.trim();
@@ -515,14 +510,12 @@ async function verifyEvm(
       }
     }
 
-    // ---- Amount check ----
     let receivedAmount: number | undefined;
     if (expectedAmount != null) {
       if (effectiveToken && tokenRawValue != null) {
         const decimals = isTokenish ? EVM_USDT_DECIMALS : 18;
         receivedAmount = Number(tokenRawValue) / 10 ** decimals;
       } else if (!effectiveToken) {
-        // Native value requires eth_getTransactionByHash
         const txResp = await rpcCall<{ value?: string }>(
           rpcUrl,
           "eth_getTransactionByHash",
@@ -658,9 +651,6 @@ async function verifyTronUsdt(
       };
     }
 
-    // TRC20 USDT transfers show up as an internal contract.
-    // The "to_address" field is the *contract* (USDT), not the recipient.
-    // The recipient is encoded in `parameter.value.data` (ABI-encoded).
     let recipientMatched: boolean | undefined;
     let receivedAmount: number | undefined;
 
@@ -670,17 +660,15 @@ async function verifyTronUsdt(
 
       const data = val.data;
       if (data && data.length >= 8 + 64 + 64) {
-        // TRC20 transfer(address,uint256)
         try {
           const toWord = data.slice(8, 8 + 64);
           const amountWord = data.slice(8 + 64, 8 + 128);
-          const toHex = "41" + toWord.slice(-40); // TRON hex prefix 41
+          const toHex = "41" + toWord.slice(-40);
           const recipientHex = `0x${toHex.toLowerCase()}`;
           const rawAmount = BigInt(`0x${amountWord}`);
           receivedAmount = Number(rawAmount) / 10 ** TRON_USDT_DECIMALS;
 
           if (expectedRecipient) {
-            // Expected recipient may be base58 or hex; only hex can be compared here.
             const exp = expectedRecipient.trim().toLowerCase();
             recipientMatched =
               exp === recipientHex || exp === toHex.toLowerCase();
@@ -689,13 +677,12 @@ async function verifyTronUsdt(
           /* ignore malformed data */
         }
       } else if (val.to_address) {
-        // Native TRX transfer
         const toAddr = val.to_address.trim();
         if (expectedRecipient) {
           recipientMatched = addrEq(toAddr, expectedRecipient);
         }
         if (typeof val.amount === "number" && Number.isFinite(val.amount)) {
-          receivedAmount = val.amount / 1e6; // SUN → TRX
+          receivedAmount = val.amount / 1e6;
         }
       }
     }
@@ -799,7 +786,6 @@ export async function verifyTxOnChain(params: {
     }
 
     case "USDT":
-      // USDT is verified on TRON (TRC20) in this deployment.
       return verifyTronUsdt(txHash, expectedRecipient, expectedAmount);
 
     case "TON":
