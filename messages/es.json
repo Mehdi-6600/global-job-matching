@@ -112,7 +112,17 @@
     "finalProfile": "Crear tu perfil",
     "careerRiskTitle": "¿Está tu trabajo a salvo de la automatización por IA?",
     "careerRiskDesc": "Una puntuación de riesgo clara, habilidades a desarrollar y próximos pasos inteligentes — empieza gratis.",
-    "careerRiskCta": "Ver mi riesgo"
+    "careerRiskCta": "Ver mi riesgo",
+    "audienceSeeker": "Para buscadores de empleo",
+    "audienceEmployer": "Para empleadores",
+    "valueSeekers": "Inteligencia profesional con IA, empleos globales, 7 idiomas.",
+    "valueEmployers": "Alcanza talento global, gestiona la contratación en un solo lugar.",
+    "trustJobsLabel": "Empleos en vivo",
+    "trustSourcesLabel": "Fuentes de empleo",
+    "trustLanguagesLabel": "Idiomas",
+    "trustFreshnessLabel": "Frescura verificada",
+    "trustSectionKicker": "CONSTRUIDO SOBRE DATOS REALES",
+    "trustSectionTitle": "Infraestructura confiable, no testimonios."
   },
   "Common": {
     "loading": "Cargando...",
