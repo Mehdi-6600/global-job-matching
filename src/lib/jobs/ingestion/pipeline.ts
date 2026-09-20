@@ -739,6 +739,18 @@ export async function runIngestion(
             page,
             perPage: PER_PAGE,
             cursor: resumeCursor,
+            /*
+             * Per-source configuration: adapters MAY read these values
+             * but MUST remain functional if any is missing (they should
+             * fall back to their own defaults).
+             */
+            sourceConfig: {
+              key: source.key,
+              name: source.name,
+              language: source.language,
+              rateLimitPerMinute: source.rateLimitPerMinute,
+              httpConfig: source.httpConfig,
+            },
           });
         } catch (error) {
           stats.failed++;
@@ -762,11 +774,6 @@ export async function runIngestion(
         ) {
           if (seenCursors.has(result.nextCursor)) {
             stats.errors.push("pagination_loop_detected");
-            /*
-             * Save checkpoint at the current page so the next run
-             * can resume cleanly (the source will likely return a
-             * different cursor on a fresh run).
-             */
             try {
               await saveSourceCheckpoint(source.key, {
                 page,
