@@ -112,7 +112,17 @@
     "finalProfile": "Profil erstellen",
     "careerRiskTitle": "Ist dein Job vor KI-Automatisierung sicher?",
     "careerRiskDesc": "Ein klarer Risikowert, aufzubauende Fähigkeiten und klügere nächste Schritte — kostenlos starten.",
-    "careerRiskCta": "Mein Risiko prüfen"
+    "careerRiskCta": "Mein Risiko prüfen",
+    "audienceSeeker": "Für Jobsuchende",
+    "audienceEmployer": "Für Arbeitgeber",
+    "valueSeekers": "KI-Karriereintelligenz, globale Jobs, 7 Sprachen.",
+    "valueEmployers": "Erreichen Sie globale Talente, verwalten Sie die Einstellung an einem Ort.",
+    "trustJobsLabel": "Live-Jobs",
+    "trustSourcesLabel": "Job-Quellen",
+    "trustLanguagesLabel": "Sprachen",
+    "trustFreshnessLabel": "Aktualität verifiziert",
+    "trustSectionKicker": "AUF ECHTEN DATEN GEBAUT",
+    "trustSectionTitle": "Vertrauenswürdige Infrastruktur, keine Testimonials."
   },
   "Common": {
     "loading": "Wird geladen...",
