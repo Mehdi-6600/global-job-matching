@@ -7,6 +7,7 @@ import {
 } from "@/lib/seo/listing-policy";
 import { parseLocalePath } from "@/lib/i18n/locale-path";
 import { LOCALE_COOKIE, isLocale } from "@/lib/i18n/config";
+import { localeCookieOptions } from "@/lib/i18n/cookie";
 
 const { auth } = NextAuth(authConfig);
 
@@ -21,11 +22,8 @@ export default auth((req) => {
     url.pathname = strippedPath;
     const response = NextResponse.rewrite(url);
 
-    response.cookies.set(LOCALE_COOKIE, localeFromPath, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: "lax",
-    });
+    const cookie = localeCookieOptions();
+    response.cookies.set(LOCALE_COOKIE, localeFromPath, cookie);
 
     response.headers.set("X-Content-Type-Options", "nosniff");
     response.headers.set("X-Frame-Options", "DENY");
