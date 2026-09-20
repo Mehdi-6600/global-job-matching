@@ -16,6 +16,7 @@ const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_MAX_RESPONSE_BYTES = 10_000_000;
 const DEFAULT_RATE_LIMIT_PER_MINUTE = 30;
+const DEFAULT_ATTRIBUTION = "Jobs via Arbeitnow";
 
 function asRecord(v: unknown): Record<string, unknown> | null {
   return v !== null && typeof v === "object" ? (v as Record<string, unknown>) : null;
@@ -30,7 +31,7 @@ function str(v: unknown, max = 50_000): string {
   return v.slice(0, max);
 }
 
-function mapItem(item: unknown): IngestJobDraft | null {
+function mapItem(item: unknown, attribution: string): IngestJobDraft | null {
   const j = asRecord(item);
   if (!j) return null;
   const slug = str(j.slug, 200);
@@ -67,7 +68,7 @@ function mapItem(item: unknown): IngestJobDraft | null {
     tags,
     skills: tags,
     publishedAt: created,
-    attribution: "Jobs via Arbeitnow",
+    attribution,
   };
 }
 
@@ -87,6 +88,11 @@ export const arbeitnowAdapter: JobSourceAdapter = {
       cfg?.httpConfig?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     const maxResponseBytes =
       cfg?.httpConfig?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
+    /*
+     * Registry attribution wins when set; otherwise fall back to the
+     * adapter's own default so imported jobs always carry a string.
+     */
+    const attribution = cfg?.attribution || DEFAULT_ATTRIBUTION;
 
     if (!tryAcquireSourceQuota("arbeitnow", rateLimit)) {
       return {
@@ -135,7 +141,7 @@ export const arbeitnowAdapter: JobSourceAdapter = {
       ? data
       : asArray(asRecord(data)?.data);
     const jobs = list
-      .map(mapItem)
+      .map((item) => mapItem(item, attribution))
       .filter((j): j is IngestJobDraft => Boolean(j));
 
     return {
