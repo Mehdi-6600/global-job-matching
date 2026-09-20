@@ -7,7 +7,13 @@
  *  - Each attempt uses min(PER_ATTEMPT_CAP, remaining budget).
  *  - Permanent errors (4xx except 408/429) skip remaining budget waste.
  *  - Default maxAttempts = 2 so worst-case stays under ~20s, not 3×25s.
+ *
+ * The template resume fallback now lives in @/lib/resume/writer.
+ * A thin wrapper (`buildTemplateResume`) is kept here for backwards
+ * compatibility with existing callers.
  */
+
+import { buildResume } from "@/lib/resume/writer";
 
 /* ------------------------------------------------------------------ */
 /* Public types                                                       */
@@ -183,16 +189,10 @@ type ProviderCallArgs = {
   maxTokens: number;
   temperature: number;
   timeoutMs: number;
-  /** Extra headers (e.g. OpenRouter attribution). */
   extraHeaders?: Record<string, string>;
-  /** Error tag prefix for logs and meta (e.g. "openrouter"). */
   errorTag: string;
 };
 
-/**
- * Shared provider call implementation for OpenRouter and OpenAI.
- * Keeps error tagging and retryability logic in a single place.
- */
 async function callProvider({
   url,
   apiKey,
@@ -308,18 +308,6 @@ function callOpenAI(
 /* Main entry points                                                  */
 /* ------------------------------------------------------------------ */
 
-/**
- * Chat completion with full meta.
- *
- * Latency contract:
- *   - The entire call finishes within `timeoutMs` (clamped to [8s, 18s]).
- *   - Each attempt uses at most `AI_PER_ATTEMPT_MS` or whatever remains.
- *   - New attempts are skipped when remaining budget < AI_MIN_REMAINING_MS.
- *
- * Failure contract:
- *   - On success: { text, meta: { provider, model, success: true, ... } }
- *   - On total failure: { text: null, meta: { provider: "none", ... } }
- */
 export async function chatCompletionWithMeta(
   messages: ChatMessage[],
   options?: ChatCompletionOptions,
@@ -331,7 +319,6 @@ export async function chatCompletionWithMeta(
   );
   const temperature = options?.temperature ?? 0.6;
 
-  // timeoutMs is the TOTAL budget, not per-attempt.
   const totalBudgetMs = clamp(
     Math.trunc(options?.timeoutMs ?? AI_TOTAL_BUDGET_MS),
     AI_MIN_BUDGET_MS,
@@ -410,8 +397,6 @@ export async function chatCompletionWithMeta(
 
     lastError = result.error || "empty";
 
-    // Permanent auth/config errors: try the next provider, but do not
-    // repeatedly burn budget on the same class of failure.
     if (!result.retryable && isPermanentAuthError(result.error)) {
       continue;
     }
@@ -430,10 +415,6 @@ export async function chatCompletionWithMeta(
   };
 }
 
-/**
- * Convenience wrapper that returns only the text (or null).
- * Use `chatCompletionWithMeta` when you need provider/latency info.
- */
 export async function chatCompletion(
   messages: ChatMessage[],
   options?: ChatCompletionOptions,
@@ -443,12 +424,15 @@ export async function chatCompletion(
 }
 
 /* ------------------------------------------------------------------ */
-/* Deterministic template fallback                                    */
+/* Template resume — backwards-compatible wrapper                     */
 /* ------------------------------------------------------------------ */
 
 /**
- * Deterministic plain-text resume builder used when AI fails or is disabled.
- * Pure function: same input → same output.
+ * @deprecated Use `buildResume` from `@/lib/resume/writer` directly.
+ *
+ * Kept for backwards compatibility with existing callers that import
+ * `buildTemplateResume` from this module. New code should call
+ * `buildResume` to access the returned metadata.
  */
 export function buildTemplateResume(input: {
   fullName: string;
@@ -462,49 +446,5 @@ export function buildTemplateResume(input: {
   education?: string;
   languages?: string;
 }): string {
-  const lines: string[] = [];
-
-  lines.push((input.fullName || "").trim().toUpperCase());
-  if (input.targetRole?.trim()) lines.push(input.targetRole.trim());
-
-  const contact = [input.email, input.phone, input.location]
-    .map((s) => s?.trim())
-    .filter(Boolean)
-    .join(" · ");
-  if (contact) lines.push(contact);
-
-  lines.push("");
-  lines.push("PROFESSIONAL SUMMARY");
-  lines.push(
-    input.summary?.trim() ||
-      `Motivated professional seeking opportunities as ${
-        input.targetRole?.trim() || "a specialist"
-      }. Strong work ethic, clear communication, and continuous learning.`,
-  );
-
-  if (input.skills?.trim()) {
-    lines.push("");
-    lines.push("SKILLS");
-    lines.push(input.skills.trim());
-  }
-
-  if (input.experience?.trim()) {
-    lines.push("");
-    lines.push("EXPERIENCE");
-    lines.push(input.experience.trim());
-  }
-
-  if (input.education?.trim()) {
-    lines.push("");
-    lines.push("EDUCATION");
-    lines.push(input.education.trim());
-  }
-
-  if (input.languages?.trim()) {
-    lines.push("");
-    lines.push("LANGUAGES");
-    lines.push(input.languages.trim());
-  }
-
-  return lines.join("\n").trim();
+  return buildResume(input).text;
 }
