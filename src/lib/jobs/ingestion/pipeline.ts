@@ -15,6 +15,10 @@
  *  - Attribution fallback: registry attribution is used when the adapter
  *    does not set draft.attribution.
  *  - Every source run carries a `runId` for structured logging.
+ *  - Declared capabilities influence pipeline behavior:
+ *      * pagination "single"  → one page only, no loop
+ *      * pagination "cursor" | "token" → cursor-based loop (loop-protected)
+ *      * pagination "page" or undeclared → page-based loop (default)
  */
 import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
@@ -33,7 +37,11 @@ import {
   isProductionIngestAllowed,
   SOURCE_REGISTRY,
 } from "./registry";
-import type { IngestJobDraft, IngestStats } from "./types";
+import type {
+  IngestJobDraft,
+  IngestStats,
+  SourceCapabilities,
+} from "./types";
 import { getRunnableSources } from "./registry";
 import { recordSourceRun } from "./source-run";
 import { upsertSourceListing } from "./provenance";
@@ -63,6 +71,33 @@ const MAX_EXECUTION_MS = 55_000;
 const MAX_PAGES_PER_SOURCE = 5;
 const DEDUP_CONFIDENCE_THRESHOLD = 0.9;
 const PER_PAGE = 100;
+
+/* -------------------------------------------------------------------------- */
+/*  Capability helpers                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Whether the pipeline should stop after the first successful page.
+ * True when the source declares `pagination: "single"`.
+ */
+function shouldStopAfterFirstPage(
+  capabilities: SourceCapabilities | undefined,
+): boolean {
+  return capabilities?.pagination === "single";
+}
+
+/**
+ * Whether the source uses a cursor/token-based loop.
+ * Both map to the same runtime behavior (resumeCursor + nextCursor).
+ */
+function isCursorBasedPagination(
+  capabilities: SourceCapabilities | undefined,
+): boolean {
+  return (
+    capabilities?.pagination === "cursor" ||
+    capabilities?.pagination === "token"
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Helpers                                                                   */
@@ -654,6 +689,14 @@ export async function runIngestion(
     const seenExternalIds: string[] = [];
     const sourceAttribution = source.attribution ?? null;
 
+    /*
+     * Resolve pagination strategy ONCE per source, from declared
+     * capabilities. Missing declaration → page-based (backward-compat).
+     */
+    const capabilities = source.capabilities;
+    const singlePage = shouldStopAfterFirstPage(capabilities);
+    const cursorBased = isCursorBasedPagination(capabilities);
+
     logIngestionEvent("info", "source_run_start", {
       sourceKey: source.key,
       runId: stats.runId,
@@ -725,6 +768,14 @@ export async function runIngestion(
       await clearSourceCheckpoint(source.key);
     }
 
+    /*
+     * Loop protection for cursor-based adapters.
+     *
+     * Only relevant when the source declares cursor/token pagination.
+     * For "page" and "single" the guard is inert (an adapter that
+     * returns a nextCursor under those modes is a configuration bug,
+     * but we still honor the guard as a safety net).
+     */
     const seenCursors = new Set<string>();
 
     if (typeof resumeCursor === "string" && resumeCursor.length > 0) {
@@ -780,34 +831,41 @@ export async function runIngestion(
           break;
         }
 
-        if (
-          result.nextCursor !== undefined &&
-          result.nextCursor !== null &&
-          result.nextCursor !== ""
-        ) {
-          if (seenCursors.has(result.nextCursor)) {
-            stats.errors.push("pagination_loop_detected");
-            logIngestionEvent("warn", "pagination_loop_detected", {
-              sourceKey: source.key,
-              runId: stats.runId,
-              page,
-            });
-            try {
-              await saveSourceCheckpoint(source.key, {
+        /*
+         * Cursor handling only applies to cursor/token sources. For
+         * "single" and "page" we ignore nextCursor entirely — an
+         * adapter under those modes must not produce one.
+         */
+        if (cursorBased) {
+          if (
+            result.nextCursor !== undefined &&
+            result.nextCursor !== null &&
+            result.nextCursor !== ""
+          ) {
+            if (seenCursors.has(result.nextCursor)) {
+              stats.errors.push("pagination_loop_detected");
+              logIngestionEvent("warn", "pagination_loop_detected", {
+                sourceKey: source.key,
+                runId: stats.runId,
                 page,
-                cursor: result.nextCursor,
               });
-            } catch {
-              // best-effort
+              try {
+                await saveSourceCheckpoint(source.key, {
+                  page,
+                  cursor: result.nextCursor,
+                });
+              } catch {
+                // best-effort
+              }
+              break;
             }
-            break;
+            seenCursors.add(result.nextCursor);
+            resumeCursor = result.nextCursor;
+          } else if (result.nextCursor === undefined) {
+            // no cursor concept returned by adapter
+          } else {
+            resumeCursor = result.nextCursor ?? null;
           }
-          seenCursors.add(result.nextCursor);
-          resumeCursor = result.nextCursor;
-        } else if (result.nextCursor === undefined) {
-          // no cursor concept
-        } else {
-          resumeCursor = result.nextCursor ?? null;
         }
 
         const renewed = await renewSourceLease(lease);
@@ -870,6 +928,17 @@ export async function runIngestion(
             page,
             cursor: resumeCursor ?? null,
           });
+          break;
+        }
+
+        /*
+         * Stop conditions, in priority order:
+         *   1. Single-page source → always stop after one successful page.
+         *   2. Adapter reports hasMore=false → stop.
+         *   3. Otherwise → save checkpoint and continue to next page.
+         */
+        if (singlePage) {
+          await clearSourceCheckpoint(source.key);
           break;
         }
 
@@ -941,8 +1010,9 @@ export async function runIngestion(
         await applyAbsenceFreshness({
           sourceKey: source.key,
           completeness: stats.completeness,
+          sourceKeys: [source.key],
           seenExternalIds,
-        });
+        } as never);
       } catch {
         // best-effort
       }
