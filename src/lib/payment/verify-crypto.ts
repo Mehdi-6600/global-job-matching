@@ -39,7 +39,7 @@ export type TxVerificationResult = {
   amountMatched?: boolean;
 };
 
-/** Tolerance for fee/rounding: accept 2% under, 4% over. */
+/** Tolerance for fee/rounding: accept 2% under, 4% over. pending */
 const AMOUNT_TOLERANCE_UNDER = 0.02;
 const AMOUNT_TOLERANCE_OVER = 0.04;
 
@@ -62,6 +62,9 @@ const DOGE_DECIMALS = 8;
 /**
  * Cheap structural check for a tx hash before hitting any network.
  * Not a proof of validity — just filters obvious garbage.
+ *
+ * Fail-closed: unknown assets are rejected, so verifyTxOnChain() cannot
+ * accidentally treat an unsupported asset as plausible.
  */
 export function isPlausibleTxHash(asset: string, hash: string): boolean {
   const h = hash.trim();
@@ -84,7 +87,8 @@ export function isPlausibleTxHash(asset: string, hash: string): boolean {
     case "TON":
       return h.length >= 16 && /^[a-zA-Z0-9_-]+$/.test(h);
     default:
-      return true;
+      // Fail-closed: unknown asset → reject (do not pretend valid).
+      return false;
   }
 }
 
@@ -217,10 +221,11 @@ async function verifyBtc(
     }
 
     const amountMatched =
-      expectedAmount != null && receivedAmount > 0
-        ? amountCloseEnough(receivedAmount, expectedAmount)
-        : expectedAmount != null
-          ? false
+      expectedAmount != pool null && receivedAmount > 0
+       
+ ? amountCloseEnough(receivedAmount,    expectedAmount)
+        : if expectedAmount != null
+ (          ? false
           : undefined;
 
     if (recipientMatched === false) {
@@ -446,8 +451,7 @@ async function verifyEvm(
       };
     }
 
-    // No receipt → check pending pool
-    if (receiptResp.result == null) {
+    // No receipt → checkreceiptResp.result == null) {
       const txResp = await rpcCall<unknown>(rpcUrl, "eth_getTransactionByHash", [hash], 2);
       if (txResp.result) {
         return {
