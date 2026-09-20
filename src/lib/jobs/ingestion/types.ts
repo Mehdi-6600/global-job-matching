@@ -87,6 +87,39 @@ export type SourceCapabilities = {
 };
 
 /**
+ * Optional per-source HTTP tuning.
+ *
+ * Declared on the registry entry, passed to the adapter via
+ * `AdapterFetchOptions.sourceConfig`. Adapters that ignore it still
+ * work (they just use their own defaults).
+ */
+export type SourceHttpConfig = {
+  /** Max ms for a single HTTP attempt (adapter default: 12_000). */
+  readonly timeoutMs?: number;
+  /** Max retry attempts for a single fetch (adapter default: 3). */
+  readonly maxAttempts?: number;
+  /**
+   * Max bytes for a single response body.
+   * If content-length exceeds this, the response is rejected before reading.
+   * If the body exceeds this despite missing/lying content-length, it is truncated.
+   */
+  readonly maxResponseBytes?: number;
+};
+
+/**
+ * Snapshot of source configuration passed to the adapter at fetch time.
+ * Adapters may read these values but must remain functional if any are
+ * missing (they should fall back to their own internal defaults).
+ */
+export type AdapterSourceConfig = {
+  readonly key: string;
+  readonly name: string;
+  readonly language?: string;
+  readonly rateLimitPerMinute?: number | null;
+  readonly httpConfig?: SourceHttpConfig;
+};
+
+/**
  * Normalized record produced by any adapter before central persist.
  * Draft fields are immutable once constructed by the adapter.
  */
@@ -121,6 +154,11 @@ export type AdapterFetchOptions = {
   readonly perPage?: number;
   readonly cursor?: string | null;
   readonly signal?: AbortSignal;
+  /**
+   * Optional per-source configuration (language, HTTP tuning, …).
+   * Adapters should treat any missing field as "use my own default".
+   */
+  readonly sourceConfig?: AdapterSourceConfig;
 };
 
 export type AdapterFetchResult = {
