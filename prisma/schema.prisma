@@ -150,12 +150,12 @@ model Job {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @default(now()) @updatedAt
 
-  company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  postedBy     User?         @relation("PostedBy", fields: [postedById], references: [id], onDelete: SetNull)
-  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  applications Application[]
-  savedJobs    SavedJob[]
-  interviews   Interview[]
+  company        Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  postedBy       User?              @relation("PostedBy", fields: [postedById], references: [id], onDelete: SetNull)
+  category       Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  applications   Application[]
+  savedJobs      SavedJob[]
+  interviews     Interview[]
   sourceListings JobSourceListing[]
 
   @@index([status])
@@ -200,11 +200,14 @@ model JobSource {
   consecutiveFailures    Int       @default(0)
   lastSyncStatus         String?
   syncCursor             String?
+  leaseOwner             String?
+  leaseUntil             DateTime?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
   @@index([enabled])
   @@index([licenseStatus])
+  @@index([leaseUntil])
 }
 
 model JobSourceListing {
