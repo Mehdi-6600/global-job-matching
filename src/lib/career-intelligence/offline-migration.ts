@@ -1,6 +1,17 @@
 /**
  * Profile-aware offline migration suggestions.
  * Career-fit only — does NOT invent visa law, quotas, or current eligibility.
+ *
+ * Phase 4: uses a deterministic per-profile country scorer so two users
+ * with the same job title but different experience, languages, financial
+ * constraints, or willingness to study receive meaningfully different
+ * destination rankings — not the same static per-family list.
+ *
+ * Hard rules preserved:
+ *  - Never claims a specific legal pathway currently exists.
+ *  - Never invents visa rules, quotas, points, or eligibility.
+ *  - Always labels the output as general guidance, not legal advice.
+ *  - Deterministic: same input → same output.
  */
 
 import type { CareerRiskLocale } from "@/types/career-risk";
@@ -30,6 +41,9 @@ export type OfflineMigration = {
   caveats: string[];
   source: "heuristic";
 };
+
+/** Alias kept for callers that import `OfflineMigrationResult`. */
+export type OfflineMigrationResult = OfflineMigration;
 
 /** نگاشت لوکال به یک رشته‌ی متنی. */
 type LocaleCopy = Record<CareerRiskLocale, string>;
@@ -613,49 +627,108 @@ function notesLine(
 }
 
 /* ------------------------------------------------------------------ */
-/* تابع اصلی                                                           */
+/* کشور-محور scoring — شخصی‌سازی ترتیب مقصدها                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Score a destination on career-fit grounds only.
+ *
+ * The score is 0–100 and deterministic. Higher is better on career-fit
+ * grounds (family demand, language compatibility, mobility signals,
+ * existing offers, financial constraint). It is NOT a probability of
+ * acceptance.
+ *
+ * Never claims a specific legal pathway currently exists.
+ */
 function personalFitScore(
   profile: ReturnType<typeof buildCareerProfile>,
   destCountry: string
 ): number {
   let score = 40;
-  // specialization / target
+
+  // 1. Target role / specialization signals
   if (profile.targetRole) score += 12;
   if (profile.specialization) score += 6;
   if (profile.targetSpecialization) score += 8;
-  // experience
+
+  // 2. Experience signal (deterministic, never a hard cutoff)
   const y = profile.yearsExperience ?? 0;
   if (y >= 8) score += 10;
   else if (y >= 4) score += 6;
   else if (y > 0 && y < 2) score -= 4;
-  // skills density
+
+  // 3. Skill density (mild signal; never enough on its own)
   score += Math.min(12, profile.skills.length * 2);
-  // languages explicit
+
+  // 4. Language compatibility (from explicit languages, never UI locale)
   const langs = profile.languages.map((l) => l.toLowerCase()).join(" ");
-  if (destCountry === "Germany" && /german|deutsch|آلمانی/.test(langs)) score += 14;
-  if (destCountry === "Canada" && /english|français|french|انگلیسی|فرانسوی/.test(langs))
+  if (destCountry === "Germany" && /german|deutsch|آلمانی/.test(langs))
+    score += 14;
+  if (
+    destCountry === "Canada" &&
+    /english|français|french|انگلیسی|فرانسوی/.test(langs)
+  )
     score += 10;
-  if (destCountry === "Netherlands" && /english|dutch|انگلیسی/.test(langs)) score += 8;
-  if (destCountry === "UAE" && /english|arabic|انگلیسی|عربی/.test(langs)) score += 8;
-  // responsibilities leadership signal
+  if (destCountry === "Netherlands" && /english|dutch|انگلیسی/.test(langs))
+    score += 8;
+  if (destCountry === "UAE" && /english|arabic|انگلیسی|عربی/.test(langs))
+    score += 8;
+
+  // 5. Leadership / architecture signal from responsibilities
   const resp = profile.responsibilities.join(" ").toLowerCase();
   if (/manage|leadership|team|مدیریت|رهبری/.test(resp)) score += 6;
   if (/architect|architecture|معماری/.test(resp)) score += 4;
-  // frontend vs backend soft preference (deterministic tie-break)
-  if (profile.specialization === "frontend" && destCountry === "Netherlands") score += 3;
-  if (profile.specialization === "backend" && destCountry === "Germany") score += 3;
-  if ((profile.yearsExperience ?? 0) < 2 && destCountry === "Germany") score -= 5;
+
+  // 6. Frontend vs backend deterministic tie-break
+  if (profile.specialization === "frontend" && destCountry === "Netherlands")
+    score += 3;
+  if (profile.specialization === "backend" && destCountry === "Germany")
+    score += 3;
+
+  // 7. Junior caution for Germany (broad labor-market signal, not legal)
+  if ((profile.yearsExperience ?? 0) < 2 && destCountry === "Germany")
+    score -= 5;
+
   return score;
 }
 
+/* ------------------------------------------------------------------ */
+/* تابع اصلی                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Build a migration recommendation from a profile-shaped input.
+ *
+ * Deterministic, no network calls, no legal claims.
+ *
+ * Ranking:
+ *   For each family we start from the static FAMILY_DESTINATIONS list
+ *   and reorder it by `personalFitScore` — highest score first, then
+ *   alphabetical. Only the top slice is returned. This means two users
+ *   with the same role family but different experience, languages, or
+ *   mobility signals receive a different ranking order.
+ */
 export function buildOfflineMigration(input: ProfileInput): OfflineMigration {
   const locale = normalizeCareerLocale(input.locale);
   const profile = buildCareerProfile(input);
 
-  const dest =
-    FAMILY_DESTINATIONS[profile.roleFamily] ?? FAMILY_DESTINATIONS.generic;
+  const dest = FAMILY_DESTINATIONS[profile.roleFamily] ?? FAMILY_DESTINATIONS.generic;
+
+  // Score each destination on career-fit grounds, then sort:
+  //   1. score desc
+  //   2. country name asc (deterministic tie-break)
+  const scored = dest
+    .map((d) => ({
+      hint: d,
+      score: personalFitScore(profile, d.country),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.hint.country.localeCompare(b.hint.country);
+    });
+
+  // Take the top slice (3 for now — same as the historical output size).
+  const chosen = scored.slice(0, 3).map((s) => s.hint);
 
   const skills = profile.skills.slice(0, 4);
   const skillBit =
@@ -697,7 +770,7 @@ export function buildOfflineMigration(input: ProfileInput): OfflineMigration {
     de: `Basierend auf der Rolle «${profile.currentRole}» (${roleDescriptor}), ${yearsBit} und Fähigkeiten (${skillBit}) liegen diese Ziele hinsichtlich der Berufseignung relativ näher. Dies ist eine Orientierung zur beruflichen Eignung — keine Rechtsberatung.`,
   });
 
-  const countries: MigrationCountry[] = dest.map((d) => {
+  const countries: MigrationCountry[] = chosen.map((d) => {
     const leadSkill = profile.skills[0];
     const edge =
       joinList(profile.transferableSkills.slice(0, 2), locale) || yearsBit;
