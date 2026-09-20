@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getPlanLimits, type PlanId } from "@/lib/plan-limits";
-import { monthPeriodKey } from "@/lib/quota";
+import { monthPeriodKey, AI_KINDS } from "@/lib/quota";
 
 export type UsageSnapshot = {
   periodKey: string;
@@ -19,6 +19,11 @@ function monthStartUtc(): Date {
 
 /**
  * Read-only quota snapshot for a user under an effective plan.
+ *
+ * `aiGenerations.used` counts ALL AI usage kinds (resume, career risk,
+ * roadmap, migration) — the same pool that `assertAndReserveAiUsage`
+ * draws from. Keeping a single source of truth (AI_KINDS in quota.ts)
+ * prevents the UI from under-reporting when new AI kinds are added.
  */
 export async function getUsageSnapshot(
   userId: string,
@@ -45,7 +50,7 @@ export async function getUsageSnapshot(
       where: {
         userId,
         periodKey,
-        kind: { in: ["ai_resume", "ai_career_risk"] },
+        kind: { in: AI_KINDS },
       },
     }),
     db.job.count({
