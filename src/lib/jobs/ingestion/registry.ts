@@ -11,6 +11,7 @@ import type {
   JobSourceAdapter,
   LicenseStatus,
   SourceCapabilities,
+  SourceHttpConfig,
 } from "./types";
 import { arbeitnowAdapter } from "./adapters/arbeitnow";
 
@@ -28,6 +29,12 @@ export type SourceRegistryEntry = {
   refreshIntervalMinutes: number;
   rateLimitPerMinute?: number | null;
   notes: string;
+
+  /** ISO 639-1 language code of the source content (e.g. "en", "de"). */
+  language?: string;
+
+  /** Optional per-source HTTP tuning passed to the adapter. */
+  httpConfig?: SourceHttpConfig;
 
   /**
    * Adapter implementation for this source.
@@ -64,6 +71,12 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 30,
     notes: "Existing production source. Legal re-verification recommended.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 12_000,
+      maxAttempts: 3,
+      maxResponseBytes: 10_000_000,
+    },
     adapter: arbeitnowAdapter,
     capabilities: {
       pagination: "page",
@@ -153,8 +166,8 @@ export async function ensureSourcesInDb(
  * Runnable sources = registry metadata ∩ DB enabled+APPROVED.
  * If DB row missing, falls back to static entry (and ensureSourcesInDb should have run).
  *
- * Adapter reference and capabilities are carried through so the pipeline
- * can resolve them without a separate lookup table.
+ * Adapter reference, capabilities, and HTTP config are carried through so
+ * the pipeline can resolve them without a separate lookup table.
  */
 export async function getRunnableSources(
   sourceKeys?: string[],
