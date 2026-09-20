@@ -98,6 +98,8 @@ model Company {
   ownerId     String?
   email       String?
   status      String   @default("active")
+  isActive    Boolean  @default(true)
+  verified    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
@@ -107,6 +109,8 @@ model Company {
 
   @@index([ownerId])
   @@index([status])
+  @@index([isActive])
+  @@index([verified])
 }
 
 model Job {
