@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
-import { NotificationProvider } from "@/components/notification-provider";
 import { LocaleProvider } from "@/components/locale-provider";
 
 const AnalyticsTracker = dynamic(
@@ -27,10 +26,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         disableTransitionOnChange
       >
         <LocaleProvider>
-          <NotificationProvider>
-            <AnalyticsTracker />
-            {children}
-          </NotificationProvider>
+          <AnalyticsTracker />
+          {children}
         </LocaleProvider>
       </ThemeProvider>
     </SessionProvider>
