@@ -1,3 +1,4 @@
+import { locales, type Locale } from "@/lib/i18n/config";
 import en from "../../../messages/en.json";
 import fa from "../../../messages/fa.json";
 import ar from "../../../messages/ar.json";
@@ -8,9 +9,13 @@ import de from "../../../messages/de.json";
 
 type Dict = Record<string, unknown>;
 
-/** All product locales — must stay in sync with config.ts */
-export const LOCALES = ["en", "fa", "ar", "es", "fr", "hi", "de"] as const;
-export type AssertLocale = (typeof LOCALES)[number];
+/**
+ * All product locales — single source of truth in `@/lib/i18n/config`.
+ * Re-exported here as `LOCALES` for backward compatibility with tests
+ * that import this module.
+ */
+export const LOCALES = locales;
+export type AssertLocale = Locale;
 
 export const dictionaries: Record<AssertLocale, Dict> = {
   en: en as Dict,
