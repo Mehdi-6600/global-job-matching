@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -117,10 +118,13 @@ function salaryLabel(job: Job) {
    ---------------------------------------------------------------- */
 const SHOW_MAP_SECTION = false;
 
+type Audience = "seeker" | "employer";
+
 export default function HomePage() {
   const { t } = useLocale();
   const router = useRouter();
 
+  const [audience, setAudience] = useState<Audience>("seeker");
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -244,20 +248,14 @@ export default function HomePage() {
       href: "/career-risk",
       icon: MapIcon,
       title: t("CareerRisk.roadmapBtn", "90-day roadmap"),
-      description: t(
-        "CareerRisk.roadmapTitle",
-        "90-day roadmap"
-      ),
+      description: t("CareerRisk.roadmapTitle", "90-day roadmap"),
       accent: "orange",
     },
     {
       href: "/career-risk",
       icon: Plane,
       title: t("CareerRisk.migrationBtn", "Migration options"),
-      description: t(
-        "CareerRisk.migrationTitle",
-        "Migration options"
-      ),
+      description: t("CareerRisk.migrationTitle", "Migration options"),
       accent: "red",
     },
   ];
@@ -325,6 +323,29 @@ export default function HomePage() {
     },
   ];
 
+  const audienceToggle = (
+    <div className="gjm-audience-toggle" role="tablist" aria-label="Audience">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={audience === "seeker"}
+        onClick={() => setAudience("seeker")}
+        className={`gjm-audience-btn ${audience === "seeker" ? "active" : ""}`}
+      >
+        {t("Home.audienceSeeker", "For Job Seekers")}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={audience === "employer"}
+        onClick={() => setAudience("employer")}
+        className={`gjm-audience-btn ${audience === "employer" ? "active" : ""}`}
+      >
+        {t("Home.audienceEmployer", "For Employers")}
+      </button>
+    </div>
+  );
+
   return (
     <main id="gjm-home" className="gjm-home">
       <section className="gjm-hero">
@@ -335,6 +356,8 @@ export default function HomePage() {
 
         <div className="gjm-container gjm-hero-inner">
           <div className="gjm-hero-copy">
+            {audienceToggle}
+
             <div className="gjm-eyebrow">
               <span className="gjm-eyebrow-dot" />
               {t("Home.eyebrow", "GLOBAL CAREER PLATFORM")}
@@ -354,37 +377,67 @@ export default function HomePage() {
               )}
             </p>
 
-            <div className="gjm-hero-actions">
-              <Link href="/jobs" className="gjm-btn gjm-btn-primary">
-                {t("Home.ctaJobs", "Find Jobs")}
-                <ArrowRight size={18} />
-              </Link>
+            <p className="gjm-hero-value">
+              {audience === "seeker"
+                ? t(
+                    "Home.valueSeekers",
+                    "AI career intelligence, global jobs, 7 languages."
+                  )
+                : t(
+                    "Home.valueEmployers",
+                    "Reach global talent, manage hiring in one place."
+                  )}
+            </p>
 
-              <Link href="/register" className="gjm-btn gjm-btn-secondary">
-                {t("Home.ctaRegister", "Create Your Profile")}
-              </Link>
+            <div className="gjm-hero-actions">
+              {audience === "seeker" ? (
+                <>
+                  <Link href="/jobs" className="gjm-btn gjm-btn-primary">
+                    {t("Home.ctaJobs", "Find Jobs")}
+                    <ArrowRight size={18} />
+                  </Link>
+
+                  <Link
+                    href="/register"
+                    className="gjm-btn gjm-btn-secondary"
+                  >
+                    {t("Home.ctaRegister", "Create Your Profile")}
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/employer/dashboard"
+                    className="gjm-btn gjm-btn-primary"
+                  >
+                    {t("Home.employerCta", "Explore Employer Tools")}
+                    <ArrowRight size={18} />
+                  </Link>
+
+                  <Link
+                    href="/register"
+                    className="gjm-btn gjm-btn-secondary"
+                  >
+                    {t("Home.ctaRegister", "Create Your Profile")}
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="gjm-hero-trust">
               <div>
                 <CheckCircle2 size={16} />
-                <span>
-                  {t("Home.trustGlobal", "Global opportunities")}
-                </span>
+                <span>{t("Home.trustGlobal", "Global opportunities")}</span>
               </div>
 
               <div>
                 <CheckCircle2 size={16} />
-                <span>
-                  {t("Home.trustLanguages", "7 languages")}
-                </span>
+                <span>{t("Home.trustLanguages", "7 languages")}</span>
               </div>
 
               <div>
                 <CheckCircle2 size={16} />
-                <span>
-                  {t("Home.trustJobs", "Active listings")}
-                </span>
+                <span>{t("Home.trustJobs", "Active listings")}</span>
               </div>
             </div>
           </div>
@@ -482,9 +535,7 @@ export default function HomePage() {
                     ? totalJobs.toLocaleString()
                     : "—"}
                 </strong>
-                <span>
-                  {t("Home.activeJobs", "active jobs")}
-                </span>
+                <span>{t("Home.activeJobs", "active jobs")}</span>
               </div>
             </div>
           </div>
@@ -536,61 +587,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="gjm-stats-section">
+      {/* ============================================================
+          TRUST SECTION — real product evidence, no fake testimonials
+          ============================================================ */}
+      <section className="gjm-trust-section">
         <div className="gjm-container">
-          <div className="gjm-stat-panel">
-            <div className="gjm-stat">
-              <span className="gjm-stat-icon">
+          <div className="gjm-section-heading compact">
+            <div>
+              <span className="gjm-section-kicker">
+                {t("Home.trustSectionKicker", "BUILT ON REAL DATA")}
+              </span>
+              <h2>
+                {t(
+                  "Home.trustSectionTitle",
+                  "Trusted infrastructure, not testimonials."
+                )}
+              </h2>
+            </div>
+          </div>
+
+          <div className="gjm-trust-grid">
+            <div className="gjm-trust-item">
+              <span className="gjm-trust-icon">
                 <BriefcaseBusiness size={20} />
               </span>
               <div>
                 <strong>
-                  {totalJobs != null
-                    ? totalJobs.toLocaleString()
-                    : "—"}
+                  {totalJobs != null ? totalJobs.toLocaleString() : "—"}
                 </strong>
-                <span>
-                  {t("Home.statRoles", "Active Jobs")}
-                </span>
+                <span>{t("Home.trustJobsLabel", "Live jobs")}</span>
               </div>
             </div>
 
-            <div className="gjm-stat">
-              <span className="gjm-stat-icon">
+            <div className="gjm-trust-item">
+              <span className="gjm-trust-icon">
                 <Globe2 size={20} />
               </span>
               <div>
                 <strong>7</strong>
-                <span>
-                  {t("Home.statLanguages", "Languages")}
-                </span>
+                <span>{t("Home.trustLanguagesLabel", "Languages")}</span>
               </div>
             </div>
 
-            <div className="gjm-stat">
-              <span className="gjm-stat-icon">
-                <Laptop size={20} />
+            <div className="gjm-trust-item">
+              <span className="gjm-trust-icon">
+                <ShieldCheck size={20} />
               </span>
               <div>
-                <strong>
-                  {t("Home.remoteStatValue", "Remote")}
-                </strong>
+                <strong>100%</strong>
                 <span>
-                  {t("Home.remoteStatLabel", "Work options")}
-                </span>
-              </div>
-            </div>
-
-            <div className="gjm-stat">
-              <span className="gjm-stat-icon">
-                <Building2 size={20} />
-              </span>
-              <div>
-                <strong>
-                  {t("Home.globalStatValue", "Global")}
-                </strong>
-                <span>
-                  {t("Home.globalStatLabel", "Career marketplace")}
+                  {t("Home.trustFreshnessLabel", "Freshness verified")}
                 </span>
               </div>
             </div>
@@ -599,51 +645,49 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          CAREER TOOLS — quick access to Career Risk, Roadmap, Migration
+          CAREER TOOLS — only for job seekers
           ============================================================ */}
-      <section className="gjm-section gjm-career-tools-section">
-        <div className="gjm-container">
-          <div className="gjm-section-heading compact">
-            <div>
-              <span className="gjm-section-kicker">
-                {t("Home.toolsKicker", "AI CAREER TOOLS")}
-              </span>
+      {audience === "seeker" && (
+        <section className="gjm-section gjm-career-tools-section">
+          <div className="gjm-container">
+            <div className="gjm-section-heading compact">
+              <div>
+                <span className="gjm-section-kicker">
+                  {t("Home.toolsKicker", "AI CAREER TOOLS")}
+                </span>
+                <h2>
+                  {t("Home.toolsTitle", "Plan your career with AI.")}
+                </h2>
+              </div>
+            </div>
 
-              <h2>
-                {t(
-                  "Home.toolsTitle",
-                  "Plan your career with AI."
-                )}
-              </h2>
+            <div className="gjm-career-tools-grid">
+              {careerTools.map((tool) => {
+                const Icon = tool.icon;
+
+                return (
+                  <Link
+                    key={tool.title}
+                    href={tool.href}
+                    className={`gjm-career-tool-card accent-${tool.accent}`}
+                  >
+                    <div className="gjm-career-tool-icon">
+                      <Icon size={22} />
+                    </div>
+
+                    <h3>{tool.title}</h3>
+                    <p>{tool.description}</p>
+
+                    <span className="gjm-career-tool-arrow">
+                      <ArrowRight size={16} />
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
-
-          <div className="gjm-career-tools-grid">
-            {careerTools.map((tool) => {
-              const Icon = tool.icon;
-
-              return (
-                <Link
-                  key={tool.title}
-                  href={tool.href}
-                  className={`gjm-career-tool-card accent-${tool.accent}`}
-                >
-                  <div className="gjm-career-tool-icon">
-                    <Icon size={22} />
-                  </div>
-
-                  <h3>{tool.title}</h3>
-                  <p>{tool.description}</p>
-
-                  <span className="gjm-career-tool-arrow">
-                    <ArrowRight size={16} />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="gjm-section gjm-section-light">
         <div className="gjm-container">
@@ -654,10 +698,7 @@ export default function HomePage() {
               </span>
 
               <h2>
-                {t(
-                  "Home.whyTitle",
-                  "Your career has no borders."
-                )}
+                {t("Home.whyTitle", "Your career has no borders.")}
               </h2>
             </div>
 
@@ -736,10 +777,12 @@ export default function HomePage() {
                     <div className="gjm-job-card-top">
                       <div className="gjm-company-logo">
                         {job.company?.logo ? (
-                          <img
+                          <Image
                             src={job.company.logo}
                             alt=""
-                            loading="lazy"
+                            width={52}
+                            height={52}
+                            className="object-cover w-full h-full"
                           />
                         ) : (
                           initials(job.company?.name)
@@ -783,8 +826,7 @@ export default function HomePage() {
                           ) : (
                             <>
                               <BriefcaseBusiness size={14} />
-                              {job.type ||
-                                t("Home.fullTime", "Full-time")}
+                              {job.type || t("Home.fullTime", "Full-time")}
                             </>
                           )}
                         </span>
@@ -825,10 +867,7 @@ export default function HomePage() {
               <div className="gjm-empty-jobs">
                 <BriefcaseBusiness size={28} />
                 <h3>
-                  {t(
-                    "Home.noJobsTitle",
-                    "No active jobs to display yet"
-                  )}
+                  {t("Home.noJobsTitle", "No active jobs to display yet")}
                 </h3>
                 <p>
                   {t(
@@ -846,56 +885,58 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="gjm-section gjm-platform-section">
-        <div className="gjm-container">
-          <div className="gjm-platform-header">
-            <div>
-              <span className="gjm-section-kicker">
-                {t("Home.platformKicker", "ONE PLATFORM")}
-              </span>
+      {audience === "seeker" && (
+        <section className="gjm-section gjm-platform-section">
+          <div className="gjm-container">
+            <div className="gjm-platform-header">
+              <div>
+                <span className="gjm-section-kicker">
+                  {t("Home.platformKicker", "ONE PLATFORM")}
+                </span>
 
-              <h2>
-                {t(
-                  "Home.platformTitle",
-                  "Everything around your job search."
-                )}
-              </h2>
+                <h2>
+                  {t(
+                    "Home.platformTitle",
+                    "Everything around your job search."
+                  )}
+                </h2>
 
-              <p>
-                {t(
-                  "Home.platformDescription",
-                  "A focused set of tools and destinations designed to make global job discovery simpler."
-                )}
-              </p>
+                <p>
+                  {t(
+                    "Home.platformDescription",
+                    "A focused set of tools and destinations designed to make global job discovery simpler."
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="gjm-platform-grid">
+              {platformCards.map((card) => {
+                const Icon = card.icon;
+
+                return (
+                  <Link
+                    href={card.href}
+                    key={card.href}
+                    className={`gjm-platform-card accent-${card.accent}`}
+                  >
+                    <div className="gjm-platform-icon">
+                      <Icon size={20} />
+                    </div>
+
+                    <div>
+                      <h3>{card.title}</h3>
+                      <p>{card.description}</p>
+                    </div>
+
+                    <ChevronRight size={18} className="gjm-platform-arrow" />
+                  </Link>
+                );
+              })}
             </div>
           </div>
-
-          <div className="gjm-platform-grid">
-            {platformCards.map((card) => {
-              const Icon = card.icon;
-
-              return (
-                <Link
-                  href={card.href}
-                  key={card.href}
-                  className={`gjm-platform-card accent-${card.accent}`}
-                >
-                  <div className="gjm-platform-icon">
-                    <Icon size={20} />
-                  </div>
-
-                  <div>
-                    <h3>{card.title}</h3>
-                    <p>{card.description}</p>
-                  </div>
-
-                  <ChevronRight size={18} className="gjm-platform-arrow" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="gjm-employer-section">
         <div className="gjm-container">
@@ -906,10 +947,7 @@ export default function HomePage() {
               </span>
 
               <h2>
-                {t(
-                  "Home.employerTitle",
-                  "Find talent without borders."
-                )}
+                {t("Home.employerTitle", "Find talent without borders.")}
               </h2>
 
               <p>
@@ -1003,10 +1041,7 @@ export default function HomePage() {
 
                     <div>
                       <small>
-                        {t(
-                          "Home.dashboardCandidates",
-                          "Candidates"
-                        )}
+                        {t("Home.dashboardCandidates", "Candidates")}
                       </small>
                       <strong>—</strong>
                     </div>
@@ -1015,14 +1050,9 @@ export default function HomePage() {
                   <div className="gjm-dashboard-table">
                     <div className="gjm-table-heading">
                       <span>
-                        {t(
-                          "Home.dashboardPipeline",
-                          "Hiring pipeline"
-                        )}
+                        {t("Home.dashboardPipeline", "Hiring pipeline")}
                       </span>
-                      <span>
-                        {t("Home.dashboardView", "View")}
-                      </span>
+                      <span>{t("Home.dashboardView", "View")}</span>
                     </div>
 
                     <div className="gjm-pipeline">
@@ -1087,14 +1117,8 @@ export default function HomePage() {
                   <ArrowRight size={18} />
                 </Link>
 
-                <Link
-                  href="/register"
-                  className="gjm-btn gjm-btn-secondary"
-                >
-                  {t(
-                    "Home.finalProfile",
-                    "Create Your Profile"
-                  )}
+                <Link href="/register" className="gjm-btn gjm-btn-secondary">
+                  {t("Home.finalProfile", "Create Your Profile")}
                 </Link>
               </div>
             </div>
