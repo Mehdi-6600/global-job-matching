@@ -102,6 +102,14 @@ export type QualityResult = {
 /**
  * Mutable run counters — pipeline increments these during a sync.
  * Do NOT mark counter fields as readonly.
+ *
+ * `leaseLost` is distinct from `timedOut`:
+ *   - `timedOut`   → run stopped because the global time budget ran out
+ *   - `leaseLost`  → run stopped because the source lease could not be renewed
+ *                    (ownership no longer confirmed by the database)
+ *
+ * Both produce `completeness: "PARTIAL"` and are safe to resume later,
+ * but they must be reported separately for diagnostics.
  */
 export type IngestStats = {
   sourceKey: string;
@@ -117,6 +125,7 @@ export type IngestStats = {
   qualityRejected: number;
   failed: number;
   timedOut: boolean;
+  leaseLost?: boolean;
   completeness: SyncCompleteness;
   errors: string[];
 };
