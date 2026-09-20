@@ -34,6 +34,59 @@ export type FreshnessStatus =
 export type SyncCompleteness = "FULL" | "PARTIAL" | "FAILED";
 
 /**
+ * Pagination modes supported by the central pipeline.
+ *
+ *  - "page"   → adapter yields page numbers (page=1,2,3,…)
+ *  - "cursor" → adapter yields an opaque nextCursor token
+ *  - "token"  → same as cursor; kept separate for semantic clarity
+ *  - "single" → adapter returns everything in one call (no pagination)
+ *
+ * Adapters declare which mode they use. The pipeline handles all modes
+ * uniformly; this declaration is for validation, metrics, and future
+ * loop-protection logic.
+ */
+export type PaginationMode = "page" | "cursor" | "token" | "single";
+
+/**
+ * Optional capability declaration for a source adapter.
+ *
+ * Adapters MAY declare which features their source actually provides.
+ * The pipeline never assumes a capability; missing declarations fall
+ * back to permissive behavior (accept whatever the adapter returns).
+ *
+ * This is intentionally a *soft* declaration, not an enforcement layer:
+ *  - If a capability is declared `false`, the pipeline may skip costly
+ *    checks that would otherwise be wasted (future optimization).
+ *  - If a capability is undeclared, the pipeline behaves as before.
+ */
+export type SourceCapabilities = {
+  /** How the adapter paginates. Defaults to "page" if undeclared. */
+  readonly pagination?: PaginationMode;
+  /** Adapter produces a stable, source-scoped identifier. */
+  readonly providesExternalId?: boolean;
+  /** Adapter produces an external detail URL. */
+  readonly providesExternalUrl?: boolean;
+  /** Adapter produces an apply URL distinct from external URL. */
+  readonly providesApplyUrl?: boolean;
+  /** Adapter produces structured salary info. */
+  readonly providesSalary?: boolean;
+  /** Adapter produces a remote flag. */
+  readonly providesRemote?: boolean;
+  /** Adapter produces a published timestamp. */
+  readonly providesPublishedAt?: boolean;
+  /** Adapter produces a source-side updated timestamp. */
+  readonly providesSourceUpdatedAt?: boolean;
+  /** Adapter produces a company name. */
+  readonly providesCompany?: boolean;
+  /** Adapter produces a non-empty location. */
+  readonly providesLocation?: boolean;
+  /** Adapter produces an employment type. */
+  readonly providesEmploymentType?: boolean;
+  /** Adapter produces a meaningful description (not just title). */
+  readonly providesDescription?: boolean;
+};
+
+/**
  * Normalized record produced by any adapter before central persist.
  * Draft fields are immutable once constructed by the adapter.
  */
