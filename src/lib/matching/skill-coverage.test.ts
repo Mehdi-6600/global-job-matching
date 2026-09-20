@@ -106,7 +106,7 @@ describe("skill coverage blend", () => {
     expect(result.score).toBeLessThan(45);
   });
 
-  it("remote jobs receive full location score", () => {
+  it("remote jobs receive a partial (not perfect) location score", () => {
     const remote = computeMatchScore(
       { skills: "Python", location: "Tehran" },
       {
@@ -130,7 +130,9 @@ describe("skill coverage blend", () => {
       },
     );
 
-    expect(remote.breakdown.location).toBe(100);
+    // Remote is flexible but deliberately not 100 (see locationScore in score.ts):
+    // otherwise location weight alone could push a weak match into "excellent".
+    expect(remote.breakdown.location).toBe(90);
     expect(remote.score).toBeGreaterThan(onsite.score);
   });
 
