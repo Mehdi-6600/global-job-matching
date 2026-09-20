@@ -4,6 +4,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { contentFingerprint } from "@/lib/jobs/ingestion/content-fingerprint";
 import { parseCheckpoint } from "@/lib/jobs/ingestion/checkpoint";
+import { randomBytes } from "crypto";
 
 describe("cursor lifecycle semantics", () => {
   it("checkpoint stores and restores cursor for next run", () => {
@@ -119,7 +120,7 @@ describe("lease ownership CAS semantics", () => {
   it("owner token is unique per acquire attempt", async () => {
     const tokens = new Set<string>();
     for (let i = 0; i < 5; i++) {
-      tokens.add(require("crypto").randomBytes(16).toString("hex"));
+      tokens.add(randomBytes(16).toString("hex"));
     }
     expect(tokens.size).toBe(5);
   });
