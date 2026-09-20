@@ -1,9 +1,18 @@
 /**
  * Static defaults + DB as runtime Source of Truth for enablement/license.
  * UNKNOWN license never runs in production ingestion.
+ *
+ * The registry is the single source of truth for which adapters exist.
+ * A new source = one adapter file + one registry entry. The pipeline
+ * resolves adapters through this registry (no separate ADAPTERS map).
  */
 import { db } from "@/lib/db";
-import type { LicenseStatus } from "./types";
+import type {
+  JobSourceAdapter,
+  LicenseStatus,
+  SourceCapabilities,
+} from "./types";
+import { arbeitnowAdapter } from "./adapters/arbeitnow";
 
 export type SourceRegistryEntry = {
   key: string;
@@ -19,6 +28,22 @@ export type SourceRegistryEntry = {
   refreshIntervalMinutes: number;
   rateLimitPerMinute?: number | null;
   notes: string;
+
+  /**
+   * Adapter implementation for this source.
+   *
+   * Declared here (not in a separate ADAPTERS map) so adding a new
+   * source is a single-file change: create the adapter, add a registry
+   * entry with the adapter reference, done.
+   */
+  adapter?: JobSourceAdapter;
+
+  /**
+   * Optional capability declaration. The pipeline never assumes a
+   * capability; this is used for diagnostics and future optimizations.
+   */
+  capabilities?: SourceCapabilities;
+
   /** Runtime health fields from JobSource (optional) */
   consecutiveFailures?: number;
   lastErrorAt?: Date | null;
@@ -39,6 +64,21 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 30,
     notes: "Existing production source. Legal re-verification recommended.",
+    adapter: arbeitnowAdapter,
+    capabilities: {
+      pagination: "page",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: true,
+      providesDescription: true,
+    },
   },
 ];
 
@@ -112,6 +152,9 @@ export async function ensureSourcesInDb(
 /**
  * Runnable sources = registry metadata ∩ DB enabled+APPROVED.
  * If DB row missing, falls back to static entry (and ensureSourcesInDb should have run).
+ *
+ * Adapter reference and capabilities are carried through so the pipeline
+ * can resolve them without a separate lookup table.
  */
 export async function getRunnableSources(
   sourceKeys?: string[],
