@@ -112,7 +112,17 @@
     "finalProfile": "أنشئ ملفك الشخصي",
     "careerRiskTitle": "هل وظيفتك آمنة من أتمتة الذكاء الاصطناعي؟",
     "careerRiskDesc": "درجة خطر واضحة، ومهارات للبناء، وخطوات أذكى تالية — ابدأ مجاناً.",
-    "careerRiskCta": "تحقق من مخاطري"
+    "careerRiskCta": "تحقق من مخاطري",
+    "audienceSeeker": "للباحثين عن عمل",
+    "audienceEmployer": "لأصحاب العمل",
+    "valueSeekers": "ذكاء اصطناعي مهني، وظائف عالمية، ٧ لغات.",
+    "valueEmployers": "الوصول إلى المواهب العالمية، وإدارة التوظيف في مكان واحد.",
+    "trustJobsLabel": "وظائف حية",
+    "trustSourcesLabel": "مصادر الوظائف",
+    "trustLanguagesLabel": "اللغات",
+    "trustFreshnessLabel": "حداثة موثقة",
+    "trustSectionKicker": "مبني على بيانات حقيقية",
+    "trustSectionTitle": "بنية تحتية موثوقة، لا شهادات مزيفة."
   },
   "Common": {
     "loading": "جارٍ التحميل...",
