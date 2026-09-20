@@ -11,12 +11,12 @@
  *  - Source lease is fail-closed: if ownership cannot be confirmed, the
  *    worker stops instead of silently continuing without a valid lease.
  *  - Adapter resolution goes through the registry (single source of truth).
- *  - Cursor-based pagination is loop-protected: a repeated nextCursor
- *    stops the source with `pagination_loop_detected` instead of burning
- *    budget on identical pages.
- *  - Attribution fallback: if an adapter does not set draft.attribution,
- *    the source-level attribution from the registry is used instead.
+ *  - Cursor-based pagination is loop-protected.
+ *  - Attribution fallback: registry attribution is used when the adapter
+ *    does not set draft.attribution.
+ *  - Every source run carries a `runId` for structured logging.
  */
+import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import {
   parseLocation,
@@ -52,6 +52,7 @@ import {
   releaseSourceLease,
 } from "./source-lease";
 import { tryAcquireSourceQuota } from "./rate-limit";
+import { logIngestionEvent } from "./log";
 
 
 /* -------------------------------------------------------------------------- */
@@ -66,6 +67,10 @@ const PER_PAGE = 100;
 /* -------------------------------------------------------------------------- */
 /*  Helpers                                                                   */
 /* -------------------------------------------------------------------------- */
+
+function generateRunId(): string {
+  return randomBytes(8).toString("hex");
+}
 
 function isTimedOut(started: number): boolean {
   return Date.now() - started >= MAX_EXECUTION_MS;
@@ -94,6 +99,7 @@ function formatLocation(city: string, country: string): string {
 function emptyStats(sourceKey: string): IngestStats {
   return {
     sourceKey,
+    runId: generateRunId(),
     startedAt: new Date().toISOString(),
     fetched: 0,
     validated: 0,
@@ -248,15 +254,6 @@ const existingJobSelect = {
   },
 } as const;
 
-/**
- * Strict 3-level dedup:
- *
- * 1. externalId
- * 2. externalUrl
- * 3. applyUrl
- *
- * Employer-owned jobs are excluded at database-query level.
- */
 async function findDedupCandidate(
   draft: IngestJobDraft,
 ): Promise<{ ref: ExistingJobRef; confidence: number } | null> {
@@ -367,11 +364,6 @@ async function findDedupCandidate(
 /*  Persistence                                                               */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Persist one draft. `sourceAttribution` is the registry-level attribution
- * for the source; used when the adapter did not set draft.attribution.
- * Adapter attribution wins because it may be more specific.
- */
 async function persistDraft(
   draft: IngestJobDraft,
   stats: IngestStats,
@@ -403,7 +395,6 @@ async function persistDraft(
   const now = new Date();
   const syncTag = `synced:${now.toISOString().slice(0, 10)}`;
 
-  /* Adapter attribution wins; otherwise fall back to registry attribution. */
   const effectiveAttribution = draft.attribution ?? sourceAttribution;
 
   if (existing) {
@@ -634,10 +625,14 @@ export async function runIngestion(
       const blocked = emptyStats(source.key);
       blocked.finishedAt = new Date().toISOString();
       blocked.completeness = "FAILED";
-      blocked.errors.push(
-        ingestBlockReason(source) ?? "source_blocked",
-      );
+      const reason = ingestBlockReason(source) ?? "source_blocked";
+      blocked.errors.push(reason);
       allStats.push(blocked);
+      logIngestionEvent("warn", "source_blocked", {
+        sourceKey: source.key,
+        runId: blocked.runId,
+        reason,
+      });
       continue;
     }
 
@@ -648,12 +643,21 @@ export async function runIngestion(
       missing.completeness = "FAILED";
       missing.errors.push("adapter_missing");
       allStats.push(missing);
+      logIngestionEvent("error", "adapter_missing", {
+        sourceKey: source.key,
+        runId: missing.runId,
+      });
       continue;
     }
 
     const stats = emptyStats(source.key);
     const seenExternalIds: string[] = [];
     const sourceAttribution = source.attribution ?? null;
+
+    logIngestionEvent("info", "source_run_start", {
+      sourceKey: source.key,
+      runId: stats.runId,
+    });
 
     const circuit = evaluateCircuit({
       enabled: source.enabled !== false,
@@ -669,6 +673,11 @@ export async function runIngestion(
       stats.completeness = "FAILED";
       stats.errors.push(circuit.reason);
       allStats.push(stats);
+      logIngestionEvent("warn", "source_circuit_open", {
+        sourceKey: source.key,
+        runId: stats.runId,
+        reason: circuit.reason,
+      });
       continue;
     }
 
@@ -678,6 +687,10 @@ export async function runIngestion(
       stats.completeness = "PARTIAL";
       stats.errors.push("source_lease_held");
       allStats.push(stats);
+      logIngestionEvent("info", "source_lease_held", {
+        sourceKey: source.key,
+        runId: stats.runId,
+      });
       continue;
     }
 
@@ -689,6 +702,10 @@ export async function runIngestion(
       stats.errors.push("rate_limited");
       allStats.push(stats);
       await releaseSourceLease(lease);
+      logIngestionEvent("warn", "source_rate_limited", {
+        sourceKey: source.key,
+        runId: stats.runId,
+      });
       continue;
     }
 
@@ -708,18 +725,6 @@ export async function runIngestion(
       await clearSourceCheckpoint(source.key);
     }
 
-    /*
-     * Loop protection for cursor-based adapters.
-     *
-     * If an adapter ever returns a nextCursor we have already seen in
-     * this run, we stop the source immediately instead of burning the
-     * remaining budget on identical pages. We keep the checkpoint so the
-     * next run can resume from the correct page (the loop is a source
-     * bug, not a checkpoint bug).
-     *
-     * A page-token is only added when it is a non-empty string; null
-     * and "" mean "no cursor" and are not treated as loop signals.
-     */
     const seenCursors = new Set<string>();
 
     if (typeof resumeCursor === "string" && resumeCursor.length > 0) {
@@ -750,11 +755,6 @@ export async function runIngestion(
             page,
             perPage: PER_PAGE,
             cursor: resumeCursor,
-            /*
-             * Per-source configuration: adapters MAY read these values
-             * but MUST remain functional if any is missing (they should
-             * fall back to their own defaults).
-             */
             sourceConfig: {
               key: source.key,
               name: source.name,
@@ -771,14 +771,15 @@ export async function runIngestion(
             error,
             "source_fetch_failed",
           );
+          logIngestionEvent("error", "source_fetch_failed", {
+            sourceKey: source.key,
+            runId: stats.runId,
+            page,
+            error: error instanceof Error ? error.message : String(error),
+          });
           break;
         }
 
-        /*
-         * Loop protection: reject a cursor we have already consumed.
-         * We validate BEFORE renewing the lease and BEFORE persisting
-         * so we don't touch the database for a page we already saw.
-         */
         if (
           result.nextCursor !== undefined &&
           result.nextCursor !== null &&
@@ -786,6 +787,11 @@ export async function runIngestion(
         ) {
           if (seenCursors.has(result.nextCursor)) {
             stats.errors.push("pagination_loop_detected");
+            logIngestionEvent("warn", "pagination_loop_detected", {
+              sourceKey: source.key,
+              runId: stats.runId,
+              page,
+            });
             try {
               await saveSourceCheckpoint(source.key, {
                 page,
@@ -799,9 +805,8 @@ export async function runIngestion(
           seenCursors.add(result.nextCursor);
           resumeCursor = result.nextCursor;
         } else if (result.nextCursor === undefined) {
-          // Adapter has no cursor concept — nothing to track.
+          // no cursor concept
         } else {
-          // nextCursor === null or "" → end of pagination.
           resumeCursor = result.nextCursor ?? null;
         }
 
@@ -809,6 +814,11 @@ export async function runIngestion(
         if (!renewed) {
           stats.leaseLost = true;
           stats.errors.push("source_lease_lost");
+          logIngestionEvent("warn", "source_lease_lost", {
+            sourceKey: source.key,
+            runId: stats.runId,
+            page,
+          });
           try {
             await saveSourceCheckpoint(source.key, {
               page,
@@ -880,6 +890,11 @@ export async function runIngestion(
         error,
         "source_failed",
       );
+      logIngestionEvent("error", "source_failed", {
+        sourceKey: source.key,
+        runId: stats.runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       await releaseSourceLease(lease);
     }
@@ -890,6 +905,25 @@ export async function runIngestion(
       new Date(stats.startedAt).getTime();
     stats.completeness = computeCompleteness(stats);
     allStats.push(stats);
+
+    logIngestionEvent(
+      stats.completeness === "FAILED" ? "error" : "info",
+      "source_run_end",
+      {
+        sourceKey: source.key,
+        runId: stats.runId,
+        status: stats.completeness,
+        durationMs: stats.durationMs,
+        fetched: stats.fetched,
+        created: stats.created,
+        updated: stats.updated,
+        duplicates: stats.duplicates,
+        skipped: stats.skipped,
+        qualityRejected: stats.qualityRejected,
+        failed: stats.failed,
+        pages: pagesThisRun,
+      },
+    );
 
     if (stats.completeness === "FULL") {
       await clearSourceCheckpoint(source.key);
@@ -932,10 +966,14 @@ export async function runIngestion(
       const skipped = emptyStats(key);
       skipped.finishedAt = new Date().toISOString();
       skipped.completeness = "FAILED";
-      skipped.errors.push(
-        ingestBlockReason(reg) ?? "source_blocked",
-      );
+      const reason = ingestBlockReason(reg) ?? "source_blocked";
+      skipped.errors.push(reason);
       allStats.push(skipped);
+      logIngestionEvent("warn", "source_not_processed", {
+        sourceKey: key,
+        runId: skipped.runId,
+        reason,
+      });
     }
   }
 
