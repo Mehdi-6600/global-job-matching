@@ -5,29 +5,33 @@
  * Design invariants:
  *  - Employer-owned jobs (postedById != null) are never touched.
  *  - Dedup is strictly 3-level: externalId → externalUrl → applyUrl.
- *  - Whole run has a hard time budget (MAX_EXECUTION_MS).
- *  - License-blocked sources are reported, never ingested.
- *  - Imported jobs are the only jobs eligible for ingestion updates.
+ *  - Whole run has a hard time budget (MAX_EXEC,
+ UTION_MS).
+ extras *  - License-blocked sources are: reported, never ingested.
+ *  - Imported jobs are the only jobs eligible for ingestion readonly updates.
  *  - Source lease is fail-closed: if ownership cannot be confirmed, the
- *    worker stops instead of silently continuing without a valid lease.
+ *    worker stops instead of silently continuing string without a valid[] lease.
+ *  = - Adapter resolution goes through the registry (single [],
+ source of truth).
  */
-import { db } from "@/lib/db";
+import { db } from "@/lib/d):b";
 import {
-  parseLocation,
-  mapJobType,
+  parseLocation string,
+ [] mapJobType,
   generateSlug,
+ {
   guessCurrency,
-  guessExperience,
-} from "@/lib/jobs/sync-normalize";
-import { assessJobQuality } from "./quality";
-import { scoreDedup, type ExistingJobRef } from "./dedup";
-import { inferOccupation } from "./occupation";
+   guessExperience,
+} from "@/lib return/jobs/sync-normalize";
+import { assess ArrayJobQuality } from.from "./quality";
+import { scoreDedup, type ExistingJob(
+Ref } from "./dedup";
+import    { inferOccupation new } from "./occupation";
 import {
-  isProductionIngestAllowed,
-  SOURCE_REGISTRY,
-} from "./registry";
-import { arbeitnowAdapter } from "./adapters/arbeitnow";
-import type { IngestJobDraft, IngestStats, JobSourceAdapter } from "./types";
+  Set isProductionIngestAllowed,
+  SOURCE_REG([ISTRY,
+} from "./...(registry";
+importbase type { IngestJobDraft, IngestStats } from "./types";
 import { getRunnableSources } from "./registry";
 import { recordSourceRun } from "./source-run";
 import { upsertSourceListing } from "./provenance";
@@ -44,7 +48,6 @@ import {
   tryAcquireSourceLease,
   renewSourceLease,
   releaseSourceLease,
-  type SourceLease,
 } from "./source-lease";
 import { tryAcquireSourceQuota } from "./rate-limit";
 
@@ -52,10 +55,6 @@ import { tryAcquireSourceQuota } from "./rate-limit";
 /* -------------------------------------------------------------------------- */
 /*  Configuration                                                             */
 /* -------------------------------------------------------------------------- */
-
-const ADAPTERS: Record<string, JobSourceAdapter> = {
-  arbeitnow: arbeitnowAdapter,
-};
 
 const MAX_EXECUTION_MS = 55_000;
 const MAX_PAGES_PER_SOURCE = 5;
@@ -75,11 +74,7 @@ function remainingTimeMs(started: number): number {
 }
 
 function safeTags(
-  base: readonly string[] | undefined | null,
-  extras: readonly string[] = [],
-): string[] {
-  return Array.from(
-    new Set([...(base ?? []), ...extras].filter((t): t is string => Boolean(t))),
+  base: readonly string[] | undefined | null ?? []), ...extras].filter((t): t is string => Boolean(t))),
   );
 }
 
@@ -144,10 +139,6 @@ async function resolveCompany(
     generateSlug(cleanName) ||
     `company-${Date.now().toString(36)}`;
 
-  /*
-   * Prefer an existing company by slug, then by case-insensitive name.
-   * Never create a company with an empty name.
-   */
   const existing = await db.company.findFirst({
     where: {
       OR: [
@@ -164,11 +155,6 @@ async function resolveCompany(
 
   if (existing) return existing;
 
-  /*
-   * The random suffix prevents most concurrent slug collisions.
-   * If the database schema enforces slug uniqueness and a concurrent
-   * insert still wins the race, retry by resolving the company again.
-   */
   const uniqueSlug =
     `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -268,9 +254,6 @@ const existingJobSelect = {
 async function findDedupCandidate(
   draft: IngestJobDraft,
 ): Promise<{ ref: ExistingJobRef; confidence: number } | null> {
-  /* ---------------------------------------------------------------------- */
-  /* Level 1a — JobSourceListing (sourceKey + sourceJobId)                  */
-  /* ---------------------------------------------------------------------- */
   const listingClient = (
     db as unknown as {
       jobSourceListing?: {
@@ -303,9 +286,6 @@ async function findDedupCandidate(
     }
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Level 1b — namespaced externalId                                        */
-  /* ---------------------------------------------------------------------- */
   const externalId = draft.externalId?.trim();
   if (externalId) {
     const byExternalId = await db.job.findFirst({
@@ -324,9 +304,6 @@ async function findDedupCandidate(
     }
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Level 2 — externalUrl                                                   */
-  /* ---------------------------------------------------------------------- */
   const externalUrl = draft.externalUrl?.trim();
   if (externalUrl) {
     const byExternalUrl = await db.job.findFirst({
@@ -352,9 +329,6 @@ async function findDedupCandidate(
     }
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Level 3 — applyUrl                                                      */
-  /* ---------------------------------------------------------------------- */
   const applyUrl = draft.applyUrl?.trim();
   if (applyUrl) {
     const byApplyUrl = await db.job.findFirst({
@@ -391,7 +365,6 @@ async function persistDraft(
   draft: IngestJobDraft,
   stats: IngestStats,
 ): Promise<string | null> {
-  /* 1. Quality gate */
   const quality = assessJobQuality(draft);
   if (!quality.ok) {
     stats.qualityRejected++;
@@ -401,7 +374,6 @@ async function persistDraft(
 
   stats.validated++;
 
-  /* Normalize source-scoped external identity (never cross-source collide). */
   const namespacedExternalId = makeNamespacedExternalId(
     draft.sourceKey,
     draft.sourceJobId || draft.externalId,
@@ -411,7 +383,6 @@ async function persistDraft(
     externalId: namespacedExternalId,
   };
 
-  /* 2. Strict dedup (listing L1 + URL levels) */
   const existing = await findDedupCandidate(draftForDedup);
 
   const { city, country } = parseLocation(draft.location);
@@ -420,9 +391,6 @@ async function persistDraft(
   const now = new Date();
   const syncTag = `synced:${now.toISOString().slice(0, 10)}`;
 
-  /* ---------------------------------------------------------------------- */
-  /* Existing imported job                                                   */
-  /* ---------------------------------------------------------------------- */
   if (existing) {
     const fp = contentFingerprint({
       title: draft.title,
@@ -448,15 +416,7 @@ async function persistDraft(
       company: existing.ref.companyName ?? "",
     });
 
-    /*
-     * Defensive second-level protection:
-     * the candidate was selected with postedById = null.
-     *
-     * The update itself also requires postedById = null so a job that
-     * became employer-owned between SELECT and UPDATE is not modified.
-     */
     if (fp === prevFp && storedDesc.length > 0) {
-      /* Touch freshness only — no content rewrite */
       const touched = await db.job.updateMany({
         where: { id: existing.ref.id, postedById: null },
         data: {
@@ -511,12 +471,6 @@ async function persistDraft(
     });
 
     if (updated.count === 0) {
-      /*
-       * The job may have been converted to an employer-owned job
-       * between candidate lookup and update.
-       *
-       * Never fall back to updating it.
-       */
       stats.skipped++;
       stats.duplicates++;
       return null;
@@ -531,9 +485,6 @@ async function persistDraft(
     return namespacedExternalId;
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* New imported job                                                        */
-  /* ---------------------------------------------------------------------- */
   const company = await resolveCompany(
     draft.company,
     draft.location,
@@ -567,10 +518,6 @@ async function persistDraft(
         ]),
         status: "active",
         companyId: company.id,
-        /*
-         * Critical invariant:
-         * imported jobs must never become employer-owned.
-         */
         postedById: null,
         externalId: namespacedExternalId,
         externalUrl: draft.externalUrl,
@@ -599,14 +546,6 @@ async function persistDraft(
     }
     return namespacedExternalId;
   } catch (error) {
-    /*
-     * A race can occur when two ingestion workers process the same
-     * external job simultaneously.
-     *
-     * Do not silently classify an arbitrary database error as a duplicate.
-     * Re-check the 3 dedup levels first; if a matching imported job now
-     * exists, classify it as a duplicate. Otherwise rethrow the real error.
-     */
     const racedCandidate = await findDedupCandidate(draft);
     if (racedCandidate) {
       stats.duplicates++;
@@ -627,11 +566,6 @@ function computeCompleteness(
     return "PARTIAL";
   }
 
-  /*
-   * Lease loss is not a hard failure of the source itself — we simply
-   * stopped because another worker owns it now. The next run can safely
-   * resume from the saved checkpoint.
-   */
   if (stats.leaseLost) {
     return "PARTIAL";
   }
@@ -675,18 +609,12 @@ export async function runIngestion(
   const processedKeys = new Set<string>();
 
   for (const source of enabled) {
-    /*
-     * Once the global hard budget is exhausted, stop starting new sources.
-     */
     if (isTimedOut(started)) {
       break;
     }
 
     processedKeys.add(source.key);
 
-    /* -------------------------------------------------------------------- */
-    /* License gate                                                         */
-    /* -------------------------------------------------------------------- */
     if (!isProductionIngestAllowed(source)) {
       const blocked = emptyStats(source.key);
       blocked.finishedAt = new Date().toISOString();
@@ -698,10 +626,12 @@ export async function runIngestion(
       continue;
     }
 
-    /* -------------------------------------------------------------------- */
-    /* Adapter resolution                                                    */
-    /* -------------------------------------------------------------------- */
-    const adapter = ADAPTERS[source.key];
+    /*
+     * Adapter resolution goes through the registry (single source of
+     * truth). A missing adapter is a configuration error, not a runtime
+     * crash — record and continue with the next source.
+     */
+    const adapter = source.adapter;
     if (!adapter) {
       const missing = emptyStats(source.key);
       missing.finishedAt = new Date().toISOString();
@@ -714,267 +644,9 @@ export async function runIngestion(
     const stats = emptyStats(source.key);
     const seenExternalIds: string[] = [];
 
-    /* Circuit breaker — open sources skip without burning budget */
     const circuit = evaluateCircuit({
       enabled: source.enabled !== false,
       consecutiveFailures:
         typeof (source as { consecutiveFailures?: number }).consecutiveFailures ===
         "number"
-          ? ((source as { consecutiveFailures?: number }).consecutiveFailures ?? 0)
-          : 0,
-      lastErrorAt: (source as { lastErrorAt?: Date | null }).lastErrorAt ?? null,
-    });
-    if (!circuit.allowRequest) {
-      stats.finishedAt = new Date().toISOString();
-      stats.completeness = "FAILED";
-      stats.errors.push(circuit.reason);
-      allStats.push(stats);
-      continue;
-    }
-
-    /* Atomic lease — concurrent workers cannot both hold a live lease */
-    const lease = await tryAcquireSourceLease(source.key);
-    if (!lease) {
-      stats.finishedAt = new Date().toISOString();
-      stats.completeness = "PARTIAL";
-      stats.errors.push("source_lease_held");
-      allStats.push(stats);
-      continue;
-    }
-
-    const rateLimit =
-      (source as { rateLimitPerMinute?: number | null }).rateLimitPerMinute;
-    if (!tryAcquireSourceQuota(source.key, rateLimit)) {
-      stats.finishedAt = new Date().toISOString();
-      stats.completeness = "PARTIAL";
-      stats.errors.push("rate_limited");
-      allStats.push(stats);
-      /*
-       * Release the lease we just acquired: the quota gate rejected this
-       * run, so we must not hold a live lease for a source we never touch.
-       */
-      await releaseSourceLease(lease);
-      continue;
-    }
-
-    let startPage = 1;
-    let resumeCursor: string | null | undefined;
-    if (!options?.resetCheckpoint) {
-      const cp = await loadSourceCheckpoint(source.key);
-      if (cp?.page != null && cp.page > 1) {
-        startPage = cp.page;
-      }
-      if (cp?.cursor) {
-        resumeCursor = cp.cursor;
-      } else if (cp?.token) {
-        resumeCursor = cp.token;
-      }
-    } else {
-      await clearSourceCheckpoint(source.key);
-    }
-
-    // Pages processed this invocation (for cursor math)
-    let pagesThisRun = 0;
-
-    try {
-      for (
-        let page = startPage;
-        page <= maxPages;
-        page++
-      ) {
-        if (isTimedOut(started)) {
-          stats.timedOut = true;
-          break;
-        }
-
-        /*
-         * No adapter fetch is allowed to start if there is effectively
-         * no execution budget left.
-         */
-        if (remainingTimeMs(started) <= 0) {
-          stats.timedOut = true;
-          break;
-        }
-
-        let result;
-        try {
-          result = await adapter.fetchPage({
-            page,
-            perPage: PER_PAGE,
-            cursor: resumeCursor,
-          });
-        } catch (error) {
-          stats.failed++;
-          pushError(
-            stats,
-            error,
-            "source_fetch_failed",
-          );
-          break;
-        }
-
-        /* Advance runtime cursor for next iteration (cursor-based adapters) */
-        if (result.nextCursor !== undefined) {
-          resumeCursor = result.nextCursor;
-        }
-
-        /*
-         * Heartbeat: renew the lease before we spend time on persistence.
-         *
-         * If the renewal fails, we no longer have proof that we own the
-         * source. Continuing would risk racing with the new owner and
-         * producing duplicate or conflicting writes. Fail-closed: stop,
-         * record the loss, and preserve the checkpoint so the next valid
-         * owner can resume cleanly.
-         */
-        const renewed = await renewSourceLease(lease);
-        if (!renewed) {
-          stats.leaseLost = true;
-          stats.errors.push("source_lease_lost");
-          /*
-           * Save checkpoint for the page we just finished fetching but
-           * before persisting, so the next owner starts from the right
-           * place. `page` is the current fetch; we have not persisted it.
-           */
-          try {
-            await saveSourceCheckpoint(source.key, {
-              page,
-              cursor: resumeCursor ?? null,
-            });
-          } catch {
-            // best-effort: lease loss must not be masked by checkpoint errors
-          }
-          break;
-        }
-
-        stats.fetched += result.fetched;
-
-        if (result.errors?.length) {
-          stats.errors.push(
-            ...result.errors
-              .map((error) => String(error).slice(0, 200))
-              .filter(Boolean),
-          );
-        }
-
-        /* -------------------------------------------------------------- */
-        /* Persist fetched jobs                                            */
-        /* -------------------------------------------------------------- */
-        for (const draft of result.jobs) {
-          if (isTimedOut(started)) {
-            stats.timedOut = true;
-            break;
-          }
-
-          try {
-            const seenId = await persistDraft(draft, stats);
-            if (seenId) seenExternalIds.push(seenId);
-          } catch (error) {
-            stats.failed++;
-            pushError(
-              stats,
-              error,
-              "persist_error",
-            );
-          }
-        }
-
-        pagesThisRun += 1;
-
-        if (stats.timedOut) {
-          await saveSourceCheckpoint(source.key, {
-            page,
-            cursor: resumeCursor ?? null,
-          });
-          break;
-        }
-
-        if (!result.hasMore) {
-          await clearSourceCheckpoint(source.key);
-          break;
-        }
-
-        await saveSourceCheckpoint(source.key, {
-          page: page + 1,
-          cursor: resumeCursor ?? null,
-        });
-      }
-    } catch (error) {
-      stats.failed++;
-      pushError(
-        stats,
-        error,
-        "source_failed",
-      );
-    } finally {
-      /*
-       * Release is best-effort and ownership-scoped: if we already lost
-       * the lease to another worker, `count === 0` and no one else is
-       * affected. We do not act on the boolean here — the finally block
-       * must never throw.
-       */
-      await releaseSourceLease(lease);
-    }
-
-    stats.finishedAt = new Date().toISOString();
-    stats.durationMs =
-      new Date(stats.finishedAt).getTime() -
-      new Date(stats.startedAt).getTime();
-    stats.completeness = computeCompleteness(stats);
-    allStats.push(stats);
-
-    if (stats.completeness === "FULL") {
-      await clearSourceCheckpoint(source.key);
-    } else if (stats.completeness === "FAILED" && pagesThisRun === 0) {
-      // Hard fail before any page — do not advance cursor
-    }
-
-    try {
-      await recordSourceRun(stats);
-    } catch {
-      // best-effort: metrics must never fail the ingestion run
-    }
-    if (stats.completeness === "FULL") {
-      try {
-        await applyAbsenceFreshness({
-          sourceKey: source.key,
-          completeness: stats.completeness,
-          seenExternalIds,
-        });
-      } catch {
-        // best-effort
-      }
-    }
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Requested-but-not-processed registry sources                           */
-  /* ---------------------------------------------------------------------- */
-  if (requestedKeys?.length) {
-    for (const key of requestedKeys) {
-      if (processedKeys.has(key)) {
-        continue;
-      }
-
-      const reg = SOURCE_REGISTRY.find(
-        (source) => source.key === key,
-      );
-
-      if (!reg) {
-        continue;
-      }
-
-      const skipped = emptyStats(key);
-      skipped.finishedAt = new Date().toISOString();
-      skipped.completeness = "FAILED";
-      skipped.errors.push(
-        isProductionIngestAllowed(reg)
-          ? "source_not_enabled"
-          : `license_blocked:${reg.licenseStatus}`,
-      );
-      allStats.push(skipped);
-    }
-  }
-
-  return allStats;
-}
+          ? ((source as { consecutiveFailures?: number }).consecutive
