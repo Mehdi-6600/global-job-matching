@@ -1,25 +1,47 @@
+/**
+ * Unified Badge — neumorphic pill.
+ *
+ * Backward-compatible with the previous shadcn API:
+ *   <Badge variant="default|secondary|destructive|outline">
+ *
+ * New variants (also supported):
+ *   variant="primary"  — brand cyan tint
+ *   variant="success"  — green
+ *   variant="warning"  — amber
+ *   variant="info"     — soft blue
+ */
+
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold border shadow-[var(--inset-1)] transition-colors",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
+          "bg-[var(--brand-primary-tint)] text-[var(--brand-primary-hover)] border-[var(--brand-primary-soft)]",
+        primary:
+          "bg-[var(--brand-primary-tint)] text-[var(--brand-primary-hover)] border-[var(--brand-primary-soft)]",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-soft)]",
+        success:
+          "bg-[var(--success-soft)] text-[var(--success)] border-[var(--success-soft)]",
+        warning:
+          "bg-[var(--warning-soft)] text-[#b45309] border-[var(--warning-soft)]",
+        info:
+          "bg-[var(--info-soft)] text-[var(--info)] border-[var(--info-soft)]",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
+          "bg-[var(--error-soft)] text-[var(--error)] border-[var(--error-soft)]",
+        outline:
+          "bg-transparent text-[var(--text-primary)] border-[var(--border)] shadow-none",
       },
     },
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 );
 
 export interface BadgeProps
