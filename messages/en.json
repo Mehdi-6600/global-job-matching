@@ -112,7 +112,17 @@
     "finalProfile": "Create Your Profile",
     "careerRiskTitle": "Is your job safe from AI automation?",
     "careerRiskDesc": "A clear risk score, skills to build and smarter next steps — start free.",
-    "careerRiskCta": "Check my risk"
+    "careerRiskCta": "Check my risk",
+    "audienceSeeker": "For Job Seekers",
+    "audienceEmployer": "For Employers",
+    "valueSeekers": "AI career intelligence, global jobs, 7 languages.",
+    "valueEmployers": "Reach global talent, manage hiring in one place.",
+    "trustJobsLabel": "Live jobs",
+    "trustSourcesLabel": "Job sources",
+    "trustLanguagesLabel": "Languages",
+    "trustFreshnessLabel": "Freshness verified",
+    "trustSectionKicker": "BUILT ON REAL DATA",
+    "trustSectionTitle": "Trusted infrastructure, not testimonials."
   },
   "Common": {
     "loading": "Loading...",
