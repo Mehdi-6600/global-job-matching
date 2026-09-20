@@ -38,7 +38,12 @@ import {
 } from "./checkpoint";
 import { evaluateCircuit } from "./circuit-breaker";
 import { contentFingerprint } from "./content-fingerprint";
-import { tryAcquireSourceLease } from "./source-lease";
+import {
+  tryAcquireSourceLease,
+  renewSourceLease,
+  releaseSourceLease,
+  type SourceLease,
+} from "./source-lease";
 import { tryAcquireSourceQuota } from "./rate-limit";
 
 
@@ -208,9 +213,12 @@ function toExistingJobRef(
     location: string;
     postedById: string | null;
     description?: string | null;
+    type?: string | null;
+    remote?: boolean | null;
+    salary?: string | null;
     company: { name: string } | null;
   },
-): ExistingJobRef & { description?: string } {
+): ExistingJobRef {
   return {
     id: job.id,
     externalId: job.externalId,
@@ -220,7 +228,10 @@ function toExistingJobRef(
     location: job.location,
     postedById: job.postedById,
     companyName: job.company?.name,
-    description: job.description ?? undefined,
+    description: job.description ?? null,
+    type: job.type ?? null,
+    remote: job.remote ?? null,
+    salary: job.salary ?? null,
   };
 }
 
@@ -233,6 +244,9 @@ const existingJobSelect = {
   location: true,
   postedById: true,
   description: true,
+  type: true,
+  remote: true,
+  salary: true,
   company: {
     select: {
       name: true,
@@ -419,20 +433,17 @@ async function persistDraft(
       salaryText: draft.salaryText,
       company: draft.company,
     });
-    const existingDesc =
-      "description" in existing.ref
-        ? String((existing.ref as { description?: string }).description || "")
-        : "";
+    const storedDesc = existing.ref.description ?? "";
     const prevFp = contentFingerprint({
       title: existing.ref.title,
-      description: existingDesc,
+      description: storedDesc,
       location: existing.ref.location,
       applyUrl: existing.ref.applyUrl ?? null,
       externalUrl: existing.ref.externalUrl ?? null,
-      employmentType: draft.employmentType,
-      remote: draft.remote,
-      salaryText: draft.salaryText,
-      company: existing.ref.companyName || draft.company,
+      employmentType: existing.ref.type ?? "",
+      remote: existing.ref.remote ?? false,
+      salaryText: existing.ref.salary ?? null,
+      company: existing.ref.companyName ?? "",
     });
 
     /*
@@ -442,7 +453,7 @@ async function persistDraft(
      * The update itself also requires postedById = null so a job that
      * became employer-owned between SELECT and UPDATE is not modified.
      */
-    if (fp === prevFp && existingDesc.length > 0) {
+    if (fp === prevFp && storedDesc.length > 0) {
       /* Touch freshness only — no content rewrite */
       const touched = await db.job.updateMany({
         where: { id: existing.ref.id, postedById: null },
@@ -710,9 +721,9 @@ export async function runIngestion(
       continue;
     }
 
-    /* Soft lease against concurrent workers on same source */
-    const leased = await tryAcquireSourceLease(source.key);
-    if (!leased) {
+    /* Atomic lease — concurrent workers cannot both hold a live lease */
+    const lease = await tryAcquireSourceLease(source.key);
+    if (!lease) {
       stats.finishedAt = new Date().toISOString();
       stats.completeness = "PARTIAL";
       stats.errors.push("source_lease_held");
@@ -734,7 +745,7 @@ export async function runIngestion(
     let resumeCursor: string | null | undefined;
     if (!options?.resetCheckpoint) {
       const cp = await loadSourceCheckpoint(source.key);
-      if (cp?.page && cp.page > 1) {
+      if (cp?.page != null && cp.page > 1) {
         startPage = cp.page;
       }
       if (cp?.cursor) {
@@ -786,6 +797,14 @@ export async function runIngestion(
           break;
         }
 
+        /* Advance runtime cursor for next iteration (cursor-based adapters) */
+        if (result.nextCursor !== undefined) {
+          resumeCursor = result.nextCursor;
+        }
+
+        /* Heartbeat so long runs do not lose the lease mid-flight */
+        await renewSourceLease(lease);
+
         stats.fetched += result.fetched;
 
         if (result.errors?.length) {
@@ -821,8 +840,10 @@ export async function runIngestion(
         pagesThisRun += 1;
 
         if (stats.timedOut) {
-          // Resume from this page next time (may partially re-process; persist is idempotent)
-          await saveSourceCheckpoint(source.key, { page });
+          await saveSourceCheckpoint(source.key, {
+            page,
+            cursor: resumeCursor ?? null,
+          });
           break;
         }
 
@@ -831,10 +852,9 @@ export async function runIngestion(
           break;
         }
 
-        // Next page to resume from
         await saveSourceCheckpoint(source.key, {
           page: page + 1,
-          cursor: result.nextCursor ?? null,
+          cursor: resumeCursor ?? null,
         });
       }
     } catch (error) {
@@ -844,6 +864,8 @@ export async function runIngestion(
         error,
         "source_failed",
       );
+    } finally {
+      await releaseSourceLease(lease);
     }
 
     stats.finishedAt = new Date().toISOString();
