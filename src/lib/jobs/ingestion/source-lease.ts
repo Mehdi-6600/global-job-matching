@@ -42,20 +42,17 @@ export async function tryAcquireSourceLease(
     if (result.count === 0) return null;
     return { sourceKey, ownerToken, leaseMs };
   } catch {
-    try {
-      const cutoff = new Date(Date.now() - leaseMs);
-      const result = await db.jobSource.updateMany({
-        where: {
-          key: sourceKey,
-          OR: [{ lastSyncAt: null }, { lastSyncAt: { lt: cutoff } }],
-        },
-        data: { lastSyncAt: new Date() },
-      });
-      if (result.count === 0) return null;
-      return { sourceKey, ownerToken, leaseMs };
-    } catch {
-      return null;
-    }
+    /*
+     * Fail-closed.
+     *
+     * If the atomic CAS could not be executed reliably, we MUST NOT pretend
+     * to own the lease. Any fallback that returns a lease without the
+     * database confirming `leaseOwner = ownerToken` would allow two workers
+     * to believe they hold the same source simultaneously → double ingestion.
+     *
+     * Therefore: unexpected DB error ⇒ acquire fails ⇒ caller must skip.
+     */
+    return null;
   }
 }
 
@@ -72,23 +69,29 @@ export async function renewSourceLease(lease: SourceLease): Promise<boolean> {
         lastSyncAt: new Date(),
       },
     });
+    /*
+     * count > 0 ⇒ the database confirmed this exact ownerToken still holds
+     * the lease and the new expiry was persisted.
+     * count === 0 ⇒ ownership was lost (reclaimed by another worker,
+     * released, or the row no longer matches) → renew MUST fail.
+     */
     return result.count > 0;
   } catch {
-    try {
-      await db.jobSource.updateMany({
-        where: { key: lease.sourceKey },
-        data: { lastSyncAt: new Date() },
-      });
-      return true;
-    } catch {
-      return false;
-    }
+    /*
+     * Fail-closed.
+     *
+     * A DB error during renew means we cannot prove ownership anymore.
+     * Returning `true` here would let the worker keep running with a lease
+     * the database never confirmed — exactly the fail-open behavior that
+     * enables duplicate ingestion. Treat any error as "not renewed".
+     */
+    return false;
   }
 }
 
-export async function releaseSourceLease(lease: SourceLease): Promise<void> {
+export async function releaseSourceLease(lease: SourceLease): Promise<boolean> {
   try {
-    await db.jobSource.updateMany({
+    const result = await db.jobSource.updateMany({
       where: {
         key: lease.sourceKey,
         leaseOwner: lease.ownerToken,
@@ -98,7 +101,15 @@ export async function releaseSourceLease(lease: SourceLease): Promise<void> {
         leaseUntil: null,
       },
     });
+    /*
+     * count === 0 is a normal outcome when the lease already expired and a
+     * new owner reclaimed it, or when the row was already released.
+     * It is NOT an error, but the caller can use the boolean to distinguish
+     * "we still owned it at release time" from "we didn't".
+     */
+    return result.count > 0;
   } catch {
-    // ignore
+    // Fail-closed: report failure to the caller instead of swallowing it.
+    return false;
   }
 }
