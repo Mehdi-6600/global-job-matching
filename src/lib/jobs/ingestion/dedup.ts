@@ -14,6 +14,11 @@ export type ExistingJobRef = {
   location: string;
   postedById: string | null;
   companyName?: string | null;
+  description?: string | null;
+  /** Job.type in DB */
+  type?: string | null;
+  remote?: boolean | null;
+  salary?: string | null;
 };
 
 function norm(s: string | null | undefined): string {
