@@ -24,6 +24,10 @@ export {
   parseCheckpoint,
 } from "./checkpoint";
 export type { SyncCheckpoint } from "./checkpoint";
+export { evaluateCircuit, CIRCUIT_DEFAULTS } from "./circuit-breaker";
+export type { CircuitState, CircuitInput } from "./circuit-breaker";
+export { contentFingerprint } from "./content-fingerprint";
+export { tryAcquireSourceLease } from "./source-lease";
 export { runIngestion } from "./pipeline";
 export { fetchWithRetry } from "./http";
 export { tryAcquireSourceQuota } from "./rate-limit";
