@@ -12,6 +12,24 @@ export type LicenseStatus =
   | "DISABLED"
   | "UNKNOWN";
 
+/**
+ * Robots.txt posture for a source.
+ *  - "allowed"    → robots.txt permits the ingestion paths we use
+ *  - "disallowed" → robots.txt forbids; the source MUST NOT run
+ *  - "unknown"    → not yet reviewed; treated as permissive only when
+ *                   licenseStatus is APPROVED (see isProductionIngestAllowed)
+ */
+export type RobotsStatus = "allowed" | "disallowed" | "unknown";
+
+/**
+ * Terms-of-service posture for a source.
+ *  - "allowed"     → terms permit automated ingestion
+ *  - "restricted"  → terms prohibit or restrict; the source MUST NOT run
+ *  - "unknown"     → not yet reviewed; treated as permissive only when
+ *                    licenseStatus is APPROVED (see isProductionIngestAllowed)
+ */
+export type TermsStatus = "allowed" | "restricted" | "unknown";
+
 export type SourceHealth =
   | "HEALTHY"
   | "DEGRADED"
@@ -53,11 +71,6 @@ export type PaginationMode = "page" | "cursor" | "token" | "single";
  * Adapters MAY declare which features their source actually provides.
  * The pipeline never assumes a capability; missing declarations fall
  * back to permissive behavior (accept whatever the adapter returns).
- *
- * This is intentionally a *soft* declaration, not an enforcement layer:
- *  - If a capability is declared `false`, the pipeline may skip costly
- *    checks that would otherwise be wasted (future optimization).
- *  - If a capability is undeclared, the pipeline behaves as before.
  */
 export type SourceCapabilities = {
   /** How the adapter paginates. Defaults to "page" if undeclared. */
@@ -117,6 +130,12 @@ export type AdapterSourceConfig = {
   readonly language?: string;
   readonly rateLimitPerMinute?: number | null;
   readonly httpConfig?: SourceHttpConfig;
+  /**
+   * Preferred attribution string for jobs from this source. Adapters
+   * SHOULD use this when set; if the adapter produces its own more
+   * specific attribution, it may override.
+   */
+  readonly attribution?: string | null;
 };
 
 /**
@@ -155,7 +174,7 @@ export type AdapterFetchOptions = {
   readonly cursor?: string | null;
   readonly signal?: AbortSignal;
   /**
-   * Optional per-source configuration (language, HTTP tuning, …).
+   * Optional per-source configuration (language, HTTP tuning, attribution, …).
    * Adapters should treat any missing field as "use my own default".
    */
   readonly sourceConfig?: AdapterSourceConfig;
