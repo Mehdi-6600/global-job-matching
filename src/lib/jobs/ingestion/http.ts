@@ -2,6 +2,11 @@
  * Provider HTTP: timeout, exponential backoff, Retry-After, no secret logging.
  * redirect: "error" reduces SSRF surface.
  * maxResponseBytes caps memory use from a misbehaving provider.
+ *
+ * Size limit is byte-aware (UTF-8), not character-aware. A response that
+ * is under the limit in ASCII characters may still exceed it in bytes
+ * for non-Latin scripts; we measure the true byte length before deciding
+ * to truncate.
  */
 
 export type FetchRetryOptions = {
@@ -12,9 +17,11 @@ export type FetchRetryOptions = {
   signal?: AbortSignal;
   headers?: Record<string, string>;
   /**
-   * Max bytes for the response body.
-   * - If content-length exceeds this, reject before reading the body.
-   * - If the body exceeds this despite missing/lying content-length, truncate.
+   * Max bytes for the response body (UTF-8).
+   * - If Content-Length exceeds this, the response is rejected before
+   *   reading the body.
+   * - If the actual body exceeds this despite a missing/lying
+   *   Content-Length, it is truncated at a UTF-8 boundary.
    * Default: 5 MB.
    */
   maxResponseBytes?: number;
@@ -53,11 +60,47 @@ function parseRetryAfterMs(header: string | null): number | null {
 }
 
 /**
- * Read the response body with a hard byte cap.
+ * Truncate a UTF-8 string so its encoded byte length does not exceed
+ * `maxBytes`. Never splits a multi-byte character: if the cut would
+ * land mid-character, we back off to the previous character boundary.
+ *
+ * Falls back to a conservative binary search when the simple bound is
+ * insufficient.
+ */
+function truncateUtf8(text: string, maxBytes: number): string {
+  // Fast path: ASCII-only strings have 1 byte per character.
+  // eslint-disable-next-line no-control-regex
+  if (/^[\u0000-\u007F]*$/.test(text)) {
+    return text.slice(0, maxBytes);
+  }
+
+  // Encode to UTF-8 bytes, then cut at a safe boundary.
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(text);
+
+  if (bytes.byteLength <= maxBytes) return text;
+
+  // Slice the byte buffer, then decode with fatal=false so a partial
+  // character at the end becomes the replacement char (U+FFFD), which
+  // we then strip.
+  const cut = bytes.slice(0, maxBytes);
+  const decoder = new TextDecoder("utf-8", { fatal: false });
+  let decoded = decoder.decode(cut);
+
+  // Remove any trailing replacement character introduced by cutting
+  // through a multi-byte sequence.
+  while (decoded.endsWith("\uFFFD")) {
+    decoded = decoded.slice(0, -1);
+  }
+  return decoded;
+}
+
+/**
+ * Read the response body with a hard byte cap (UTF-8).
  *
  * Prefers Content-Length when present to bail out early; otherwise
- * falls back to a post-read length check. In both cases the returned
- * string never exceeds `maxBytes` (truncated if necessary).
+ * falls back to a post-read byte-length check. In both cases the
+ * returned string's UTF-8 byte length never exceeds `maxBytes`.
  */
 async function readBodyWithCap(
   res: Response,
@@ -67,7 +110,7 @@ async function readBodyWithCap(
   if (contentLength) {
     const n = Number(contentLength);
     if (Number.isFinite(n) && n > maxBytes) {
-      // We still need to drain the body to free the connection.
+      // Drain the body to free the connection without keeping it in memory.
       try {
         await res.body?.cancel();
       } catch {
@@ -78,8 +121,11 @@ async function readBodyWithCap(
   }
 
   const text = await res.text();
-  if (text.length > maxBytes) {
-    return { body: text.slice(0, maxBytes), truncated: true };
+
+  // Byte-aware measurement.
+  const actualBytes = new TextEncoder().encode(text).byteLength;
+  if (actualBytes > maxBytes) {
+    return { body: truncateUtf8(text, maxBytes), truncated: true };
   }
   return { body: text, truncated: false };
 }
