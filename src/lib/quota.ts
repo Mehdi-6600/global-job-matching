@@ -24,7 +24,7 @@ export type UsageKind =
  * دسته‌ی سهمیه‌های مبتنی بر هوش مصنوعی.
  * این‌ها در یک سهمیه‌ی مشترک ماهانه شمارش می‌شوند.
  */
-const AI_KINDS: UsageKind[] = [
+export const AI_KINDS: UsageKind[] = [
   "ai_resume",
   "ai_career_risk",
   "ai_roadmap",
