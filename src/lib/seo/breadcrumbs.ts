@@ -4,6 +4,8 @@ import type { CareerRiskLocale } from "@/types/career-risk";
 /**
  * Breadcrumb label translations for all supported locales.
  * Keys are the canonical English labels used across the app.
+ *
+ * Callers that omit `locale` receive the English label (backward compatible).
  */
 const BREADCRUMB_LABELS: Record<
   string,
