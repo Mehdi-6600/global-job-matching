@@ -19,6 +19,7 @@ import {
 } from "@/lib/i18n/config";
 import { getDictionary, t, type Dictionary } from "@/lib/i18n/get-dictionary";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
+import { writeLocaleCookie } from "@/lib/i18n/cookie";
 import {
   localizePath,
   parseLocalePath,
@@ -33,14 +34,6 @@ type LocaleContextValue = {
 };
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
-
-function writeLocaleCookie(locale: Locale) {
-  try {
-    document.cookie = `${LOCALE_COOKIE}=${locale};path=/;max-age=31536000;samesite=lax`;
-  } catch {
-    // ignore
-  }
-}
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
