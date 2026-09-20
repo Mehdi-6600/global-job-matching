@@ -1,18 +1,19 @@
 /**
  * Static defaults + DB as runtime Source of Truth for enablement/license.
- * UNKNOWN license never runs in production ingestion.
  *
  * The registry is the single source of truth for which adapters exist.
  * A new source = one adapter file + one registry entry. The pipeline
  * resolves adapters through this registry (no separate ADAPTERS map).
  *
- * Legal gate (isProductionIngestAllowed) enforces three layers:
- *   1. enabled           — runtime kill switch
- *   2. licenseStatus     — licensing/permission to ingest
- *   3. robotsStatus/termsStatus — robots.txt & terms posture
+ * Legal gate (isProductionIngestAllowed) is fail-closed:
+ *   1. enabled                  — runtime kill switch
+ *   2. licenseStatus APPROVED   — licensing/permission to ingest
+ *   3. robotsStatus ALLOWED     — explicit robots.txt review
+ *   4. termsStatus ALLOWED      — explicit ToS review
  *
- * Only sources with an explicit "allowed"/"APPROVED" posture run in
- * production. "unknown"/"disallowed"/"restricted" never run.
+ * Any missing or non-ALLOWED value blocks the source. "UNKNOWN" is NOT
+ * a synonym for "allowed": a new source must be reviewed and explicitly
+ * marked allowed before it can run in production.
  */
 import { db } from "@/lib/db";
 import type {
@@ -43,15 +44,17 @@ export type SourceRegistryEntry = {
    */
   attribution?: string;
   /**
-   * Robots.txt posture. Defaults to "unknown" for new entries; set to
-   * "allowed" only after a manual review of the source's robots.txt
-   * for the paths the adapter actually fetches.
+   * Robots.txt posture. MUST be explicitly set to "allowed" (after a
+   * manual review of the source's robots.txt for the paths the adapter
+   * actually fetches) before the source can run in production. Missing
+   * or "unknown" is treated as blocked.
    */
   robotsStatus?: RobotsStatus;
   /**
-   * Terms-of-service posture. Defaults to "unknown" for new entries;
-   * set to "allowed" only after a manual review of the source's terms
-   * for automated ingestion.
+   * Terms-of-service posture. MUST be explicitly set to "allowed" (after
+   * a manual review of the source's terms for automated ingestion)
+   * before the source can run in production. Missing or "unknown" is
+   * treated as blocked.
    */
   termsStatus?: TermsStatus;
   enabled: boolean;
@@ -75,8 +78,8 @@ export type SourceRegistryEntry = {
   adapter?: JobSourceAdapter;
 
   /**
-   * Optional capability declaration. The pipeline never assumes a
-   * capability; this is used for diagnostics and future optimizations.
+   * Optional capability declaration. The pipeline uses it to pick the
+   * right pagination strategy and to validate the adapter's behavior.
    */
   capabilities?: SourceCapabilities;
 
@@ -128,17 +131,18 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
 ];
 
 /**
- * Legal gate for production ingestion.
+ * Legal gate for production ingestion — FAIL-CLOSED.
  *
  * A source is allowed to run only when ALL of the following hold:
  *   - enabled === true
  *   - licenseStatus === "APPROVED"
- *   - robotsStatus is "allowed" OR unset (backward-compat for old entries)
- *   - termsStatus is "allowed" OR unset (backward-compat for old entries)
+ *   - robotsStatus === "allowed"
+ *   - termsStatus === "allowed"
  *
- * "unknown" robots/terms are treated as permissive to remain compatible
- * with registry entries written before these fields existed. New entries
- * SHOULD explicitly set both to "allowed" after review.
+ * Missing (undefined) or "unknown" is treated as NOT allowed. This
+ * intentionally rejects sources that have not been reviewed — a new
+ * adapter must set both robotsStatus and termsStatus explicitly after
+ * a manual review.
  */
 export function isProductionIngestAllowed(
   entry: Pick<
@@ -148,17 +152,20 @@ export function isProductionIngestAllowed(
 ): boolean {
   if (!entry.enabled) return false;
   if (entry.licenseStatus !== "APPROVED") return false;
-
-  // Backward-compat: unset is permissive; explicit disallow/restricted is not.
-  if (entry.robotsStatus === "disallowed") return false;
-  if (entry.termsStatus === "restricted") return false;
-
+  if (entry.robotsStatus !== "allowed") return false;
+  if (entry.termsStatus !== "allowed") return false;
   return true;
 }
 
 /**
  * Human-readable reason a source is blocked, or null when allowed.
  * Used by the pipeline to record a specific error code.
+ *
+ * Error taxonomy (stable strings):
+ *   source_disabled
+ *   license_blocked:<status>
+ *   robots_blocked:<status-or-missing>
+ *   terms_blocked:<status-or-missing>
  */
 export function ingestBlockReason(
   entry: Pick<
@@ -170,8 +177,12 @@ export function ingestBlockReason(
   if (entry.licenseStatus !== "APPROVED") {
     return `license_blocked:${entry.licenseStatus}`;
   }
-  if (entry.robotsStatus === "disallowed") return "robots_disallowed";
-  if (entry.termsStatus === "restricted") return "terms_restricted";
+  if (entry.robotsStatus !== "allowed") {
+    return `robots_blocked:${entry.robotsStatus ?? "missing"}`;
+  }
+  if (entry.termsStatus !== "allowed") {
+    return `terms_blocked:${entry.termsStatus ?? "missing"}`;
+  }
   return null;
 }
 
