@@ -6,17 +6,10 @@
  *  - Never log secrets, tokens, cookies, or auth headers.
  *  - Truncate long strings to keep log lines bounded.
  *  - Safe to call from anywhere in ingestion; never throws.
- *
- * Output format is a single console line so it works with Vercel Logs
- * and log drains without a JSON parser setup.
  */
 
 export type IngestionLogLevel = "info" | "warn" | "error";
 
-/**
- * Fields permitted in log output. Values are stringified safely.
- * Keep this list narrow — only diagnostics, never business PII.
- */
 export type IngestionLogFields = {
   sourceKey?: string;
   runId?: string;
@@ -41,12 +34,11 @@ const MAX_FIELD_LEN = 240;
 const FORBIDDEN_KEYS = new Set([
   "password",
   "token",
-  "accessToken",
-  "refreshToken",
+  "accesstoken",
+  "refreshtoken",
   "authorization",
   "cookie",
   "secret",
-  "apiKey",
   "apikey",
   "auth",
 ]);
@@ -66,10 +58,6 @@ function safeString(v: unknown): string {
   }
 }
 
-/**
- * Strip forbidden keys, truncate values, and drop nullish/empty fields
- * so the log line stays compact.
- */
 function sanitizeFields(
   fields: IngestionLogFields | undefined,
 ): Record<string, string> {
@@ -87,7 +75,6 @@ function sanitizeFields(
 
 /**
  * Emit a single structured log line.
- *
  * Never throws — logging must never break ingestion.
  */
 export function logIngestionEvent(
