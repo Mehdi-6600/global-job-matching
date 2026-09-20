@@ -14,6 +14,8 @@
  *  - Cursor-based pagination is loop-protected: a repeated nextCursor
  *    stops the source with `pagination_loop_detected` instead of burning
  *    budget on identical pages.
+ *  - Attribution fallback: if an adapter does not set draft.attribution,
+ *    the source-level attribution from the registry is used instead.
  */
 import { db } from "@/lib/db";
 import {
@@ -27,6 +29,7 @@ import { assessJobQuality } from "./quality";
 import { scoreDedup, type ExistingJobRef } from "./dedup";
 import { inferOccupation } from "./occupation";
 import {
+  ingestBlockReason,
   isProductionIngestAllowed,
   SOURCE_REGISTRY,
 } from "./registry";
@@ -364,9 +367,15 @@ async function findDedupCandidate(
 /*  Persistence                                                               */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Persist one draft. `sourceAttribution` is the registry-level attribution
+ * for the source; used when the adapter did not set draft.attribution.
+ * Adapter attribution wins because it may be more specific.
+ */
 async function persistDraft(
   draft: IngestJobDraft,
   stats: IngestStats,
+  sourceAttribution: string | null,
 ): Promise<string | null> {
   const quality = assessJobQuality(draft);
   if (!quality.ok) {
@@ -393,6 +402,9 @@ async function persistDraft(
   const occupation = inferOccupation(draft.title);
   const now = new Date();
   const syncTag = `synced:${now.toISOString().slice(0, 10)}`;
+
+  /* Adapter attribution wins; otherwise fall back to registry attribution. */
+  const effectiveAttribution = draft.attribution ?? sourceAttribution;
 
   if (existing) {
     const fp = contentFingerprint({
@@ -465,7 +477,7 @@ async function persistDraft(
         occupation: occupation.occupation,
         occupationFamily: occupation.occupationFamily,
         seniority: occupation.seniority,
-        attribution: draft.attribution,
+        attribution: effectiveAttribution,
         tags: safeTags(draft.tags, [
           `source:${draft.sourceKey}`,
           syncTag,
@@ -536,7 +548,7 @@ async function persistDraft(
         occupation: occupation.occupation,
         occupationFamily: occupation.occupationFamily,
         seniority: occupation.seniority,
-        attribution: draft.attribution,
+        attribution: effectiveAttribution,
         expiresAt: draft.expiresAt ?? null,
       },
     });
@@ -623,7 +635,7 @@ export async function runIngestion(
       blocked.finishedAt = new Date().toISOString();
       blocked.completeness = "FAILED";
       blocked.errors.push(
-        `license_blocked:${source.licenseStatus}`,
+        ingestBlockReason(source) ?? "source_blocked",
       );
       allStats.push(blocked);
       continue;
@@ -641,6 +653,7 @@ export async function runIngestion(
 
     const stats = emptyStats(source.key);
     const seenExternalIds: string[] = [];
+    const sourceAttribution = source.attribution ?? null;
 
     const circuit = evaluateCircuit({
       enabled: source.enabled !== false,
@@ -709,8 +722,6 @@ export async function runIngestion(
      */
     const seenCursors = new Set<string>();
 
-    // If the resumed cursor is already known, it means the last run ended
-    // at a bad cursor. Seed the set so the very next fetch is protected.
     if (typeof resumeCursor === "string" && resumeCursor.length > 0) {
       seenCursors.add(resumeCursor);
     }
@@ -750,6 +761,7 @@ export async function runIngestion(
               language: source.language,
               rateLimitPerMinute: source.rateLimitPerMinute,
               httpConfig: source.httpConfig,
+              attribution: source.attribution ?? null,
             },
           });
         } catch (error) {
@@ -803,7 +815,7 @@ export async function runIngestion(
               cursor: resumeCursor ?? null,
             });
           } catch {
-            // best-effort: lease loss must not be masked by checkpoint errors
+            // best-effort
           }
           break;
         }
@@ -825,7 +837,11 @@ export async function runIngestion(
           }
 
           try {
-            const seenId = await persistDraft(draft, stats);
+            const seenId = await persistDraft(
+              draft,
+              stats,
+              sourceAttribution,
+            );
             if (seenId) seenExternalIds.push(seenId);
           } catch (error) {
             stats.failed++;
@@ -917,9 +933,7 @@ export async function runIngestion(
       skipped.finishedAt = new Date().toISOString();
       skipped.completeness = "FAILED";
       skipped.errors.push(
-        isProductionIngestAllowed(reg)
-          ? "source_not_enabled"
-          : `license_blocked:${reg.licenseStatus}`,
+        ingestBlockReason(reg) ?? "source_blocked",
       );
       allStats.push(skipped);
     }
