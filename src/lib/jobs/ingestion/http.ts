@@ -1,6 +1,7 @@
 /**
  * Provider HTTP: timeout, exponential backoff, Retry-After, no secret logging.
  * redirect: "error" reduces SSRF surface.
+ * maxResponseBytes caps memory use from a misbehaving provider.
  */
 
 export type FetchRetryOptions = {
@@ -10,6 +11,13 @@ export type FetchRetryOptions = {
   maxDelayMs?: number;
   signal?: AbortSignal;
   headers?: Record<string, string>;
+  /**
+   * Max bytes for the response body.
+   * - If content-length exceeds this, reject before reading the body.
+   * - If the body exceeds this despite missing/lying content-length, truncate.
+   * Default: 5 MB.
+   */
+  maxResponseBytes?: number;
 };
 
 export type FetchRetryResult = {
@@ -18,10 +26,14 @@ export type FetchRetryResult = {
   body: string;
   attempts: number;
   error?: string;
+  /** True if body was truncated due to maxResponseBytes. */
+  truncated?: boolean;
 };
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
 const NO_RETRY = new Set([400, 401, 403, 404, 422]);
+
+const DEFAULT_MAX_RESPONSE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -40,6 +52,38 @@ function parseRetryAfterMs(header: string | null): number | null {
   return null;
 }
 
+/**
+ * Read the response body with a hard byte cap.
+ *
+ * Prefers Content-Length when present to bail out early; otherwise
+ * falls back to a post-read length check. In both cases the returned
+ * string never exceeds `maxBytes` (truncated if necessary).
+ */
+async function readBodyWithCap(
+  res: Response,
+  maxBytes: number,
+): Promise<{ body: string; truncated: boolean }> {
+  const contentLength = res.headers.get("content-length");
+  if (contentLength) {
+    const n = Number(contentLength);
+    if (Number.isFinite(n) && n > maxBytes) {
+      // We still need to drain the body to free the connection.
+      try {
+        await res.body?.cancel();
+      } catch {
+        // ignore
+      }
+      return { body: "", truncated: true };
+    }
+  }
+
+  const text = await res.text();
+  if (text.length > maxBytes) {
+    return { body: text.slice(0, maxBytes), truncated: true };
+  }
+  return { body: text, truncated: false };
+}
+
 export async function fetchWithRetry(
   url: string,
   options: FetchRetryOptions = {},
@@ -48,6 +92,9 @@ export async function fetchWithRetry(
   const maxAttempts = options.maxAttempts ?? 3;
   const baseDelayMs = options.baseDelayMs ?? 400;
   const maxDelayMs = options.maxDelayMs ?? 8_000;
+  const maxResponseBytes =
+    options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
+
   let attempts = 0;
   let lastError = "";
 
@@ -64,10 +111,17 @@ export async function fetchWithRetry(
         signal: controller.signal,
         redirect: "error",
       });
-      const body = await res.text();
+
+      const { body, truncated } = await readBodyWithCap(res, maxResponseBytes);
 
       if (res.ok) {
-        return { ok: true, status: res.status, body, attempts };
+        return {
+          ok: true,
+          status: res.status,
+          body,
+          attempts,
+          truncated: truncated || undefined,
+        };
       }
 
       if (NO_RETRY.has(res.status) || attempts >= maxAttempts) {
@@ -77,6 +131,7 @@ export async function fetchWithRetry(
           body: body.slice(0, 2000),
           attempts,
           error: `http_${res.status}`,
+          truncated: truncated || undefined,
         };
       }
 
@@ -87,6 +142,7 @@ export async function fetchWithRetry(
           body: body.slice(0, 2000),
           attempts,
           error: `http_${res.status}`,
+          truncated: truncated || undefined,
         };
       }
 
