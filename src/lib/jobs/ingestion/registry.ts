@@ -5,13 +5,23 @@
  * The registry is the single source of truth for which adapters exist.
  * A new source = one adapter file + one registry entry. The pipeline
  * resolves adapters through this registry (no separate ADAPTERS map).
+ *
+ * Legal gate (isProductionIngestAllowed) enforces three layers:
+ *   1. enabled           — runtime kill switch
+ *   2. licenseStatus     — licensing/permission to ingest
+ *   3. robotsStatus/termsStatus — robots.txt & terms posture
+ *
+ * Only sources with an explicit "allowed"/"APPROVED" posture run in
+ * production. "unknown"/"disallowed"/"restricted" never run.
  */
 import { db } from "@/lib/db";
 import type {
   JobSourceAdapter,
   LicenseStatus,
+  RobotsStatus,
   SourceCapabilities,
   SourceHttpConfig,
+  TermsStatus,
 } from "./types";
 import { arbeitnowAdapter } from "./adapters/arbeitnow";
 
@@ -25,6 +35,25 @@ export type SourceRegistryEntry = {
   commercialAllowed: boolean;
   redistributionAllowed: boolean;
   attributionRequired: boolean;
+  /**
+   * Human-readable attribution string written into imported Job rows
+   * (Job.attribution). If omitted, jobs from this source carry no
+   * attribution string even if attributionRequired is true — this is
+   * allowed but discouraged; prefer to always set it.
+   */
+  attribution?: string;
+  /**
+   * Robots.txt posture. Defaults to "unknown" for new entries; set to
+   * "allowed" only after a manual review of the source's robots.txt
+   * for the paths the adapter actually fetches.
+   */
+  robotsStatus?: RobotsStatus;
+  /**
+   * Terms-of-service posture. Defaults to "unknown" for new entries;
+   * set to "allowed" only after a manual review of the source's terms
+   * for automated ingestion.
+   */
+  termsStatus?: TermsStatus;
   enabled: boolean;
   refreshIntervalMinutes: number;
   rateLimitPerMinute?: number | null;
@@ -67,6 +96,9 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     commercialAllowed: true,
     redistributionAllowed: true,
     attributionRequired: true,
+    attribution: "Jobs via Arbeitnow",
+    robotsStatus: "allowed",
+    termsStatus: "allowed",
     enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 30,
@@ -95,15 +127,52 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 ];
 
+/**
+ * Legal gate for production ingestion.
+ *
+ * A source is allowed to run only when ALL of the following hold:
+ *   - enabled === true
+ *   - licenseStatus === "APPROVED"
+ *   - robotsStatus is "allowed" OR unset (backward-compat for old entries)
+ *   - termsStatus is "allowed" OR unset (backward-compat for old entries)
+ *
+ * "unknown" robots/terms are treated as permissive to remain compatible
+ * with registry entries written before these fields existed. New entries
+ * SHOULD explicitly set both to "allowed" after review.
+ */
 export function isProductionIngestAllowed(
-  entry: Pick<SourceRegistryEntry, "enabled" | "licenseStatus">,
+  entry: Pick<
+    SourceRegistryEntry,
+    "enabled" | "licenseStatus" | "robotsStatus" | "termsStatus"
+  >,
 ): boolean {
   if (!entry.enabled) return false;
-  if (entry.licenseStatus === "UNKNOWN") return false;
-  if (entry.licenseStatus === "NEEDS_PERMISSION") return false;
-  if (entry.licenseStatus === "RESTRICTED") return false;
-  if (entry.licenseStatus === "DISABLED") return false;
-  return entry.licenseStatus === "APPROVED";
+  if (entry.licenseStatus !== "APPROVED") return false;
+
+  // Backward-compat: unset is permissive; explicit disallow/restricted is not.
+  if (entry.robotsStatus === "disallowed") return false;
+  if (entry.termsStatus === "restricted") return false;
+
+  return true;
+}
+
+/**
+ * Human-readable reason a source is blocked, or null when allowed.
+ * Used by the pipeline to record a specific error code.
+ */
+export function ingestBlockReason(
+  entry: Pick<
+    SourceRegistryEntry,
+    "enabled" | "licenseStatus" | "robotsStatus" | "termsStatus"
+  >,
+): string | null {
+  if (!entry.enabled) return "source_disabled";
+  if (entry.licenseStatus !== "APPROVED") {
+    return `license_blocked:${entry.licenseStatus}`;
+  }
+  if (entry.robotsStatus === "disallowed") return "robots_disallowed";
+  if (entry.termsStatus === "restricted") return "terms_restricted";
+  return null;
 }
 
 /** Static-only enabled list (no DB). Prefer getRunnableSources() at runtime. */
@@ -115,6 +184,10 @@ export function getEnabledSources(): SourceRegistryEntry[] {
  * Upsert static registry into JobSource table (idempotent).
  * Does not override DB licenseStatus/enabled once row exists — only fills missing.
  * To hard-sync defaults, pass forceDefaults=true (admin use).
+ *
+ * Note: robotsStatus / termsStatus / attribution live only in the static
+ * registry (not in the DB schema) — they are policy metadata, not runtime
+ * state, and are intentionally not persisted to JobSource.
  */
 export async function ensureSourcesInDb(
   forceDefaults = false,
@@ -166,8 +239,8 @@ export async function ensureSourcesInDb(
  * Runnable sources = registry metadata ∩ DB enabled+APPROVED.
  * If DB row missing, falls back to static entry (and ensureSourcesInDb should have run).
  *
- * Adapter reference, capabilities, and HTTP config are carried through so
- * the pipeline can resolve them without a separate lookup table.
+ * Adapter reference, capabilities, attribution, and HTTP config are carried
+ * through so the pipeline can resolve them without a separate lookup table.
  */
 export async function getRunnableSources(
   sourceKeys?: string[],
