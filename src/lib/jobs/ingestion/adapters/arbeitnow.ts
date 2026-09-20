@@ -11,6 +11,12 @@ import { tryAcquireSourceQuota } from "../rate-limit";
 
 const API = "https://www.arbeitnow.com/api/job-board-api";
 
+/** Adapter-local defaults; overridable via `sourceConfig.httpConfig`. */
+const DEFAULT_TIMEOUT_MS = 12_000;
+const DEFAULT_MAX_ATTEMPTS = 3;
+const DEFAULT_MAX_RESPONSE_BYTES = 10_000_000;
+const DEFAULT_RATE_LIMIT_PER_MINUTE = 30;
+
 function asRecord(v: unknown): Record<string, unknown> | null {
   return v !== null && typeof v === "object" ? (v as Record<string, unknown>) : null;
 }
@@ -70,7 +76,19 @@ export const arbeitnowAdapter: JobSourceAdapter = {
   async fetchPage(
     options: AdapterFetchOptions = {},
   ): Promise<AdapterFetchResult> {
-    if (!tryAcquireSourceQuota("arbeitnow", 30)) {
+    const cfg = options.sourceConfig;
+
+    const rateLimit =
+      typeof cfg?.rateLimitPerMinute === "number" && cfg.rateLimitPerMinute > 0
+        ? cfg.rateLimitPerMinute
+        : DEFAULT_RATE_LIMIT_PER_MINUTE;
+    const timeoutMs = cfg?.httpConfig?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const maxAttempts =
+      cfg?.httpConfig?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+    const maxResponseBytes =
+      cfg?.httpConfig?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
+
+    if (!tryAcquireSourceQuota("arbeitnow", rateLimit)) {
       return {
         jobs: [],
         hasMore: false,
@@ -87,8 +105,9 @@ export const arbeitnowAdapter: JobSourceAdapter = {
 
     const result = await fetchWithRetry(url.toString(), {
       signal: options.signal,
-      timeoutMs: 12_000,
-      maxAttempts: 3,
+      timeoutMs,
+      maxAttempts,
+      maxResponseBytes,
     });
 
     if (!result.ok) {
