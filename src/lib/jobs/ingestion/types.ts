@@ -12,22 +12,7 @@ export type LicenseStatus =
   | "DISABLED"
   | "UNKNOWN";
 
-/**
- * Robots.txt posture for a source.
- *  - "allowed"    → robots.txt permits the ingestion paths we use
- *  - "disallowed" → robots.txt forbids; the source MUST NOT run
- *  - "unknown"    → not yet reviewed; treated as permissive only when
- *                   licenseStatus is APPROVED (see isProductionIngestAllowed)
- */
 export type RobotsStatus = "allowed" | "disallowed" | "unknown";
-
-/**
- * Terms-of-service posture for a source.
- *  - "allowed"     → terms permit automated ingestion
- *  - "restricted"  → terms prohibit or restrict; the source MUST NOT run
- *  - "unknown"     → not yet reviewed; treated as permissive only when
- *                    licenseStatus is APPROVED (see isProductionIngestAllowed)
- */
 export type TermsStatus = "allowed" | "restricted" | "unknown";
 
 export type SourceHealth =
@@ -51,97 +36,38 @@ export type FreshnessStatus =
 
 export type SyncCompleteness = "FULL" | "PARTIAL" | "FAILED";
 
-/**
- * Pagination modes supported by the central pipeline.
- *
- *  - "page"   → adapter yields page numbers (page=1,2,3,…)
- *  - "cursor" → adapter yields an opaque nextCursor token
- *  - "token"  → same as cursor; kept separate for semantic clarity
- *  - "single" → adapter returns everything in one call (no pagination)
- *
- * Adapters declare which mode they use. The pipeline handles all modes
- * uniformly; this declaration is for validation, metrics, and future
- * loop-protection logic.
- */
 export type PaginationMode = "page" | "cursor" | "token" | "single";
 
-/**
- * Optional capability declaration for a source adapter.
- *
- * Adapters MAY declare which features their source actually provides.
- * The pipeline never assumes a capability; missing declarations fall
- * back to permissive behavior (accept whatever the adapter returns).
- */
 export type SourceCapabilities = {
-  /** How the adapter paginates. Defaults to "page" if undeclared. */
   readonly pagination?: PaginationMode;
-  /** Adapter produces a stable, source-scoped identifier. */
   readonly providesExternalId?: boolean;
-  /** Adapter produces an external detail URL. */
   readonly providesExternalUrl?: boolean;
-  /** Adapter produces an apply URL distinct from external URL. */
   readonly providesApplyUrl?: boolean;
-  /** Adapter produces structured salary info. */
   readonly providesSalary?: boolean;
-  /** Adapter produces a remote flag. */
   readonly providesRemote?: boolean;
-  /** Adapter produces a published timestamp. */
   readonly providesPublishedAt?: boolean;
-  /** Adapter produces a source-side updated timestamp. */
   readonly providesSourceUpdatedAt?: boolean;
-  /** Adapter produces a company name. */
   readonly providesCompany?: boolean;
-  /** Adapter produces a non-empty location. */
   readonly providesLocation?: boolean;
-  /** Adapter produces an employment type. */
   readonly providesEmploymentType?: boolean;
-  /** Adapter produces a meaningful description (not just title). */
   readonly providesDescription?: boolean;
 };
 
-/**
- * Optional per-source HTTP tuning.
- *
- * Declared on the registry entry, passed to the adapter via
- * `AdapterFetchOptions.sourceConfig`. Adapters that ignore it still
- * work (they just use their own defaults).
- */
 export type SourceHttpConfig = {
-  /** Max ms for a single HTTP attempt (adapter default: 12_000). */
   readonly timeoutMs?: number;
-  /** Max retry attempts for a single fetch (adapter default: 3). */
   readonly maxAttempts?: number;
-  /**
-   * Max bytes for a single response body.
-   * If content-length exceeds this, the response is rejected before reading.
-   * If the body exceeds this despite missing/lying content-length, it is truncated.
-   */
   readonly maxResponseBytes?: number;
 };
 
-/**
- * Snapshot of source configuration passed to the adapter at fetch time.
- * Adapters may read these values but must remain functional if any are
- * missing (they should fall back to their own internal defaults).
- */
 export type AdapterSourceConfig = {
   readonly key: string;
   readonly name: string;
   readonly language?: string;
   readonly rateLimitPerMinute?: number | null;
   readonly httpConfig?: SourceHttpConfig;
-  /**
-   * Preferred attribution string for jobs from this source. Adapters
-   * SHOULD use this when set; if the adapter produces its own more
-   * specific attribution, it may override.
-   */
   readonly attribution?: string | null;
 };
 
-/**
- * Normalized record produced by any adapter before central persist.
- * Draft fields are immutable once constructed by the adapter.
- */
 export type IngestJobDraft = {
   readonly sourceKey: string;
   readonly sourceJobId: string;
@@ -173,10 +99,6 @@ export type AdapterFetchOptions = {
   readonly perPage?: number;
   readonly cursor?: string | null;
   readonly signal?: AbortSignal;
-  /**
-   * Optional per-source configuration (language, HTTP tuning, attribution, …).
-   * Adapters should treat any missing field as "use my own default".
-   */
   readonly sourceConfig?: AdapterSourceConfig;
 };
 
@@ -202,7 +124,6 @@ export type DedupMatch = {
   readonly reason: string;
 };
 
-/** Result of the quality gate before persist. */
 export type QualityResult = {
   ok: boolean;
   score: number;
@@ -213,16 +134,13 @@ export type QualityResult = {
  * Mutable run counters — pipeline increments these during a sync.
  * Do NOT mark counter fields as readonly.
  *
- * `leaseLost` is distinct from `timedOut`:
- *   - `timedOut`   → run stopped because the global time budget ran out
- *   - `leaseLost`  → run stopped because the source lease could not be renewed
- *                    (ownership no longer confirmed by the database)
- *
- * Both produce `completeness: "PARTIAL"` and are safe to resume later,
- * but they must be reported separately for diagnostics.
+ * `runId` is a per-source, per-run correlation id used only for logs
+ * and diagnostics. It is NOT persisted to the database.
  */
 export type IngestStats = {
   sourceKey: string;
+  /** Per-run correlation id (not persisted; logs only). */
+  runId: string;
   startedAt: string;
   finishedAt?: string;
   durationMs?: number;
