@@ -8,6 +8,8 @@
  *  - Whole run has a hard time budget (MAX_EXECUTION_MS).
  *  - License-blocked sources are reported, never ingested.
  *  - Imported jobs are the only jobs eligible for ingestion updates.
+ *  - Source lease is fail-closed: if ownership cannot be confirmed, the
+ *    worker stops instead of silently continuing without a valid lease.
  */
 import { db } from "@/lib/db";
 import {
@@ -625,6 +627,15 @@ function computeCompleteness(
     return "PARTIAL";
   }
 
+  /*
+   * Lease loss is not a hard failure of the source itself — we simply
+   * stopped because another worker owns it now. The next run can safely
+   * resume from the saved checkpoint.
+   */
+  if (stats.leaseLost) {
+    return "PARTIAL";
+  }
+
   if (
     stats.fetched === 0 &&
     (stats.failed > 0 || stats.errors.length > 0)
@@ -738,6 +749,11 @@ export async function runIngestion(
       stats.completeness = "PARTIAL";
       stats.errors.push("rate_limited");
       allStats.push(stats);
+      /*
+       * Release the lease we just acquired: the quota gate rejected this
+       * run, so we must not hold a live lease for a source we never touch.
+       */
+      await releaseSourceLease(lease);
       continue;
     }
 
@@ -802,8 +818,34 @@ export async function runIngestion(
           resumeCursor = result.nextCursor;
         }
 
-        /* Heartbeat so long runs do not lose the lease mid-flight */
-        await renewSourceLease(lease);
+        /*
+         * Heartbeat: renew the lease before we spend time on persistence.
+         *
+         * If the renewal fails, we no longer have proof that we own the
+         * source. Continuing would risk racing with the new owner and
+         * producing duplicate or conflicting writes. Fail-closed: stop,
+         * record the loss, and preserve the checkpoint so the next valid
+         * owner can resume cleanly.
+         */
+        const renewed = await renewSourceLease(lease);
+        if (!renewed) {
+          stats.leaseLost = true;
+          stats.errors.push("source_lease_lost");
+          /*
+           * Save checkpoint for the page we just finished fetching but
+           * before persisting, so the next owner starts from the right
+           * place. `page` is the current fetch; we have not persisted it.
+           */
+          try {
+            await saveSourceCheckpoint(source.key, {
+              page,
+              cursor: resumeCursor ?? null,
+            });
+          } catch {
+            // best-effort: lease loss must not be masked by checkpoint errors
+          }
+          break;
+        }
 
         stats.fetched += result.fetched;
 
@@ -865,6 +907,12 @@ export async function runIngestion(
         "source_failed",
       );
     } finally {
+      /*
+       * Release is best-effort and ownership-scoped: if we already lost
+       * the lease to another worker, `count === 0` and no one else is
+       * affected. We do not act on the boolean here — the finally block
+       * must never throw.
+       */
       await releaseSourceLease(lease);
     }
 
