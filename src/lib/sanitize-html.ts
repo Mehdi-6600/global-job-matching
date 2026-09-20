@@ -1,10 +1,17 @@
+import DOMPurify from "isomorphic-dompurify";
+
 /**
- * Minimal HTML sanitizer for trusted-admin blog content.
- * Strips scripts, event handlers, javascript: URLs, and dangerous tags.
- * Not a full DOMPurify substitute — prefer plain text / markdown long-term.
+ * HTML sanitizer for trusted-admin blog content.
+ *
+ * Uses DOMPurify (via isomorphic-dompurify) instead of regex-based
+ * stripping. Regex sanitizers are known to be bypassable by malformed
+ * HTML (nested tags, attribute smuggling, javascript: variants, etc.).
+ *
+ * The allowlist is intentionally narrow — only blog-friendly markup.
+ * Links are restricted to http(s), mailto, or relative paths.
  */
 
-const ALLOWED_TAGS = new Set([
+const ALLOWED_TAGS = [
   "p",
   "br",
   "strong",
@@ -33,57 +40,34 @@ const ALLOWED_TAGS = new Set([
   "tr",
   "th",
   "td",
-]);
+];
 
-const VOID_TAGS = new Set(["br", "hr"]);
+const ALLOWED_ATTR = ["href", "title", "target", "rel"];
 
-function stripEventHandlers(attrs: string): string {
-  return attrs
-    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/\s(href|src)\s*=\s*("\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, "")
-    .replace(/\sstyle\s*=\s*("[^"]*"|'[^']*')/gi, "");
-}
-
-function sanitizeOpenTag(tag: string, attrs: string): string {
-  const name = tag.toLowerCase();
-  if (!ALLOWED_TAGS.has(name)) return "";
-  const cleanAttrs = stripEventHandlers(attrs);
-  if (name === "a") {
-    const hrefMatch = cleanAttrs.match(/\shref\s*=\s*("([^"]*)"|'([^']*)')/i);
-    const href = hrefMatch ? hrefMatch[2] || hrefMatch[3] || "" : "";
-    if (!href || !/^(https?:|mailto:|\/)/i.test(href)) {
-      return `<${name}>`;
-    }
-    return `<a href="${href.replace(/"/g, "")}" rel="noopener noreferrer" target="_blank">`;
-  }
-  if (VOID_TAGS.has(name)) return `<${name}>`;
-  return `<${name}${cleanAttrs}>`;
-}
+/**
+ * URI scheme allowlist for links. Mirrors the old behavior:
+ *   - relative paths starting with "/"
+ *   - http(s)://
+ *   - mailto:
+ *
+ * DOMPurify drops any attribute whose value does not match one of
+ * these patterns, and additionally runs its own scheme checks.
+ */
+const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto):|\/)/i;
 
 export function sanitizeBlogHtml(input: string): string {
   if (!input) return "";
 
-  let html = input
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
-    .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, "")
-    .replace(/<object[\s\S]*?>[\s\S]*?<\/object>/gi, "")
-    .replace(/<embed[\s\S]*?>/gi, "")
-    .replace(/<link[\s\S]*?>/gi, "")
-    .replace(/<meta[\s\S]*?>/gi, "");
+  const clean = DOMPurify.sanitize(input, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
+    ALLOWED_URI_REGEXP,
+    // Force external links to be safe against tab-nabbing.
+    // (DOMPurify runs this hook on every <a> after parsing.)
+    FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "link", "meta"],
+    FORBID_ATTR: ["style", "onerror", "onload", "onclick"],
+    KEEP_CONTENT: true,
+  });
 
-  html = html.replace(
-    /<\/?([a-zA-Z0-9]+)(\s[^>]*)?>/g,
-    (full, tag: string, attrs: string = "") => {
-      if (full.startsWith("</")) {
-        const name = tag.toLowerCase();
-        return ALLOWED_TAGS.has(name) && !VOID_TAGS.has(name)
-          ? `</${name}>`
-          : "";
-      }
-      return sanitizeOpenTag(tag, attrs || "");
-    }
-  );
-
-  return html;
+  return String(clean);
 }
