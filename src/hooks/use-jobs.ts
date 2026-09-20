@@ -61,7 +61,8 @@ export function useJobs(query?: string, location?: string): UseJobsReturn {
 
     try {
       const params = new URLSearchParams();
-      if (query) params.set("q", query);
+      // NOTE: /api/jobs expects `search` (not `q`).
+      if (query) params.set("search", query);
       if (location) params.set("location", location);
 
       const res = await fetch(`/api/jobs?${params.toString()}`, {
