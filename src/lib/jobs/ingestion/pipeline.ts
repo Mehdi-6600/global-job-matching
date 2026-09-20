@@ -5,33 +5,29 @@
  * Design invariants:
  *  - Employer-owned jobs (postedById != null) are never touched.
  *  - Dedup is strictly 3-level: externalId → externalUrl → applyUrl.
- *  - Whole run has a hard time budget (MAX_EXEC,
- UTION_MS).
- extras *  - License-blocked sources are: reported, never ingested.
- *  - Imported jobs are the only jobs eligible for ingestion readonly updates.
+ *  - Whole run has a hard time budget (MAX_EXECUTION_MS).
+ *  - License-blocked sources are reported, never ingested.
+ *  - Imported jobs are the only jobs eligible for ingestion updates.
  *  - Source lease is fail-closed: if ownership cannot be confirmed, the
- *    worker stops instead of silently continuing string without a valid[] lease.
- *  = - Adapter resolution goes through the registry (single [],
- source of truth).
+ *    worker stops instead of silently continuing without a valid lease.
+ *  - Adapter resolution goes through the registry (single source of truth).
  */
-import { db } from "@/lib/d):b";
+import { db } from "@/lib/db";
 import {
-  parseLocation string,
- [] mapJobType,
+  parseLocation,
+  mapJobType,
   generateSlug,
- {
   guessCurrency,
-   guessExperience,
-} from "@/lib return/jobs/sync-normalize";
-import { assess ArrayJobQuality } from.from "./quality";
-import { scoreDedup, type ExistingJob(
-Ref } from "./dedup";
-import    { inferOccupation new } from "./occupation";
+  guessExperience,
+} from "@/lib/jobs/sync-normalize";
+import { assessJobQuality } from "./quality";
+import { scoreDedup, type ExistingJobRef } from "./dedup";
+import { inferOccupation } from "./occupation";
 import {
-  Set isProductionIngestAllowed,
-  SOURCE_REG([ISTRY,
-} from "./...(registry";
-importbase type { IngestJobDraft, IngestStats } from "./types";
+  isProductionIngestAllowed,
+  SOURCE_REGISTRY,
+} from "./registry";
+import type { IngestJobDraft, IngestStats } from "./types";
 import { getRunnableSources } from "./registry";
 import { recordSourceRun } from "./source-run";
 import { upsertSourceListing } from "./provenance";
@@ -74,7 +70,11 @@ function remainingTimeMs(started: number): number {
 }
 
 function safeTags(
-  base: readonly string[] | undefined | null ?? []), ...extras].filter((t): t is string => Boolean(t))),
+  base: readonly string[] | undefined | null,
+  extras: readonly string[] = [],
+): string[] {
+  return Array.from(
+    new Set([...(base ?? []), ...extras].filter((t): t is string => Boolean(t))),
   );
 }
 
@@ -649,4 +649,224 @@ export async function runIngestion(
       consecutiveFailures:
         typeof (source as { consecutiveFailures?: number }).consecutiveFailures ===
         "number"
-          ? ((source as { consecutiveFailures?: number }).consecutive
+          ? ((source as { consecutiveFailures?: number }).consecutiveFailures ?? 0)
+          : 0,
+      lastErrorAt: (source as { lastErrorAt?: Date | null }).lastErrorAt ?? null,
+    });
+    if (!circuit.allowRequest) {
+      stats.finishedAt = new Date().toISOString();
+      stats.completeness = "FAILED";
+      stats.errors.push(circuit.reason);
+      allStats.push(stats);
+      continue;
+    }
+
+    const lease = await tryAcquireSourceLease(source.key);
+    if (!lease) {
+      stats.finishedAt = new Date().toISOString();
+      stats.completeness = "PARTIAL";
+      stats.errors.push("source_lease_held");
+      allStats.push(stats);
+      continue;
+    }
+
+    const rateLimit =
+      (source as { rateLimitPerMinute?: number | null }).rateLimitPerMinute;
+    if (!tryAcquireSourceQuota(source.key, rateLimit)) {
+      stats.finishedAt = new Date().toISOString();
+      stats.completeness = "PARTIAL";
+      stats.errors.push("rate_limited");
+      allStats.push(stats);
+      await releaseSourceLease(lease);
+      continue;
+    }
+
+    let startPage = 1;
+    let resumeCursor: string | null | undefined;
+    if (!options?.resetCheckpoint) {
+      const cp = await loadSourceCheckpoint(source.key);
+      if (cp?.page != null && cp.page > 1) {
+        startPage = cp.page;
+      }
+      if (cp?.cursor) {
+        resumeCursor = cp.cursor;
+      } else if (cp?.token) {
+        resumeCursor = cp.token;
+      }
+    } else {
+      await clearSourceCheckpoint(source.key);
+    }
+
+    let pagesThisRun = 0;
+
+    try {
+      for (
+        let page = startPage;
+        page <= maxPages;
+        page++
+      ) {
+        if (isTimedOut(started)) {
+          stats.timedOut = true;
+          break;
+        }
+
+        if (remainingTimeMs(started) <= 0) {
+          stats.timedOut = true;
+          break;
+        }
+
+        let result;
+        try {
+          result = await adapter.fetchPage({
+            page,
+            perPage: PER_PAGE,
+            cursor: resumeCursor,
+          });
+        } catch (error) {
+          stats.failed++;
+          pushError(
+            stats,
+            error,
+            "source_fetch_failed",
+          );
+          break;
+        }
+
+        if (result.nextCursor !== undefined) {
+          resumeCursor = result.nextCursor;
+        }
+
+        const renewed = await renewSourceLease(lease);
+        if (!renewed) {
+          stats.leaseLost = true;
+          stats.errors.push("source_lease_lost");
+          try {
+            await saveSourceCheckpoint(source.key, {
+              page,
+              cursor: resumeCursor ?? null,
+            });
+          } catch {
+            // best-effort: lease loss must not be masked by checkpoint errors
+          }
+          break;
+        }
+
+        stats.fetched += result.fetched;
+
+        if (result.errors?.length) {
+          stats.errors.push(
+            ...result.errors
+              .map((error) => String(error).slice(0, 200))
+              .filter(Boolean),
+          );
+        }
+
+        for (const draft of result.jobs) {
+          if (isTimedOut(started)) {
+            stats.timedOut = true;
+            break;
+          }
+
+          try {
+            const seenId = await persistDraft(draft, stats);
+            if (seenId) seenExternalIds.push(seenId);
+          } catch (error) {
+            stats.failed++;
+            pushError(
+              stats,
+              error,
+              "persist_error",
+            );
+          }
+        }
+
+        pagesThisRun += 1;
+
+        if (stats.timedOut) {
+          await saveSourceCheckpoint(source.key, {
+            page,
+            cursor: resumeCursor ?? null,
+          });
+          break;
+        }
+
+        if (!result.hasMore) {
+          await clearSourceCheckpoint(source.key);
+          break;
+        }
+
+        await saveSourceCheckpoint(source.key, {
+          page: page + 1,
+          cursor: resumeCursor ?? null,
+        });
+      }
+    } catch (error) {
+      stats.failed++;
+      pushError(
+        stats,
+        error,
+        "source_failed",
+      );
+    } finally {
+      await releaseSourceLease(lease);
+    }
+
+    stats.finishedAt = new Date().toISOString();
+    stats.durationMs =
+      new Date(stats.finishedAt).getTime() -
+      new Date(stats.startedAt).getTime();
+    stats.completeness = computeCompleteness(stats);
+    allStats.push(stats);
+
+    if (stats.completeness === "FULL") {
+      await clearSourceCheckpoint(source.key);
+    } else if (stats.completeness === "FAILED" && pagesThisRun === 0) {
+      // Hard fail before any page — do not advance cursor
+    }
+
+    try {
+      await recordSourceRun(stats);
+    } catch {
+      // best-effort: metrics must never fail the ingestion run
+    }
+    if (stats.completeness === "FULL") {
+      try {
+        await applyAbsenceFreshness({
+          sourceKey: source.key,
+          completeness: stats.completeness,
+          seenExternalIds,
+        });
+      } catch {
+        // best-effort
+      }
+    }
+  }
+
+  if (requestedKeys?.length) {
+    for (const key of requestedKeys) {
+      if (processedKeys.has(key)) {
+        continue;
+      }
+
+      const reg = SOURCE_REGISTRY.find(
+        (source) => source.key === key,
+      );
+
+      if (!reg) {
+        continue;
+      }
+
+      const skipped = emptyStats(key);
+      skipped.finishedAt = new Date().toISOString();
+      skipped.completeness = "FAILED";
+      skipped.errors.push(
+        isProductionIngestAllowed(reg)
+          ? "source_not_enabled"
+          : `license_blocked:${reg.licenseStatus}`,
+      );
+      allStats.push(skipped);
+    }
+  }
+
+  return allStats;
+}
