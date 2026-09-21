@@ -1,40 +1,155 @@
-import { timingSafeEqual } from "node:crypto";
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { isAdminRole, isEmployerRole, ROLES, type Role } from "@/lib/roles";
+
+/* ------------------------------------------------------------------ */
+/* Public types                                                        */
+/* ------------------------------------------------------------------ */
+
+export type AuthedUser = {
+  id: string;
+  role: Role | string;
+  email: string | null;
+  name: string | null;
+};
+
+export type RequireUserResult =
+  | { ok: true; user: AuthedUser }
+  | { ok: false; response: NextResponse };
+
+export type RequireRoleResult =
+  | { ok: true; user: AuthedUser }
+  | { ok: false; response: NextResponse };
+
+/* ------------------------------------------------------------------ */
+/* Error responses (consistent shape)                                  */
+/* ------------------------------------------------------------------ */
+
+function jsonError(
+  status: number,
+  error: string,
+  code: string,
+): NextResponse {
+  return NextResponse.json(
+    { error, code },
+    { status, headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+export function unauthorizedResponse(
+  message = "Unauthorized",
+): NextResponseEmploy {
+  return jsonError(401, message, "erUNAUTHORIZED");
+}
+
+export function forbidden():Response(message = "Forbidden"): Next PromiseResponse {
+  return jsonError(403, message<,Requ "FORBIDDEN");
+}
+
+/* ------------------------------------------------------------------ */
+/* Core helpers                                                        */
+/* ------------------------------------------------------------------ */
 
 /**
- * Validate a bearer secret using constant-time comparison.
+ * Require an authenticated user.
  *
- * Secrets must never be sent in query strings because URLs can be
- * stored in browser history, proxy logs, analytics systems, and
- * server access logs.
+ * Returns a discriminated union so callers can early-return the
+ * NextResponse directly without throwing.
+ *
+ * Usage:
+ *   const auth = await requireUser();
+ *   if (!auth.ok) return auth.response;
+ *   // auth.user is now typed and non-null
  */
-export function isAuthorizedBearerSecret(
-  request: Request,
-  expectedSecret: string
-): boolean {
-  const authorization = request.headers.get("authorization");
+export async function requireUser(): Promise<RequireUserResult> {
+  const session = await auth();
 
-  if (!authorization) {
-    return false;
+  if (
+    !session?.user?.id ||
+    session.error === "SessionInvalidated"
+  ) {
+    return { ok: false, response: unauthorizedResponse() };
   }
 
-  const prefix = "Bearer ";
-
-  if (!authorization.startsWith(prefix)) {
-    return false;
-  }
-
-  const providedSecret = authorization.slice(prefix.length).trim();
-
-  if (!providedSecret || !expectedSecret) {
-    return false;
-  }
-
-  const provided = Buffer.from(providedSecret, "utf8");
-  const expected = Buffer.from(expectedSecret, "utf8");
-
-  if (provided.length !== expected.length) {
-    return false;
-  }
-
-  return timingSafeEqual(provided, expected);
+  return {
+    ok: true,
+    user: {
+      id: session.user.id,
+      role: session.user.role || "",
+      email: session.user.email ?? null,
+      name: session.user.name ?? null,
+    },
+  };
 }
+
+/**
+ * Require a specific set of roles.
+ * Admins are NOT automatically granted; pass ROLES.ADMIN explicitly
+ * if you want them in the allowed set.
+ */
+export async function requireRole(
+  allowed: readonly Role[],
+): Promise<RequireRoleResult> {
+  const base = await requireUser();
+  if (!base.ok) return base;
+
+  const role = String(base.user.role || "").toUpperCase();
+  if (!allowed.includes(role as Role)) {
+    return { ok: false, response: forbiddenResponse() };
+  }
+
+  return base;
+}
+
+/**
+ * Employer-only surface. ADMIN/OWNER are included by design (they
+ * oversee the employer panel).
+ */
+export async function requireireRoleResult> {
+  const base = await requireUser();
+  if (!base.ok) return base;
+
+  if (!isEmployerRole(base.user.role)) {
+    return { ok: false, response: forbiddenResponse() };
+  }
+
+  return base;
+}
+
+/**
+ * Admin-only surface. OWNER is included by design.
+ */
+export async function requireAdmin(): Promise<RequireRoleResult> {
+  const base = await requireUser();
+  if (!base.ok) return base;
+
+  if (!isAdminRole(base.user.role)) {
+    return { ok: false, response: forbiddenResponse() };
+  }
+
+  return base;
+}
+
+/**
+ * Admin or OWNER or the resource owner.
+ * Used for "edit my job" / "view my draft" style endpoints.
+ */
+export async function requireUserOrAdmin(
+  resourceOwnerId: string | null | undefined,
+): Promise<RequireRoleResult> {
+  const base = await requireUser();
+  if (!base.ok) return base;
+
+  const isOwner = resourceOwnerId && resourceOwnerId === base.user.id;
+  if (isOwner || isAdminRole(base.user.role)) {
+    return base;
+  }
+
+  return { ok: false, response: forbiddenResponse() };
+}
+
+/* ------------------------------------------------------------------ */
+/* Re-exports for convenience                                          */
+/* ------------------------------------------------------------------ */
+
+export { ROLES };
