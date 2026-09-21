@@ -3,137 +3,141 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { normalizeLocation } from "@/lib/location";
-import { createJobForUser } from "@/services/jobs/create-job";
 import { getRequestIp } from "@/lib/client-ip";
 import { ratelimit } from "@/lib/ratelimit";
 
-const querySchema = z.object({
-  page: z.coerce.number().min(1).max(1000).default(1),
-  limit: z.coerce.number().min(1).max(100).default(12),
-  search: z.string().max(100).optional(),
-  location: z.string().max(100).optional(),
-  type: z.string().max(50).optional(),
-  experience: z.string().max(50).optional(),
-  remote: z
-    .string()
-    .optional()
-    .transform((v) => v === "true"),
-  minSalary: z.coerce.number().optional(),
-  maxSalary: z.coerce.number().optional(),
-  tag: z.string().max(50).optional(),
-  company: z.string().optional(),
+/* ------------------------------------------------------------------ */
+/* Query schema — for GET /api/companies (public list)                */
+/* ------------------------------------------------------------------ */
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(24),
+  search: z.string().trim().max(100).optional(),
+  location: z.string().trim().max(100).optional(),
 });
 
-function mapJob(job: {
-  location: string | null;
-  company?: { location: string | null } | null;
-  [key: string]: unknown;
-}) {
-  return {
-    ...job,
-    location: normalizeLocation(job.location) || job.location,
-    company: job.company
-      ? {
-          ...job.company,
-          location: normalizeLocation(job.company.location),
-        }
-      : job.company,
-  };
-}
+/* ------------------------------------------------------------------ */
+/* Create-company schema — used by POST (owner or admin)              */
+/* ------------------------------------------------------------------ */
+const createCompanySchema = z
+  .object({
+    name: z.string().trim().min(2).max(150),
+    description: z
+      .string()
+      .trim()
+      .max(5000)
+      .nullable()
+      .optional(),
+    location: z
+      .string()
+      .trim()
+      .max(200)
+      .nullable()
+      .optional(),
+    website: z
+      .string()
+      .trim()
+      .url()
+      .max(500)
+      .nullable()
+      .optional(),
+  })
+  .strict();
 
+/* ------------------------------------------------------------------ */
+/* GET /api/companies — public list of active companies               */
+/* ------------------------------------------------------------------ */
 export async function GET(req: NextRequest) {
   try {
+    const ip = getRequestIp(req);
+    const limited = await ratelimit.limit(`companies_get_${ip}`);
+    if (!limited.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const params = Object.fromEntries(searchParams.entries());
 
-    const result = querySchema.safeParse(params);
-    if (!result.success) {
+    const parsed = listQuerySchema.safeParse(params);
+    if (!parsed.success) {
       return NextResponse.json(
         {
           error: "Invalid query",
-          details: result.error.flatten().fieldErrors,
+          details: parsed.error.flatten().fieldErrors,
         },
         { status: 400 }
       );
     }
 
-    const {
-      page,
-      limit,
-      search,
-      location,
-      type,
-      experience,
-      remote,
-      tag,
-      company,
-      minSalary,
-      maxSalary,
-    } = result.data;
-
+    const { page, limit, search, location } = parsed.data;
     const skip = (page - 1) * limit;
-    const where: Record<string, unknown> = { status: "active" };
+
+    const where: Record<string, unknown> = {
+      status: "active",
+      isActive: true,
+    };
 
     if (search) {
       where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
+        { name: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
-        { company: { name: { contains: search, mode: "insensitive" } } },
-      ];
-    }
-    if (location) where.location = { contains: location, mode: "insensitive" };
-    if (type) where.type = type;
-    if (experience) where.experience = experience;
-    if (remote) where.remote = true;
-    if (company) where.companyId = company;
-    if (tag) where.tags = { has: tag };
-
-    if (minSalary != null || maxSalary != null) {
-      const salaryFilter: Record<string, unknown> = {};
-      if (minSalary != null) salaryFilter.gte = minSalary;
-      if (maxSalary != null) salaryFilter.lte = maxSalary;
-      where.AND = [
-        ...(Array.isArray(where.AND) ? where.AND : []),
-        {
-          OR: [
-            { salaryMin: salaryFilter },
-            { salaryMax: salaryFilter },
-            {
-              AND: [
-                { salaryMin: { lte: maxSalary ?? 999999999 } },
-                { salaryMax: { gte: minSalary ?? 0 } },
-              ],
-            },
-          ],
-        },
       ];
     }
 
-    const [jobs, total] = await Promise.all([
-      db.job.findMany({
+    if (location) {
+      where.location = {
+        contains: location,
+        mode: "insensitive",
+      };
+    }
+
+    const [companies, total] = await Promise.all([
+      db.company.findMany({
         where,
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        include: {
-          company: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          email: true,
+          website: true,
+          location: true,
+          description: true,
+          logo: true,
+          status: true,
+          createdAt: true,
+          _count: {
             select: {
-              id: true,
-              name: true,
-              logo: true,
-              location: true,
+              jobs: {
+                where: { status: "active" },
+              },
             },
-          },
-          category: {
-            select: { id: true, name: true, slug: true, color: true },
           },
         },
       }),
-      db.job.count({ where }),
+      db.company.count({ where }),
     ]);
 
     return NextResponse.json({
-      jobs: jobs.map(mapJob),
+      companies: companies.map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        email: c.email,
+        website: c.website,
+        location: normalizeLocation(c.location) || c.location,
+        size: null,
+        description: c.description,
+        logo: c.logo,
+        status: c.status,
+        createdAt: c.createdAt,
+        activeJobs: c._count.jobs,
+      })),
       pagination: {
         page,
         limit,
@@ -142,17 +146,17 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Jobs GET error:", error);
+    console.error("Companies GET error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch jobs" },
+      { error: "Failed to fetch companies" },
       { status: 500 }
     );
   }
 }
 
-/**
- * Create job — same pipeline as /api/employer/jobs (no plan bypass).
- */
+/* ------------------------------------------------------------------ */
+/* POST /api/companies — create a company (employer or admin)         */
+/* ------------------------------------------------------------------ */
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -162,49 +166,103 @@ export async function POST(req: NextRequest) {
 
     const ip = getRequestIp(req);
     const limited = await ratelimit.limit(
-      `jobs_post_${session.user.id}_${ip}`
+      `companies_post_${session.user.id}_${ip}`
     );
     if (!limited.success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
     }
 
     let body: unknown;
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const result = await createJobForUser(
-      {
-        id: session.user.id,
-        role: session.user.role,
-        email: session.user.email,
-      },
-      body
-    );
-
-    if (!result.ok) {
       return NextResponse.json(
-        {
-          error: result.error,
-          code: result.code,
-          details: result.details,
-          limit: result.limit,
-          used: result.used,
-        },
-        { status: result.status }
+        { error: "Invalid JSON body" },
+        { status: 400 }
       );
     }
 
+    const parsed = createCompanySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { name, description, location, website } = parsed.data;
+
+    const existing = await db.company.findFirst({
+      where: { ownerId: session.user.id },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        {
+          error:
+            "You already own a company. Edit your existing company instead.",
+          code: "COMPANY_ALREADY_EXISTS",
+        },
+        { status: 409 }
+      );
+    }
+
+    const baseSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60);
+
+    const slugTaken = baseSlug
+      ? await db.company.findUnique({
+          where: { slug: baseSlug },
+          select: { id: true },
+        })
+      : null;
+
+    const slug = slugTaken
+      ? `${baseSlug}-${Date.now().toString(36).slice(-6)}`
+      : baseSlug || null;
+
+    const company = await db.company.create({
+      data: {
+        name: name.trim(),
+        slug,
+        description: description?.trim() || null,
+        location: location
+          ? normalizeLocation(location) || location.trim()
+          : null,
+        website: website?.trim() || null,
+        ownerId: session.user.id,
+        email: session.user.email || null,
+        status: "active",
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        location: true,
+        website: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
     return NextResponse.json(
-      { success: true, job: mapJob(result.job) },
+      { success: true, company },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Job create error:", error);
+    console.error("Companies POST error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to create company" },
       { status: 500 }
     );
   }
