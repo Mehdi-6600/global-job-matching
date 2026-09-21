@@ -1,4 +1,4 @@
-@tailwind base;
+ @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -1791,10 +1791,53 @@
     text-overflow: ellipsis;
   }
 
-  /* ============================================================
-     CAREER TOOLS
+    /* ============================================================
+     CAREER TOOLS — dark premium section (after hero)
      ============================================================ */
-  .gjm-career-tools-section { padding-block: 3rem 4rem; }
+  .gjm-career-tools-section {
+    position: relative;
+    padding-block: 4rem 4.5rem;
+    background:
+      radial-gradient(
+        ellipse 60% 80% at 50% 0%,
+        rgba(6, 182, 212, 0.08) 0%,
+        transparent 60%
+      ),
+      linear-gradient(180deg, #1a1917 0%, #0f0e0d 100%);
+    color: #ffffff;
+    overflow: hidden;
+  }
+
+  @media (min-width: 768px) {
+    .gjm-career-tools-section {
+      padding-block: 5rem 5.5rem;
+    }
+  }
+
+  .gjm-career-tools-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+    max-width: 42rem;
+  }
+
+  .gjm-career-tools-heading .gjm-section-kicker {
+    color: var(--brand-primary);
+  }
+
+  .gjm-career-tools-heading h2 {
+    color: #ffffff;
+    font-size: var(--font-h2);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .gjm-career-tools-heading p {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
 
   .gjm-career-tools-grid {
     display: grid;
@@ -1803,193 +1846,150 @@
   }
 
   @media (min-width: 640px) {
-    .gjm-career-tools-grid { grid-template-columns: repeat(2, 1fr); }
+    .gjm-career-tools-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   @media (min-width: 1024px) {
-    .gjm-career-tools-grid { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .gjm-career-tools-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
   }
 
   .gjm-career-tool-card {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
+    gap: 0.875rem;
+    padding: 1.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-2xl);
-    box-shadow: var(--elev-3);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition:
+      transform 0.25s ease,
+      border-color 0.25s ease,
+      background-color 0.25s ease,
+      box-shadow 0.25s ease;
+    overflow: hidden;
+  }
+
+  .gjm-career-tool-card::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--brand-primary);
+    opacity: 0;
+    transition: opacity 0.25s ease;
   }
 
   .gjm-career-tool-card:hover {
-    box-shadow: var(--elev-4);
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.6);
   }
 
-  .gjm-career-tool-card:active {
-    box-shadow: var(--inset-1);
-    transform: translateY(0);
+  .gjm-career-tool-card:hover::before {
+    opacity: 1;
   }
+
+  .gjm-career-tool-card.accent-cyan::before { background: #22d3ee; }
+  .gjm-career-tool-card.accent-orange::before { background: #fb923c; }
+  .gjm-career-tool-card.accent-red::before { background: #f87171; }
 
   .gjm-career-tool-card h3 {
-    font-size: 1.0625rem;
+    font-size: 1.125rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #ffffff;
+    line-height: 1.3;
     padding-inline-end: 2rem;
   }
 
   .gjm-career-tool-card p {
-    font-size: 0.875rem;
-    line-height: 1.55;
-    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.62);
   }
 
   .gjm-career-tool-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 52px;
-    height: 52px;
-    border-radius: var(--radius-md);
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg);
     margin-bottom: 0.25rem;
     flex-shrink: 0;
-    box-shadow: var(--elev-2);
+    transition: transform 0.25s ease;
   }
 
-  .gjm-career-tool-arrow {
-    position: absolute;
-    top: 1.5rem;
-    inset-inline-end: 1.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-pill);
-    background: var(--surface);
-    color: var(--text-muted);
-    box-shadow: var(--elev-2);
-    transition: box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
-  }
-
-  .gjm-career-tool-card:hover .gjm-career-tool-arrow {
-    background: var(--brand-primary);
-    color: #ffffff;
-    box-shadow:
-      4px 4px 10px rgba(8, 145, 178, 0.35),
-      -3px -3px 8px rgba(255, 255, 255, 0.75);
+  .gjm-career-tool-card:hover .gjm-career-tool-icon {
     transform: scale(1.05);
   }
 
   .gjm-career-tool-card.accent-cyan .gjm-career-tool-icon {
-    background: var(--brand-primary-tint);
-    color: #0891b2;
+    background: rgba(34, 211, 238, 0.14);
+    color: #67e8f9;
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.22);
   }
 
   .gjm-career-tool-card.accent-orange .gjm-career-tool-icon {
-    background: #ffedd5;
-    color: #ea580c;
+    background: rgba(251, 146, 60, 0.14);
+    color: #fdba74;
+    box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.22);
   }
 
   .gjm-career-tool-card.accent-red .gjm-career-tool-icon {
-    background: #fee2e2;
-    color: #dc2626;
+    background: rgba(248, 113, 113, 0.14);
+    color: #fca5a5;
+    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.22);
   }
 
-  [dir="rtl"] .gjm-career-tool-arrow svg {
-    transform: scaleX(-1);
-  }
-
-  /* ---------- Feature cards ---------- */
-  .gjm-feature-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-
-  @media (min-width: 640px) {
-    .gjm-feature-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  @media (min-width: 1024px) {
-    .gjm-feature-grid { grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
-  }
-
-  .gjm-feature-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-2xl);
-    box-shadow: var(--elev-2);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
-  }
-  .gjm-feature-card:hover {
-    box-shadow: var(--elev-4);
-    transform: translateY(-3px);
-  }
-
-  .gjm-feature-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    background: var(--brand-primary-tint);
-    color: var(--brand-primary-hover);
-    box-shadow: var(--elev-1);
-  }
-
-  .gjm-feature-card h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .gjm-feature-card p {
-    font-size: 0.875rem;
-    line-height: 1.55;
-    color: var(--text-muted);
-  }
-
-  .gjm-card-arrow {
+  .gjm-career-tool-badge {
     position: absolute;
-    top: 1.5rem;
-    inset-inline-end: 1.5rem;
+    top: 1.125rem;
+    inset-inline-end: 1.125rem;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #67e8f9;
+    background: rgba(34, 211, 238, 0.14);
+    border: 1px solid rgba(34, 211, 238, 0.28);
     border-radius: var(--radius-pill);
-    background: var(--surface);
-    color: var(--text-muted);
-    box-shadow: var(--elev-1);
-    opacity: 0;
-    transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   }
 
-  .gjm-feature-card:hover .gjm-card-arrow {
-    opacity: 1;
-    background: var(--brand-primary);
+  .gjm-career-tool-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
     color: #ffffff;
-    box-shadow:
-      4px 4px 10px rgba(8, 145, 178, 0.35),
-      -3px -3px 8px rgba(255, 255, 255, 0.75);
+    transition: gap 0.2s ease, color 0.2s ease;
   }
 
-  [dir="rtl"] .gjm-card-arrow svg,
-  [dir="rtl"] .gjm-inline-link svg,
-  [dir="rtl"] .gjm-dark-link svg,
-  [dir="rtl"] .gjm-hero-actions svg,
-  [dir="rtl"] .gjm-platform-arrow,
-  [dir="rtl"] .gjm-job-arrow svg {
+  .gjm-career-tool-card.accent-cyan .gjm-career-tool-cta { color: #67e8f9; }
+  .gjm-career-tool-card.accent-orange .gjm-career-tool-cta { color: #fdba74; }
+  .gjm-career-tool-card.accent-red .gjm-career-tool-cta { color: #fca5a5; }
+
+  .gjm-career-tool-card:hover .gjm-career-tool-cta {
+    gap: 0.625rem;
+  }
+
+  [dir="rtl"] .gjm-career-tool-cta svg {
     transform: scaleX(-1);
   }
 
@@ -3026,7 +3026,7 @@
     font-weight: 600;
     font-size: 0.9375rem;
     border: 1px solid var(--border);
-    boborder-radius: var(--radius-lg);
+    border-radius: var(--radius-lg);
     cursor: not-allowed;
     opacity: 1;
     box-shadow: var(--inset-2);
