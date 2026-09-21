@@ -24,6 +24,10 @@ function resetIdentifier(email: string): string {
   return `pw-reset:${email.toLowerCase().trim()}`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Password reset                                                      */
+/* ------------------------------------------------------------------ */
+
 /** Invalidate previous reset tokens for this email, then create a new one */
 export async function issuePasswordResetToken(email: string): Promise<{
   rawToken: string;
@@ -118,6 +122,10 @@ export async function markPasswordResetUsed(tokenHash: string): Promise<void> {
   });
 }
 
+/* ------------------------------------------------------------------ */
+/* Email verification                                                  */
+/* ------------------------------------------------------------------ */
+
 /** Email verification via VerificationToken table */
 export async function issueEmailVerificationToken(email: string): Promise<{
   rawToken: string;
@@ -141,13 +149,25 @@ export async function issueEmailVerificationToken(email: string): Promise<{
     }),
   ]);
 
-  const verifyUrl = `${appBaseUrl()}/verify-email?token=${rawToken}&email=${encodeURIComponent(normalized)}`;
+  const verifyUrl = `${appBaseUrl()}/verify-email?token=${rawToken}&email=${encodeURIComponent(
+    normalized,
+  )}`;
   return { rawToken, verifyUrl };
 }
 
+/**
+ * Consume an email verification token.
+ *
+ * Uses `updateMany` (not `update`) so that if the user's email was
+ * changed after the token was issued, we do NOT crash with P2025 —
+ * we simply fail closed ("Invalid or expired token").
+ *
+ * When the update count is 0 (email no longer matches any user),
+ * we delete the orphan token row and return invalid.
+ */
 export async function consumeEmailVerificationToken(
   rawToken: string,
-  email: string
+  email: string,
 ): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
   const normalized = email.toLowerCase().trim();
   const tokenHash = hashToken(rawToken.trim());
@@ -165,6 +185,7 @@ export async function consumeEmailVerificationToken(
   if (!row) {
     return { ok: false, error: "Invalid or expired token", status: 400 };
   }
+
   if (row.expires < now) {
     await db.verificationToken
       .deleteMany({
@@ -174,15 +195,24 @@ export async function consumeEmailVerificationToken(
     return { ok: false, error: "Token expired", status: 400 };
   }
 
-  await db.$transaction([
-    db.user.update({
+  // RC21: use updateMany to fail closed if the email was reassigned.
+  const result = await db.$transaction(async (tx) => {
+    const updated = await tx.user.updateMany({
       where: { email: normalized },
       data: { emailVerified: now },
-    }),
-    db.verificationToken.deleteMany({
+    });
+
+    // Always clean up the consumed token, even on failure.
+    await tx.verificationToken.deleteMany({
       where: { identifier: normalized },
-    }),
-  ]);
+    });
+
+    return updated.count;
+  });
+
+  if (result === 0) {
+    return { ok: false, error: "Invalid or expired token", status: 400 };
+  }
 
   return { ok: true };
 }
