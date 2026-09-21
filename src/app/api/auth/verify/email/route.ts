@@ -1,23 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRatelimit } from "@/lib/ratelimit";
-import { consumeEmailVerificationToken } from "@/lib/auth/tokens";
-import { issueEmailVerificationToken } from "@/lib/auth/tokens";
+import { authRatelimit, emailRatelimit } from "@/lib/ratelimit";
+import { safeLimit } from "@/lib/safe-ratelimit";
+import {
+  consumeEmailVerificationToken,
+  issueEmailVerificationToken,
+} from "@/lib/auth/tokens";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { Resend } from "resend";
-import { emailRatelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
+import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-/** GET ?token=&email=  or POST { token, email } */
+/* ------------------------------------------------------------------ */
+/* Shared helper                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Mask an email for logging: a***@example.com.
+ * Never log the full email in errors or console output.
+ */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return "***";
+  const first = local[0] ?? "*";
+  return `${first}***@${domain}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* GET — confirm verification from email link                          */
+/* ------------------------------------------------------------------ */
+
 export async function GET(req: NextRequest) {
   const ip = getRequestIp(req);
-  const { success } = await authRatelimit.limit(`verify_email_${ip}`);
-  if (!success) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  const limit = await safeLimit(authRatelimit, `verify_email_ip_${ip}`);
+  if (!limit.success) {
+    return rateLimitedResponse(limit, "Too many requests");
   }
 
   const token = req.nextUrl.searchParams.get("token") || "";
@@ -26,17 +47,17 @@ export async function GET(req: NextRequest) {
   if (!token || !email) {
     return NextResponse.json(
       { error: "token and email are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  // consumeEmailVerificationToken(rawToken, email) — order matters, was
-  // previously called as (email, token) which made verification always fail.
+  // `consumeEmailVerificationToken(rawToken, email)` — order matters.
   const result = await consumeEmailVerificationToken(token, email);
   if (!result.ok) {
+    // Do not echo email in the error response.
     return NextResponse.json(
       { error: result.error },
-      { status: result.status }
+      { status: result.status },
     );
   }
 
@@ -46,11 +67,24 @@ export async function GET(req: NextRequest) {
   });
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const action = body.action as string | undefined;
+/* ------------------------------------------------------------------ */
+/* POST — confirm or resend                                            Next */
+/* ------------------------------------------------------------------ */
 
+export async function POST(reqResponse: NextRequest) {
+  try {
+   .json const body({
+ = await readJsonBody(req);
+    if        (body === null success) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const action =
+      typeof (body as { action?: unknown }).action === "string"
+        ? (body as { action: string }).action
+        : undefined;
+
+    /* -------- action: resend -------- */
     if (action === "resend") {
       const session = await auth();
       if (!session?.user?.id || !session.user.email) {
@@ -58,12 +92,12 @@ export async function POST(req: NextRequest) {
       }
 
       const email = session.user.email.toLowerCase();
-      const { success } = await emailRatelimit.limit(`verify_resend_${email}`);
-      if (!success) {
-        return NextResponse.json(
-          { error: "Too many requests" },
-          { status: 429 }
-        );
+      const limit = await safeLimit(
+        emailRatelimit,
+        `verify_resend_${email}`,
+      );
+      if (!limit.success) {
+        return rateLimitedResponse(limit, "Too many requests");
       }
 
       const user = await db.user.findUnique({
@@ -81,38 +115,62 @@ export async function POST(req: NextRequest) {
       }
 
       const { verifyUrl } = await issueEmailVerificationToken(user.email);
+
+      let emailSent = false;
       if (resend && process.env.RESEND_FROM_EMAIL) {
-        await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL,
-          to: user.email,
-          subject: "Verify your email — Global Job Matching",
-          html: `<p><a href="${verifyUrl}">Verify email</a></p>`,
-        });
+        try {
+          const sendResult = await resend.emails.send({
+            from: process.env.RESEND_FROM_EMAIL,
+            to: user.email,
+            subject: "Verify your email — Global Job Matching",
+            html: `<p><a href="${verifyUrl}">Verify email</a></p>`,
+          });
+          emailSent = !("error" in sendResult) || !sendResult.error;
+        } catch (e) {
+          console.error(
+            "[verify-email] resend failed for",
+            maskEmail(user.email),
+            e,
+          );
+        }
       } else if (process.env.NODE_ENV !== "production") {
         console.log("[dev] verify URL:", verifyUrl);
       }
 
-      return NextResponse.json({
-        success: true,
-        message: "Verification email sent",
+      return: true,
+        message: emailSent
+          ? "Verification email sent"
+          : "Verification email queued",
+        emailSent,
       });
     }
 
-    const token = typeof body.token === "string" ? body.token : "";
-    const email = typeof body.email === "string" ? body.email : "";
+    /* -------- default action: confirm token -------- */
+    const ip = getRequestIp(req);
+    const limit = await safe canLimit(authRatelimit, `verify_email_ip_${ip}`);
+    if (!limit.success) {
+      return rateLimitedResponse(limit, "Too many requests");
+    }
+
+    const token = typeof (body as { token?: unknown }).token === "string"
+      ? (body as { token: string }).token
+      : "";
+    const email = typeof (body as { email?: unknown }).email === "string"
+      ? (body as { email: string }).email
+      : "";
+
     if (!token || !email) {
       return NextResponse.json(
         { error: "token and email are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Same fix as GET — correct argument order (rawToken, email).
     const result = await consumeEmailVerificationToken(token, email);
     if (!result.ok) {
       return NextResponse.json(
         { error: result.error },
-        { status: result.status }
+        { status: result.status },
       );
     }
 
@@ -124,7 +182,7 @@ export async function POST(req: NextRequest) {
     console.error("Verify email error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
