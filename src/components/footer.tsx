@@ -57,32 +57,28 @@ export function Footer() {
               {t("Nav.categories", "Categories")}
             </Link>
 
-            <Link href="/pricing">
-              {t("Nav.pricing", "Pricing")}
+            <Link href="/blog">
+              {t("Nav.blog", "Blog")}
             </Link>
           </div>
 
           <div className="gjm-footer-column">
-            <h3>{t("Footer.tools", "Platform")}</h3>
+            <h3>{t("Footer.tools", "AI Tools")}</h3>
 
-            <Link href="/search">
-              {t("Nav.search", "Search")}
+            <Link href="/career-risk">
+              {t("CareerRisk.title", "AI Career Risk")}
             </Link>
 
-            <Link href="/saved-jobs">
-              {t("Footer.savedJobs", "Saved Jobs")}
-            </Link>
-
-            <Link href="/my-applications">
-              {t("Footer.applications", "Applications")}
+            <Link href="/resume-builder">
+              {t("Resume.title", "Resume Builder")}
             </Link>
 
             <Link href="/job-alerts">
               {t("Footer.jobAlerts", "Job Alerts")}
             </Link>
 
-            <Link href="/blog">
-              {t("Nav.blog", "Blog")}
+            <Link href="/saved-jobs">
+              {t("Footer.savedJobs", "Saved Jobs")}
             </Link>
           </div>
 
@@ -97,16 +93,16 @@ export function Footer() {
               {t("Footer.postJob", "Post a Job")}
             </Link>
 
+            <Link href="/pricing">
+              {t("Nav.pricing", "Pricing")}
+            </Link>
+
             <Link href="/about">
               {t("Nav.about", "About")}
             </Link>
 
             <Link href="/contact">
               {t("Nav.contact", "Contact")}
-            </Link>
-
-            <Link href="/privacy">
-              {t("Footer.privacy", "Privacy Policy")}
             </Link>
           </div>
         </div>
@@ -126,10 +122,6 @@ export function Footer() {
 
             <Link href="/privacy">
               {t("Footer.privacy", "Privacy Policy")}
-            </Link>
-
-            <Link href="/contact">
-              {t("Nav.contact", "Contact")}
             </Link>
 
             <Link href="/jobs">
