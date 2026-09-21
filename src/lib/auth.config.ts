@@ -1,11 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import { ROLES } from "@/lib/roles";
 
-/**
- * Edge-compatible auth config for middleware only.
- * Full credentials + sessionVersion checks live in src/lib/auth.ts (Node).
- * Middleware trusts JWT claims; server routes re-validate via jwt callback.
- */
 export const authConfig = {
   pages: {
     signIn: "/login",
@@ -35,7 +30,6 @@ export const authConfig = {
           error: "SessionInvalidated",
         };
       }
-
       if (session.user) {
         (session.user as { id?: string }).id = token.sub as string;
         (session.user as { role?: string }).role = (token.role as string) || "";
@@ -56,7 +50,10 @@ export const authConfig = {
         ) {
           return true;
         }
-        return false;
+        // Redirect to login with callbackUrl
+        const loginUrl = new URL("/login", request.nextUrl);
+        loginUrl.searchParams.set("callbackUrl", pathname);
+        return Response.redirect(loginUrl);
       }
 
       if (pathname.startsWith("/api/")) {
@@ -101,7 +98,10 @@ export const authConfig = {
       }
 
       if (!isLoggedIn) {
-        return false;
+        // Redirect to login with callbackUrl preserved
+        const loginUrl = new URL("/login", request.nextUrl);
+        loginUrl.searchParams.set("callbackUrl", pathname);
+        return Response.redirect(loginUrl);
       }
 
       if (
