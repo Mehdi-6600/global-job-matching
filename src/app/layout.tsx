@@ -19,8 +19,7 @@ import { resolveLocale } from "@/lib/i18n/resolve-locale";
    - Vazirmatn    : Arabic script for Persian (fa)
    - Noto Kufi    : Arabic script for Arabic (ar)
    Hindi falls back to Inter, which renders Devanagari correctly
-   via system fallback on modern OSes. If you want full Devanagari
-   coverage, we can add Noto_Sans_Devanagari later.
+   via system fallback on modern OSes.
    ---------------------------------------------------------------- */
 
 const inter = Inter({
@@ -56,12 +55,53 @@ const siteUrl = (
   "https://global-job-matching.vercel.app"
 ).replace(/\/$/, "");
 
+/*
+ * themeColor is aligned with --bg-page (#e8e5e0) so the mobile
+ * browser chrome matches the soft neumorphic cream surface instead
+ * of a jarring white bar.
+ */
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#e8e5e0",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
 };
+
+/*
+ * Locale-aware font stack.
+ *
+ * The order matters: the first family with an available glyph for a
+ * given codepoint wins in CSS font-family. Latin script is present in
+ * all three fonts, so we must put the *script-specific* font first per
+ * locale to avoid Inter rendering Arabic/Devanagari fallback glyphs.
+ *
+ * - fa / ar → Vazirmatn / Noto Kufi first
+ * - hi      → Inter first (Devanagari falls back to OS, but Inter has
+ *              no Devanagari so the fallback chain handles it)
+ * - en/es/fr/de → Inter first
+ */
+function fontStackForLocale(
+  locale: string,
+  variables: {
+    inter: string;
+    vazirmatn: string;
+    notoKufi: string;
+  },
+): string {
+  switch (locale) {
+    case "fa":
+      return `${variables.vazirmatn} ${variables.inter} ${variables.notoKufi}`;
+    case "ar":
+      return `${variables.notoKufi} ${variables.inter} ${variables.vazirmatn}`;
+    case "hi":
+    case "en":
+    case "es":
+    case "fr":
+    case "de":
+    default:
+      return `${variables.inter} ${variables.vazirmatn} ${variables.notoKufi}`;
+  }
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -82,6 +122,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Global Job Matching" }],
   creator: "Global Job Matching",
+  applicationName: "Global Job Matching",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -118,11 +159,20 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl,
   },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icon-192.png",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "GJM Jobs",
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
   },
 };
 
@@ -138,10 +188,17 @@ export default async function RootLayout({
   const websiteLd = websiteJsonLd();
   const orgLd = organizationSiteJsonLd();
 
-  /* Build the font-class string. All three fonts are always
-     attached so that any locale change at runtime immediately
-     has its correct font available. */
-  const fontClasses = `${inter.variable} ${vazirmatn.variable} ${notoKufi.variable}`;
+  /*
+   * Attach ALL three font variables to <html> so runtime locale
+   * switches still have their correct font available without a
+   * full page reload. The *order* in which they are listed is
+   * script-specific so the correct family wins per locale.
+   */
+  const fontClasses = fontStackForLocale(locale, {
+    inter: inter.variable,
+    vazirmatn: vazirmatn.variable,
+    notoKufi: notoKufi.variable,
+  });
 
   return (
     <html
@@ -151,16 +208,6 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          rel="dns-prefetch"
-          href="https://fonts.gstatic.com"
-        />
-
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
