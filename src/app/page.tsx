@@ -113,9 +113,6 @@ function salaryLabel(job: Job) {
   return null;
 }
 
-/* ----------------------------------------------------------------
-   SHOW_MAP_SECTION — toggle for the "Global Job Market" map block.
-   ---------------------------------------------------------------- */
 const SHOW_MAP_SECTION = false;
 
 type Audience = "seeker" | "employer";
@@ -228,11 +225,6 @@ export default function HomePage() {
     },
   ];
 
-  /* ----------------------------------------------------------------
-     Career Tools — quick access cards for Career Risk, Roadmap
-     and Migration. All three lead to /career-risk where the full
-     experience (analysis + 90-day roadmap + migration options) lives.
-     ---------------------------------------------------------------- */
   const careerTools = [
     {
       href: "/career-risk",
@@ -242,20 +234,30 @@ export default function HomePage() {
         "CareerRisk.subtitle",
         "Estimate how automation might affect your role in the next 5–10 years."
       ),
+      cta: t("Home.toolCtaAnalyze", "Analyze my risk"),
       accent: "cyan",
+      badge: t("Home.toolBadgePopular", "Popular"),
     },
     {
       href: "/career-risk",
       icon: MapIcon,
-      title: t("CareerRisk.roadmapBtn", "90-day roadmap"),
-      description: t("CareerRisk.roadmapTitle", "90-day roadmap"),
+      title: t("CareerRisk.roadmapTitle", "90-day roadmap"),
+      description: t(
+        "CareerRisk.roadmapCta",
+        "Build a 90-day skill roadmap tailored to your role."
+      ),
+      cta: t("Home.toolCtaPlan", "Plan my next 90 days"),
       accent: "orange",
     },
     {
       href: "/career-risk",
       icon: Plane,
-      title: t("CareerRisk.migrationBtn", "Migration options"),
-      description: t("CareerRisk.migrationTitle", "Migration options"),
+      title: t("CareerRisk.migrationTitle", "Migration options"),
+      description: t(
+        "CareerRisk.migrationCta",
+        "Explore realistic skill-based migration pathways."
+      ),
+      cta: t("Home.toolCtaExplore", "Explore pathways"),
       accent: "red",
     },
   ];
@@ -588,6 +590,63 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
+          CAREER TOOLS — dark premium section, right after hero
+          Only for job seekers
+          ============================================================ */}
+      {audience === "seeker" && (
+        <section className="gjm-career-tools-section">
+          <div className="gjm-container">
+            <div className="gjm-career-tools-heading">
+              <span className="gjm-section-kicker">
+                {t("Home.toolsKicker", "AI CAREER TOOLS")}
+              </span>
+              <h2>
+                {t("Home.toolsTitle", "Plan your career with AI.")}
+              </h2>
+              <p>
+                {t(
+                  "Home.toolsSubtitle",
+                  "Free tools to assess your risk, plan your next 90 days, and explore global opportunities."
+                )}
+              </p>
+            </div>
+
+            <div className="gjm-career-tools-grid">
+              {careerTools.map((tool) => {
+                const Icon = tool.icon;
+
+                return (
+                  <Link
+                    key={tool.title}
+                    href={tool.href}
+                    className={`gjm-career-tool-card accent-${tool.accent}`}
+                  >
+                    {"badge" in tool && tool.badge ? (
+                      <span className="gjm-career-tool-badge">
+                        {tool.badge}
+                      </span>
+                    ) : null}
+
+                    <div className="gjm-career-tool-icon">
+                      <Icon size={24} />
+                    </div>
+
+                    <h3>{tool.title}</h3>
+                    <p>{tool.description}</p>
+
+                    <span className="gjm-career-tool-cta">
+                      {tool.cta}
+                      <ArrowRight size={14} />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============================================================
           TRUST SECTION — real product evidence, no fake testimonials
           ============================================================ */}
       <section className="gjm-trust-section">
@@ -643,51 +702,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ============================================================
-          CAREER TOOLS — only for job seekers
-          ============================================================ */}
-      {audience === "seeker" && (
-        <section className="gjm-section gjm-career-tools-section">
-          <div className="gjm-container">
-            <div className="gjm-section-heading compact">
-              <div>
-                <span className="gjm-section-kicker">
-                  {t("Home.toolsKicker", "AI CAREER TOOLS")}
-                </span>
-                <h2>
-                  {t("Home.toolsTitle", "Plan your career with AI.")}
-                </h2>
-              </div>
-            </div>
-
-            <div className="gjm-career-tools-grid">
-              {careerTools.map((tool) => {
-                const Icon = tool.icon;
-
-                return (
-                  <Link
-                    key={tool.title}
-                    href={tool.href}
-                    className={`gjm-career-tool-card accent-${tool.accent}`}
-                  >
-                    <div className="gjm-career-tool-icon">
-                      <Icon size={22} />
-                    </div>
-
-                    <h3>{tool.title}</h3>
-                    <p>{tool.description}</p>
-
-                    <span className="gjm-career-tool-arrow">
-                      <ArrowRight size={16} />
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
 
       <section className="gjm-section gjm-section-light">
         <div className="gjm-container">
