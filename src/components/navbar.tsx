@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { isAdminRole, isEmployerRole } from "@/lib/roles";
@@ -251,7 +251,22 @@ export default function Navbar() {
   const userRole = session?.user?.role as string | undefined;
   const isAdmin = isAdminRole(userRole);
   const isEmployer = isEmployerRole(userRole) && !isAdmin;
-  const isLoggedIn = status === "authenticated" && !!session;
+
+  const sessionError = (session as { error?: string } | null)?.error;
+  const isSessionInvalidated = sessionError === "SessionInvalidated";
+
+  const isLoggedIn =
+    status === "authenticated" && !!session && !isSessionInvalidated;
+
+  const router = useRouter();
+  useEffect(() => {
+    if (isSessionInvalidated) {
+      // Session was revoked server-side — force clean client state
+      void signOut({ redirect: false }).then(() => {
+        router.replace("/login");
+      });
+    }
+  }, [isSessionInvalidated, router]);
 
   const unreadCount = useUnreadNotifications(isLoggedIn);
 
