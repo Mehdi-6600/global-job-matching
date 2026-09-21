@@ -73,8 +73,6 @@ export async function GET(
     });
 
     if (!allowed) {
-      // TEMP DEBUG — will be removed once production is stable.
-      // Return diagnostic info so we can see why access was denied.
       console.error("[jobs/id] rejected", {
         jobId: job.id,
         jobStatus: job.status,
@@ -94,8 +92,6 @@ export async function GET(
             hasCompanyOwner: Boolean(job.company?.ownerId),
             viewerId,
             viewerRole,
-            reason:
-              "Job exists but is not visible to this viewer (status not 'active' and viewer is not owner/admin).",
           },
         },
         { status: 404 },
@@ -120,7 +116,6 @@ export async function GET(
       }
     }
 
-    // Never expose ownerId on public payloads
     const { ownerId: _ownerId, ...companyPublic } = job.company || {
       ownerId: null,
     };
