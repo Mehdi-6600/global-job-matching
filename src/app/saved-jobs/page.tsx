@@ -34,11 +34,13 @@ interface SavedJob {
   } | null;
 }
 
-// تابع کمکی برای جایگزینی متغیرها در متن ترجمه‌شده
-function interpolate(template: string, replacements: Record<string, string | number>): string {
+function interpolate(
+  template: string,
+  replacements: Record<string, string | number>,
+): string {
   let result = template;
   for (const [key, value] of Object.entries(replacements)) {
-    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+    result = result.split(`{${key}}`).join(String(value));
   }
   return result;
 }
@@ -57,7 +59,7 @@ function formatSalary(
   currency: string | null | undefined,
   min: number | null | undefined,
   max: number | null | undefined,
-  notSpecified: string
+  notSpecified: string,
 ) {
   const cur = currency || "USD";
   if (min == null && max == null) return notSpecified;
@@ -75,7 +77,6 @@ export default function SavedJobsPage() {
   const [error, setError] = useState("");
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  // تابع timeAgo با ترجمه
   function timeAgo(dateString: string): string {
     const date = new Date(dateString);
     const now = new Date();
@@ -86,25 +87,31 @@ export default function SavedJobsPage() {
     const months = Math.floor(days / 30);
 
     if (months > 0) {
-      const template = t("Common.timeAgo.months", "{count} months ago");
-      return interpolate(template, { count: months });
+      return interpolate(t("Common.timeAgo.months", "{count} months ago"), {
+        count: months,
+      });
     }
     if (days > 0) {
-      const template = t("Common.timeAgo.days", "{count} days ago");
-      return interpolate(template, { count: days });
+      return interpolate(t("Common.timeAgo.days", "{count} days ago"), {
+        count: days,
+      });
     }
     if (hours > 0) {
-      const template = t("Common.timeAgo.hours", "{count} hours ago");
-      return interpolate(template, { count: hours });
+      return interpolate(t("Common.timeAgo.hours", "{count} hours ago"), {
+        count: hours,
+      });
     }
     if (minutes > 0) {
-      const template = t("Common.timeAgo.minutes", "{count} minutes ago");
-      return interpolate(template, { count: minutes });
+      return interpolate(t("Common.timeAgo.minutes", "{count} minutes ago"), {
+        count: minutes,
+      });
     }
     return t("Common.timeAgo.justNow", "Just now");
   }
 
   useEffect(() => {
+    let cancelled = false;
+
     fetch("/api/saved-jobs")
       .then(async (res) => {
         if (res.status === 401) {
@@ -114,18 +121,29 @@ export default function SavedJobsPage() {
         return res.json();
       })
       .then((data) => {
-        if (!data) return;
+        if (cancelled) return;
+        if (!data) {
+          setLoading(false);
+          return;
+        }
         if (data.jobs) {
           setJobs(data.jobs);
         } else {
-          setError(data.error || t("SavedJobs.errorLoad", "Failed to load saved jobs"));
+          setError(
+            data.error || t("SavedJobs.errorLoad", "Failed to load saved jobs"),
+          );
         }
         setLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setError(t("SavedJobs.errorLoad", "Failed to load saved jobs"));
         setLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
 
   const handleRemove = async (jobId: string) => {
@@ -152,7 +170,9 @@ export default function SavedJobsPage() {
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">{t("SavedJobs.loading", "Loading saved jobs...")}</p>
+          <p className="text-slate-400">
+            {t("SavedJobs.loading", "Loading saved jobs...")}
+          </p>
         </div>
       </main>
     );
@@ -174,7 +194,6 @@ export default function SavedJobsPage() {
     );
   }
 
-  // دریافت متن ترجمه‌شده و جایگزینی متغیرها
   const countTemplate = t("SavedJobs.count", "{count} job{plural} saved");
   const countLabel = interpolate(countTemplate, {
     count: jobs.length,
@@ -208,7 +227,7 @@ export default function SavedJobsPage() {
                 job.currency,
                 job.salaryMin,
                 job.salaryMax,
-                t("Common.notSpecified", "Not specified")
+                t("Common.notSpecified", "Not specified"),
               );
               return (
                 <div
@@ -241,7 +260,8 @@ export default function SavedJobsPage() {
                       </h3>
                       <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
                         <Building2 className="w-3 h-3" />
-                        {job.company?.name || t("Common.companyFallback", "Company")}
+                        {job.company?.name ||
+                          t("Common.companyFallback", "Company")}
                       </p>
                     </div>
                   </div>
@@ -262,7 +282,9 @@ export default function SavedJobsPage() {
                       </span>
                     )}
                     {job.remote && (
-                      <span className="text-emerald-400">{t("Common.remote", "Remote")}</span>
+                      <span className="text-emerald-400">
+                        {t("Common.remote", "Remote")}
+                      </span>
                     )}
                   </div>
 
@@ -285,7 +307,7 @@ export default function SavedJobsPage() {
                       {timeAgo(job.createdAt)}
                     </span>
                     <Link
-                      href={`/${locale}/jobs/${job.id}`}
+                      href={`/jobs/${job.id}`}
                       className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-medium"
                     >
                       {t("SavedJobs.viewJob", "View Job")}
@@ -298,9 +320,14 @@ export default function SavedJobsPage() {
         ) : (
           <div className="text-center py-20">
             <Bookmark className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 font-medium mb-1">{t("SavedJobs.emptyTitle", "No saved jobs yet")}</p>
+            <p className="text-slate-400 font-medium mb-1">
+              {t("SavedJobs.emptyTitle", "No saved jobs yet")}
+            </p>
             <p className="text-slate-500 text-sm mb-6">
-              {t("SavedJobs.emptyDesc", "Browse jobs and save the ones you like")}
+              {t(
+                "SavedJobs.emptyDesc",
+                "Browse jobs and save the ones you like",
+              )}
             </p>
             <Link
               href="/jobs"
