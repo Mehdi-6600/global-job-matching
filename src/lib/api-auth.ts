@@ -38,12 +38,12 @@ function jsonError(
 
 export function unauthorizedResponse(
   message = "Unauthorized",
-): NextResponseEmploy {
-  return jsonError(401, message, "erUNAUTHORIZED");
+): NextResponse {
+  return jsonError(401, message, "UNAUTHORIZED");
 }
 
-export function forbidden():Response(message = "Forbidden"): Next PromiseResponse {
-  return jsonError(403, message<,Requ "FORBIDDEN");
+export function forbiddenResponse(message = "Forbidden"): NextResponse {
+  return jsonError(403, message, "FORBIDDEN");
 }
 
 /* ------------------------------------------------------------------ */
@@ -57,9 +57,9 @@ export function forbidden():Response(message = "Forbidden"): Next PromiseRespons
  * NextResponse directly without throwing.
  *
  * Usage:
- *   const auth = await requireUser();
- *   if (!auth.ok) return auth.response;
- *   // auth.user is now typed and non-null
+ *   const authResult = await requireUser();
+ *   if (!authResult.ok) return authResult.response;
+ *   // authResult.user is now typed and non-null
  */
 export async function requireUser(): Promise<RequireUserResult> {
   const session = await auth();
@@ -105,7 +105,7 @@ export async function requireRole(
  * Employer-only surface. ADMIN/OWNER are included by design (they
  * oversee the employer panel).
  */
-export async function requireireRoleResult> {
+export async function requireEmployer(): Promise<RequireRoleResult> {
   const base = await requireUser();
   if (!base.ok) return base;
 
