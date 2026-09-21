@@ -54,7 +54,6 @@ export type CareerProfile = {
   country: string | null;
   location: string | null;
   locale: CareerRiskLocale;
-  /** Spoken/written language abilities — NEVER inferred from UI locale */
   languages: string[];
   targetRole: string | null;
   targetRoleFamily: RoleFamily | null;
@@ -79,7 +78,6 @@ export type ProfileInput = {
   locale?: string | null;
   targetRole?: string | null;
   careerGoal?: string | null;
-  /** Explicit language proficiency list — not UI locale */
   languages?: string | null;
   responsibilities?: string | null;
 };
@@ -101,12 +99,11 @@ function splitList(raw?: string | null): string[] {
         .split(/[,|/;،\n]+/)
         .map((s) => s.trim())
         .filter((s) => s.length >= 2)
-        .slice(0, 40)
-    )
+        .slice(0, 40),
+    ),
   );
 }
 
-/** Canonical skill aliases — Java must NOT map to JavaScript */
 const SKILL_ALIASES: Record<string, string> = {
   js: "javascript",
   "java script": "javascript",
@@ -160,7 +157,7 @@ const SOFT_SKILL_SET = new Set(
     "رهبری",
     "کار تیمی",
     "مذاکره",
-  ].map(norm)
+  ].map(norm),
 );
 
 const TOOL_SET = new Set(
@@ -190,7 +187,7 @@ const TOOL_SET = new Set(
     "powerbi",
     "notion",
     "salesforce",
-  ].map(norm)
+  ].map(norm),
 );
 
 const TECH_LANG_SET = new Set(
@@ -213,7 +210,7 @@ const TECH_LANG_SET = new Set(
     "scala",
     "c++",
     "c",
-  ].map(norm)
+  ].map(norm),
 );
 
 const FRAMEWORK_SET = new Set(
@@ -232,7 +229,7 @@ const FRAMEWORK_SET = new Set(
     "rails",
     "laravel",
     "flutter",
-  ].map(norm)
+  ].map(norm),
 );
 
 function classifySkills(skills: string[]): {
@@ -261,7 +258,6 @@ function classifySkills(skills: string[]): {
       technologies.push(raw);
       continue;
     }
-    // Domain / unknown — keep as technical-ish competency, not tool
     if (/[a-zA-Z]{2,}/.test(raw) || /[\u0600-\u06FF]{2,}/.test(raw)) {
       technicalSkills.push(raw);
     } else {
@@ -273,7 +269,8 @@ function classifySkills(skills: string[]): {
 
 function detectSeniority(title: string, years: number | null): Seniority {
   const t = norm(title);
-  if (/\b(intern|junior|entry|جونیور|کارآموز|مبتدی)\b/.test(t)) return "junior";
+  if (/\b(intern|junior|entry|جونیور|کارآموز|مبتدی)\b/.test(t))
+    return "junior";
   if (/\b(lead|principal|staff|head)\b/.test(t)) return "lead";
   if (/\b(manager|director|مدیر)\b/.test(t)) return "manager";
   if (/\b(senior|sr\.?|ارشد)\b/.test(t)) return "senior";
@@ -286,19 +283,14 @@ function detectSeniority(title: string, years: number | null): Seniority {
   return "unknown";
 }
 
-/**
- * BUG #8: Management titles classified before operations/clerical.
- * Domain managers (Engineering Manager) still get domain family when clear.
- */
 function detectFamily(
   title: string,
   skills: string[],
-  industry: string
+  industry: string,
 ): RoleFamily {
   const t = norm(title);
   const blob = `${t} ${skills.map(norm).join(" ")} ${norm(industry)}`;
 
-  // Domain-specific manager → domain family (not clerical)
   if (/\b(engineering|software|product|tech)\s+manager\b/.test(t)) {
     return "software_engineering";
   }
@@ -320,7 +312,7 @@ function detectFamily(
 
   if (
     /nurse|پزشک|پرستار|doctor|clinician|therapist|healthcare|مراقبت|بیمار/.test(
-      blob
+      blob,
     )
   ) {
     return "healthcare";
@@ -341,28 +333,27 @@ function detectFamily(
     return "design";
   }
   if (
-    /\b(ai engineer|ml engineer|machine learning|data scien|llm|nlp)\b/.test(blob) ||
+    /\b(ai engineer|ml engineer|machine learning|data scien|llm|nlp)\b/.test(
+      blob,
+    ) ||
     /data engineer|analyst|بیگ دیتا|هوش مصنوعی/.test(blob)
   ) {
     return "data";
   }
   if (
     /devop|sre|backend|frontend|full.?stack|software|developer|engineer|react|node|typescript|python|java|برنامه|نرم.?افزار/.test(
-      blob
+      blob,
     )
   ) {
     return "software_engineering";
   }
-  if (
-    /electric|plumber|welder|hvac|لوله|جوش|برقکار|نجار|trades/.test(blob)
-  ) {
+  if (/electric|plumber|welder|hvac|لوله|جوش|برقکار|نجار|trades/.test(blob)) {
     return "trades";
   }
   if (/sales|marketing|بازاریاب|فروش|seo|content/.test(blob)) {
     return "sales_marketing";
   }
 
-  // Pure management keywords (after domain checks)
   if (/\b(manager|director|head of|مدیر)\b/.test(t)) {
     return "management";
   }
@@ -373,18 +364,18 @@ function detectFamily(
   return "generic";
 }
 
-/**
- * BUG #9: full-stack before narrow frontend/backend when dual signals.
- */
 function detectSpecialization(
   family: RoleFamily,
   title: string,
-  skills: string[]
+  skills: string[],
 ): string | null {
   const blob = `${norm(title)} ${skills.map(norm).join(" ")}`;
 
-  // Domain keywords from TITLE (and optional skill hints) — not from unrelated current stack
-  if (/\b(ai|ml|machine learning|deep learning|llm|data scien|nlp|computer vision|هوش مصنوعی)\b/.test(blob)) {
+  if (
+    /\b(ai|ml|machine learning|deep learning|llm|data scien|nlp|computer vision|هوش مصنوعی)\b/.test(
+      blob,
+    )
+  ) {
     return "ai_ml";
   }
   if (/\b(data engineer|etl|analytics engineer)\b/.test(blob)) {
@@ -393,7 +384,14 @@ function detectSpecialization(
 
   if (family === "software_engineering") {
     if (/full.?stack/.test(blob)) return "full_stack";
-    const front = hasCanonical(skills, "react", "vue", "angular", "nextjs", "css");
+    const front = hasCanonical(
+      skills,
+      "react",
+      "vue",
+      "angular",
+      "nextjs",
+      "css",
+    );
     const back = hasCanonical(
       skills,
       "nodejs",
@@ -403,7 +401,7 @@ function detectSpecialization(
       "django",
       "python",
       ".net",
-      "golang"
+      "golang",
     );
     if (front && back) return "full_stack";
     if (/devop|kubernetes|docker|terraform|sre|ci\/cd/.test(blob))
@@ -438,7 +436,7 @@ function detectSpecialization(
 
 function tasksForFamily(
   family: RoleFamily,
-  spec: string | null
+  spec: string | null,
 ): TaskExposure[] {
   const base: Record<RoleFamily, TaskExposure[]> = {
     software_engineering: [
@@ -616,8 +614,6 @@ const FAMILY_GROWTH_SKILLS: Record<RoleFamily, string[]> = {
   ],
 };
 
-
-/** Finer growth targets by specialization — reduces identical gaps for whole families */
 const SPEC_GROWTH: Record<string, string[]> = {
   frontend: ["Accessibility", "Design systems collaboration", "Web performance"],
   backend: ["API reliability", "Data modeling", "Observability"],
@@ -632,25 +628,25 @@ const SPEC_GROWTH: Record<string, string[]> = {
   edtech: ["Learning product design", "Content systems", "Facilitation online"],
 };
 
-/** Target-role gaps: growth skills for target family not present in current skills */
 function computeSkillGaps(
   currentSkills: string[],
   currentFamily: RoleFamily,
   targetFamily: RoleFamily | null,
   targetSpec: string | null,
-  currentSpec: string | null
+  currentSpec: string | null,
 ): string[] {
   const have = new Set(currentSkills.map(canonicalSkill));
   const family = targetFamily || currentFamily;
   const spec = targetSpec || currentSpec;
   const fromSpec = (spec && SPEC_GROWTH[spec]) || [];
   const fromFamily = FAMILY_GROWTH_SKILLS[family] || FAMILY_GROWTH_SKILLS.generic;
-  // Prefer specialization-specific gaps first (more relevant than generic family list)
-  const growth = [...fromSpec, ...fromFamily.filter((g) => !fromSpec.includes(g))];
+  const growth = [
+    ...fromSpec,
+    ...fromFamily.filter((g) => !fromSpec.includes(g)),
+  ];
   return growth.filter((g) => !have.has(canonicalSkill(g)));
 }
 
-/** Extract task signals from free-text responsibilities */
 function tasksFromResponsibilities(raw?: string | null): TaskExposure[] {
   if (!raw?.trim()) return [];
   const lines = raw
@@ -666,7 +662,9 @@ function tasksFromResponsibilities(raw?: string | null): TaskExposure[] {
     let judgment = 50;
     let interpersonal = 40;
     let regulatory = 20;
-    if (/report|repetitive|data entry|گزارش تکراری|ورود داده|copy.?paste/.test(n)) {
+    if (
+      /report|repetitive|data entry|گزارش تکراری|ورود داده|copy.?paste/.test(n)
+    ) {
       automation = 85;
       judgment = 20;
     }
@@ -720,7 +718,6 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
   const location = input.location?.trim() || null;
   const targetRole = input.targetRole?.trim().slice(0, 120) || null;
   const careerGoal = input.careerGoal?.trim().slice(0, 200) || null;
-  // BUG #12: languages only from explicit field — never from locale
   const languages = splitList(input.languages);
   const years =
     typeof input.experienceYears === "number" &&
@@ -736,17 +733,26 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
   if (!education) uncertainty.push("missing_education");
   if (!country && !location) uncertainty.push("missing_location");
   if (!targetRole) uncertainty.push("missing_target_role");
-  if (languages.length === 0) uncertainty.push("missing_language_proficiency");
+  if (languages.length === 0)
+    uncertainty.push("missing_language_proficiency");
 
   const roleFamily = detectFamily(currentRole, skills, industry || "");
-  const specialization = detectSpecialization(roleFamily, currentRole, skills);
+  const specialization = detectSpecialization(
+    roleFamily,
+    currentRole,
+    skills,
+  );
   const seniority = detectSeniority(currentRole, years);
   const familyTasks = tasksForFamily(roleFamily, specialization);
   const respTasks = tasksFromResponsibilities(input.responsibilities);
-  // Actual responsibilities override/enrich family defaults
   const tasks =
     respTasks.length > 0
-      ? [...respTasks, ...familyTasks.filter((ft) => !respTasks.some((r) => r.id === ft.id))].slice(0, 10)
+      ? [
+          ...respTasks,
+          ...familyTasks.filter(
+            (ft) => !respTasks.some((r) => r.id === ft.id),
+          ),
+        ].slice(0, 10)
       : familyTasks;
 
   const responsibilityLines = respTasks.map((t) => t.label);
@@ -758,16 +764,14 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
 
   const classified = classifySkills(skills);
 
-  // Target family/spec from TARGET ROLE text only — current skills must not rewrite target
   const targetRoleFamily = targetRole
     ? detectFamily(targetRole, [], industry || "")
     : null;
-  // Target specialization from target role (+ career goal text), NEVER from current skill stack
   const targetSpecialization = targetRole
     ? detectSpecialization(
         targetRoleFamily || "generic",
         `${targetRole} ${careerGoal || ""}`.trim(),
-        []
+        [],
       )
     : null;
 
@@ -776,7 +780,7 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
     roleFamily,
     targetRoleFamily,
     targetSpecialization,
-    specialization
+    specialization,
   ).slice(0, 8);
 
   const transferableSkills = Array.from(
@@ -784,7 +788,7 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
       ...classified.technicalSkills.slice(0, 6),
       ...classified.tools.slice(0, 3),
       ...tasks.filter((t) => t.judgment >= 70).map((t) => t.label),
-    ])
+    ]),
   ).slice(0, 10);
 
   let completeness = 15;
@@ -843,12 +847,11 @@ export function humanMoatScore(profile: CareerProfile): number {
   const avg =
     profile.tasks.reduce(
       (s, t) => s + (t.judgment + t.interpersonal + t.regulatory) / 3,
-      0
+      0,
     ) / profile.tasks.length;
   let moat = avg;
   if (profile.seniority === "senior" || profile.seniority === "lead") moat += 5;
   if (profile.seniority === "manager") moat += 8;
-  // BUG #11: experience influences moat more clearly
   const y = profile.yearsExperience ?? 0;
   if (y >= 12) moat += 8;
   else if (y >= 8) moat += 5;
@@ -863,22 +866,76 @@ export function highAutomationTasks(profile: CareerProfile): TaskExposure[] {
 
 export function resilientTasks(profile: CareerProfile): TaskExposure[] {
   return profile.tasks.filter(
-    (t) => t.judgment >= 70 || t.interpersonal >= 75 || t.regulatory >= 70
+    (t) => t.judgment >= 70 || t.interpersonal >= 75 || t.regulatory >= 70,
   );
 }
 
-const TASK_LABEL_I18N: Record<string, Partial<Record<CareerRiskLocale, string>>> = {
+/**
+ * Complete 7-locale task label map for every task id used in tasksForFamily.
+ * If a task id is not found, fall back to the English label — never null.
+ */
+const TASK_LABEL_I18N: Record<
+  string,
+  Partial<Record<CareerRiskLocale, string>>
+> = {
+  // software_engineering
   impl: { fa: "پیاده‌سازی قابلیت / کدنویسی", ar: "تنفيذ الميزات / البرمجة", es: "Implementación de funciones", fr: "Implémentation de fonctionnalités", de: "Feature-Implementierung", hi: "फीचर इम्प्लीमेंटेशन" },
-  boilerplate: { fa: "کارهای تکراری و CRUD", ar: "أعمال متكررة وCRUD", es: "Trabajo repetitivo y CRUD", fr: "Tâches répétitives et CRUD", de: "Boilerplate und CRUD", hi: "दोहराव और CRUD" },
-  design: { fa: "طراحی سیستم / API", ar: "تصميم النظام / API", es: "Diseño de sistema / API", fr: "Conception système / API", de: "System-/API-Design", hi: "सिस्टम / API डिज़ाइन" },
-  review: { fa: "بازبینی کد و منتورینگ", ar: "مراجعة الكود والإرشاد", es: "Code review y mentoring", fr: "Revue de code et mentorat", de: "Code-Review und Mentoring", hi: "कोड रिव्यू और मेंटरिंग" },
-  incident: { fa: "حوادث پروداکشن", ar: "حوادث الإنتاج", es: "Incidentes de producción", fr: "Incidents de production", de: "Produktionsvorfälle", hi: "प्रोडक्शन घटनाएँ" },
+  boilerplate: { fa: "کارهای تکراری و CRUD", ar: "أعمال متكررة و CRUD", es: "Trabajo repetitivo y CRUD", fr: "Tâches répétitives et CRUD", de: "Boilerplate und CRUD", hi: "दोहराव और CRUD" },
+  reqs: { fa: "روشن‌سازی نیازمندی‌ها", ar: "توضيح المتطلبات", es: "Aclaración de requisitos", fr: "Clarification des exigences", de: "Anforderungsklärung", hi: "आवश्यकताएँ स्पष्ट करना" },
+  infra: { fa: "زیرساخت به‌صورت کد", ar: "البنية التحتية كشيفرة", es: "Infraestructura como código", fr: "Infrastructure as code", de: "Infrastructure as Code", hi: "इन्फ़्रास्ट्रक्चर ऐज़ कोड" },
+  ci: { fa: "پایپ‌لاین CI/CD", ar: "خطوط CI/CD", es: "Pipelines CI/CD", fr: "Pipelines CI/CD", de: "CI/CD-Pipelines", hi: "CI/CD पाइपलाइन" },
+  sec: { fa: "سخت‌سازی امنیتی", ar: "تقوية الأمان", es: "Endurecimiento de seguridad", fr: "Renforcement sécurité", de: "Security-Hardening", hi: "सुरक्षा सख़्ती" },
+  fe: { fa: "تحویل قابلیت UI", ar: "تسليم ميزات الواجهة", es: "Entrega de funciones UI", fr: "Livraison de fonctionnalités UI", de: "UI-Feature-Lieferung", hi: "UI फ़ीचर डिलीवरी" },
+  be: { fa: "پیاده‌سازی API / سرویس", ar: "تنفيذ API / الخدمة", es: "Implementación de API/servicio", fr: "Implémentation API/service", de: "API-/Service-Implementierung", hi: "API / सेवा इम्प्लीमेंटेशन" },
+  // accounting_finance
   entry: { fa: "ورود داده / فاکتور", ar: "إدخال بيانات / فواتير", es: "Entrada de datos / facturas", fr: "Saisie de données / factures", de: "Dateneingabe / Rechnungen", hi: "डेटा एंट्री / इनवॉइस" },
   recon: { fa: "مغایرت‌گیری", ar: "المطابقة", es: "Conciliación", fr: "Rapprochement", de: "Abstimmung", hi: "सुलह" },
   report: { fa: "بسته گزارش مالی", ar: "حزم التقارير المالية", es: "Paquetes de reporting financiero", fr: "Reporting financier", de: "Finanzreporting", hi: "वित्तीय रिपोर्टिंग" },
+  tax: { fa: "تفسیر مالیات", ar: "تفسير الضرائب", es: "Interpretación fiscal", fr: "Interprétation fiscale", de: "Steuerauslegung", hi: "कर व्याख्या" },
+  advise: { fa: "مشاوره به مشتری / ذی‌نفع", ar: "استشارة العميل / صاحب المصلحة", es: "Asesoría a cliente / stakeholder", fr: "Conseil client / partie prenante", de: "Kunden-/Stakeholder-Beratung", hi: "ग्राहक / हितधारक सलाह" },
+  control: { fa: "کنترل و مدیریت استثنا", ar: "الرقابة ومعالجة الاستثناءات", es: "Controles y manejo de excepciones", fr: "Contrôles et exceptions", de: "Controls und Ausnahmen", hi: "नियंत्रण और अपवाद" },
+  // education
   lesson: { fa: "تدریس و تسهیل کلاس", ar: "تقديم الدروس", es: "Impartición de clases", fr: "Animation de cours", de: "Unterrichtsführung", hi: "पाठ वितरण" },
+  plan: { fa: "برنامه‌ریزی درس", ar: "تخطيط الدرس", es: "Planificación de clases", fr: "Planification des cours", de: "Unterrichtsplanung", hi: "पाठ योजना" },
+  assess: { fa: "ارزشیابی و بازخورد", ar: "التقييم والتغذية الراجعة", es: "Evaluación y feedback", fr: "Évaluation et retour", de: "Bewertung und Feedback", hi: "मूल्यांकन और प्रतिक्रिया" },
+  admin: { fa: "امور اداری / حضور و غیاب / گزارش", ar: "الإدارة / الحضور / التقارير", es: "Admin / asistencia / reportes", fr: "Admin / présence / rapports", de: "Verwaltung / Anwesenheit / Berichte", hi: "प्रशासन / उपस्थिति / रिपोर्ट" },
+  pastoral: { fa: "ارتباط با والدین و پشتیبانی", ar: "التواصل مع الوالدين والدعم", es: "Comunicación con familias y apoyo", fr: "Communication parents et soutien", de: "Elternkommunikation und Betreuung", hi: "अभिभावक संवाद और सहयोग" },
+  diff: { fa: "تفکیک برای یادگیرندگان", ar: "التمايز للمتعلمين", es: "Diferenciación para estudiantes", fr: "Différenciation pédagogique", de: "Differenzierung für Lernende", hi: "शिक्षार्थियों के लिए विभेदन" },
+  // healthcare
   hands: { fa: "مراقبت مستقیم از بیمار", ar: "رعاية مباشرة للمريض", es: "Atención directa al paciente", fr: "Soins directs au patient", de: "Direkte Patientenversorgung", hi: "प्रत्यक्ष रोगी देखभाल" },
+  doc: { fa: "مستندسازی بالینی", ar: "التوثيق السريري", es: "Documentación clínica", fr: "Documentation clinique", de: "Klinische Dokumentation", hi: "क्लिनिकल दस्तावेज़ीकरण" },
+  triage: { fa: "تریاژ / اولویت‌بندی", ar: "الفرز / تحديد الأولويات", es: "Triaje / priorización", fr: "Triage / priorisation", de: "Triage / Priorisierung", hi: "ट्रायाज / प्राथमिकता" },
+  coord: { fa: "هماهنگی مراقبت", ar: "تنسيق الرعاية", es: "Coordinación de cuidados", fr: "Coordination des soins", de: "Versorgungskoordination", hi: "देखभाल समन्वय" },
+  med: { fa: "دارو / پایبندی به پروتکل", ar: "الدواء / الالتزام بالبروتوكول", es: "Medicación / adherencia al protocolo", fr: "Médication / respect du protocole", de: "Medikation / Protokolltreue", hi: "दवा / प्रोटोकॉल पालन" },
+  // design
+  produce: { fa: "تولید دارایی بصری", ar: "إنتاج الأصول", es: "Producción de recursos", fr: "Production d'actifs", de: "Asset-Produktion", hi: "एसेट उत्पादन" },
+  concept: { fa: "مفهوم / جهت‌گیری خلاقانه", ar: "المفهوم / التوجه الإبداعي", es: "Concepto / dirección creativa", fr: "Concept / direction créative", de: "Konzept / kreative Leitung", hi: "कॉन्सेप्ट / रचनात्मक दिशा" },
+  research: { fa: "ترکیب پژوهش کاربر", ar: "تركيب أبحاث المستخدم", es: "Síntesis de investigación", fr: "Synthèse de recherche", de: "Research-Synthese", hi: "रिसर्च संश्लेषण" },
+  system: { fa: "سیستم‌های طراحی", ar: "أنظمة التصميم", es: "Sistemas de diseño", fr: "Design systems", de: "Design-Systems", hi: "डिज़ाइन सिस्टम" },
+  stake: { fa: "نقد ذی‌نفعان", ar: "نقد أصحاب المصلحة", es: "Crítica con stakeholders", fr: "Critique parties prenantes", de: "Stakeholder-Kritik", hi: "हितधारक समीक्षा" },
+  // data
+  etl: { fa: "ETL / پایپ‌لاین", ar: "ETL / خطوط الأنابيب", es: "ETL / pipelines", fr: "ETL / pipelines", de: "ETL / Pipelines", hi: "ETL / पाइपलाइन" },
+  analysis: { fa: "تحلیل اکتشافی", ar: "التحليل الاستكشافي", es: "Análisis exploratorio", fr: "Analyse exploratoire", de: "Explorative Analyse", hi: "खोजपूर्ण विश्लेषण" },
+  model: { fa: "مدل‌سازی / آزمایش", ar: "النمذجة / التجريب", es: "Modelado / experimentación", fr: "Modélisation / expérimentation", de: "Modellierung / Experimente", hi: "मॉडलिंग / प्रयोग" },
+  // trades
+  field: { fa: "کار فیزیکی در محل", ar: "عمل ميداني", es: "Trabajo físico en sitio", fr: "Travail physique sur site", de: "Körperliche Arbeit vor Ort", hi: "स्थल पर शारीरिक कार्य" },
+  diag: { fa: "عیب‌یابی / رفع اشکال", ar: "التشخيص / استكشاف الأخطاء", es: "Diagnóstico / resolución", fr: "Diagnostic / dépannage", de: "Diagnose / Fehlerbehebung", hi: "निदान / समस्या निवारण" },
+  safety: { fa: "ایمنی و انطباق با مقررات", ar: "السلامة والامتثال للكود", es: "Seguridad y cumplimiento normativo", fr: "Sécurité et conformité au code", de: "Sicherheit und Code-Compliance", hi: "सुरक्षा और कोड अनुपालन" },
+  quote: { fa: "برآورد و ارتباط با مشتری", ar: "التقديرات والتواصل مع العميل", es: "Presupuestos y comunicación", fr: "Devis et communication client", de: "Angebote und Kundenkommunikation", hi: "अनुमान और ग्राहक संवाद" },
+  // operations_clerical
+  sched: { fa: "زمان‌بندی / هماهنگی", ar: "الجدولة / التنسيق", es: "Programación / coordinación", fr: "Planification / coordination", de: "Terminplanung / Koordination", hi: "शेड्यूलिंग / समन्वय" },
+  customer: { fa: "برخورد با مشتری", ar: "التعامل مع العميل", es: "Atención al cliente", fr: "Gestion du client", de: "Kundenbetreuung", hi: "ग्राहक प्रबंधन" },
+  // sales_marketing
+  outreach: { fa: "کمپین / ارتباط اولیه", ar: "الحملات / التواصل", es: "Campañas / outreach", fr: "Campagnes / prospection", de: "Kampagnen / Outreach", hi: "कैंपेन / आउटरीच" },
+  close: { fa: "مذاکره / بستن قرارداد", ar: "التفاوض / الإغلاق", es: "Negociación / cierre", fr: "Négociation / closing", de: "Verhandlung / Abschluss", hi: "बातचीत / क्लोज़िंग" },
+  content: { fa: "تولید محتوا", ar: "إنتاج المحتوى", es: "Producción de contenido", fr: "Production de contenu", de: "Content-Produktion", hi: "कंटेंट उत्पादन" },
+  insight: { fa: "بینش بازار", ar: "رؤى السوق", es: "Insight de mercado", fr: "Analyse de marché", de: "Markteinblicke", hi: "बाज़ार अंतर्दृष्टि" },
+  // management
   people: { fa: "رهبری افراد", ar: "قيادة الأشخاص", es: "Liderazgo de personas", fr: "Leadership d'équipe", de: "Personalführung", hi: "लोगों का नेतृत्व" },
+  priority: { fa: "اولویت‌بندی / استراتژی", ar: "تحديد الأولويات / الاستراتيجية", es: "Priorización / estrategia", fr: "Priorisation / stratégie", de: "Priorisierung / Strategie", hi: "प्राथमिकता / रणनीति" },
+  // generic
+  core: { fa: "وظایف اصلی نقش", ar: "المهام الأساسية للدور", es: "Funciones principales del rol", fr: "Tâches principales du rôle", de: "Kernaufgaben der Rolle", hi: "भूमिका के मुख्य कार्य" },
+  docs: { fa: "مستندسازی", ar: "التوثيق", es: "Documentación", fr: "Documentation", de: "Dokumentation", hi: "दस्तावेज़ीकरण" },
 };
 
 export function taskLabel(t: TaskExposure, locale?: CareerRiskLocale): string {
@@ -889,7 +946,6 @@ export function taskLabel(t: TaskExposure, locale?: CareerRiskLocale): string {
   return t.label;
 }
 
-/** Tool maturity from actual tools list — not technicalSkills length */
 export function toolMaturityFromProfile(profile: CareerProfile): number {
   const n = profile.tools.length + Math.min(3, profile.technologies.length);
   return Math.min(90, 35 + n * 8);
