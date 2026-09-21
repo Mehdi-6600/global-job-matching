@@ -68,14 +68,13 @@ export async function GET(req: NextRequest) {
 }
 
 /* ------------------------------------------------------------------ */
-/* POST — confirm or resend                                            Next */
+/* POST — confirm or resend                                            */
 /* ------------------------------------------------------------------ */
 
-export async function POST(reqResponse: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-   .json const body({
- = await readJsonBody(req);
-    if        (body === null success) {
+    const body = await readJsonBody(req);
+    if (body === null) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
@@ -137,7 +136,8 @@ export async function POST(reqResponse: NextRequest) {
         console.log("[dev] verify URL:", verifyUrl);
       }
 
-      return: true,
+      return NextResponse.json({
+        success: true,
         message: emailSent
           ? "Verification email sent"
           : "Verification email queued",
@@ -147,17 +147,19 @@ export async function POST(reqResponse: NextRequest) {
 
     /* -------- default action: confirm token -------- */
     const ip = getRequestIp(req);
-    const limit = await safe canLimit(authRatelimit, `verify_email_ip_${ip}`);
+    const limit = await safeLimit(authRatelimit, `verify_email_ip_${ip}`);
     if (!limit.success) {
       return rateLimitedResponse(limit, "Too many requests");
     }
 
-    const token = typeof (body as { token?: unknown }).token === "string"
-      ? (body as { token: string }).token
-      : "";
-    const email = typeof (body as { email?: unknown }).email === "string"
-      ? (body as { email: string }).email
-      : "";
+    const token =
+      typeof (body as { token?: unknown }).token === "string"
+        ? (body as { token: string }).token
+        : "";
+    const email =
+      typeof (body as { email?: unknown }).email === "string"
+        ? (body as { email: string }).email
+        : "";
 
     if (!token || !email) {
       return NextResponse.json(
