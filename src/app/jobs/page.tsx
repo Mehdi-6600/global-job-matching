@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -14,6 +14,7 @@ import {
   Building2,
   Globe,
   Tag,
+  AlertCircle,
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
@@ -51,74 +52,119 @@ interface Filters {
   tag: string;
 }
 
+const EMPTY_FILTERS: Filters = {
+  search: "",
+  location: "",
+  type: "",
+  experience: "",
+  remote: false,
+  minSalary: "",
+  maxSalary: "",
+  tag: "",
+};
+
+/** Debounce delay for free-text fields (search, location, tag). */
+const TEXT_DEBOUNCE_MS = 350;
+
 export default function JobsPage() {
   const { t, locale } = useLocale();
+
+  // Raw input state — what the user types immediately.
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // Debounced version — what we send to the API.
+  const [debouncedFilters, setDebouncedFilters] =
+    useState<Filters>(EMPTY_FILTERS);
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<Filters>({
-    search: "",
-    location: "",
-    type: "",
-    experience: "",
-    remote: false,
-    minSalary: "",
-    maxSalary: "",
-    tag: "",
-  });
 
-  const formatSalary = useCallback(
-    (
-      currency: string | null | undefined,
-      min: number | null | undefined,
-      max: number | null | undefined
-    ) => {
-      const cur = currency || "USD";
-      if (min == null && max == null) {
-        return t("Jobs.salaryNA", t("JobDetail.salaryNA", "Salary not specified"));
-      }
-      if (min != null && max != null) {
-        return `${cur} ${min.toLocaleString(locale)} – ${max.toLocaleString(locale)}`;
-      }
-      if (min != null) {
-        return `${t("Jobs.from", "From")} ${cur} ${min.toLocaleString(locale)}`;
-      }
-      return `${t("Jobs.upTo", "Up to")} ${cur} ${Number(max).toLocaleString(locale)}`;
-    },
-    [t, locale]
-  );
+  /* --------------------------------------------------------------- */
+  /* Debounce free-text fields (search, location, tag)               */
+  /* --------------------------------------------------------------- */
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, TEXT_DEBOUNCE_MS);
+
+    return () => clearTimeout(handle);
+  }, [filters]);
+
+  /* --------------------------------------------------------------- */
+  /* Fetch jobs                                                       */
+  /* --------------------------------------------------------------- */
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchJobs = useCallback(async () => {
+    // Cancel any in-flight request before starting a new one.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
+    setFetchError(false);
+
     const params = new URLSearchParams();
     params.set("page", page.toString());
-    if (filters.search) params.set("search", filters.search);
-    if (filters.location) params.set("location", filters.location);
-    if (filters.type) params.set("type", filters.type);
-    if (filters.experience) params.set("experience", filters.experience);
-    if (filters.remote) params.set("remote", "true");
-    if (filters.minSalary) params.set("minSalary", filters.minSalary);
-    if (filters.maxSalary) params.set("maxSalary", filters.maxSalary);
-    if (filters.tag) params.set("tag", filters.tag);
+
+    const f = debouncedFilters;
+    if (f.search) params.set("search", f.search);
+    if (f.location) params.set("location", f.location);
+    if (f.type) params.set("type", f.type);
+    if (f.experience) params.set("experience", f.experience);
+    if (f.remote) params.set("remote", "true");
+    if (f.tag) params.set("tag", f.tag);
+
+    // Only send salary if the string looks numeric.
+    const minNum = parseInt(f.minSalary, 10);
+    const maxNum = parseInt(f.maxSalary, 10);
+    if (Number.isFinite(minNum) && minNum >= 0) {
+      params.set("minSalary", String(minNum));
+    }
+    if (Number.isFinite(maxNum) && maxNum >= 0) {
+      params.set("maxSalary", String(maxNum));
+    }
 
     try {
-      const res = await fetch(`/api/jobs?${params.toString()}`);
+      const res = await fetch(`/api/jobs?${params.toString()}`, {
+        signal: controller.signal,
+      });
       const data = await res.json();
+
+      if (controller.signal.aborted) return;
+
+      if (!res.ok) {
+        setJobs([]);
+        setFetchError(true);
+        return;
+      }
+
       setJobs(data.jobs || data.data || []);
       setTotalPages(data.totalPages || data.pagination?.totalPages || 1);
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setJobs([]);
+      setFetchError(true);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [page, filters]);
+  }, [page, debouncedFilters]);
 
   useEffect(() => {
     void fetchJobs();
+    return () => {
+      abortRef.current?.abort();
+    };
   }, [fetchJobs]);
 
+  /* --------------------------------------------------------------- */
+  /* Filter mutations                                                 */
+  /* --------------------------------------------------------------- */
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setPage(1);
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -126,16 +172,8 @@ export default function JobsPage() {
 
   function clearFilters() {
     setPage(1);
-    setFilters({
-      search: "",
-      location: "",
-      type: "",
-      experience: "",
-      remote: false,
-      minSalary: "",
-      maxSalary: "",
-      tag: "",
-    });
+    setFilters(EMPTY_FILTERS);
+    setDebouncedFilters(EMPTY_FILTERS);
   }
 
   const hasFilters = Boolean(
@@ -146,9 +184,39 @@ export default function JobsPage() {
       filters.remote ||
       filters.minSalary ||
       filters.maxSalary ||
-      filters.tag
+      filters.tag,
   );
 
+  /* --------------------------------------------------------------- */
+  /* Salary formatting                                                */
+  /* --------------------------------------------------------------- */
+  const formatSalary = useCallback(
+    (
+      currency: string | null | undefined,
+      min: number | null | undefined,
+      max: number | null | undefined,
+    ) => {
+      const cur = currency || "USD";
+      if (min == null && max == null) {
+        return t(
+          "Jobs.salaryNA",
+          t("JobDetail.salaryNA", "Salary not specified"),
+        );
+      }
+      if (min != null && max != null) {
+        return `${cur} ${min.toLocaleString(locale)} – ${max.toLocaleString(locale)}`;
+      }
+      if (min != null) {
+        return `${t("Jobs.from", "From")} ${cur} ${min.toLocaleString(locale)}`;
+      }
+      return `${t("Jobs.upTo", "Up to")} ${cur} ${Number(max).toLocaleString(locale)}`;
+    },
+    [t, locale],
+  );
+
+  /* --------------------------------------------------------------- */
+  /* Render                                                           */
+  /* --------------------------------------------------------------- */
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -161,6 +229,7 @@ export default function JobsPage() {
           </p>
         </div>
 
+        {/* Filter shell */}
         <div className="glass rounded-2xl p-4 mb-6 border border-white/10">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -169,7 +238,7 @@ export default function JobsPage() {
                 type="text"
                 placeholder={t(
                   "Jobs.searchPlaceholder",
-                  "Job title, keywords, or company..."
+                  "Job title, keywords, or company...",
                 )}
                 value={filters.search}
                 onChange={(e) => updateFilter("search", e.target.value)}
@@ -196,16 +265,20 @@ export default function JobsPage() {
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label
+                  htmlFor="jobs-filter-location"
+                  className="block text-xs font-medium text-slate-400 mb-1.5"
+                >
                   {t("Jobs.location", "Location")}
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
+                    id="jobs-filter-location"
                     type="text"
                     placeholder={t(
                       "Jobs.locationPlaceholder",
-                      "City or country..."
+                      "City or country...",
                     )}
                     value={filters.location}
                     onChange={(e) => updateFilter("location", e.target.value)}
@@ -215,10 +288,14 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label
+                  htmlFor="jobs-filter-type"
+                  className="block text-xs font-medium text-slate-400 mb-1.5"
+                >
                   {t("Jobs.jobType", "Job Type")}
                 </label>
                 <select
+                  id="jobs-filter-type"
                   value={filters.type}
                   onChange={(e) => updateFilter("type", e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -243,10 +320,14 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label
+                  htmlFor="jobs-filter-experience"
+                  className="block text-xs font-medium text-slate-400 mb-1.5"
+                >
                   {t("Jobs.experience", "Experience")}
                 </label>
                 <select
+                  id="jobs-filter-experience"
                   value={filters.experience}
                   onChange={(e) => updateFilter("experience", e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -273,16 +354,20 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label
+                  htmlFor="jobs-filter-tag"
+                  className="block text-xs font-medium text-slate-400 mb-1.5"
+                >
                   {t("Jobs.tag", "Tag")}
                 </label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
+                    id="jobs-filter-tag"
                     type="text"
                     placeholder={t(
                       "Jobs.tagPlaceholder",
-                      "e.g. React, Python..."
+                      "e.g. React, Python...",
                     )}
                     value={filters.tag}
                     onChange={(e) => updateFilter("tag", e.target.value)}
@@ -292,32 +377,48 @@ export default function JobsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label
+                  htmlFor="jobs-filter-minsalary"
+                  className="block text-xs font-medium text-slate-400 mb-1.5"
+                >
                   {t("Jobs.minSalary", "Min Salary")}
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
+                    id="jobs-filter-minsalary"
                     type="number"
+                    inputMode="numeric"
+                    min={0}
                     placeholder={t("Jobs.noLimit", "No limit")}
                     value={filters.minSalary}
-                    onChange={(e) => updateFilter("minSalary", e.target.value)}
+                    onChange={(e) =>
+                      updateFilter("minSalary", e.target.value)
+                    }
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label
+                  htmlFor="jobs-filter-maxsalary"
+                  className="block text-xs font-medium text-slate-400 mb-1.5"
+                >
                   {t("Jobs.maxSalary", "Max Salary")}
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
+                    id="jobs-filter-maxsalary"
                     type="number"
+                    inputMode="numeric"
+                    min={0}
                     placeholder={t("Jobs.noLimit", "No limit")}
                     value={filters.maxSalary}
-                    onChange={(e) => updateFilter("maxSalary", e.target.value)}
+                    onChange={(e) =>
+                      updateFilter("maxSalary", e.target.value)
+                    }
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                   />
                 </div>
@@ -354,9 +455,30 @@ export default function JobsPage() {
           )}
         </div>
 
+        {/* Results */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+          </div>
+        ) : fetchError ? (
+          <div className="text-center py-20 glass rounded-2xl border border-red-500/20">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">
+              {t("Jobs.loadErrorTitle", "Could not load jobs")}
+            </h3>
+            <p className="text-slate-400 text-sm mb-4">
+              {t(
+                "Jobs.loadErrorBody",
+                "Something went wrong. Please try again.",
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => void fetchJobs()}
+              className="inline-flex px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold"
+            >
+              {t("Common.retry", "Retry")}
+            </button>
           </div>
         ) : jobs.length === 0 ? (
           <div className="text-center py-20 glass rounded-2xl border border-white/10">
@@ -367,7 +489,7 @@ export default function JobsPage() {
             <p className="text-slate-400 text-sm mb-4">
               {t(
                 "Jobs.tryAdjusting",
-                "Try adjusting your search or filters"
+                "Try adjusting your search or filters",
               )}
             </p>
             {hasFilters && (
@@ -391,7 +513,10 @@ export default function JobsPage() {
                 >
                   <div className="flex items-start gap-3 mb-3">
                     <CompanyLogo
-                      name={job.company?.name || t("Jobs.companyFallback", "Company")}
+                      name={
+                        job.company?.name ||
+                        t("Jobs.companyFallback", "Company")
+                      }
                       logo={job.company?.logo}
                       size={40}
                     />
@@ -436,7 +561,7 @@ export default function JobsPage() {
                       {formatSalary(
                         job.currency,
                         job.salaryMin,
-                        job.salaryMax
+                        job.salaryMax,
                       )}
                     </span>
                     <span className="text-xs text-slate-500">
@@ -473,12 +598,16 @@ export default function JobsPage() {
                 </button>
                 <span className="text-sm text-slate-400 px-4">
                   {t("Jobs.pageOf", "Page {current} of {total}")
-                    .replace("{current}", String(page))
-                    .replace("{total}", String(totalPages))}
+                    .split("{current}")
+                    .join(String(page))
+                    .split("{total}")
+                    .join(String(totalPages))}
                 </span>
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages, p + 1))
+                  }
                   disabled={page === totalPages}
                   aria-label={t("Jobs.nextPage", "Next page")}
                   className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-30 transition-all"
