@@ -39,11 +39,13 @@ interface ApplicationItem {
   } | null;
 }
 
-// تابع کمکی برای جایگزینی متغیرها
-function interpolate(template: string, replacements: Record<string, string | number>): string {
+function interpolate(
+  template: string,
+  replacements: Record<string, string | number>,
+): string {
   let result = template;
   for (const [key, value] of Object.entries(replacements)) {
-    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+    result = result.split(`{${key}}`).join(String(value));
   }
   return result;
 }
@@ -51,7 +53,7 @@ function interpolate(template: string, replacements: Record<string, string | num
 function formatSalary(
   currency: string | null | undefined,
   min: number | null | undefined,
-  max: number | null | undefined
+  max: number | null | undefined,
 ) {
   const cur = currency || "USD";
   if (min == null && max == null) return null;
@@ -68,9 +70,11 @@ export default function MyApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // وضعیت‌ها با ترجمه
   const getStatusConfig = (status: string) => {
-    const statusMap: Record<string, { label: string; icon: React.ReactNode; bg: string; color: string }> = {
+    const statusMap: Record<
+      string,
+      { label: string; icon: React.ReactNode; bg: string; color: string }
+    > = {
       pending: {
         label: t("Applications.statusPending", "Pending"),
         icon: <Clock className="w-3.5 h-3.5" />,
@@ -112,6 +116,8 @@ export default function MyApplicationsPage() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     fetch("/api/applications")
       .then(async (res) => {
         if (res.status === 401) {
@@ -119,6 +125,7 @@ export default function MyApplicationsPage() {
           return null;
         }
         const data = await res.json();
+        if (cancelled) return;
         if (!res.ok) {
           setError(data.error || t("Applications.errorLoad", "Failed to load"));
           setLoading(false);
@@ -128,9 +135,14 @@ export default function MyApplicationsPage() {
         setLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setError(t("Common.errorNetwork", "Network error"));
         setLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
 
   if (loading) {
@@ -141,7 +153,6 @@ export default function MyApplicationsPage() {
     );
   }
 
-  // ساخت متن تعداد درخواست‌ها با interpolate
   const countTemplate = t("Applications.count", "{count} application{plural}");
   const countLabel = interpolate(countTemplate, {
     count: applications.length,
@@ -162,7 +173,9 @@ export default function MyApplicationsPage() {
         <div className="flex items-center gap-3 mb-8">
           <Briefcase className="w-7 h-7 text-cyan-400" />
           <div>
-            <h1 className="text-2xl font-bold text-white">{t("Applications.title", "My Applications")}</h1>
+            <h1 className="text-2xl font-bold text-white">
+              {t("Applications.title", "My Applications")}
+            </h1>
             <p className="text-slate-400 text-sm">{countLabel}</p>
           </div>
         </div>
@@ -176,7 +189,9 @@ export default function MyApplicationsPage() {
         {applications.length === 0 && !error ? (
           <div className="glass rounded-2xl p-12 text-center border border-white/10">
             <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 mb-4">{t("Applications.empty", "No applications yet")}</p>
+            <p className="text-slate-400 mb-4">
+              {t("Applications.empty", "No applications yet")}
+            </p>
             <Link
               href="/jobs"
               className="inline-flex px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-semibold"
@@ -191,11 +206,18 @@ export default function MyApplicationsPage() {
               const salary = formatSalary(
                 app.job?.currency,
                 app.job?.salaryMin,
-                app.job?.salaryMax
+                app.job?.salaryMax,
               );
-              const appliedDate = new Date(app.createdAt).toLocaleDateString(locale);
-              const appliedTemplate = t("Applications.appliedOn", "Applied {date}");
-              const appliedText = interpolate(appliedTemplate, { date: appliedDate });
+              const appliedDate = new Date(app.createdAt).toLocaleDateString(
+                locale,
+              );
+              const appliedTemplate = t(
+                "Applications.appliedOn",
+                "Applied {date}",
+              );
+              const appliedText = interpolate(appliedTemplate, {
+                date: appliedDate,
+              });
 
               return (
                 <div
@@ -206,14 +228,17 @@ export default function MyApplicationsPage() {
                     <div className="min-w-0">
                       {app.job ? (
                         <Link
-                          href={`/${locale}/jobs/${app.job.id}`}
+                          href={`/jobs/${app.job.id}`}
                           className="text-white font-semibold hover:text-cyan-300 transition-colors"
                         >
                           {app.job.title}
                         </Link>
                       ) : (
                         <span className="text-white font-semibold">
-                          {t("Applications.jobUnavailable", "Job unavailable")}
+                          {t(
+                            "Applications.jobUnavailable",
+                            "Job unavailable",
+                          )}
                         </span>
                       )}
                       <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
@@ -231,7 +256,9 @@ export default function MyApplicationsPage() {
                         )}
                         {salary && <span>{salary}</span>}
                       </div>
-                      <p className="text-slate-600 text-xs mt-2">{appliedText}</p>
+                      <p className="text-slate-600 text-xs mt-2">
+                        {appliedText}
+                      </p>
                     </div>
 
                     <span
