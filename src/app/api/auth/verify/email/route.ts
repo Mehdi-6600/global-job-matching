@@ -15,24 +15,12 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-/* ------------------------------------------------------------------ */
-/* Shared helper                                                       */
-/* ------------------------------------------------------------------ */
-
-/**
- * Mask an email for logging: a***@example.com.
- * Never log the full email in errors or console output.
- */
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!local || !domain) return "***";
   const first = local[0] ?? "*";
   return `${first}***@${domain}`;
 }
-
-/* ------------------------------------------------------------------ */
-/* GET — confirm verification from email link                          */
-/* ------------------------------------------------------------------ */
 
 export async function GET(req: NextRequest) {
   const ip = getRequestIp(req);
@@ -51,10 +39,8 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // `consumeEmailVerificationToken(rawToken, email)` — order matters.
   const result = await consumeEmailVerificationToken(token, email);
   if (!result.ok) {
-    // Do not echo email in the error response.
     return NextResponse.json(
       { error: result.error },
       { status: result.status },
@@ -66,10 +52,6 @@ export async function GET(req: NextRequest) {
     message: "Email verified successfully",
   });
 }
-
-/* ------------------------------------------------------------------ */
-/* POST — confirm or resend                                            */
-/* ------------------------------------------------------------------ */
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,7 +65,6 @@ export async function POST(req: NextRequest) {
         ? (body as { action: string }).action
         : undefined;
 
-    /* -------- action: resend -------- */
     if (action === "resend") {
       const session = await auth();
       if (!session?.user?.id || !session.user.email) {
@@ -145,7 +126,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    /* -------- default action: confirm token -------- */
     const ip = getRequestIp(req);
     const limit = await safeLimit(authRatelimit, `verify_email_ip_${ip}`);
     if (!limit.success) {
