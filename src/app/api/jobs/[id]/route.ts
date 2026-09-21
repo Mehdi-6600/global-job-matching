@@ -82,20 +82,8 @@ export async function GET(
         viewerRole,
       });
 
-      return NextResponse.json(
-        {
-          error: "Not found",
-          debug: {
-            jobId: job.id,
-            jobStatus: job.status,
-            hasPostedBy: Boolean(job.postedById),
-            hasCompanyOwner: Boolean(job.company?.ownerId),
-            viewerId,
-            viewerRole,
-          },
-        },
-        { status: 404 },
-      );
+      // Same as missing — do not leak existence/status of non-public jobs
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     const cookieName = `${VIEW_COOKIE_PREFIX}${id}`;
