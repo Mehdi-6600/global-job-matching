@@ -47,6 +47,58 @@ export function forbiddenResponse(message = "Forbidden"): NextResponse {
 }
 
 /* ------------------------------------------------------------------ */
+/* Bearer secret (cron / sync / seed)                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Constant-time comparison of two strings.
+ *
+ * Uses Node's crypto.timingSafeEqual when available. Falls back to a
+ * length-safe XOR loop for edge runtimes without node:crypto — never
+ * leaks timing information about the matching prefix.
+ */
+function safeStringEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * Authorize a request by comparing `Authorization: Bearer <secret>`
+ * against the expected secret in constant time.
+ *
+ * Used by:
+ *   - /api/cron/expire-plans (CRON_SECRET)
+ *   - /api/jobs/sync (SYNC_SECRET or CRON_SECRET)
+ *   - /api/seed (SEED_SECRET, dev only)
+ *
+ * Never logs the secret. Never reveals whether the header was missing
+ * vs. wrong vs. malformed.
+ */
+export function isAuthorizedBearerSecret(
+  req: Request,
+  expectedSecret: string | null | undefined,
+): boolean {
+  if (!expectedSecret || expectedSecret.length < 8) return false;
+
+  const header =
+    req.headers.get("authorization") || req.headers.get("Authorization");
+  if (!header) return false;
+
+  const prefix = "Bearer ";
+  if (!header.startsWith(prefix)) return false;
+
+  const provided = header.slice(prefix.length).trim();
+  if (!provided) return false;
+
+  return safeStringEqual(provided, expectedSecret);
+}
+
+/* ------------------------------------------------------------------ */
 /* Core helpers                                                        */
 /* ------------------------------------------------------------------ */
 
