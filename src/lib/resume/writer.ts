@@ -53,11 +53,8 @@ export type ResumeWriterInput = {
 };
 
 export type ResumeWriterOutput = {
-  /** Plain-text, ATS-friendly resume. */
   text: string;
-  /** Locale actually used. */
   locale: CareerRiskLocale;
-  /** Diagnostics — not shown to end users. */
   meta: {
     sectionsIncluded: string[];
     achievementsExtracted: number;
@@ -172,9 +169,13 @@ const SECTION_LABELS: Record<CareerRiskLocale, SectionLabels> = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Placeholder summary (only when user did not supply one)            */
+/* Placeholder summary (locale-complete; only when user did not supply one) */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Complete 7-locale fallback summary.
+ * Missing years → neutral phrasing (not "0 years").
+ */
 function fallbackSummary(
   locale: CareerRiskLocale,
   targetRole: string | undefined,
@@ -183,45 +184,49 @@ function fallbackSummary(
   const role = targetRole?.trim() || profile.currentRole || "professional";
   const years = profile.yearsExperience;
 
-  const tables: Record<CareerRiskLocale, string> = {
-    en: years
-      ? `Professional with ${years} year${years === 1 ? "" : "s"} of experience seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`
-      : `Professional seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`,
-    fa: years
-      ? `حرفه‌ای با ${years} سال تجربه، در جستجوی نقش ${role}. متمرکز بر ارائه نتایج قابل اتکا و توسعه تخصص حوزه.`
-      : `حرفه‌ای در جستجوی نقش ${role}. متمرکز بر ارائه نتایج قابل اتکا و توسعه تخصص حوزه.`,
-    ar: years
-      ? `محترف بخبرة ${years} سنوات يبحث عن دور ${role}. يركّز على تقديم نتائج موثوقة وتطوير الخبرة المجالية.`
-      : `محترف يبحث عن دور ${role}. يركّز على تقديم نتائج موثوقة وتطوير الخبرة المجالية.`,
-    es: years
-      ? `Profesional con ${years} año${years === 1 ? "" : "s"} de experiencia en busca de un puesto como ${role}. Enfocado en entregar resultados fiables y desarrollar experiencia de dominio.`
-      : `Profesional en busca de un puesto como ${role}. Enfocado en entregar resultados fiables y desarrollar experiencia de dominio.`,
-    fr: years
-      ? `Professionnel avec ${years} an${years === 1 ? "" : "s"} d'expérience, à la recherche d'un poste de ${role}. Focalisé sur la livraison de résultats fiables et le développement de l'expertise métier.`
-      : `Professionnel à la recherche d'un poste de ${role}. Focalisé sur la livraison de résultats fiables et le développement de l'expertise métier.`,
-    de: years
-      ? `Fachkraft mit ${years} Jahr${years === 1 ? "" : "en"} Erfahrung, auf der Suche nach einer Position als ${role}. Fokussiert auf verlässliche Ergebnisse und den Ausbau von Fachwissen.`
-      : `Fachkraft auf der Suche nach einer Position als ${role}. Fokussiert auf verlässliche Ergebnisse und den Ausbau von Fachwissen.`,
-    hi: years
-      ? `${years} वर्ष के अनुभव वाला पेशेवर, ${role} की भूमिका की तलाश में। विश्वसनीय परिणाम और डोमेन विशेषज्ञता विकसित करने पर केंद्रित।`
-      : `${role} की भूमिका की तलाश में पेशेवर। विश्वसनीय परिणाम और डोमेन विशेषज्ञता विकसित करने पर केंद्रित।`,
+  const tables: Record<
+    CareerRiskLocale,
+    { withYears: string; noYears: string }
+  > = {
+    en: {
+      withYears: `Professional with ${years} year${years === 1 ? "" : "s"} of experience seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`,
+      noYears: `Professional seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`,
+    },
+    fa: {
+      withYears: `حرفه‌ای با ${years} سال تجربه، در جستجوی نقش ${role}. متمرکز بر ارائه نتایج قابل اتکا و توسعه تخصص حوزه.`,
+      noYears: `حرفه‌ای در جستجوی نقش ${role}. متمرکز بر ارائه نتایج قابل اتکا و توسعه تخصص حوزه.`,
+    },
+    ar: {
+      withYears: `محترف بخبرة ${years} سنوات يبحث عن دور ${role}. يركّز على تقديم نتائج موثوقة وتطوير الخبرة المجالية.`,
+      noYears: `محترف يبحث عن دور ${role}. يركّز على تقديم نتائج موثوقة وتطوير الخبرة المجالية.`,
+    },
+    es: {
+      withYears: `Profesional con ${years} año${years === 1 ? "" : "s"} de experiencia en busca de un puesto como ${role}. Enfocado en entregar resultados fiables y desarrollar experiencia de dominio.`,
+      noYears: `Profesional en busca de un puesto como ${role}. Enfocado en entregar resultados fiables y desarrollar experiencia de dominio.`,
+    },
+    fr: {
+      withYears: `Professionnel avec ${years} an${years === 1 ? "" : "s"} d'expérience, à la recherche d'un poste de ${role}. Focalisé sur la livraison de résultats fiables et le développement de l'expertise métier.`,
+      noYears: `Professionnel à la recherche d'un poste de ${role}. Focalisé sur la livraison de résultats fiables et le développement de l'expertise métier.`,
+    },
+    de: {
+      withYears: `Fachkraft mit ${years} Jahr${years === 1 ? "" : "en"} Erfahrung, auf der Suche nach einer Position als ${role}. Fokussiert auf verlässliche Ergebnisse und den Ausbau von Fachwissen.`,
+      noYears: `Fachkraft auf der Suche nach einer Position als ${role}. Fokussiert auf verlässliche Ergebnisse und den Ausbau von Fachwissen.`,
+    },
+    hi: {
+      withYears: `${years} वर्ष के अनुभव वाला पेशेवर, ${role} की भूमिका की तलाश में। विश्वसनीय परिणाम और डोमेन विशेषज्ञता विकसित करने पर केंद्रित।`,
+      noYears: `${role} की भूमिका की तलाश में पेशेवर। विश्वसनीय परिणाम और डोमेन विशेषज्ञता विकसित करने पर केंद्रित।`,
+    },
   };
-  return tables[locale] || tables.en;
+
+  const pack = tables[locale] || tables.en;
+  return years ? pack.withYears : pack.noYears;
 }
 
 /* ------------------------------------------------------------------ */
 /* Tone adjustment                                                    */
 /* ------------------------------------------------------------------ */
 
-/**
- * Tone only affects summary length and verbosity — never facts.
- * "concise" trims the summary to ~60%; "confident" keeps it as is.
- * We never alter achievements or experience lines based on tone.
- */
-function applyTone(
-  summary: string,
-  tone: ResumeTone,
-): string {
+function applyTone(summary: string, tone: ResumeTone): string {
   if (tone !== "concise") return summary;
   const firstSentence = summary.split(/[.!?؟।]/)[0]?.trim();
   return firstSentence && firstSentence.length >= 20
@@ -230,13 +235,9 @@ function applyTone(
 }
 
 /* ------------------------------------------------------------------ */
-/* Skill prioritization                                               */
+/* Skill prioritization (case-insensitive)                            */
 /* ------------------------------------------------------------------ */
 
-/**
- * Prioritize skills that match the target role or target family.
- * Never invents skills — only reorders what the user provided.
- */
 function prioritizeSkills(
   skills: string[],
   targetRole: string | undefined,
@@ -246,8 +247,12 @@ function prioritizeSkills(
   const matches: string[] = [];
   const others: string[] = [];
   for (const s of skills) {
-    if (target.includes(s.toLowerCase())) matches.push(s);
-    else others.push(s);
+    const sl = s.toLowerCase();
+    if (target.includes(sl) || sl.length >= 3 && target.split(/\s+/).some((w) => w.includes(sl) || sl.includes(w))) {
+      matches.push(s);
+    } else {
+      others.push(s);
+    }
   }
   return [...matches, ...others];
 }
@@ -257,21 +262,15 @@ function prioritizeSkills(
 /* ------------------------------------------------------------------ */
 
 function containsFabricationMarkers(text: string): boolean {
-  // Catch obvious hallucinations that must never appear:
-  // - generic "results-driven professional" boilerplate is fine,
-  //   but we block text that claims unverifiable credentials.
-  return /\b(ph\.?d|mba|ceo|cto|cfo|fortune 500|award-winning)\b/i.test(text);
+  return /\b(ph\.?d|mba|ceo|cto|cfo|fortune 500|award-winning)\b/i.test(
+    text,
+  );
 }
 
 /* ------------------------------------------------------------------ */
 /* Main entry point                                                   */
 /* ------------------------------------------------------------------ */
 
-/**
- * Build an ATS-friendly plain-text resume in the requested locale.
- *
- * Deterministic, no network calls, no fabrication.
- */
 export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
   const locale = normalizeCareerLocale(input.locale);
   const tone: ResumeTone =
@@ -279,7 +278,6 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
       ? input.tone
       : "professional";
 
-  /* -------- Build normalized profile -------- */
   const extended: ExtendedProfileInput = {
     jobTitle: input.targetRole || "",
     skills: input.skills,
@@ -295,7 +293,6 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
   };
   const profile = normalizeCareerProfile(extended);
 
-  /* -------- Extract achievements (never invents) -------- */
   const extracted = extractAchievements({
     responsibilities: splitExperienceLines(input.experience || ""),
     metrics: input.metrics || [],
@@ -304,12 +301,10 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
     targetFamily: profile.targetRoleFamily,
   });
 
-  /* -------- Section order (locale-aware) -------- */
   const labels = SECTION_LABELS[locale];
 
   const sections: Array<{ id: SectionId; body: string }> = [];
 
-  /* -------- Contact header -------- */
   const contact = [input.email, input.phone, input.location]
     .map((s) => (s || "").trim())
     .filter(Boolean)
@@ -320,7 +315,6 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
   if (input.targetRole?.trim()) headerLines.push(input.targetRole.trim());
   if (contact) headerLines.push(contact);
 
-  /* -------- Summary -------- */
   const summarySource =
     input.summary?.trim() && input.summary.trim().length >= 40
       ? input.summary.trim()
@@ -330,7 +324,6 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
     sections.push({ id: "summary", body: summary });
   }
 
-  /* -------- Core competencies (from extracted) -------- */
   const competencies = extracted.competencies.slice(0, 8);
   if (competencies.length >= 2) {
     const body = competencies
@@ -339,7 +332,6 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
     sections.push({ id: "competencies", body });
   }
 
-  /* -------- Experience -------- */
   const experienceLines = splitExperienceLines(input.experience || "");
   if (experienceLines.length > 0) {
     const body = experienceLines
@@ -348,22 +340,17 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
     sections.push({ id: "experience", body });
   }
 
-  /* -------- Selected achievements (only those with metrics) -------- */
   const metricAchievements = extracted.achievements.filter((a) => a.hasMetric);
   if (metricAchievements.length >= 1) {
-    const body = metricAchievements
-      .map((a) => `- ${a.text}`)
-      .join("\n");
+    const body = metricAchievements.map((a) => `- ${a.text}`).join("\n");
     sections.push({ id: "achievements", body });
   }
 
-  /* -------- Education -------- */
   const education = (input.education || "").trim();
   if (education) {
     sections.push({ id: "education", body: education });
   }
 
-  /* -------- Certifications -------- */
   const certs = (input.certifications || []).filter(
     (c) => c && c.trim().length > 0,
   );
@@ -374,7 +361,6 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
     });
   }
 
-  /* -------- Skills (prioritized) -------- */
   const skillList = splitSkills(input.skills || "");
   if (skillList.length > 0) {
     const prioritized = prioritizeSkills(skillList, input.targetRole);
@@ -384,13 +370,11 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
     });
   }
 
-  /* -------- Languages -------- */
   const languages = (input.languages || "").trim();
   if (languages) {
     sections.push({ id: "languages", body: languages });
   }
 
-  /* -------- Compose text -------- */
   const parts: string[] = [];
   parts.push(headerLines.join("\n"));
   for (const section of sections) {
@@ -401,10 +385,7 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
 
   let text = parts.join("\n").trim();
 
-  /* -------- Truthfulness gate -------- */
   if (containsFabricationMarkers(text)) {
-    // We do not throw — we simply remove the offending summary if it
-    // contains claims we cannot verify. The rest of the resume stays.
     const cleaned = text.replace(
       /\b(ph\.?d|mba|ceo|cto|cfo|fortune 500|award-winning)\b[^\n.]*[.\n]/gi,
       "",
@@ -412,7 +393,6 @@ export function buildResume(input: ResumeWriterInput): ResumeWriterOutput {
     text = cleaned.trim();
   }
 
-  /* -------- Diagnostics -------- */
   const sectionsIncluded = sections.map((s) => s.id as string);
 
   return {
