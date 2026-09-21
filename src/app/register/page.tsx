@@ -22,9 +22,6 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const { t } = useLocale();
 
-  /* -------------------------------------------------------------- */
-  /* Destination                                                    */
-  /* -------------------------------------------------------------- */
   const callbackUrlParam = searchParams.get("callbackUrl");
   const callbackUrl = useMemo(
     () => safeCallbackOr(callbackUrlParam, "/dashboard"),
@@ -74,7 +71,6 @@ function RegisterForm() {
         return;
       }
 
-      /* -------- Auto sign-in after successful registration -------- */
       const result = await signIn("credentials", {
         email: formData.email.trim(),
         password: formData.password,
@@ -88,11 +84,6 @@ function RegisterForm() {
         return;
       }
 
-      /* -------- Sign-in failed after successful register --------
-       * This is rare (register just succeeded) but can happen if the
-       * login rate limiter triggers. Send the user to /login with a
-       * clear message + preserved email + preserved callbackUrl.
-       */
       const loginUrl = new URL("/login", window.location.origin);
       loginUrl.searchParams.set("registered", "1");
       loginUrl.searchParams.set("email", formData.email.trim());
@@ -109,9 +100,6 @@ function RegisterForm() {
     }
   };
 
-  /* -------------------------------------------------------------- */
-  /* Login link preserves callbackUrl                               */
-  /* -------------------------------------------------------------- */
   const loginHref = useMemo(() => {
     if (!callbackUrlParam) return "/login";
     const safe = safeCallbackOr(callbackUrlParam, "/dashboard");
