@@ -12,18 +12,14 @@ function trimEnv(name: string): string {
   return process.env[name]?.trim() || "";
 }
 
-/** @upstash/redis needs HTTPS REST endpoint, not rediss:// TCP */
 function isRestUrl(url: string): boolean {
   return /^https:\/\//i.test(url);
 }
 
 function pickUrl(): { url: string; source: string } | null {
   const candidates: Array<[string, string]> = [
-    // Standard Upstash
     ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_URL"],
-    // Vercel KV classic
     ["KV_REST_API_URL", "KV_REST_API_URL"],
-    // Vercel + Upstash marketplace
     ["UPSTASH_KV_REST_API_URL", "UPSTASH_KV_REST_API_URL"],
     ["UPSTASH_KV_REDIS_URL", "UPSTASH_KV_REDIS_URL"],
     ["UPSTASH_REDIS_URL", "UPSTASH_REDIS_URL"],
@@ -36,7 +32,6 @@ function pickUrl(): { url: string; source: string } | null {
     }
   }
 
-  // KV_URL / UPSTASH_KV_KV_URL are often rediss:// — only accept https
   for (const [envName, source] of [
     ["KV_URL", "KV_URL"],
     ["UPSTASH_KV_KV_URL", "UPSTASH_KV_KV_URL"],
@@ -100,13 +95,12 @@ export function getRedisEnvStatus(): RedisEnvStatus {
 
 /**
  * Redis is DISABLED until Upstash credentials are re-provisioned.
- * The previous attempt used a stale/mismatched token which caused
- * every rate-limited endpoint to fail with WRONGPASS -> 500.
+ * Previous attempt used a stale/mismatched token which caused every
+ * rate-limited endpoint to fail with WRONGPASS -> 500.
  *
- * When you have fresh Upstash credentials:
- *   1. Add UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in Vercel.
- *   2. Replace the body of `createClient()` below with the original
- *      implementation (see git history) — or ask to re-enable.
+ * To re-enable:
+ *   1. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in Vercel.
+ *   2. Replace `return null;` below with the original client code.
  */
 function createClient(): Redis | null {
   return null;
