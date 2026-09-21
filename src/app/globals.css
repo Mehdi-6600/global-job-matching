@@ -1070,8 +1070,8 @@
 
   .gjm-hero {
     position: relative;
-    padding-top: 3rem;
-    padding-bottom: 4rem;
+    padding-top: 1.75rem;
+    padding-bottom: 2.25rem;
     overflow: hidden;
     isolation: isolate;
     background: linear-gradient(180deg, var(--bg-page-soft) 0%, var(--bg-page) 100%);
@@ -1079,8 +1079,8 @@
 
   @media (min-width: 768px) {
     .gjm-hero {
-      padding-top: 4rem;
-      padding-bottom: 5rem;
+      padding-top: 2.5rem;
+      padding-bottom: 3rem;
     }
   }
 
@@ -1138,7 +1138,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1.25rem;
+    gap: 0.9rem;
     text-align: start;
   }
 
@@ -1166,13 +1166,30 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
   }
 
-  .gjm-hero h1 {
-    font-size: var(--font-display);
+  .gjm-hero h1,
+  .gjm-hero-title {
+    font-size: clamp(1.75rem, 5.2vw, 3.15rem);
     font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.03em;
+    line-height: 1.12;
+    letter-spacing: -0.028em;
     color: var(--text-primary);
-    max-width: 20ch;
+    max-width: 16ch;
+    text-wrap: balance;
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.95),
+      0 2px 3px rgba(170, 160, 145, 0.28),
+      0 4px 12px rgba(180, 170, 155, 0.18);
+  }
+
+  .gjm-hero-title-line {
+    display: block;
+  }
+
+  .gjm-hero-title-line.accent {
+    color: var(--brand-primary-hover);
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.7),
+      0 2px 6px rgba(8, 145, 178, 0.22);
   }
 
   .gjm-hero-description {
@@ -1796,7 +1813,7 @@
      ============================================================ */
   .gjm-career-tools-section {
     position: relative;
-    padding-block: 3rem 3.5rem;
+    padding-block: 2rem 2.75rem;
     background:
       radial-gradient(
         ellipse 60% 80% at 50% 0%,
@@ -1810,15 +1827,15 @@
 
   @media (min-width: 768px) {
     .gjm-career-tools-section {
-      padding-block: 4rem 4.5rem;
+      padding-block: 2.75rem 3.5rem;
     }
   }
 
   .gjm-career-tools-heading {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 2.5rem;
+    gap: 0.5rem;
+    margin-bottom: 1.35rem;
     max-width: 42rem;
   }
 
