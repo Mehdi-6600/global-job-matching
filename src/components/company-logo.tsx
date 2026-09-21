@@ -21,10 +21,6 @@ function initials(name?: string | null): string {
     .toUpperCase();
 }
 
-/**
- * Optimized company logo via next/image.
- * Falls back to initials if URL missing or fails to load.
- */
 export function CompanyLogo({
   name,
   logo,
