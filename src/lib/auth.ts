@@ -4,36 +4,71 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Adapter } from "next-auth/adapters";
 import { CredentialsSignin } from "next-auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { authRatelimit } from "@/lib/ratelimit";
 import { safeLimit } from "@/lib/safe-ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
+import { googleAuthConfigured } from "@/lib/env";
+
+/* ------------------------------------------------------------------ */
+/* Custom errors                                                       */
+/* ------------------------------------------------------------------ */
 
 class RateLimitedSignin extends CredentialsSignin {
   code = "rate_limited";
 }
 
+/* ------------------------------------------------------------------ */
+/* Session config                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 30 days max age, 15 min refresh.
+ *
+ * The jwt callback performs a DB read on every refresh (sessionVersion
+ * check). 60s was far too aggressive (1 query/min/active-user). 15 min
+ * gives an acceptable invalidation window after password change while
+ * cutting DB load ~14x.
+ */
+const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const SESSION_UPDATE_AGE_SECONDS = 15 * 60;
+
+/* ------------------------------------------------------------------ */
+/* Providers                                                           */
+/* ------------------------------------------------------------------ */
+
+const googleProvider = googleAuthConfigured
+  ? [
+      Google({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        /**
+         * We intentionally do NOT set allowDangerousEmailAccountLinking.
+         * Safe account-linking is handled in the signIn callback below.
+         */
+        allowDangerousEmailAccountLinking: false,
+      }),
+    ]
+  : [];
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: PrismaAdapter(db) as Adapter,
+
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
-    updateAge: 60,
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    updateAge: SESSION_UPDATE_AGE_SECONDS,
   },
+
   pages: {
     signIn: "/login",
+    error: "/login",
   },
+
   providers: [
-    ...((process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
-      ? [
-          Google({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            allowDangerousEmailAccountLinking: true,
-          }),
-        ]
-      : []),
+    ...googleProvider,
+
     Credentials({
       name: "Credentials",
       credentials: {
@@ -58,12 +93,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new RateLimitedSignin();
         }
 
-        const emailLimit = await safeLimit(authRatelimit, `login_email_${email}`);
+        const emailLimit = await safeLimit(
+          authRatelimit,
+          `login_email_${email}`,
+        );
         if (!emailLimit.success) {
           throw new RateLimitedSignin();
         }
 
-        const user = await prisma.user.findUnique({
+        const user = await db.user.findUnique({
           where: { email },
           select: {
             id: true,
@@ -97,24 +135,85 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+
   callbacks: {
-    async jwt({ token, user, account }) {
+    /**
+     * Safe account-linking for Google OAuth.
+     *
+     * When a Google sign-in returns an email that already has an
+     * Account+User row created via Credentials, we only allow the
+     * accounts to be linked when the existing user is verified.
+     *
+     * This closes the allowDangerousEmailAccountLinking takeover path
+     * while preserving UX for legitimate users who first registered
+     * with email/password and then chose Google.
+     */
+    async signIn({ user, account }) {
+      // Credentials path: authorize() already validated.
+      if (account?.provider !== "google") {
+        return true;
+      }
+
+      const email = (user?.email || "").toLowerCase().trim();
+      if (!email) return false;
+
+      // Look up existing user by email.
+      const existing = await db.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          emailVerified: true,
+          password: true,
+          accounts: {
+            select: { provider: true },
+          },
+        },
+      });
+
+      // Brand new user: Google will create User + Account rows.
+      if (!existing) {
+        return true;
+      }
+
+      // Already linked to Google → allow.
+      const alreadyGoogle = existing.accounts.some(
+        (a) => a.provider === "google",
+      );
+      if (alreadyGoogle) {
+        return true;
+      }
+
+      // Credentials user exists, no Google link yet.
+      // Only allow linking when the email was already verified
+      // (via our own verification flow or trust the provider).
+      if (existing.password && !existing.emailVerified) {
+        // Refuse: this is exactly the takeover vector.
+        return false;
+      }
+
+      // Safe: email is verified → allow Google to link.
+      return true;
+    },
+
+    async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
         let role = (user as { role?: string }).role;
-        let sessionVersion =
-          (user as { sessionVersion?: number }).sessionVersion;
+        let sessionVersion = (
+          user as { sessionVersion?: number }
+        ).sessionVersion;
 
         // OAuth (Google): adapter user may omit role/sessionVersion — load from DB
         if (sessionVersion == null || role == null) {
           try {
-            const dbUser = await prisma.user.findUnique({
+            const dbUser = await db.user.findUnique({
               where: { id: user.id },
               select: { role: true, sessionVersion: true },
             });
             if (dbUser) {
               role = role ?? dbUser.role;
-              sessionVersion = sessionVersion ?? dbUser.sessionVersion ?? 0;
+              sessionVersion =
+                sessionVersion ?? dbUser.sessionVersion ?? 0;
             }
           } catch {
             /* keep defaults */
@@ -136,7 +235,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       try {
-        const dbUser = await prisma.user.findUnique({
+        const dbUser = await db.user.findUnique({
           where: { id: token.sub },
           select: {
             sessionVersion: true,
@@ -155,7 +254,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const tokenVersion =
-          typeof token.sessionVersion === "number" ? token.sessionVersion : -1;
+          typeof token.sessionVersion === "number"
+            ? token.sessionVersion
+            : -1;
 
         if (dbUser.sessionVersion !== tokenVersion) {
           return {
