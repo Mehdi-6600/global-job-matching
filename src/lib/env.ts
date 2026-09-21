@@ -90,10 +90,16 @@ export const env = createEnv({
   /**
    * Cross-field: Google ID and Secret must be set together.
    * Prevents the "button visible but provider missing" failure mode.
+   *
+   * NOTE: `onValidationError` receives a ZodError. Access `.issues`
+   * (array) rather than mapping the error object itself.
    */
-  onValidationError: (issues) => {
-    const messages = issues
-      .map((i) => `[${i.path?.join(".") || "env"}] ${i.message}`)
+  onValidationError: (error) => {
+    const messages = error.issues
+      .map((issue) => {
+        const path = issue.path?.join(".") || "env";
+        return `[${path}] ${issue.message}`;
+      })
       .join("\n");
     throw new Error(`❌ Invalid environment variables:\n${messages}`);
   },
