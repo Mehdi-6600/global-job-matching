@@ -316,7 +316,7 @@ export default function CareerRiskPage() {
     () =>
       t(
         "CareerRisk.stepsAfterRisk",
-        "The steps below unlock after you run a risk analysis.",
+        "Enter a job title — roadmap and migration work on their own (sign-in required).",
       ),
     [t],
   );
@@ -347,9 +347,10 @@ export default function CareerRiskPage() {
 
   const analysisContext = useMemo(
     () => ({
-      jobTitle: analysis?.jobTitle,
-      skillsToBuild: analysis?.skillsToBuild,
-      reasons: analysis?.reasons,
+      // Standalone: form job title is enough when no prior risk analysis
+      jobTitle: (analysis?.jobTitle || jobTitle).trim(),
+      skillsToBuild: analysis?.skillsToBuild || [],
+      reasons: analysis?.reasons || [],
       riskScore: analysis?.riskScore,
       riskLevel: analysis?.riskLevel,
       summary: analysis?.summary,
@@ -365,6 +366,7 @@ export default function CareerRiskPage() {
     }),
     [
       analysis,
+      jobTitle,
       country,
       location,
       experienceYears,
@@ -458,7 +460,20 @@ export default function CareerRiskPage() {
 
   /* -------- Roadmap -------- */
   const generateRoadmap = useCallback(async () => {
-    if (!analysis) return;
+    if (jobTitle.trim().length < 2) {
+      setRoadmapError(
+        t(
+          "CareerRisk.jobTitleRequired",
+          "Please enter a job title (min 2 characters).",
+        ),
+      );
+      return;
+    }
+    if (status !== "authenticated") {
+      saveCareerRiskDraft(currentForm(), { autoSubmit: false });
+      setShowAuthGate(true);
+      return;
+    }
     setRoadmapError("");
     setRoadmapLoading(true);
     trackEvent("career_roadmap_submit");
@@ -496,11 +511,24 @@ export default function CareerRiskPage() {
     } finally {
       setRoadmapLoading(false);
     }
-  }, [analysis, analysisContext, t]);
+  }, [analysisContext, jobTitle, status, t, currentForm]);
 
   /* -------- Migration -------- */
   const generateMigration = useCallback(async () => {
-    if (!analysis) return;
+    if (jobTitle.trim().length < 2) {
+      setMigrationError(
+        t(
+          "CareerRisk.jobTitleRequired",
+          "Please enter a job title (min 2 characters).",
+        ),
+      );
+      return;
+    }
+    if (status !== "authenticated") {
+      saveCareerRiskDraft(currentForm(), { autoSubmit: false });
+      setShowAuthGate(true);
+      return;
+    }
     setMigrationError("");
     setMigrationLoading(true);
     trackEvent("career_migration_submit");
@@ -542,7 +570,7 @@ export default function CareerRiskPage() {
     } finally {
       setMigrationLoading(false);
     }
-  }, [analysis, analysisContext, t]);
+  }, [analysisContext, jobTitle, status, t, currentForm]);
 
   /* -------- Draft restore -------- */
   useEffect(() => {
@@ -617,7 +645,8 @@ export default function CareerRiskPage() {
       : t("CareerRisk.sourceAi", "AI analysis");
   }, [analysis, t]);
 
-  const canSecondary = Boolean(analysis) && !loading;
+  // Each tool is independent — only a job title is required (auth on click).
+  const canSecondary = jobTitle.trim().length >= 2 && !loading;
 
   /* -------- Render -------- */
   return (
