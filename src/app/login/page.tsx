@@ -13,18 +13,12 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { t } = useLocale();
 
-  /* -------------------------------------------------------------- */
-  /* Resolve destination                                            */
-  /* -------------------------------------------------------------- */
   const callbackUrlParam = searchParams.get("callbackUrl");
   const callbackUrl = useMemo(
     () => safeCallbackOr(callbackUrlParam, "/dashboard"),
     [callbackUrlParam],
   );
 
-  /* -------------------------------------------------------------- */
-  /* One-time notices from query params                             */
-  /* -------------------------------------------------------------- */
   const registered = searchParams.get("registered") === "1";
   const sessionExpired = searchParams.get("error") === "SessionExpired";
 
@@ -34,7 +28,6 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  // Surface notices once the page is interactive.
   useEffect(() => {
     if (sessionExpired) {
       setNotice(
@@ -55,15 +48,9 @@ function LoginForm() {
     }
   }, [sessionExpired, registered, t]);
 
-  /* -------------------------------------------------------------- */
-  /* Google availability                                            */
-  /* -------------------------------------------------------------- */
   const googleEnabled =
     process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "1";
 
-  /* -------------------------------------------------------------- */
-  /* Submit                                                         */
-  /* -------------------------------------------------------------- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -102,9 +89,6 @@ function LoginForm() {
     }
   };
 
-  /* -------------------------------------------------------------- */
-  /* Register link preserves callbackUrl                            */
-  /* -------------------------------------------------------------- */
   const registerHref = useMemo(() => {
     if (!callbackUrlParam) return "/register";
     const safe = safeCallbackOr(callbackUrlParam, "/dashboard");
