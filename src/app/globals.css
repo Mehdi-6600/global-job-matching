@@ -410,11 +410,17 @@
 
   .gjm-section-light {
     background:
-      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(214, 232, 255, 0.45), transparent 60%),
-      radial-gradient(ellipse 70% 40% at 90% 100%, rgba(216, 245, 232, 0.4), transparent 55%),
-      var(--surface);
+      radial-gradient(ellipse 80% 50% at 10% 0%, rgba(147, 197, 253, 0.35), transparent 60%),
+      radial-gradient(ellipse 70% 40% at 90% 20%, rgba(196, 181, 253, 0.28), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(110, 231, 183, 0.25), transparent 55%),
+      linear-gradient(180deg, #f8faff 0%, #f5f3ff 50%, #f0fdf6 100%);
   }
-  .gjm-section-soft { background: var(--bg-page-soft); }
+  .gjm-section-soft {
+    background:
+      radial-gradient(ellipse 70% 50% at 0% 50%, rgba(254, 215, 170, 0.25), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(165, 243, 252, 0.3), transparent 50%),
+      linear-gradient(180deg, #fffbeb 0%, #f0f9ff 50%, #faf5ff 100%);
+  }
 
   .gjm-inline-link {
     display: inline-flex;
@@ -1089,10 +1095,11 @@
     overflow: hidden;
     isolation: isolate;
     background:
-      radial-gradient(ellipse 90% 60% at 10% -10%, rgba(214, 232, 255, 0.55), transparent 55%),
-      radial-gradient(ellipse 70% 50% at 100% 0%, rgba(232, 221, 255, 0.4), transparent 50%),
-      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(216, 245, 232, 0.35), transparent 50%),
-      linear-gradient(180deg, var(--bg-page-soft) 0%, var(--bg-page) 100%);
+      radial-gradient(ellipse 90% 60% at 0% -10%, rgba(147, 197, 253, 0.45), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 100% 0%, rgba(196, 181, 253, 0.4), transparent 50%),
+      radial-gradient(ellipse 55% 45% at 80% 80%, rgba(253, 186, 116, 0.22), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 20% 100%, rgba(110, 231, 183, 0.28), transparent 50%),
+      linear-gradient(180deg, #eef4ff 0%, #f5f0ff 40%, #f0fdf6 100%);
   }
 
   @media (min-width: 768px) {
@@ -1174,9 +1181,9 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--brand-primary-hover);
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
+    color: #1d4ed8;
+    background: linear-gradient(135deg, #dbeafe, #ede9fe);
+    border: 1px solid rgba(147, 197, 253, 0.6);
     border-radius: var(--radius-pill);
     box-shadow: var(--elev-2);
   }
@@ -1201,84 +1208,41 @@
     margin-inline: 0;
     font-size: clamp(1.7rem, 5.2vw, 3.1rem);
     font-weight: 800;
-    line-height: 1.18;
+    line-height: 1.2;
     letter-spacing: -0.02em;
-    gap: 0.12em;
+    gap: 0.1em;
+    color: #0f172a;
   }
 
   .gjm-hero-title-line {
     display: block;
     width: 100%;
     text-align: center;
-    white-space: normal;
+    color: #0f172a;
   }
 
-  /* Base silver metallic — all default text */
   .gjm-hero-title-silver {
-    background: linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #f0f3f7 18%,
-      #b8c2d0 48%,
-      #8a96a8 68%,
-      #e8eef5 88%,
-      #ffffff 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
-      drop-shadow(0 2px 2px rgba(90, 100, 120, 0.35))
-      drop-shadow(0 4px 10px rgba(120, 130, 150, 0.22));
+    color: #0f172a;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    filter: none;
   }
 
-  /* Opportunity — gold metallic */
-  .gjm-hero-title-gold {
-    background: linear-gradient(
-      180deg,
-      #fff8d6 0%,
-      #ffe789 22%,
-      #f0c020 48%,
-      #b8860b 70%,
-      #f5d76e 88%,
-      #fff3c4 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 1px 0 rgba(255, 240, 180, 0.95))
-      drop-shadow(0 2px 2px rgba(140, 90, 10, 0.45))
-      drop-shadow(0 5px 12px rgba(200, 150, 20, 0.3));
-  }
-
-  /* World — red */
+  .gjm-hero-title-gold,
   .gjm-hero-title-red {
-    background: linear-gradient(
-      180deg,
-      #fecaca 0%,
-      #f87171 35%,
-      #dc2626 70%,
-      #b91c1c 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 1px 0 rgba(255, 220, 220, 0.85))
-      drop-shadow(0 2px 2px rgba(120, 20, 20, 0.4))
-      drop-shadow(0 5px 12px rgba(220, 50, 50, 0.28));
+    color: #dc2626;
+    font-weight: 800;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    filter: none;
   }
 
-  /* legacy accent class → silver (unused) */
   .gjm-hero-title-line.accent {
-    background: linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #b8c2d0 50%,
-      #ffffff 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: #0f172a;
+    background: none;
+    filter: none;
   }
 
   .gjm-hero-description {
@@ -1408,6 +1372,11 @@
      NEW (CHECKPOINT) — TRUST SECTION (product evidence)
      ============================================================ */
   .gjm-trust-section {
+    /* trust pastel */
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(191, 219, 254, 0.4), transparent 60%),
+      linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+
     padding-block: 2.5rem 3rem;
     background: var(--bg-page-soft);
   }
@@ -2222,16 +2191,16 @@
   }
 
   .gjm-feature-grid > .gjm-feature-card:nth-child(1) {
-    background: linear-gradient(155deg, rgba(216, 245, 232, 0.85), rgba(255, 255, 255, 0.55));
+    background: linear-gradient(155deg, rgba(167, 243, 208, 0.75), rgba(255, 255, 255, 0.55));
   }
   .gjm-feature-grid > .gjm-feature-card:nth-child(2) {
-    background: linear-gradient(155deg, rgba(214, 232, 255, 0.85), rgba(255, 255, 255, 0.55));
+    background: linear-gradient(155deg, rgba(147, 197, 253, 0.7), rgba(255, 255, 255, 0.55));
   }
   .gjm-feature-grid > .gjm-feature-card:nth-child(3) {
-    background: linear-gradient(155deg, rgba(232, 221, 255, 0.85), rgba(255, 255, 255, 0.55));
+    background: linear-gradient(155deg, rgba(196, 181, 253, 0.7), rgba(255, 255, 255, 0.55));
   }
   .gjm-feature-grid > .gjm-feature-card:nth-child(4) {
-    background: linear-gradient(155deg, rgba(212, 247, 242, 0.85), rgba(255, 255, 255, 0.55));
+    background: linear-gradient(155deg, rgba(253, 186, 116, 0.55), rgba(255, 255, 255, 0.55));
   }
 
   .gjm-feature-icon {
@@ -2291,6 +2260,50 @@
   [dir="rtl"] .gjm-platform-arrow,
   [dir="rtl"] .gjm-job-arrow svg {
     transform: scaleX(-1);
+  }
+
+  .gjm-home .gjm-platform-section {
+    background:
+      radial-gradient(ellipse 70% 50% at 100% 0%, rgba(221, 214, 254, 0.4), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 0% 100%, rgba(167, 243, 208, 0.3), transparent 50%),
+      linear-gradient(180deg, #f5f3ff 0%, #ecfdf5 100%);
+  }
+
+  .gjm-home .gjm-platform-card {
+    background: linear-gradient(
+      155deg,
+      rgba(255, 255, 255, 0.75) 0%,
+      rgba(255, 255, 255, 0.4) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(10px);
+  }
+  .gjm-home .gjm-platform-card.accent-blue {
+    background: linear-gradient(155deg, rgba(191, 219, 254, 0.7), rgba(255, 255, 255, 0.5));
+  }
+  .gjm-home .gjm-platform-card.accent-cyan {
+    background: linear-gradient(155deg, rgba(165, 243, 252, 0.7), rgba(255, 255, 255, 0.5));
+  }
+  .gjm-home .gjm-platform-card.accent-violet {
+    background: linear-gradient(155deg, rgba(221, 214, 254, 0.7), rgba(255, 255, 255, 0.5));
+  }
+  .gjm-home .gjm-platform-card.accent-green {
+    background: linear-gradient(155deg, rgba(167, 243, 208, 0.7), rgba(255, 255, 255, 0.5));
+  }
+  .gjm-home .gjm-platform-card.accent-orange {
+    background: linear-gradient(155deg, rgba(254, 215, 170, 0.75), rgba(255, 255, 255, 0.5));
+  }
+  .gjm-home .gjm-platform-card.accent-pink {
+    background: linear-gradient(155deg, rgba(251, 207, 232, 0.75), rgba(255, 255, 255, 0.5));
+  }
+
+  .gjm-home .gjm-job-card {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(239, 246, 255, 0.65) 100%
+    );
+    border: 1px solid rgba(191, 219, 254, 0.5);
   }
 
   /* ---------- Map section ---------- */
@@ -3719,3 +3732,31 @@ code {
     scroll-behavior: auto !important;
   }
 }
+
+  /* ---------- Home / page headers — blue ---------- */
+  .gjm-home h1:not(.gjm-hero-title),
+  .gjm-home h2,
+  .gjm-home .gjm-section-heading h2,
+  .gjm-home .gjm-platform-header h2,
+  .gjm-home .gjm-employer-copy h2,
+  .gjm-home .gjm-final-content h2,
+  .gjm-home .gjm-career-tools-heading h2,
+  .gjm-home .gjm-trust-section h2 {
+    color: #1d4ed8;
+  }
+
+  .gjm-home .gjm-section-kicker,
+  .gjm-home .gjm-career-tools-heading .gjm-section-kicker {
+    color: #2563eb;
+  }
+
+  .gjm-home .gjm-kicker-dark {
+    color: #93c5fd;
+  }
+
+  .gjm-home .gjm-feature-card h3,
+  .gjm-home .gjm-platform-card h3,
+  .gjm-home .gjm-job-card h3 {
+    color: #1e3a8a;
+  }
+
