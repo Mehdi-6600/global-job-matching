@@ -6,10 +6,7 @@ import { applicationCreateSchema } from "@/lib/validation/application";
 import { normalizeLocation } from "@/lib/location";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
-import {
-  assertApplicationQuota,
-  lockUserRow,
-} from "@/lib/quota";
+import { assertApplicationQuota, lockUserRow } from "@/lib/quota";
 import { parseListLimit, LIST_LIMITS } from "@/lib/pagination";
 
 export async function GET(req: NextRequest) {
@@ -21,16 +18,19 @@ export async function GET(req: NextRequest) {
 
     const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
-      `applications_get_${session.user.id}_${ip}`
+      `applications_get_${session.user.id}_${ip}`,
     );
     if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 },
+      );
     }
 
     const { searchParams } = new URL(req.url);
     const take = parseListLimit(
       searchParams.get("limit"),
-      LIST_LIMITS.userList
+      LIST_LIMITS.userList,
     );
 
     const applications = await db.application.findMany({
@@ -103,8 +103,9 @@ export async function GET(req: NextRequest) {
               ? {
                   ...application.job.company,
                   location:
-                    normalizeLocation(application.job.company.location) ||
-                    application.job.company.location,
+                    normalizeLocation(
+                      application.job.company.location,
+                    ) || application.job.company.location,
                 }
               : null,
             category: application.job.category,
@@ -121,7 +122,7 @@ export async function GET(req: NextRequest) {
     console.error("Applications fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch applications" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -132,18 +133,18 @@ export async function POST(req: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized. Please sign in." },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
-      `apply_${session.user.id}_${ip}`
+      `apply_${session.user.id}_${ip}`,
     );
     if (!success) {
       return NextResponse.json(
         { error: "Too many applications. Please try again later." },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -161,7 +162,10 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 },
+      );
     }
 
     const parsed = applicationCreateSchema.safeParse(body);
@@ -171,7 +175,7 @@ export async function POST(req: NextRequest) {
           error: "Invalid input",
           details: parsed.error.flatten().fieldErrors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -196,14 +200,14 @@ export async function POST(req: NextRequest) {
     if (!job) {
       return NextResponse.json(
         { error: "Job not found or no longer active." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (job.deadline && job.deadline.getTime() < Date.now()) {
       return NextResponse.json(
         { error: "This job application deadline has passed." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -281,7 +285,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json(
         { success: true, application: result },
-        { status: 201 }
+        { status: 201 },
       );
     } catch (error: unknown) {
       const e = error as {
@@ -295,7 +299,7 @@ export async function POST(req: NextRequest) {
       if (e.code === "P2002") {
         return NextResponse.json(
           { error: "You have already applied for this job." },
-          { status: 409 }
+          { status: 409 },
         );
       }
       throw error;
@@ -304,7 +308,7 @@ export async function POST(req: NextRequest) {
     console.error("Application create error:", error);
     return NextResponse.json(
       { error: "Failed to submit application" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
