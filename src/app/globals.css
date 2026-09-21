@@ -1073,6 +1073,7 @@
     padding-top: 3rem;
     padding-bottom: 4rem;
     overflow: hidden;
+    isolation: isolate;
     background: linear-gradient(180deg, var(--bg-page-soft) 0%, var(--bg-page) 100%);
   }
 
@@ -1112,10 +1113,10 @@
   }
 
   .gjm-hero-glow-two {
-    bottom: -120px;
-    inset-inline-end: -80px;
-    background: var(--brand-accent);
-    opacity: 0.18;
+    bottom: -100px;
+    inset-inline-end: -60px;
+    background: var(--brand-primary);
+    opacity: 0.12;
   }
 
   .gjm-hero-inner {
@@ -3025,7 +3026,7 @@
     font-weight: 600;
     font-size: 0.9375rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    boborder-radius: var(--radius-lg);
     cursor: not-allowed;
     opacity: 1;
     box-shadow: var(--inset-2);
@@ -3308,7 +3309,7 @@ a.bg-indigo-600,
 
 .text-emerald-300,
 .text-emerald-400,
-.text-emerald-500 { color: var(--brand-accent) !important; }
+.text-emerald-500 { color: #047857 !important; }
 
 .text-purple-400,
 .text-violet-400 { color: #7c3aed !important; }
