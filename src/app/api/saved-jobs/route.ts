@@ -24,16 +24,19 @@ export async function GET(req: NextRequest) {
 
     const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
-      `savedjobs_get_${session.user.id}_${ip}`
+      `savedjobs_get_${session.user.id}_${ip}`,
     );
     if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 },
+      );
     }
 
     const { searchParams } = new URL(req.url);
     const take = parseListLimit(
       searchParams.get("limit"),
-      LIST_LIMITS.userList
+      LIST_LIMITS.userList,
     );
 
     const savedJobs = await db.savedJob.findMany({
@@ -91,7 +94,8 @@ export async function GET(req: NextRequest) {
         savedJobId: item.id,
         savedAt: item.createdAt,
         ...item.job,
-        location: normalizeLocation(item.job!.location) || item.job!.location,
+        location:
+          normalizeLocation(item.job!.location) || item.job!.location,
         company: item.job!.company
           ? {
               ...item.job!.company,
@@ -111,7 +115,7 @@ export async function GET(req: NextRequest) {
     console.error("Saved jobs fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch saved jobs" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -125,10 +129,13 @@ export async function POST(req: NextRequest) {
 
     const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
-      `savedjobs_post_${session.user.id}_${ip}`
+      `savedjobs_post_${session.user.id}_${ip}`,
     );
     if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 },
+      );
     }
 
     const effective = await getEffectivePlan(session.user.id);
@@ -137,7 +144,10 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 },
+      );
     }
 
     const parsed = savedJobSchema.safeParse(body);
@@ -147,7 +157,7 @@ export async function POST(req: NextRequest) {
           error: "Invalid input",
           details: parsed.error.flatten().fieldErrors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -172,7 +182,7 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "This job is no longer active." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -238,7 +248,7 @@ export async function POST(req: NextRequest) {
     console.error("Save job error:", error);
     return NextResponse.json(
       { error: "Failed to save job" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -252,17 +262,23 @@ export async function DELETE(req: NextRequest) {
 
     const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
-      `savedjobs_delete_${session.user.id}_${ip}`
+      `savedjobs_delete_${session.user.id}_${ip}`,
     );
     if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 },
+      );
     }
 
     let body: unknown;
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 },
+      );
     }
 
     const parsed = savedJobSchema.safeParse(body);
@@ -272,7 +288,7 @@ export async function DELETE(req: NextRequest) {
           error: "Invalid input",
           details: parsed.error.flatten().fieldErrors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -288,7 +304,7 @@ export async function DELETE(req: NextRequest) {
     console.error("Remove saved job error:", error);
     return NextResponse.json(
       { error: "Failed to remove saved job" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
