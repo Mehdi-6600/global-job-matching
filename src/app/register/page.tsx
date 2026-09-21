@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import {
@@ -15,10 +15,22 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { safeCallbackOr } from "@/lib/url-safety";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLocale();
+
+  /* -------------------------------------------------------------- */
+  /* Destination                                                    */
+  /* -------------------------------------------------------------- */
+  const callbackUrlParam = searchParams.get("callbackUrl");
+  const callbackUrl = useMemo(
+    () => safeCallbackOr(callbackUrlParam, "/dashboard"),
+    [callbackUrlParam],
+  );
+
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,7 +42,7 @@ export default function RegisterPage() {
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -56,31 +68,55 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         setError(
-          data.error || t("Auth.errors.generic", "Something went wrong")
+          data.error || t("Auth.errors.generic", "Something went wrong"),
         );
         setLoading(false);
         return;
       }
 
+      /* -------- Auto sign-in after successful registration -------- */
       const result = await signIn("credentials", {
         email: formData.email.trim(),
         password: formData.password,
         redirect: false,
-        callbackUrl: "/dashboard",
+        callbackUrl,
       });
 
       if (result?.ok) {
-        router.push("/dashboard");
+        router.push(callbackUrl);
         router.refresh();
-      } else {
-        router.push("/login");
+        return;
       }
+
+      /* -------- Sign-in failed after successful register --------
+       * This is rare (register just succeeded) but can happen if the
+       * login rate limiter triggers. Send the user to /login with a
+       * clear message + preserved email + preserved callbackUrl.
+       */
+      const loginUrl = new URL("/login", window.location.origin);
+      loginUrl.searchParams.set("registered", "1");
+      loginUrl.searchParams.set("email", formData.email.trim());
+      if (callbackUrl && callbackUrl !== "/dashboard") {
+        loginUrl.searchParams.set("callbackUrl", callbackUrl);
+      }
+      router.push(loginUrl.pathname + "?" + loginUrl.searchParams.toString());
     } catch {
-      setError(t("Auth.errors.network", "Network error. Please try again."));
+      setError(
+        t("Auth.errors.network", "Network error. Please try again."),
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  /* -------------------------------------------------------------- */
+  /* Login link preserves callbackUrl                               */
+  /* -------------------------------------------------------------- */
+  const loginHref = useMemo(() => {
+    if (!callbackUrlParam) return "/login";
+    const safe = safeCallbackOr(callbackUrlParam, "/dashboard");
+    return `/login?callbackUrl=${encodeURIComponent(safe)}`;
+  }, [callbackUrlParam]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center py-10 px-4">
@@ -101,23 +137,33 @@ export default function RegisterPage() {
             {t("Auth.registerTitle", "Create Account")}
           </h2>
           <p className="text-sm text-slate-400 text-center mb-6">
-            {t("Auth.registerSubtitle", "Start your journey to find your dream job")}
+            {t(
+              "Auth.registerSubtitle",
+              "Start your journey to find your dream job",
+            )}
           </p>
 
           {error && (
-            <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+            <div
+              role="alert"
+              className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center"
+            >
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="register-name"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
                 {t("Auth.name", "Full Name")}
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
+                  id="register-name"
                   type="text"
                   name="name"
                   value={formData.name}
@@ -125,49 +171,68 @@ export default function RegisterPage() {
                   placeholder={t("Auth.namePlaceholder", "John Doe")}
                   required
                   minLength={2}
+                  autoComplete="name"
                   className="w-full py-3.5 pl-11 pr-5 rounded-xl outline-none bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="register-email"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
                 {t("Auth.email", "Email")}
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
+                  id="register-email"
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="you@example.com"
                   required
+                  autoComplete="email"
                   className="w-full py-3.5 pl-11 pr-5 rounded-xl outline-none bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="register-password"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
                 {t("Auth.password", "Password")}
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
+                  id="register-password"
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder={t("Auth.passwordHint", "At least 8 characters")}
+                  placeholder={t(
+                    "Auth.passwordHint",
+                    "At least 8 characters",
+                  )}
                   required
                   minLength={8}
+                  autoComplete="new-password"
                   className="w-full py-3.5 pl-11 pr-11 rounded-xl outline-none bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  aria-label={
+                    showPassword
+                      ? t("Auth.hidePassword", "Hide password")
+                      : t("Auth.showPassword", "Show password")
+                  }
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -179,10 +244,14 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="register-role"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
                 {t("Auth.role", "I am a...")}
               </label>
               <select
+                id="register-role"
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
@@ -219,7 +288,7 @@ export default function RegisterPage() {
           <p className="mt-7 text-center text-sm text-slate-400">
             {t("Auth.hasAccount", "Already have an account?")}{" "}
             <Link
-              href="/login"
+              href={loginHref}
               className="font-medium text-sky-400 hover:underline"
             >
               {t("Auth.submitLogin", "Sign In")}
@@ -228,5 +297,19 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-sky-400 animate-spin" />
+        </main>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }
