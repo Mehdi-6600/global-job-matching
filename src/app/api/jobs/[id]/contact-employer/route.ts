@@ -3,10 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { ratelimit } from "@/lib/ratelimit";
-import {
-  buildEmployerEmailHtml,
-  sendEmail,
-} from "@/lib/email";
+import { buildEmployerEmailHtml, sendEmail } from "@/lib/email";
 import { getRequestIp } from "@/lib/client-ip";
 
 const schema = z.object({
@@ -18,7 +15,7 @@ const schema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
@@ -33,12 +30,12 @@ export async function POST(
 
     const ip = getRequestIp(req);
     const { success } = await ratelimit.limit(
-      `contact_employer_${session.user.id}_${ip}`
+      `contact_employer_${session.user.id}_${ip}`,
     );
     if (!success) {
       return NextResponse.json(
         { error: "Too many requests. Please wait." },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -46,8 +43,11 @@ export async function POST(
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
-        { status: 400 }
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
       );
     }
 
@@ -59,7 +59,7 @@ export async function POST(
           error:
             "Please confirm you want to send this email (confirmSend: true).",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -82,7 +82,7 @@ export async function POST(
     if (!job || job.status !== "active") {
       return NextResponse.json(
         { error: "Job not found or not active" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -99,7 +99,7 @@ export async function POST(
     if (!applicant?.email) {
       return NextResponse.json(
         { error: "Your account needs a valid email" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -155,7 +155,7 @@ ${applicant.name || applicant.email}`;
             "This job has no employer email on file. Use Draft and send manually, or message via the platform.",
           draft: draftText,
         },
-        { status: 422 }
+        { status: 422 },
       );
     }
 
@@ -179,29 +179,20 @@ ${applicant.name || applicant.email}`;
     if (!result.ok) {
       return NextResponse.json(
         { error: result.error, draft: draftText },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
-    await db.notification.create({
-      data: {
-        userId: session.user.id,
-        type: "application",
-        title: "Email sent to employer",
-        message: `Your message about "${job.title}" was sent to ${employerEmail}.`,
-        actionUrl: `/jobs/${job.id}`,
-      },
-    });
-
-    const employerUserId =
-      job.company?.ownerId || job.postedById || null;
+    // Notify the employer only. Sender already knows they sent it —
+    // creating a self-notification would inflate their unread counter.
+    const employerUserId = job.company?.ownerId || job.postedById || null;
     if (employerUserId) {
       await db.notification.create({
         data: {
           userId: employerUserId,
           type: "application",
           title: "New candidate email",
-          message: `${applicant.name || applicant.email} contacted you about "${job.title}". Check your email inbox.`,
+          message: `${applicant.name || applicant.email} contacted you about "${job.title}".`,
           actionUrl: `/jobs/${job.id}`,
         },
       });
