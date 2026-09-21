@@ -1,10 +1,41 @@
 import { Metadata } from "next";
 import VerifyEmailHandler from "./VerifyEmailHandler";
+import { consumeEmailVerificationToken } from "@/lib/auth/tokens";
 
 export const metadata: Metadata = {
   title: "Verify Email | Global Job Matching",
   description: "Verify your email address for Global Job Matching.",
 };
+
+export const dynamic = "force-dynamic";
+
+type VerifyResult =
+  | { status: "success" }
+  | { status: "error"; message: string }
+  | { status: "missing" };
+
+async function tryVerify(
+  token: string | undefined,
+  email: string | undefined,
+): Promise<VerifyResult> {
+  if (!token || !email) {
+    return { status: "missing" };
+  }
+
+  try {
+    const result = await consumeEmailVerificationToken(token, email);
+    if (result.ok) {
+      return { status: "success" };
+    }
+    return { status: "error", message: result.error };
+  } catch (err) {
+    console.error("[verify-email page] consume failed:", err);
+    return {
+      status: "error",
+      message: "Something went wrong while verifying your email.",
+    };
+  }
+}
 
 export default async function VerifyEmailPage({
   searchParams,
@@ -12,11 +43,17 @@ export default async function VerifyEmailPage({
   searchParams: Promise<{ token?: string; email?: string }>;
 }) {
   const { token, email } = await searchParams;
+  const result = await tryVerify(token, email);
 
   return (
     <main className="min-h-screen bg-[var(--page-bg)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full glass-card p-8 text-center">
-        <VerifyEmailHandler token={token} email={email} />
+        <VerifyEmailHandler
+          status={result.status}
+          errorMessage={
+            result.status === "error" ? result.message : undefined
+          }
+        />
       </div>
     </main>
   );
