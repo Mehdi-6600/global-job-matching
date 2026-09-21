@@ -65,3 +65,4 @@ export default function TwitterImage() {
     { ...OG_SIZE }
   );
 }
+ 
