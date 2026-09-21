@@ -1,4 +1,4 @@
- @tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -1990,6 +1990,98 @@
   }
 
   [dir="rtl"] .gjm-career-tool-cta svg {
+    transform: scaleX(-1);
+  }
+
+
+  /* ---------- Feature cards (Why section) ---------- */
+  .gjm-feature-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .gjm-feature-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (min-width: 1024px) {
+    .gjm-feature-grid { grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+  }
+
+  .gjm-feature-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--elev-2);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .gjm-feature-card:hover {
+    box-shadow: var(--elev-4);
+    transform: translateY(-3px);
+  }
+
+  .gjm-feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background: var(--brand-primary-tint);
+    color: var(--brand-primary-hover);
+    box-shadow: var(--elev-1);
+  }
+
+  .gjm-feature-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .gjm-feature-card p {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  .gjm-card-arrow {
+    position: absolute;
+    top: 1.5rem;
+    inset-inline-end: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--text-muted);
+    box-shadow: var(--elev-1);
+    opacity: 0;
+    transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .gjm-feature-card:hover .gjm-card-arrow {
+    opacity: 1;
+    background: var(--brand-primary);
+    color: #ffffff;
+    box-shadow:
+      4px 4px 10px rgba(8, 145, 178, 0.35),
+      -3px -3px 8px rgba(255, 255, 255, 0.75);
+  }
+
+  [dir="rtl"] .gjm-card-arrow svg,
+  [dir="rtl"] .gjm-inline-link svg,
+  [dir="rtl"] .gjm-dark-link svg,
+  [dir="rtl"] .gjm-hero-actions svg,
+  [dir="rtl"] .gjm-platform-arrow,
+  [dir="rtl"] .gjm-job-arrow svg {
     transform: scaleX(-1);
   }
 
