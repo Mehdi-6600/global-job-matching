@@ -138,7 +138,6 @@ export const authConfig = {
   session: {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60,
-    // 15 minutes — see auth.ts for rationale.
     updateAge: 15 * 60,
   },
 } satisfies NextAuthConfig;
