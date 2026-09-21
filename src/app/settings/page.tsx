@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Settings,
@@ -42,8 +43,11 @@ function isHttpUrl(value: string | null | undefined): boolean {
 
 export default function SettingsPage() {
   const { t } = useLocale();
+  const router = useRouter();
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unauthorized, setUnauthorized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -59,9 +63,21 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    fetch("/api/profile")
-      .then((res) => res.json())
+    let cancelled = false;
+
+    fetch("/api/profile", { cache: "no-store" })
+      .then(async (res) => {
+        if (res.status === 401) {
+          if (!cancelled) {
+            setUnauthorized(true);
+            setLoading(false);
+          }
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (cancelled || !data) return;
         if (data.profile) {
           setProfile(data.profile);
           setForm({
@@ -79,10 +95,22 @@ export default function SettingsPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError(t("Settings.loadError", "Failed to load profile"));
-        setLoading(false);
+        if (!cancelled) {
+          setError(t("Settings.loadError", "Failed to load profile"));
+          setLoading(false);
+        }
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
+
+  useEffect(() => {
+    if (unauthorized) {
+      router.replace("/login?callbackUrl=/settings");
+    }
+  }, [unauthorized, router]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -176,10 +204,17 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || unauthorized) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
+          {unauthorized && (
+            <p className="text-slate-400 text-sm mt-3">
+              {t("Common.loading", "Redirecting to sign in...")}
+            </p>
+          )}
+        </div>
       </main>
     );
   }
