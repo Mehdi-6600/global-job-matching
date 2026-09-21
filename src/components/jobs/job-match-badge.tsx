@@ -20,31 +20,50 @@ export function JobMatchBadge({ jobId }: { jobId: string }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<MatchPayload | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/jobs/${encodeURIComponent(jobId)}/match`)
+    setFailed(false);
+    setUnauthorized(false);
+
+    const controller = new AbortController();
+
+    fetch(`/api/jobs/${encodeURIComponent(jobId)}/match`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
       .then(async (res) => {
+        if (cancelled) return null;
+
         if (res.status === 401) {
-          if (!cancelled) setUnauthorized(true);
+          setUnauthorized(true);
           return null;
         }
-        if (!res.ok) return null;
-        return res.json();
+
+        if (!res.ok) {
+          setFailed(true);
+          return null;
+        }
+
+        return res.json().catch(() => null);
       })
       .then((json) => {
         if (cancelled) return;
-        setData(json);
+        if (json) setData(json);
       })
-      .catch(() => {
-        if (!cancelled) setData(null);
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!cancelled) setFailed(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [jobId]);
 
@@ -69,6 +88,10 @@ export function JobMatchBadge({ jobId }: { jobId: string }) {
     );
   }
 
+  if (failed) {
+    return null;
+  }
+
   if (data?.profileComplete === false) {
     return (
       <Link
@@ -78,7 +101,7 @@ export function JobMatchBadge({ jobId }: { jobId: string }) {
         <Target className="w-3.5 h-3.5" />
         {t(
           "JobDetail.matchNeedProfile",
-          "Complete profile for match score"
+          "Complete profile for match score",
         )}
       </Link>
     );
