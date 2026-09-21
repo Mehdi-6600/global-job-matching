@@ -29,7 +29,7 @@ export default function Error({
         </h2>
         <p className="text-slate-400 text-sm mb-6 leading-relaxed">
           {t(
-            "Common.errorNetwork",
+            "Common.errorUnexpected",
             "An unexpected error occurred. You can try again or return home."
           )}
         </p>
