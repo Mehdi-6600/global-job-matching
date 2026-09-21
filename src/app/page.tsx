@@ -371,20 +371,49 @@ export default function HomePage() {
                   "Home.title",
                   "Find Your Next Opportunity. Anywhere in the World."
                 );
+                const lower = full.toLowerCase();
+                const opp = lower.indexOf("opportunity");
+                const anyw = lower.indexOf("anywhere");
+                if (opp >= 0 && anyw > opp) {
+                  const before = full.slice(0, opp); // "Find Your Next "
+                  let goldEnd = opp + "opportunity".length;
+                  // include trailing period if present
+                  if (full[goldEnd] === ".") goldEnd += 1;
+                  const goldWord = full.slice(opp, goldEnd);
+                  const cyanEnd = anyw + "anywhere".length;
+                  const cyanWord = full.slice(anyw, cyanEnd);
+                  const after = full.slice(cyanEnd).trim(); // "in the World."
+                  return (
+                    <>
+                      <span className="gjm-hero-title-line gjm-hero-title-silver">
+                        {before}
+                        <span className="gjm-hero-title-gold">{goldWord}</span>
+                      </span>
+                      <span className="gjm-hero-title-line">
+                        <span className="gjm-hero-title-cyan">{cyanWord}</span>
+                      </span>
+                      {after ? (
+                        <span className="gjm-hero-title-line gjm-hero-title-muted">
+                          {after}
+                        </span>
+                      ) : null}
+                    </>
+                  );
+                }
                 const i = full.indexOf(". ");
                 if (i > 0 && i < full.length - 2) {
                   return (
                     <>
-                      <span className="gjm-hero-title-line">
+                      <span className="gjm-hero-title-line gjm-hero-title-silver">
                         {full.slice(0, i + 1)}
                       </span>
-                      <span className="gjm-hero-title-line accent">
+                      <span className="gjm-hero-title-line gjm-hero-title-cyan">
                         {full.slice(i + 2)}
                       </span>
                     </>
                   );
                 }
-                return full;
+                return <span className="gjm-hero-title-silver">{full}</span>;
               })()}
             </h1>
 
