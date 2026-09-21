@@ -82,7 +82,6 @@ export async function GET(
         viewerRole,
       });
 
-      // Same as missing — do not leak existence/status of non-public jobs
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
