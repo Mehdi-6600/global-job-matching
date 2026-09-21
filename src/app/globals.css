@@ -1,4 +1,4 @@
- @tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -1160,6 +1160,11 @@
     text-align: start;
   }
 
+  .gjm-hero-copy .gjm-hero-title {
+    align-self: stretch;
+    text-align: center;
+  }
+
   .gjm-eyebrow {
     display: inline-flex;
     align-items: center;
@@ -1186,102 +1191,94 @@
 
   .gjm-hero h1,
   .gjm-hero-title {
-    font-size: clamp(1.85rem, 5.5vw, 3.35rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+    font-size: clamp(1.7rem, 5.2vw, 3.1rem);
     font-weight: 800;
-    line-height: 1.08;
-    letter-spacing: -0.03em;
-    max-width: 14ch;
-    text-wrap: balance;
-    color: transparent;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    gap: 0.12em;
   }
 
   .gjm-hero-title-line {
     display: block;
+    width: 100%;
+    text-align: center;
+    white-space: normal;
   }
 
-  /* Line 1 — silver metallic: "Find Your Next Opportunity." handled via spans */
+  /* Base silver metallic — all default text */
   .gjm-hero-title-silver {
     background: linear-gradient(
       180deg,
       #ffffff 0%,
-      #e8eef5 28%,
-      #9aa8b8 55%,
-      #dce4ee 78%,
+      #f0f3f7 18%,
+      #b8c2d0 48%,
+      #8a96a8 68%,
+      #e8eef5 88%,
       #ffffff 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 2px 2px rgba(80, 90, 110, 0.35))
-      drop-shadow(0 6px 14px rgba(100, 120, 150, 0.2));
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
+      drop-shadow(0 2px 2px rgba(90, 100, 120, 0.35))
+      drop-shadow(0 4px 10px rgba(120, 130, 150, 0.22));
   }
 
-  /* Gold 3D — "Opportunity." */
+  /* Opportunity — gold metallic */
   .gjm-hero-title-gold {
     background: linear-gradient(
       180deg,
-      #fff4c4 0%,
-      #ffe08a 18%,
-      #f5c542 38%,
-      #c99212 62%,
-      #f0d060 82%,
-      #fff0b0 100%
+      #fff8d6 0%,
+      #ffe789 22%,
+      #f0c020 48%,
+      #b8860b 70%,
+      #f5d76e 88%,
+      #fff3c4 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 1px 0 rgba(255, 230, 150, 0.9))
-      drop-shadow(0 3px 2px rgba(140, 90, 10, 0.45))
-      drop-shadow(0 8px 18px rgba(200, 150, 20, 0.28));
+    filter: drop-shadow(0 1px 0 rgba(255, 240, 180, 0.95))
+      drop-shadow(0 2px 2px rgba(140, 90, 10, 0.45))
+      drop-shadow(0 5px 12px rgba(200, 150, 20, 0.3));
   }
 
-  /* Cyan glow — "Anywhere" */
-  .gjm-hero-title-cyan {
+  /* World — red */
+  .gjm-hero-title-red {
     background: linear-gradient(
       180deg,
-      #e0fdff 0%,
-      #67e8f9 35%,
-      #06b6d4 70%,
-      #22d3ee 100%
+      #fecaca 0%,
+      #f87171 35%,
+      #dc2626 70%,
+      #b91c1c 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.55))
-      drop-shadow(0 0 20px rgba(6, 182, 212, 0.35))
-      drop-shadow(0 2px 2px rgba(8, 100, 120, 0.25));
+    filter: drop-shadow(0 1px 0 rgba(255, 220, 220, 0.85))
+      drop-shadow(0 2px 2px rgba(120, 20, 20, 0.4))
+      drop-shadow(0 5px 12px rgba(220, 50, 50, 0.28));
   }
 
-  /* Soft silver — "in the World." */
-  .gjm-hero-title-muted {
-    background: linear-gradient(
-      180deg,
-      #f5f7fa 0%,
-      #c5cdd8 50%,
-      #eef2f6 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 2px 3px rgba(90, 100, 120, 0.3));
-    font-weight: 700;
-    font-size: 0.72em;
-    letter-spacing: -0.01em;
-    margin-top: 0.15em;
-  }
-
-  /* fallback single-line accent if not split */
+  /* legacy accent class → silver (unused) */
   .gjm-hero-title-line.accent {
     background: linear-gradient(
       180deg,
-      #e0fdff 0%,
-      #67e8f9 40%,
-      #06b6d4 100%
+      #ffffff 0%,
+      #b8c2d0 50%,
+      #ffffff 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.4));
   }
 
   .gjm-hero-description {
