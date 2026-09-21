@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { isAdminRole, isEmployerRole } from "@/lib/roles";
@@ -88,12 +88,10 @@ function ProfileMenu({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
 
-  // Close on route change
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
@@ -126,7 +124,9 @@ function ProfileMenu({
         <span className="hidden sm:inline">{labels.dashboard}</span>
         <ChevronDown
           size={14}
-          className={open ? "rotate-180 transition-transform" : "transition-transform"}
+          className={
+            open ? "rotate-180 transition-transform" : "transition-transform"
+          }
         />
       </button>
 
@@ -252,29 +252,24 @@ export default function Navbar() {
   const isAdmin = isAdminRole(userRole);
   const isEmployer = isEmployerRole(userRole) && !isAdmin;
 
+  /* ---------------------------------------------------------------
+   * Session invalidation detection (defense-in-depth).
+   *
+   * If SessionGuard already fired, we won't normally get here. But
+   * navbar can render briefly before the guard's redirect lands, and
+   * a middleware-served route can also surface this state. Treating
+   * `error === "SessionInvalidated"` as logged-out prevents the "ghost
+   * logged-in" state where the navbar shows a profile menu while every
+   * API call returns 401.
+   * --------------------------------------------------------------- */
   const sessionError = (session as { error?: string } | null)?.error;
   const isSessionInvalidated = sessionError === "SessionInvalidated";
 
   const isLoggedIn =
     status === "authenticated" && !!session && !isSessionInvalidated;
 
-  const router = useRouter();
-  useEffect(() => {
-    if (isSessionInvalidated) {
-      // Session was revoked server-side — force clean client state
-      void signOut({ redirect: false }).then(() => {
-        router.replace("/login");
-      });
-    }
-  }, [isSessionInvalidated, router]);
-
   const unreadCount = useUnreadNotifications(isLoggedIn);
 
-  /* --------------------------------------------------------------
-   * Main navigation links — kept minimal on purpose.
-   * Account-scoped links (Career Risk, Resume, Settings) live in
-   * the profile dropdown to reduce desktop CTA overload.
-   * -------------------------------------------------------------- */
   const links = [
     { href: "/jobs", label: t("Nav.jobs", "Jobs") },
     { href: "/companies", label: t("Nav.companies", "Companies") },
@@ -360,7 +355,6 @@ export default function Navbar() {
             <div className="gjm-nav-actions">
               {isLoggedIn ? (
                 <>
-                  {/* Employer quick-access — visible on desktop when employer */}
                   {isEmployer && (
                     <Link
                       href="/employer/dashboard"
@@ -376,7 +370,6 @@ export default function Navbar() {
                     </Link>
                   )}
 
-                  {/* Notifications with unread badge */}
                   <Link
                     href="/notifications"
                     className="gjm-nav-icon relative"
