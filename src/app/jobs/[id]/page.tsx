@@ -80,6 +80,49 @@ type MatchData = {
   reasons: string[];
 };
 
+function asStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string");
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [value];
+  }
+  return [];
+}
+
+function parseMatchData(raw: unknown): MatchData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const m = raw as Record<string, unknown>;
+  const score = typeof m.score === "number" && Number.isFinite(m.score) ? m.score : null;
+  if (score == null) return null;
+
+  const bd =
+    m.breakdown && typeof m.breakdown === "object"
+      ? (m.breakdown as Record<string, unknown>)
+      : {};
+
+  const num = (v: unknown, fallback = 0) =>
+    typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+  const reasons = Array.isArray(m.reasons)
+    ? m.reasons.filter((r): r is string => typeof r === "string")
+    : [];
+
+  return {
+    score,
+    breakdown: {
+      skills: num(bd.skills),
+      location: num(bd.location),
+      experience: num(bd.experience),
+      remote: num(bd.remote),
+      overall: num(bd.overall, score),
+    },
+    reasons,
+  };
+}
+
+
+
 function timeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -134,7 +177,10 @@ export default function JobDetailPage() {
   const { t, locale } = useLocale();
   const params = useParams();
   const router = useRouter();
-  const id = params.id as string;
+  const rawParam = params?.id;
+  const id = Array.isArray(rawParam)
+    ? String(rawParam[0] || "")
+    : String(rawParam || "");
 
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -191,22 +237,37 @@ export default function JobDetailPage() {
           return;
         }
         if (data.job) {
+          const j = data.job;
           setJob({
-            ...data.job,
-            requirements: data.job.requirements || [],
-            responsibilities: data.job.responsibilities || [],
-            benefits: data.job.benefits || [],
-            tags: data.job.tags || [],
-            applicantCount: data.job.applicantCount ?? 0,
-            viewCount: data.job.viewCount ?? 0,
+            ...j,
+            title: typeof j.title === "string" ? j.title : "",
+            description: typeof j.description === "string" ? j.description : "",
+            location: typeof j.location === "string" ? j.location : "",
+            type: typeof j.type === "string" ? j.type : "",
+            remote: Boolean(j.remote),
+            requirements: asStringArray(j.requirements),
+            responsibilities: asStringArray(j.responsibilities),
+            benefits: asStringArray(j.benefits),
+            tags: asStringArray(j.tags),
+            applicantCount:
+              typeof j.applicantCount === "number" ? j.applicantCount : 0,
+            viewCount: typeof j.viewCount === "number" ? j.viewCount : 0,
+            company: j.company && typeof j.company === "object" ? j.company : null,
+            category: j.category && typeof j.category === "object" ? j.category : null,
           });
         } else {
           setError(t("JobDetail.notFound", "Job not found"));
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[job-detail] load failed", err);
         if (!cancelled) {
-          setError(t("Common.error", "Failed to load job details"));
+          setError(
+            t(
+              "Common.errorNetwork",
+              "Network error. Please try again.",
+            ),
+          );
         }
       })
       .finally(() => {
@@ -280,8 +341,16 @@ export default function JobDetailPage() {
           return;
         }
         if (data.match) {
-          setMatch(data.match);
-          setMatchMessage("");
+          const parsed = parseMatchData(data.match);
+          if (parsed) {
+            setMatch(parsed);
+            setMatchMessage("");
+          } else {
+            setMatch(null);
+            setMatchMessage(
+              t("Common.error", "Could not load match score"),
+            );
+          }
         } else {
           setMatch(null);
           setMatchMessage(
@@ -610,16 +679,16 @@ export default function JobDetailPage() {
                   <div className="space-y-3">
                     {(
                       [
-                        [t("JobDetail.skills", "Skills"), match.breakdown.skills],
+                        [t("JobDetail.skills", "Skills"), match.breakdown?.skills ?? 0],
                         [
                           t("JobDetail.location", "Location"),
-                          match.breakdown.location,
+                          match.breakdown?.location ?? 0,
                         ],
                         [
                           t("JobDetail.experience", "Experience"),
-                          match.breakdown.experience,
+                          match.breakdown?.experience ?? 0,
                         ],
-                        [t("JobDetail.remote", "Remote"), match.breakdown.remote],
+                        [t("JobDetail.remote", "Remote"), match.breakdown?.remote ?? 0],
                       ] as const
                     ).map(([label, value]) => (
                       <div key={label}>
@@ -637,9 +706,9 @@ export default function JobDetailPage() {
                     ))}
                   </div>
 
-                  {match.reasons.length > 0 && (
+                  {Array.isArray(match.reasons) && match.reasons.length > 0 && (
                     <ul className="mt-2 space-y-1.5">
-                      {match.reasons.map((r) => (
+                      {match.reasons.map((r: string) => (
                         <li
                           key={r}
                           className="text-sm text-slate-300 flex items-start gap-2"
@@ -657,7 +726,7 @@ export default function JobDetailPage() {
                     {matchMessage ||
                       t("Common.error", "Match score unavailable.")}
                   </p>
-                  {matchMessage.toLowerCase().includes("sign in") && (
+                  {(matchMessage || "").toLowerCase().includes("sign in") && (
                     <Link
                       href={`/login?callbackUrl=/jobs/${id}`}
                       className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
@@ -665,7 +734,7 @@ export default function JobDetailPage() {
                       {t("Common.signIn", "Sign in")}
                     </Link>
                   )}
-                  {matchMessage.toLowerCase().includes("profile") && (
+                  {(matchMessage || "").toLowerCase().includes("profile") && (
                     <Link
                       href="/profile"
                       className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
