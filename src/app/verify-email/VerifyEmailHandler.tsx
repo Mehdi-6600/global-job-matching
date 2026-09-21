@@ -1,62 +1,55 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { verifyEmailToken } from "./actions";
+import { useSession } from "next-auth/react";
+import { Loader2 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 
+type Status = "success" | "error" | "missing";
+
 export default function VerifyEmailHandler({
-  token,
-  email,
+  status,
+  errorMessage,
 }: {
-  token?: string;
-  email?: string;
+  status: Status;
+  errorMessage?: string;
 }) {
   const { t } = useLocale();
-  const [status, setStatus] = useState<
-    "loading" | "success" | "error" | "missing"
-  >("loading");
+  const { data: session } = useSession();
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState<null | "ok" | "err">(null);
 
-  useEffect(() => {
-    if (!token || !email) {
-      setStatus("missing");
-      return;
+  const isLoggedIn = Boolean(session?.user?.id);
+
+  async function handleResend() {
+    setResending(true);
+    setResent(null);
+    try {
+      const res = await fetch("/api/auth/verify/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resend" }),
+      });
+      setResent(res.ok ? "ok" : "err");
+    } catch {
+      setResent("err");
+    } finally {
+      setResending(false);
     }
-
-    let cancelled = false;
-
-    verifyEmailToken(token, email).then((result) => {
-      if (!cancelled) {
-        setStatus(result.success ? "success" : "error");
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, email]);
-
-  if (status === "loading") {
-    return (
-      <>
-        <div className="mx-auto w-12 h-12 border-4 border-[var(--glass-border)] border-t-[var(--ios-blue)] rounded-full animate-spin mb-4" />
-        <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-          {t("AuthExtra.verifyTitle", "Verify email")}…
-        </h1>
-      </>
-    );
   }
 
+  /* -------- Missing params -------- */
   if (status === "missing") {
     return (
       <>
         <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-          {t("Common.error", "Invalid Link")}
+          {t("Auth.verifyEmailMissingTitle", "Invalid Link")}
         </h1>
         <p className="text-[var(--text-muted)] mb-6">
           {t(
-            "AuthExtra.verifySubtitle",
-            "The verification link is missing or expired."
+            "Auth.verifyEmailMissingBody",
+            "This verification link is missing required parameters.",
           )}
         </p>
         <Link href="/" className="btn-primary">
@@ -66,6 +59,7 @@ export default function VerifyEmailHandler({
     );
   }
 
+  /* -------- Success -------- */
   if (status === "success") {
     return (
       <>
@@ -75,6 +69,7 @@ export default function VerifyEmailHandler({
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -85,21 +80,28 @@ export default function VerifyEmailHandler({
           </svg>
         </div>
         <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-          {t("Common.success", "Email Verified!")}
+          {t("Auth.verifyEmailSuccessTitle", "Email Verified!")}
         </h1>
         <p className="text-[var(--text-muted)] mb-6">
           {t(
-            "AuthExtra.verifySubtitle",
-            "Your email has been successfully verified."
+            "Auth.verifyEmailSuccessBody",
+            "Your email has been successfully verified.",
           )}
         </p>
-        <Link href="/login" className="btn-primary">
-          {t("Common.signIn", "Sign in")}
-        </Link>
+        {isLoggedIn ? (
+          <Link href="/dashboard" className="btn-primary">
+            {t("Nav.dashboard", "Dashboard")}
+          </Link>
+        ) : (
+          <Link href="/login" className="btn-primary">
+            {t("Common.signIn", "Sign in")}
+          </Link>
+        )}
       </>
     );
   }
 
+  /* -------- Error -------- */
   return (
     <>
       <div className="mx-auto w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
@@ -108,6 +110,7 @@ export default function VerifyEmailHandler({
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -118,17 +121,56 @@ export default function VerifyEmailHandler({
         </svg>
       </div>
       <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-        {t("Common.error", "Verification Failed")}
+        {t("Auth.verifyEmailErrorTitle", "Verification Failed")}
       </h1>
       <p className="text-[var(--text-muted)] mb-6">
-        {t(
-          "AuthExtra.verifySubtitle",
-          "The link is invalid or has expired."
-        )}
+        {errorMessage ||
+          t(
+            "Auth.verifyEmailErrorBody",
+            "The link is invalid or has expired.",
+          )}
       </p>
-      <Link href="/contact" className="btn-primary">
-        {t("Nav.contact", "Contact")}
-      </Link>
+
+      {isLoggedIn ? (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="btn-primary inline-flex items-center gap-2 disabled:opacity-60"
+          >
+            {resending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t("Auth.verifyEmailResending", "Sending...")}
+              </>
+            ) : (
+              t("Auth.verifyEmailResend", "Resend verification email")
+            )}
+          </button>
+
+          {resent === "ok" && (
+            <p className="text-sm text-green-400">
+              {t(
+                "Auth.verifyEmailResent",
+                "Verification email sent. Check your inbox.",
+              )}
+            </p>
+          )}
+          {resent === "err" && (
+            <p className="text-sm text-red-400">
+              {t(
+                "Auth.verifyEmailResendFailed",
+                "Could not send the email. Please try again later.",
+              )}
+            </p>
+          )}
+        </div>
+      ) : (
+        <Link href="/login" className="btn-primary">
+          {t("Common.signIn", "Sign in")}
+        </Link>
+      )}
     </>
   );
 }
