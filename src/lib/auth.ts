@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Adapter } from "next-auth/adapters";
 import { CredentialsSignin } from "next-auth";
@@ -24,6 +25,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   providers: [
+    ...((process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     Credentials({
       name: "Credentials",
       credentials: {
@@ -88,12 +98,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.sub = user.id;
-        token.role = (user as { role?: string }).role;
-        token.sessionVersion =
-          (user as { sessionVersion?: number }).sessionVersion ?? 0;
+        let role = (user as { role?: string }).role;
+        let sessionVersion =
+          (user as { sessionVersion?: number }).sessionVersion;
+
+        // OAuth (Google): adapter user may omit role/sessionVersion — load from DB
+        if (sessionVersion == null || role == null) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: user.id },
+              select: { role: true, sessionVersion: true },
+            });
+            if (dbUser) {
+              role = role ?? dbUser.role;
+              sessionVersion = sessionVersion ?? dbUser.sessionVersion ?? 0;
+            }
+          } catch {
+            /* keep defaults */
+          }
+        }
+
+        token.role = role ?? "JOB_SEEKER";
+        token.sessionVersion = sessionVersion ?? 0;
         delete token.error;
         return token;
       }
