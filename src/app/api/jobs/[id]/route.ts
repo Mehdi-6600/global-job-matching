@@ -17,7 +17,7 @@ const VIEW_COOKIE_MAX_AGE = 60 * 60 * 12; // 12 hours
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: rawId } = await params;
@@ -73,8 +73,33 @@ export async function GET(
     });
 
     if (!allowed) {
-      // Same as missing — avoid leaking existence of drafts to strangers
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      // TEMP DEBUG — will be removed once production is stable.
+      // Return diagnostic info so we can see why access was denied.
+      console.error("[jobs/id] rejected", {
+        jobId: job.id,
+        jobStatus: job.status,
+        postedById: job.postedById,
+        companyOwnerId: job.company?.ownerId ?? null,
+        viewerId,
+        viewerRole,
+      });
+
+      return NextResponse.json(
+        {
+          error: "Not found",
+          debug: {
+            jobId: job.id,
+            jobStatus: job.status,
+            hasPostedBy: Boolean(job.postedById),
+            hasCompanyOwner: Boolean(job.company?.ownerId),
+            viewerId,
+            viewerRole,
+            reason:
+              "Job exists but is not visible to this viewer (status not 'active' and viewer is not owner/admin).",
+          },
+        },
+        { status: 404 },
+      );
     }
 
     const cookieName = `${VIEW_COOKIE_PREFIX}${id}`;
@@ -133,14 +158,14 @@ export async function GET(
     console.error("Job GET error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
@@ -157,13 +182,16 @@ export async function PATCH(
 
     const body = await readJsonBody(req);
     if (body === null) {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 },
+      );
     }
 
     const result = await updateJobForUser(
       { id: session.user.id, role: session.user.role },
       id,
-      body
+      body,
     );
 
     if (!result.ok) {
@@ -175,7 +203,7 @@ export async function PATCH(
           limit: result.limit,
           used: result.used,
         },
-        { status: result.status }
+        { status: result.status },
       );
     }
 
@@ -191,14 +219,14 @@ export async function PATCH(
     console.error("Job PATCH error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
@@ -215,13 +243,13 @@ export async function DELETE(
 
     const result = await deleteJobForUser(
       { id: session.user.id, role: session.user.role },
-      id
+      id,
     );
 
     if (!result.ok) {
       return NextResponse.json(
         { error: result.error },
-        { status: result.status }
+        { status: result.status },
       );
     }
 
@@ -230,7 +258,7 @@ export async function DELETE(
     console.error("Job DELETE error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
