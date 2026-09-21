@@ -365,11 +365,27 @@ export default function HomePage() {
               {t("Home.eyebrow", "GLOBAL CAREER PLATFORM")}
             </div>
 
-            <h1>
-              {t(
-                "Home.title",
-                "Find Your Next Opportunity. Anywhere in the World."
-              )}
+            <h1 className="gjm-hero-title">
+              {(() => {
+                const full = t(
+                  "Home.title",
+                  "Find Your Next Opportunity. Anywhere in the World."
+                );
+                const i = full.indexOf(". ");
+                if (i > 0 && i < full.length - 2) {
+                  return (
+                    <>
+                      <span className="gjm-hero-title-line">
+                        {full.slice(0, i + 1)}
+                      </span>
+                      <span className="gjm-hero-title-line accent">
+                        {full.slice(i + 2)}
+                      </span>
+                    </>
+                  );
+                }
+                return full;
+              })()}
             </h1>
 
             <p className="gjm-hero-description">
