@@ -20,12 +20,13 @@ type Props = {
 export function ContactEmployer({ jobId, jobTitle }: Props) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState(
-    t(
-      "JobDetail.contactDefault",
-      `I am very interested in the "${jobTitle}" position and would welcome the chance to discuss how my background fits your team.\n\nThank you for your time.`
-    ).replace("{title}", jobTitle)
-  );
+
+  const defaultMessage = t(
+    "JobDetail.contactDefault",
+    'I am very interested in the "{title}" position and would welcome the chance to discuss how my background fits your team.\n\nThank you for your time.',
+  ).split("{title}").join(jobTitle);
+
+  const [message, setMessage] = useState(defaultMessage);
   const [subject, setSubject] = useState("");
   const [loading, setLoading] = useState<"draft" | "send" | null>(null);
   const [error, setError] = useState("");
@@ -63,8 +64,12 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
         setError(
           typeof data.error === "string"
             ? data.error
-            : t("Common.error", "Request failed")
+            : t("Common.error", "Request failed"),
         );
+        // If server returned a fallback draft (422 / 502), surface it.
+        if (typeof data.draft === "string") {
+          setDraft(data.draft);
+        }
         return;
       }
 
@@ -74,12 +79,15 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
             ? data.draft
             : typeof data.message === "string"
               ? data.message
-              : message
+              : message,
         );
         setSuccess(t("Common.success", "Draft ready"));
       } else {
         setSuccess(
-          t("Common.success", "Message sent (or queued for the employer)")
+          t(
+            "JobDetail.contactSent",
+            "Message sent to the employer.",
+          ),
         );
         setConfirmSend(false);
       }
@@ -115,10 +123,14 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
       {open && (
         <div className="mt-4 glass rounded-2xl border border-white/10 p-5 space-y-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1.5">
+            <label
+              htmlFor="contact-subject"
+              className="block text-xs text-slate-400 mb-1.5"
+            >
               {t("Contact.subject", "Subject (optional)")}
             </label>
             <input
+              id="contact-subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50"
@@ -127,10 +139,14 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400 mb-1.5">
+            <label
+              htmlFor="contact-message"
+              className="block text-xs text-slate-400 mb-1.5"
+            >
               {t("Contact.message", "Message")}
             </label>
             <textarea
+              id="contact-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
@@ -185,7 +201,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
             <span>
               {t(
                 "JobDetail.contactConfirm",
-                "I confirm I want to send this message to the employer (not only a draft)."
+                "I confirm I want to send this message to the employer (not only a draft).",
               )}
             </span>
           </label>
