@@ -5,6 +5,11 @@ import { ROLES } from "@/lib/roles";
  * Edge-compatible auth config for middleware only.
  * Full credentials + sessionVersion checks live in src/lib/auth.ts (Node).
  * Middleware trusts JWT claims; server routes re-validate via jwt callback.
+ *
+ * IMPORTANT: session.maxAge and session.updateAge MUST stay in sync with
+ * src/lib/auth.ts. Both define the effective session lifetime and refresh
+ * interval; a mismatch creates inconsistent behavior between middleware
+ * (edge) and API routes (Node).
  */
 export const authConfig = {
   pages: {
@@ -57,6 +62,7 @@ export const authConfig = {
         }
         const loginUrl = new URL("/login", request.nextUrl);
         loginUrl.searchParams.set("callbackUrl", pathname);
+        loginUrl.searchParams.set("error", "SessionExpired");
         return Response.redirect(loginUrl);
       }
 
@@ -132,6 +138,7 @@ export const authConfig = {
   session: {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60,
-    updateAge: 60,
+    // 15 minutes — see auth.ts for rationale.
+    updateAge: 15 * 60,
   },
 } satisfies NextAuthConfig;
