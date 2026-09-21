@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { LocaleProvider } from "@/components/locale-provider";
+import { SessionGuard } from "@/components/session-guard";
 
 const AnalyticsTracker = dynamic(
   () =>
@@ -18,6 +19,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       refetchInterval={5 * 60}
       refetchOnWindowFocus={false}
     >
+      <SessionGuard />
+
       <ThemeProvider
         attribute="class"
         defaultTheme="light"
