@@ -428,7 +428,11 @@
     "notFound": "Profil nicht gefunden",
     "planTitle": "Aktueller Tarif",
     "paymentHistory": "Zahlungsverlauf",
-    "noPayments": "Noch keine Zahlungen."
+    "noPayments": "Noch keine Zahlungen.",
+    "resumeUploaded": "Lebenslauf erfolgreich hochgeladen.",
+    "resumeDeleteConfirm": "Möchtest du deinen Lebenslauf wirklich entfernen?",
+    "resumeRemoved": "Lebenslauf entfernt.",
+    "removeResume": "Lebenslauf entfernen"
   },
   "CareerRisk": {
     "title": "KI-Karriererisiko",
@@ -536,7 +540,7 @@
       "entry": "Einstiegsebene",
       "mid": "Mittlere Ebene",
       "senior": "Senior-Ebene",
-      "lead": "Lead / Manager",
+      "lead": "Leitung / Manager",
       "executive": "Führungsebene"
     },
     "tag": "Tag",
@@ -558,7 +562,9 @@
     "category": "Kategorie",
     "noJobs": "Keine Jobs gefunden",
     "pending": "Ausstehend",
-    "salaryNA": "Gehalt nicht angegeben"
+    "salaryNA": "Gehalt nicht angegeben",
+    "loadErrorTitle": "Jobs konnten nicht geladen werden",
+    "loadErrorBody": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
   },
   "Applications": {
     "title": "Meine Bewerbungen",
@@ -688,7 +694,20 @@
     "school": "Schule / Universität",
     "degree": "Abschluss",
     "year": "Jahr",
-    "role": "Rolle"
+    "role": "Rolle",
+    "loading": "Profil wird geladen...",
+    "saved": "Profil gespeichert",
+    "anonymous": "Anonym",
+    "name": "Vollständiger Name",
+    "headline": "Berufsbezeichnung / Titel",
+    "location": "Standort",
+    "bioEmpty": "Noch keine Bio.",
+    "linksEmpty": "Noch keine Links hinzugefügt.",
+    "skillsEmpty": "Noch keine Fähigkeiten hinzugefügt.",
+    "removeSkill": "Fähigkeit entfernen",
+    "experiencePlaceholder": "Rollen, Jahre, Erfolge",
+    "experienceEmpty": "Noch keine Erfahrung hinzugefügt.",
+    "educationPlaceholder": "Details zu deiner Ausbildung"
   },
   "Blog": {
     "title": "Karriere-Blog",
