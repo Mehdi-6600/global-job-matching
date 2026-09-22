@@ -558,7 +558,8 @@
     "category": "श्रेणी",
     "noJobs": "कोई नौकरी नहीं मिली",
     "pending": "लंबित",
-    "salaryNA": "वेतन निर्दिष्ट नहीं"
+    "salaryNA": "वेतन निर्दिष्ट नहीं",
+    "loadErrorTitle": "नौकरियाँ लोड नहीं हो सकीं"
   },
   "Applications": {
     "title": "मेरे आवेदन",
@@ -624,7 +625,10 @@
     "toneConfident": "आत्मविश्वासी",
     "toneConcise": "संक्षिप्त",
     "saveToProfile": "प्रोफ़ाइल में नोट सहेजें",
-    "previewEmpty": "आपका बनाया गया रेज़्यूमे यहाँ दिखेगा"
+    "previewEmpty": "आपका बनाया गया रेज़्यूमे यहाँ दिखेगा",
+    "printTitle": "रेज़्यूमे",
+    "sourceAi": "AI",
+    "sourceTemplate": "टेम्पलेट"
   },
   "Employer": {
     "title": "नियोक्ता डैशबोर्ड",
@@ -755,7 +759,27 @@
     "contactEmployer": "नियोक्ता से संपर्क करें",
     "remote": "रिमोट",
     "salaryNA": "वेतन निर्दिष्ट नहीं",
-    "loginToApply": "आवेदन करने के लिए साइन इन करें"
+    "loginToApply": "आवेदन करने के लिए साइन इन करें",
+    "deadline": "अंतिम तिथि",
+    "responsibilities": "जिम्मेदारियाँ",
+    "matchScoreTitle": "आपका मैच स्कोर",
+    "overallFit": "कुल फिट",
+    "skills": "कौशल",
+    "experience": "अनुभव",
+    "stats": "{views} बार देखा गया · {applicants} आवेदक",
+    "coverLetterLabel": "कवर लेटर (वैकल्पिक)",
+    "coverLetterPlaceholder": "बताएँ कि आप इस भूमिका के लिए क्यों उपयुक्त हैं...",
+    "applySuccessBody": "आपका आवेदन सफलतापूर्वक भेज दिया गया है।",
+    "contactDefault": "मुझे \"{title}\" पद में बहुत रुचि है और मैं यह चर्चा करने का अवसर चाहूँगा कि मेरी पृष्ठभूमि आपकी टीम से कैसे मेल खाती है।\n\nआपके समय के लिए धन्यवाद।",
+    "contactConfirm": "मैं पुष्टि करता/करती हूँ कि मैं यह संदेश नियोक्ता को भेजना चाहता/चाहती हूँ (केवल ड्राफ़्ट नहीं)।",
+    "contactSent": "संदेश नियोक्ता को भेज दिया गया।",
+    "contactDraftReady": "ड्राफ़्ट तैयार",
+    "contactSubject": "विषय (वैकल्पिक)",
+    "contactMessage": "संदेश",
+    "contactDraft": "ड्राफ़्ट",
+    "contactGenerateDraft": "ड्राफ़्ट बनाएँ",
+    "contactCopy": "कॉपी",
+    "contactSend": "भेजें"
   },
   "Companies": {
     "title": "कंपनियाँ",
