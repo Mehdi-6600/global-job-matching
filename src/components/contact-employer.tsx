@@ -11,6 +11,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 type Props = {
   jobId: string;
@@ -53,7 +54,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (res.status === 401) {
         window.location.href = `/login?callbackUrl=/jobs/${jobId}`;
@@ -61,12 +62,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
       }
 
       if (!res.ok) {
-        setError(
-          typeof data.error === "string"
-            ? data.error
-            : t("Common.error", "Request failed"),
-        );
-        // If server returned a fallback draft (422 / 502), surface it.
+        setError(messageFromApiError(res.status, data, t));
         if (typeof data.draft === "string") {
           setDraft(data.draft);
         }
@@ -81,13 +77,10 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               ? data.message
               : message,
         );
-        setSuccess(t("Common.success", "Draft ready"));
+        setSuccess(t("JobDetail.contactDraftReady", "Draft ready"));
       } else {
         setSuccess(
-          t(
-            "JobDetail.contactSent",
-            "Message sent to the employer.",
-          ),
+          t("JobDetail.contactSent", "Message sent to the employer."),
         );
         setConfirmSend(false);
       }
@@ -127,7 +120,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               htmlFor="contact-subject"
               className="block text-xs text-slate-400 mb-1.5"
             >
-              {t("Contact.subject", "Subject (optional)")}
+              {t("JobDetail.contactSubject", "Subject (optional)")}
             </label>
             <input
               id="contact-subject"
@@ -143,7 +136,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               htmlFor="contact-message"
               className="block text-xs text-slate-400 mb-1.5"
             >
-              {t("Contact.message", "Message")}
+              {t("JobDetail.contactMessage", "Message")}
             </label>
             <textarea
               id="contact-message"
@@ -172,7 +165,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className="text-xs text-slate-400 flex items-center gap-1">
                   <FileText className="w-3.5 h-3.5" />
-                  {t("Common.view", "Draft")}
+                  {t("JobDetail.contactDraft", "Draft")}
                 </span>
                 <button
                   type="button"
@@ -181,8 +174,8 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
                 >
                   <Copy className="w-3.5 h-3.5" />
                   {copied
-                    ? t("Common.success", "Copied")
-                    : t("Common.save", "Copy")}
+                    ? t("Common.copied", "Copied")
+                    : t("JobDetail.contactCopy", "Copy")}
                 </button>
               </div>
               <pre className="text-xs text-slate-300 whitespace-pre-wrap font-sans">
@@ -218,7 +211,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               ) : (
                 <FileText className="w-4 h-4" />
               )}
-              {t("Common.view", "Generate draft")}
+              {t("JobDetail.contactGenerateDraft", "Generate draft")}
             </button>
             <button
               type="button"
@@ -231,7 +224,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               ) : (
                 <Send className="w-4 h-4" />
               )}
-              {t("Common.submit", "Send")}
+              {t("JobDetail.contactSend", "Send")}
             </button>
           </div>
         </div>
