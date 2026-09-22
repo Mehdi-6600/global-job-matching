@@ -428,7 +428,11 @@
     "notFound": "الملف الشخصي غير موجود",
     "planTitle": "الخطة الحالية",
     "paymentHistory": "سجل المدفوعات",
-    "noPayments": "لا توجد مدفوعات بعد."
+    "noPayments": "لا توجد مدفوعات بعد.",
+    "resumeUploaded": "تم رفع السيرة الذاتية بنجاح.",
+    "resumeDeleteConfirm": "هل أنت متأكد من رغبتك في حذف سيرتك الذاتية؟",
+    "resumeRemoved": "تم حذف السيرة الذاتية.",
+    "removeResume": "حذف السيرة الذاتية"
   },
   "CareerRisk": {
     "title": "مخاطر المسار المهني بالذكاء الاصطناعي",
@@ -558,7 +562,9 @@
     "category": "الفئة",
     "noJobs": "لم يتم العثور على وظائف",
     "pending": "قيد الانتظار",
-    "salaryNA": "الراتب غير محدد"
+    "salaryNA": "الراتب غير محدد",
+    "loadErrorTitle": "تعذّر تحميل الوظائف",
+    "loadErrorBody": "حدث خطأ ما. يرجى المحاولة مجددًا."
   },
   "Applications": {
     "title": "طلباتي",
@@ -688,7 +694,20 @@
     "school": "المدرسة / الجامعة",
     "degree": "الدرجة العلمية",
     "year": "السنة",
-    "role": "الدور"
+    "role": "الدور",
+    "loading": "جارٍ تحميل الملف الشخصي...",
+    "saved": "تم حفظ الملف الشخصي",
+    "anonymous": "مجهول",
+    "name": "الاسم الكامل",
+    "headline": "المسمى / العنوان",
+    "location": "الموقع",
+    "bioEmpty": "لا توجد نبذة بعد.",
+    "linksEmpty": "لم تُضف روابط بعد.",
+    "skillsEmpty": "لم تُضف مهارات بعد.",
+    "removeSkill": "إزالة المهارة",
+    "experiencePlaceholder": "الأدوار، السنوات، الإنجازات",
+    "experienceEmpty": "لم تُضف خبرة بعد.",
+    "educationPlaceholder": "تفاصيل تعليمك"
   },
   "Blog": {
     "title": "مدونة المسار المهني",
