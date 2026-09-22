@@ -9,9 +9,11 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+type VerifyErrorCode = "INVALID" | "EXPIRED" | "UNKNOWN";
+
 type VerifyResult =
   | { status: "success" }
-  | { status: "error"; message: string }
+  | { status: "error"; errorCode: VerifyErrorCode }
   | { status: "missing" };
 
 async function tryVerify(
@@ -27,13 +29,10 @@ async function tryVerify(
     if (result.ok) {
       return { status: "success" };
     }
-    return { status: "error", message: result.error };
+    return { status: "error", errorCode: result.errorCode };
   } catch (err) {
     console.error("[verify-email page] consume failed:", err);
-    return {
-      status: "error",
-      message: "Something went wrong while verifying your email.",
-    };
+    return { status: "error", errorCode: "UNKNOWN" };
   }
 }
 
@@ -50,9 +49,7 @@ export default async function VerifyEmailPage({
       <div className="max-w-md w-full glass-card p-8 text-center">
         <VerifyEmailHandler
           status={result.status}
-          errorMessage={
-            result.status === "error" ? result.message : undefined
-          }
+          errorCode={result.status === "error" ? result.errorCode : undefined}
         />
       </div>
     </main>
