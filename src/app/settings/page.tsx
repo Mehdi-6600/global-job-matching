@@ -22,6 +22,7 @@ import {
 import { PlanUsageCard } from "@/components/plan-usage-card";
 import { PaymentHistoryCard } from "@/components/payment-history-card";
 import { useLocale } from "@/components/locale-provider";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 interface Profile {
   id: string;
@@ -74,29 +75,59 @@ export default function SettingsPage() {
           }
           return null;
         }
-        return res.json();
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return null;
+        if (!res.ok) {
+          setError(messageFromApiError(res.status, data, t));
+          setLoading(false);
+          return null;
+        }
+        return data as {
+          profile?: {
+            id: string;
+            email: string;
+            name: string | null;
+            title: string | null;
+            bio: string | null;
+            location: string | null;
+            phone: string | null;
+            avatar?: string | null;
+            role: string;
+            resumeUrl: string | null;
+          };
+        };
       })
       .then((data) => {
-        if (cancelled || !data) return;
-        if (data.profile) {
-          setProfile(data.profile);
-          setForm({
-            name: data.profile.name || "",
-            title: data.profile.title || "",
-            bio: data.profile.bio || "",
-            location: data.profile.location || "",
-            phone: data.profile.phone || "",
-          });
-        } else {
-          setError(
-            data.error || t("Settings.loadError", "Failed to load profile")
-          );
-        }
+        if (cancelled || !data?.profile) return;
+        setProfile({
+          id: data.profile.id,
+          email: data.profile.email,
+          name: data.profile.name,
+          title: data.profile.title,
+          bio: data.profile.bio,
+          location: data.profile.location,
+          phone: data.profile.phone,
+          avatar: data.profile.avatar ?? null,
+          role: data.profile.role,
+          resumeUrl: data.profile.resumeUrl,
+        });
+        setForm({
+          name: data.profile.name || "",
+          title: data.profile.title || "",
+          bio: data.profile.bio || "",
+          location: data.profile.location || "",
+          phone: data.profile.phone || "",
+        });
         setLoading(false);
       })
       .catch(() => {
         if (!cancelled) {
-          setError(t("Settings.loadError", "Failed to load profile"));
+          setError(
+            t(
+              "Common.errorNetwork",
+              "Network error. Please try again.",
+            ),
+          );
           setLoading(false);
         }
       });
@@ -113,10 +144,11 @@ export default function SettingsPage() {
   }, [unauthorized, router]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setSuccess(false);
+    setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,19 +164,21 @@ export default function SettingsPage() {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || t("Common.error", "Something went wrong"));
+        setError(messageFromApiError(res.status, data, t));
         setSaving(false);
         return;
       }
 
-      setProfile(data.profile);
+      if (data.profile) setProfile(data.profile);
       setSuccess(true);
       setSaving(false);
     } catch {
-      setError(t("Auth.errors.network", "Network error. Please try again."));
+      setError(
+        t("Common.errorNetwork", "Network error. Please try again."),
+      );
       setSaving(false);
     }
   };
@@ -155,16 +189,18 @@ export default function SettingsPage() {
     setError("");
     setResumeUploading(true);
 
+    const formEl = e.currentTarget;
+
     try {
-      const formData = new FormData(e.currentTarget);
+      const formData = new FormData(formEl);
       const res = await fetch("/api/profile/resume", {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || t("Common.error", "Something went wrong"));
+        setError(messageFromApiError(res.status, data, t));
         setResumeUploading(false);
         return;
       }
@@ -174,33 +210,56 @@ export default function SettingsPage() {
           ? {
               ...prev,
               resumeUrl:
-                data.resumeUrl || data.profile?.resumeUrl || prev.resumeUrl,
+                data.resumeUrl ||
+                data.profile?.resumeUrl ||
+                prev.resumeUrl,
             }
-          : prev
+          : prev,
       );
-      setResumeMessage(t("Settings.saved", "Profile saved"));
+      setResumeMessage(
+        t("Settings.resumeUploaded", "Resume uploaded successfully."),
+      );
       setResumeUploading(false);
-      e.currentTarget.reset();
+      formEl.reset();
     } catch {
-      setError(t("Common.error", "Something went wrong"));
+      setError(
+        t(
+          "Common.errorNetwork",
+          "Network error. Please try again.",
+        ),
+      );
       setResumeUploading(false);
     }
   };
 
   const handleResumeDelete = async () => {
-    if (!confirm(t("Settings.remove", "Remove") + "?")) return;
+    const confirmed = window.confirm(
+      t(
+        "Settings.resumeDeleteConfirm",
+        "Are you sure you want to remove your resume?",
+      ),
+    );
+    if (!confirmed) return;
     setError("");
+    setResumeMessage("");
     try {
       const res = await fetch("/api/profile/resume", { method: "DELETE" });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || t("Common.error", "Something went wrong"));
+        setError(messageFromApiError(res.status, data, t));
         return;
       }
       setProfile((prev) => (prev ? { ...prev, resumeUrl: null } : prev));
-      setResumeMessage(t("Settings.remove", "Remove"));
+      setResumeMessage(
+        t("Settings.resumeRemoved", "Resume removed."),
+      );
     } catch {
-      setError(t("Common.error", "Something went wrong"));
+      setError(
+        t(
+          "Common.errorNetwork",
+          "Network error. Please try again.",
+        ),
+      );
     }
   };
 
@@ -211,7 +270,7 @@ export default function SettingsPage() {
           <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
           {unauthorized && (
             <p className="text-slate-400 text-sm mt-3">
-              {t("Common.loading", "Redirecting to sign in...")}
+              {t("Common.loading", "Loading...")}
             </p>
           )}
         </div>
@@ -227,7 +286,10 @@ export default function SettingsPage() {
           <p className="text-slate-300">
             {error || t("Settings.notFound", "Profile not found")}
           </p>
-          <Link href="/login" className="text-cyan-400 hover:underline text-sm">
+          <Link
+            href="/login"
+            className="text-cyan-400 hover:underline text-sm"
+          >
             {t("Common.signIn", "Sign in")}
           </Link>
         </div>
@@ -244,6 +306,7 @@ export default function SettingsPage() {
           <Link
             href="/dashboard"
             className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white"
+            aria-label={t("Common.back", "Back")}
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
@@ -255,7 +318,7 @@ export default function SettingsPage() {
             <p className="text-slate-400 text-sm">
               {t(
                 "Settings.subtitle",
-                "Manage your profile, plan, and resume"
+                "Manage your profile, plan, and resume",
               )}
             </p>
           </div>
@@ -293,11 +356,15 @@ export default function SettingsPage() {
           </h2>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-1.5">
+            <label
+              htmlFor="settings-email"
+              className="block text-sm text-slate-300 mb-1.5"
+            >
               <Mail className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.email", "Email")}
             </label>
             <input
+              id="settings-email"
               type="email"
               value={profile.email || ""}
               disabled
@@ -306,10 +373,14 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-1.5">
+            <label
+              htmlFor="settings-name"
+              className="block text-sm text-slate-300 mb-1.5"
+            >
               {t("Settings.name", "Name")}
             </label>
             <input
+              id="settings-name"
               name="name"
               value={form.name}
               onChange={handleChange}
@@ -318,11 +389,15 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-1.5">
+            <label
+              htmlFor="settings-title"
+              className="block text-sm text-slate-300 mb-1.5"
+            >
               <Briefcase className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.headline", "Title / Skills headline")}
             </label>
             <input
+              id="settings-title"
               name="title"
               value={form.title}
               onChange={handleChange}
@@ -331,10 +406,14 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-1.5">
+            <label
+              htmlFor="settings-bio"
+              className="block text-sm text-slate-300 mb-1.5"
+            >
               {t("Settings.bio", "Bio")}
             </label>
             <textarea
+              id="settings-bio"
               name="bio"
               value={form.bio}
               onChange={handleChange}
@@ -344,11 +423,15 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-1.5">
+            <label
+              htmlFor="settings-location"
+              className="block text-sm text-slate-300 mb-1.5"
+            >
               <MapPin className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.location", "Location")}
             </label>
             <input
+              id="settings-location"
               name="location"
               value={form.location}
               onChange={handleChange}
@@ -357,11 +440,15 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-1.5">
+            <label
+              htmlFor="settings-phone"
+              className="block text-sm text-slate-300 mb-1.5"
+            >
               <Phone className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.phone", "Phone")}
             </label>
             <input
+              id="settings-phone"
               name="phone"
               value={form.phone}
               onChange={handleChange}
@@ -415,7 +502,8 @@ export default function SettingsPage() {
                 type="button"
                 onClick={handleResumeDelete}
                 className="p-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/20"
-                title={t("Settings.remove", "Remove")}
+                title={t("Settings.removeResume", "Remove resume")}
+                aria-label={t("Settings.removeResume", "Remove resume")}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -428,6 +516,7 @@ export default function SettingsPage() {
                   name="resume"
                   accept=".pdf,application/pdf"
                   required
+                  aria-label={t("Settings.uploadResume", "Upload resume")}
                   className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300"
                 />
                 <p className="text-xs text-slate-500 mt-3">
@@ -448,11 +537,15 @@ export default function SettingsPage() {
 
           {profile.resumeUrl && (
             <form onSubmit={handleResumeUpload} className="pt-2">
-              <label className="block text-xs text-slate-400 mb-2">
+              <label
+                htmlFor="settings-replace-resume"
+                className="block text-xs text-slate-400 mb-2"
+              >
                 {t("Settings.replacePdf", "Replace with a new PDF")}
               </label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
+                  id="settings-replace-resume"
                   type="file"
                   name="resume"
                   accept=".pdf,application/pdf"
