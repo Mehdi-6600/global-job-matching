@@ -14,9 +14,9 @@ import {
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { neutralizeInstructionish } from "@/lib/ai-sanitize";
 import { strictAiLimit } from "@/lib/safe-ratelimit";
+import { normalizeCareerLocale } from "@/lib/career-risk";
 import {
-  buildResumeSystemPrompt,
-  buildResumeUserPrompt,
+  buildResumePrompts,
   isWeakResumeOutput,
   looksHallucinated,
   normalizeTone,
@@ -85,6 +85,10 @@ const schema = z.object({
     .enum(["professional", "confident", "concise"])
     .optional()
     .default("professional"),
+  locale: z
+    .enum(["en", "fa", "ar", "es", "fr", "de", "hi"])
+    .optional()
+    .default("en"),
   saveToProfile: z.boolean().optional().default(false),
 });
 
@@ -135,6 +139,7 @@ function sanitizePayload(input: z.infer<typeof schema>): {
   skills: string;
   languages: string;
   tone: ReturnType<typeof normalizeTone>;
+  locale: ReturnType<typeof normalizeCareerLocale>;
   saveToProfile: boolean;
 } {
   return {
@@ -167,6 +172,7 @@ function sanitizePayload(input: z.infer<typeof schema>): {
       MAX_LANGUAGES,
     ),
     tone: normalizeTone(input.tone),
+    locale: normalizeCareerLocale(input.locale),
     saveToProfile: Boolean(input.saveToProfile),
   };
 }
@@ -225,6 +231,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = sanitizePayload(parsed.data);
+    const locale = data.locale;
 
     /* -------- پلن -------- */
     let effectivePlan = "free";
@@ -276,8 +283,14 @@ export async function POST(req: NextRequest) {
     }
 
     /* -------- تلاش برای فراخوانی AI -------- */
-    const systemPrompt = buildResumeSystemPrompt(data.tone);
-    const userPrompt = buildResumeUserPrompt(data);
+    // System prompt + user prompt هر دو locale-aware هستند. System
+    // prompt از همان section headings استفاده می‌کند که offline
+    // writer استفاده می‌کند (single source of truth).
+    const { system: systemPrompt, user: userPrompt } = buildResumePrompts(
+      data.tone,
+      data,
+      locale,
+    );
 
     let text: string | null = null;
     let source: "ai" | "template" = "template";
@@ -305,9 +318,11 @@ export async function POST(req: NextRequest) {
         const scrubbed = scrubResumeText(aiText);
 
         // فقط اگر خروجی ضعیف یا توهم‌آمیز نباشد، آن را می‌پذیریم.
+        // هر دو validator حالا locale-aware هستند: برای fa/ar/hi طول
+        // کمتری لازم است و script چک می‌شود.
         if (
-          !isWeakResumeOutput(scrubbed) &&
-          !looksHallucinated(scrubbed, data)
+          !isWeakResumeOutput(scrubbed, locale) &&
+          !looksHallucinated(scrubbed, data, locale)
         ) {
           text = scrubbed;
           source = "ai";
@@ -315,11 +330,13 @@ export async function POST(req: NextRequest) {
             provider: meta.provider,
             model: meta.model,
             latencyMs: meta.latencyMs,
+            locale,
           });
         } else {
           console.error("Resume AI rejected (weak/hallucination)", {
             provider: meta.provider,
             model: meta.model,
+            locale,
           });
         }
       }
@@ -333,7 +350,25 @@ export async function POST(req: NextRequest) {
       // AI نتیجه نداد → سهمیه‌ی رزروشده را آزاد کن و از قالب استفاده کن.
       await safeReleaseUsage(reservedUserId, reservedEventId);
       reservedEventId = null;
-      text = buildTemplateResume(data);
+      text = buildTemplateResume({
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone,
+        location: data.location,
+        targetRole: data.targetRole,
+        summary: data.summary,
+        experience: data.experience,
+        education: data.education,
+        skills: data.skills,
+        languages: data.languages,
+        // NOTE: `buildTemplateResume` is the backwards-compatible wrapper
+        // around `buildResume` and only accepts the subset of fields
+        // shown above. Locale is passed through `writer.ts` via the
+        // wrapper's internal default (en). Offline fallback in this
+        // route intentionally keeps `source: "template"` — the full
+        // locale-aware fallback would require extending the wrapper,
+        // which is out of scope for this phase.
+      });
       source = "template";
     }
 
@@ -376,6 +411,7 @@ export async function POST(req: NextRequest) {
       success: true,
       resume: text,
       source,
+      locale,
       profileSaved,
       message: profileSaved
         ? "Resume ready. Profile notes updated."
