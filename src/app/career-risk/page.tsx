@@ -347,7 +347,6 @@ export default function CareerRiskPage() {
 
   const analysisContext = useMemo(
     () => ({
-      // Standalone: form job title is enough when no prior risk analysis
       jobTitle: (analysis?.jobTitle || jobTitle).trim(),
       skillsToBuild: analysis?.skillsToBuild || [],
       reasons: analysis?.reasons || [],
@@ -645,7 +644,6 @@ export default function CareerRiskPage() {
       : t("CareerRisk.sourceAi", "AI analysis");
   }, [analysis, t]);
 
-  // Each tool is independent — only a job title is required (auth on click).
   const canSecondary = jobTitle.trim().length >= 2 && !loading;
 
   /* -------- Render -------- */
@@ -853,6 +851,7 @@ export default function CareerRiskPage() {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
             role="dialog"
             aria-modal="true"
+            aria-label={t("CareerRisk.authTitle", "Sign in to continue")}
           >
             <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-xl">
               <div className="flex justify-between items-start mb-4">
@@ -863,7 +862,7 @@ export default function CareerRiskPage() {
                   type="button"
                   onClick={() => setShowAuthGate(false)}
                   className="text-slate-400 hover:text-white"
-                  aria-label="Close"
+                  aria-label={t("Common.close", "Close")}
                 >
                   <X className="w-5 h-5" />
                 </button>
