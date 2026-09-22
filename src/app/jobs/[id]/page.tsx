@@ -123,19 +123,15 @@ function parseMatchData(raw: unknown): MatchData | null {
   };
 }
 
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 30) return `${Math.floor(days / 30)} months ago`;
-  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  return "Just now";
+function interpolate(
+  template: string,
+  replacements: Record<string, string | number>,
+): string {
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.split(`{${key}}`).join(String(value));
+  }
+  return result;
 }
 
 function formatSalary(
@@ -202,6 +198,45 @@ export default function JobDetailPage() {
   const [match, setMatch] = useState<MatchData | null>(null);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchMessage, setMatchMessage] = useState("");
+
+  /* -------------------------------------------------------------- */
+  /* Relative time (localized)                                      */
+  /* -------------------------------------------------------------- */
+  const timeAgo = useCallback(
+    (dateString: string): string => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      const months = Math.floor(days / 30);
+
+      if (months > 0) {
+        return interpolate(t("Common.timeAgo.months", "{count} months ago"), {
+          count: months,
+        });
+      }
+      if (days > 0) {
+        return interpolate(t("Common.timeAgo.days", "{count} days ago"), {
+          count: days,
+        });
+      }
+      if (hours > 0) {
+        return interpolate(t("Common.timeAgo.hours", "{count} hours ago"), {
+          count: hours,
+        });
+      }
+      if (minutes > 0) {
+        return interpolate(
+          t("Common.timeAgo.minutes", "{count} minutes ago"),
+          { count: minutes },
+        );
+      }
+      return t("Common.timeAgo.justNow", "Just now");
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
