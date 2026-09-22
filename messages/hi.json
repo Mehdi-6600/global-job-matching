@@ -428,7 +428,11 @@
     "notFound": "प्रोफ़ाइल नहीं मिली",
     "planTitle": "वर्तमान प्लान",
     "paymentHistory": "भुगतान इतिहास",
-    "noPayments": "अभी कोई भुगतान नहीं।"
+    "noPayments": "अभी कोई भुगतान नहीं।",
+    "resumeUploaded": "रेज़्यूमे सफलतापूर्वक अपलोड किया गया।",
+    "resumeDeleteConfirm": "क्या आप वाकई अपना रेज़्यूमे हटाना चाहते हैं?",
+    "resumeRemoved": "रेज़्यूमे हटा दिया गया।",
+    "removeResume": "रेज़्यूमे हटाएँ"
   },
   "CareerRisk": {
     "title": "AI करियर जोखिम",
@@ -559,7 +563,8 @@
     "noJobs": "कोई नौकरी नहीं मिली",
     "pending": "लंबित",
     "salaryNA": "वेतन निर्दिष्ट नहीं",
-    "loadErrorTitle": "नौकरियाँ लोड नहीं हो सकीं"
+    "loadErrorTitle": "नौकरियाँ लोड नहीं हो सकीं",
+    "loadErrorBody": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
   },
   "Applications": {
     "title": "मेरे आवेदन",
@@ -689,7 +694,20 @@
     "school": "स्कूल / विश्वविद्यालय",
     "degree": "डिग्री",
     "year": "वर्ष",
-    "role": "भूमिका"
+    "role": "भूमिका",
+    "loading": "प्रोफ़ाइल लोड हो रही है...",
+    "saved": "प्रोफ़ाइल सहेजी गई",
+    "anonymous": "अज्ञात",
+    "name": "पूरा नाम",
+    "headline": "पद शीर्षक / शीर्षक",
+    "location": "स्थान",
+    "bioEmpty": "अभी कोई परिचय नहीं।",
+    "linksEmpty": "अभी कोई लिंक नहीं जोड़ा गया।",
+    "skillsEmpty": "अभी कोई कौशल नहीं जोड़ा गया।",
+    "removeSkill": "कौशल हटाएँ",
+    "experiencePlaceholder": "भूमिकाएँ, वर्ष, उपलब्धियाँ",
+    "experienceEmpty": "अभी कोई अनुभव नहीं जोड़ा गया।",
+    "educationPlaceholder": "आपकी शिक्षा का विवरण"
   },
   "Blog": {
     "title": "करियर ब्लॉग",
