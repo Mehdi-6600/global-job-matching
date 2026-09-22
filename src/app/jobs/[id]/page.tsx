@@ -31,6 +31,7 @@ import {
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
 import { JobMatchBadge } from "@/components/jobs/job-match-badge";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 interface JobDetail {
   id: string;
@@ -93,7 +94,8 @@ function asStringArray(value: unknown): string[] {
 function parseMatchData(raw: unknown): MatchData | null {
   if (!raw || typeof raw !== "object") return null;
   const m = raw as Record<string, unknown>;
-  const score = typeof m.score === "number" && Number.isFinite(m.score) ? m.score : null;
+  const score =
+    typeof m.score === "number" && Number.isFinite(m.score) ? m.score : null;
   if (score == null) return null;
 
   const bd =
@@ -120,8 +122,6 @@ function parseMatchData(raw: unknown): MatchData | null {
     reasons,
   };
 }
-
-
 
 function timeAgo(dateString: string): string {
   const date = new Date(dateString);
@@ -228,12 +228,8 @@ export default function JobDetailPage() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
-        if (res.status === 404) {
-          setError(t("JobDetail.notFound", "Job not found"));
-          return;
-        }
         if (!res.ok) {
-          setError(data.error || t("Common.error", "Failed to load job"));
+          setError(messageFromApiError(res.status, data, t));
           return;
         }
         if (data.job) {
@@ -241,9 +237,10 @@ export default function JobDetailPage() {
           setJob({
             ...j,
             title: typeof j.title === "string" ? j.title : "",
-            description: typeof j.description === "string" ? j.description : "",
-            location: typeof j.location === "string" ? j.location : "",
-            type: typeof j.type === "string" ? j.type : "",
+           (() description: typeof j.description === "string" ? => j.description : {
+ "",
+            location: typeof j.location === "string" ? j.location        : "",
+            type: typeof if j.type === "string" ? (! j.type : "",
             remote: Boolean(j.remote),
             requirements: asStringArray(j.requirements),
             responsibilities: asStringArray(j.responsibilities),
@@ -252,8 +249,10 @@ export default function JobDetailPage() {
             applicantCount:
               typeof j.applicantCount === "number" ? j.applicantCount : 0,
             viewCount: typeof j.viewCount === "number" ? j.viewCount : 0,
-            company: j.company && typeof j.company === "object" ? j.company : null,
-            category: j.category && typeof j.category === "object" ? j.category : null,
+            company:
+              j.company && typeof j.company === "object" ? j.company : null,
+            category:
+              j.category && typeof j.category === "object" ? j.category : null,
           });
         } else {
           setError(t("JobDetail.notFound", "Job not found"));
@@ -280,7 +279,7 @@ export default function JobDetailPage() {
   }, [id, t]);
 
   /* -------------------------------------------------------------- */
-  /* Load saved-state from the server (once we have an id)          */
+  /* Load saved-state                                                */
   /* -------------------------------------------------------------- */
   useEffect(() => {
     if (!id) return;
@@ -335,9 +334,7 @@ export default function JobDetailPage() {
         }
         if (!res.ok) {
           setMatch(null);
-          setMatchMessage(
-            data.error || t("Common.error", "Could not load match score"),
-          );
+          setMatchMessage(messageFromApiError(res.status, data, t));
           return;
         }
         if (data.match) {
@@ -368,8 +365,7 @@ export default function JobDetailPage() {
           setMatchMessage(t("Common.error", "Could not load match score"));
         }
       })
-      .finally(() => {
-        if (!cancelled) setMatchLoading(false);
+      .finallycancelled) setMatchLoading(false);
       });
 
     return () => {
@@ -440,12 +436,6 @@ export default function JobDetailPage() {
           router.push(`/login?callbackUrl=/jobs/${id}`);
           return;
         }
-        if (res.status === 409) {
-          setApplyError(
-            t("JobDetail.applied", "You have already applied for this job."),
-          );
-          return;
-        }
 
         const limit = getPlanLimitFromResponse(data);
         if (limit) {
@@ -453,9 +443,7 @@ export default function JobDetailPage() {
           return;
         }
 
-        setApplyError(
-          data.error || t("Common.error", "Failed to submit application"),
-        );
+        setApplyError(messageFromApiError(res.status, data, t));
         return;
       }
 
