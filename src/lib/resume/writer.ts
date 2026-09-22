@@ -13,6 +13,10 @@
  *
  * Deterministic: same input → same output.
  * Never invents employers, degrees, dates, metrics, or certifications.
+ *
+ * Phase 5+: `SECTION_LABELS` is exported so the AI prompt builder in
+ * `resume-ai.ts` can use the exact same localized section headings —
+ * single source of truth across AI and offline paths.
  */
 import type { CareerRiskLocale } from "@/types/career-risk";
 import { normalizeCareerLocale } from "@/lib/career-risk";
@@ -67,7 +71,7 @@ export type ResumeWriterOutput = {
 /* Localization tables                                                */
 /* ------------------------------------------------------------------ */
 
-type SectionId =
+export type SectionId =
   | "summary"
   | "competencies"
   | "experience"
@@ -79,9 +83,16 @@ type SectionId =
   | "languages"
   | "additional";
 
-type SectionLabels = Record<SectionId, string>;
+export type SectionLabels = Record<SectionId, string>;
 
-const SECTION_LABELS: Record<CareerRiskLocale, SectionLabels> = {
+/**
+ * Localized section headings for the resume.
+ *
+ * Exported so `resume-ai.ts` can build the AI prompt with the same
+ * localized headings — no more English-only section names for
+ * non-English users.
+ */
+export const SECTION_LABELS: Record<CareerRiskLocale, SectionLabels> = {
   en: {
     summary: "PROFESSIONAL SUMMARY",
     competencies: "CORE COMPETENCIES",
