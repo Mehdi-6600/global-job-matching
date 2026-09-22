@@ -428,7 +428,11 @@
     "notFound": "Profile not found",
     "planTitle": "Current Plan",
     "paymentHistory": "Payment History",
-    "noPayments": "No payments yet."
+    "noPayments": "No payments yet.",
+    "resumeUploaded": "Resume uploaded successfully.",
+    "resumeDeleteConfirm": "Are you sure you want to remove your resume?",
+    "resumeRemoved": "Resume removed.",
+    "removeResume": "Remove resume"
   },
   "CareerRisk": {
     "title": "AI Career Risk",
@@ -558,7 +562,9 @@
     "category": "Category",
     "noJobs": "No jobs found",
     "pending": "Pending",
-    "salaryNA": "Salary not specified"
+    "salaryNA": "Salary not specified",
+    "loadErrorTitle": "Could not load jobs",
+    "loadErrorBody": "Something went wrong. Please try again."
   },
   "Applications": {
     "title": "My Applications",
@@ -688,7 +694,20 @@
     "school": "School",
     "degree": "Degree",
     "year": "Year",
-    "role": "Role"
+    "role": "Role",
+    "loading": "Loading profile...",
+    "saved": "Profile saved",
+    "anonymous": "Anonymous",
+    "name": "Full name",
+    "headline": "Headline / title",
+    "location": "Location",
+    "bioEmpty": "No bio yet.",
+    "linksEmpty": "No links added yet.",
+    "skillsEmpty": "No skills added yet.",
+    "removeSkill": "Remove skill",
+    "experiencePlaceholder": "Roles, years, achievements",
+    "experienceEmpty": "No experience added yet.",
+    "educationPlaceholder": "Your education details"
   },
   "Blog": {
     "title": "Career Blog",
