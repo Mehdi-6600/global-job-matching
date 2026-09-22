@@ -3,7 +3,8 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { aiRatelimit } from "@/lib/ratelimit";
-import { buildTemplateResume, chatCompletionWithMeta } from "@/lib/ai";
+import { chatCompletionWithMeta } from "@/lib/ai";
+import { buildResume } from "@/lib/resume/writer";
 import { getEffectivePlan } from "@/lib/subscription";
 import { getRequestIp } from "@/lib/client-ip";
 import {
@@ -350,7 +351,10 @@ export async function POST(req: NextRequest) {
       // AI نتیجه نداد → سهمیه‌ی رزروشده را آزاد کن و از قالب استفاده کن.
       await safeReleaseUsage(reservedUserId, reservedEventId);
       reservedEventId = null;
-      text = buildTemplateResume({
+
+      // از `buildResume` مستقیم استفاده می‌کنیم تا locale-aware
+      // fallback کامل شود. wrapper `buildTemplateResume` را دور می‌زنیم.
+      text = buildResume({
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
@@ -361,14 +365,9 @@ export async function POST(req: NextRequest) {
         education: data.education,
         skills: data.skills,
         languages: data.languages,
-        // NOTE: `buildTemplateResume` is the backwards-compatible wrapper
-        // around `buildResume` and only accepts the subset of fields
-        // shown above. Locale is passed through `writer.ts` via the
-        // wrapper's internal default (en). Offline fallback in this
-        // route intentionally keeps `source: "template"` — the full
-        // locale-aware fallback would require extending the wrapper,
-        // which is out of scope for this phase.
-      });
+        tone: data.tone,
+        locale,
+      }).text;
       source = "template";
     }
 
