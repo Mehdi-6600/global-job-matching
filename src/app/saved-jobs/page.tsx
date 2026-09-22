@@ -14,6 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 interface SavedJob {
   id: string;
@@ -118,20 +119,22 @@ export default function SavedJobsPage() {
           window.location.href = "/login?callbackUrl=/saved-jobs";
           return null;
         }
-        return res.json();
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return data;
+        return { res, data };
       })
-      .then((data) => {
-        if (cancelled) return;
-        if (!data) {
-          setLoading(false);
-          return;
-        }
-        if (data.jobs) {
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        const { res, data } = payload as {
+          res: Response;
+          data: { jobs?: SavedJob[] };
+        };
+        if (!res.ok) {
+          setError(messageFromApiError(res.status, data, t));
+        } else if (data.jobs) {
           setJobs(data.jobs);
         } else {
-          setError(
-            data.error || t("SavedJobs.errorLoad", "Failed to load saved jobs"),
-          );
+          setError(t("SavedJobs.errorLoad", "Failed to load saved jobs"));
         }
         setLoading(false);
       })
