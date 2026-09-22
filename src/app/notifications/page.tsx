@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -16,6 +16,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 interface NotificationItem {
   id: string;
@@ -28,11 +29,13 @@ interface NotificationItem {
   createdAt: string;
 }
 
-// تابع کمکی برای جایگزینی متغیرها
-function interpolate(template: string, replacements: Record<string, string | number>): string {
+function interpolate(
+  template: string,
+  replacements: Record<string, string | number>,
+): string {
   let result = template;
   for (const [key, value] of Object.entries(replacements)) {
-    result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
+    result = result.split(`{${key}}`).join(String(value));
   }
   return result;
 }
@@ -43,31 +46,41 @@ export default function NotificationsPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  // تابع formatTime
-  function formatTime(dateStr: string) {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+  const formatTime = useCallback(
+    (dateStr: string): string => {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return t("Common.timeAgo.justNow", "Just now");
-    if (minutes < 60) {
-      const template = t("Common.timeAgo.minutesAgo", "{count}m ago");
-      return interpolate(template, { count: minutes });
-    }
-    if (hours < 24) {
-      const template = t("Common.timeAgo.hoursAgo", "{count}h ago");
-      return interpolate(template, { count: hours });
-    }
-    if (days < 7) {
-      const template = t("Common.timeAgo.daysAgo", "{count}d ago");
-      return interpolate(template, { count: days });
-    }
-    return date.toLocaleDateString(locale);
-  }
+      if (minutes < 1) return t("Common.timeAgo.justNow", "Just now");
+
+      if (minutes < 60) {
+        return interpolate(
+          t("Common.timeAgo.minutes", "{count} minutes ago"),
+          { count: minutes },
+        );
+      }
+      if (hours < 24) {
+        return interpolate(
+          t("Common.timeAgo.hours", "{count} hours ago"),
+          { count: hours },
+        );
+      }
+      if (days < 7) {
+        return interpolate(
+          t("Common.timeAgo.days", "{count} days ago"),
+          { count: days },
+        );
+      }
+      return date.toLocaleDateString(locale);
+    },
+    [t, locale],
+  );
 
   const typeConfig: Record<
     string,
@@ -110,90 +123,124 @@ export default function NotificationsPage() {
     );
   }
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  async function fetchNotifications() {
+  const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch("/api/notifications", { cache: "no-store" });
       if (res.status === 401) {
         window.location.href = "/login?callbackUrl=/notifications";
         return;
       }
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(messageFromApiError(res.status, data, t));
+        return;
       }
-    } catch (err) {
-      console.error(err);
+      setNotifications(
+        Array.isArray(data.notifications) ? data.notifications : [],
+      );
+      setUnreadCount(
+        typeof data.unreadCount === "number" ? data.unreadCount : 0,
+      );
+      setError("");
+    } catch {
+      setError(
+        t("Common.errorNetwork", "Network error. Please try again."),
+      );
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
 
-  async function markAsRead(id: string) {
-    setActionLoading(id);
-    try {
-      const res = await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (res.ok) {
+  useEffect(() => {
+    void fetchNotifications();
+  }, [fetchNotifications]);
+
+  const markAsRead = useCallback(
+    async (id: string) => {
+      setActionLoading(id);
+      setError("");
+      try {
+        const res = await fetch("/api/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(messageFromApiError(res.status, data, t));
+          return;
+        }
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+          prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
         );
         setUnreadCount((prev) => Math.max(0, prev - 1));
+      } catch {
+        setError(
+          t("Common.errorNetwork", "Network error. Please try again."),
+        );
+      } finally {
+        setActionLoading(null);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setActionLoading(null);
-    }
-  }
+    },
+    [t],
+  );
 
-  async function markAllAsRead() {
+  const markAllAsRead = useCallback(async () => {
     setActionLoading("all");
+    setError("");
     try {
       const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ readAll: true }),
       });
-      if (res.ok) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-        setUnreadCount(0);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(messageFromApiError(res.status, data, t));
+        return;
       }
-    } catch (err) {
-      console.error(err);
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch {
+      setError(
+        t("Common.errorNetwork", "Network error. Please try again."),
+      );
     } finally {
       setActionLoading(null);
     }
-  }
+  }, [t]);
 
-  async function deleteNotification(id: string, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setActionLoading(id);
-    try {
-      const res = await fetch(`/api/notifications?id=${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
+  const deleteNotification = useCallback(
+    async (id: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setActionLoading(id);
+      setError("");
+      try {
+        const res = await fetch(
+          `/api/notifications?id=${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(messageFromApiError(res.status, data, t));
+          return;
+        }
         const deleted = notifications.find((n) => n.id === id);
         setNotifications((prev) => prev.filter((n) => n.id !== id));
         if (deleted && !deleted.read) {
           setUnreadCount((prev) => Math.max(0, prev - 1));
         }
+      } catch {
+        setError(
+          t("Common.errorNetwork", "Network error. Please try again."),
+        );
+      } finally {
+        setActionLoading(null);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setActionLoading(null);
-    }
-  }
+    },
+    [notifications, t],
+  );
 
   if (loading) {
     return (
@@ -203,15 +250,16 @@ export default function NotificationsPage() {
     );
   }
 
-  // ساخت متن تعداد اعلان‌های خوانده‌نشده
-  let unreadLabel = t("Notifications.allCaughtUp", "All caught up!");
-  if (unreadCount > 0) {
-    const template = t("Notifications.unreadCount", "{count} unread notification{plural}");
-    unreadLabel = interpolate(template, {
-      count: unreadCount,
-      plural: unreadCount > 1 ? "s" : "",
-    });
-  }
+  const unreadLabel =
+    unreadCount > 0
+      ? interpolate(
+          t(
+            "Notifications.unreadCount",
+            "{count} unread notifications",
+          ),
+          { count: unreadCount },
+        )
+      : t("Notifications.allCaughtUp", "You're all caught up!");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
@@ -228,7 +276,9 @@ export default function NotificationsPage() {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">{t("Notifications.title", "Notifications")}</h1>
+                <h1 className="text-2xl font-bold text-white">
+                  {t("Notifications.title", "Notifications")}
+                </h1>
                 <p className="text-slate-400 text-sm">{unreadLabel}</p>
               </div>
             </div>
@@ -236,7 +286,8 @@ export default function NotificationsPage() {
             <div className="flex items-center gap-3">
               {unreadCount > 0 && (
                 <button
-                  onClick={markAllAsRead}
+                  type="button"
+                  onClick={() => void markAllAsRead()}
                   disabled={actionLoading === "all"}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 disabled:opacity-50 transition-all text-sm font-medium"
                 >
@@ -245,7 +296,7 @@ export default function NotificationsPage() {
                   ) : (
                     <CheckCheck className="w-4 h-4" />
                   )}
-                  {t("Notifications.markAllRead", "Mark all read")}
+                  {t("Notifications.markAllRead", "Mark all as read")}
                 </button>
               )}
               <Link
@@ -259,6 +310,13 @@ export default function NotificationsPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
         <div className="space-y-3">
           {notifications.length === 0 ? (
             <div className="glass rounded-2xl p-12 text-center border border-white/10">
@@ -267,7 +325,10 @@ export default function NotificationsPage() {
                 {t("Notifications.emptyTitle", "No notifications yet")}
               </h3>
               <p className="text-slate-400 text-sm">
-                {t("Notifications.emptyDesc", "When something happens, you will see it here.")}
+                {t(
+                  "Notifications.emptyDesc",
+                  "When something happens, you'll see it here.",
+                )}
               </p>
             </div>
           ) : (
@@ -319,11 +380,18 @@ export default function NotificationsPage() {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                markAsRead(notification.id);
+                                void markAsRead(notification.id);
                               }}
                               disabled={actionLoading === notification.id}
                               className="p-2 rounded-lg hover:bg-white/10 text-indigo-400 transition-colors"
-                              title={t("Notifications.markAsRead", "Mark as read")}
+                              title={t(
+                                "Notifications.markAsRead",
+                                "Mark as read",
+                              )}
+                              aria-label={t(
+                                "Notifications.markAsRead",
+                                "Mark as read",
+                              )}
                             >
                               {actionLoading === notification.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -335,11 +403,12 @@ export default function NotificationsPage() {
                           <button
                             type="button"
                             onClick={(e) =>
-                              deleteNotification(notification.id, e)
+                              void deleteNotification(notification.id, e)
                             }
                             disabled={actionLoading === notification.id}
                             className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors"
                             title={t("Notifications.delete", "Delete")}
+                            aria-label={t("Notifications.delete", "Delete")}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -357,7 +426,7 @@ export default function NotificationsPage() {
                     href={notification.actionUrl}
                     className="block"
                     onClick={() => {
-                      if (isUnread) markAsRead(notification.id);
+                      if (isUnread) void markAsRead(notification.id);
                     }}
                   >
                     {content}
