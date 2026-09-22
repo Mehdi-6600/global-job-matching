@@ -285,11 +285,13 @@ export default function ResumeBuilderPage() {
     const w = window.open("", "_blank");
     if (!w) return;
 
+    const printTitle = t("Resume.printTitle", "Resume");
+
     const html = `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Resume</title>
+    <title>${escapeHtml(printTitle)}</title>
     <style>
       body {
         font-family: Georgia, serif;
@@ -310,7 +312,7 @@ export default function ResumeBuilderPage() {
     w.focus();
     // Wait a tick so styles/layout settle before printing.
     setTimeout(() => w.print(), 0);
-  }, [resume]);
+  }, [resume, t]);
 
   /* -------- Derived -------- */
   const canSubmit = useMemo(
