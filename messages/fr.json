@@ -624,7 +624,10 @@
     "toneConfident": "Assuré",
     "toneConcise": "Concis",
     "saveToProfile": "Enregistrer une note dans le profil",
-    "previewEmpty": "Votre CV généré apparaîtra ici"
+    "previewEmpty": "Votre CV généré apparaîtra ici",
+    "printTitle": "CV",
+    "sourceAi": "IA",
+    "sourceTemplate": "Modèle"
   },
   "Employer": {
     "title": "Tableau de bord employeur",
@@ -755,7 +758,27 @@
     "contactEmployer": "Contacter l'employeur",
     "remote": "Télétravail",
     "salaryNA": "Salaire non précisé",
-    "loginToApply": "Connectez-vous pour postuler"
+    "loginToApply": "Connectez-vous pour postuler",
+    "deadline": "Date limite",
+    "responsibilities": "Responsabilités",
+    "matchScoreTitle": "Votre score de compatibilité",
+    "overallFit": "compatibilité globale",
+    "skills": "Compétences",
+    "experience": "Expérience",
+    "stats": "{views} vues · {applicants} candidats",
+    "coverLetterLabel": "Lettre de motivation (facultatif)",
+    "coverLetterPlaceholder": "Expliquez-nous pourquoi vous êtes un excellent candidat pour ce poste...",
+    "applySuccessBody": "Votre candidature a bien été envoyée.",
+    "contactDefault": "Je suis très intéressé par le poste de « {title} » et je serais ravi d'échanger sur la façon dont mon profil correspond à votre équipe.\n\nMerci pour votre temps.",
+    "contactConfirm": "Je confirme vouloir envoyer ce message à l'employeur (pas seulement un brouillon).",
+    "contactSent": "Message envoyé à l'employeur.",
+    "contactDraftReady": "Brouillon prêt",
+    "contactSubject": "Objet (facultatif)",
+    "contactMessage": "Message",
+    "contactDraft": "Brouillon",
+    "contactGenerateDraft": "Générer un brouillon",
+    "contactCopy": "Copier",
+    "contactSend": "Envoyer"
   },
   "Companies": {
     "title": "Entreprises",
