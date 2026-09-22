@@ -624,7 +624,10 @@
     "toneConfident": "Con confianza",
     "toneConcise": "Conciso",
     "saveToProfile": "Guardar nota en el perfil",
-    "previewEmpty": "Tu currículum generado aparecerá aquí"
+    "previewEmpty": "Tu currículum generado aparecerá aquí",
+    "printTitle": "Currículum",
+    "sourceAi": "IA",
+    "sourceTemplate": "Plantilla"
   },
   "Employer": {
     "title": "Panel del empleador",
@@ -755,7 +758,27 @@
     "contactEmployer": "Contactar al empleador",
     "remote": "Remoto",
     "salaryNA": "Salario no especificado",
-    "loginToApply": "Inicia sesión para postularte"
+    "loginToApply": "Inicia sesión para postularte",
+    "deadline": "Fecha límite",
+    "responsibilities": "Responsabilidades",
+    "matchScoreTitle": "Tu puntuación de compatibilidad",
+    "overallFit": "compatibilidad general",
+    "skills": "Habilidades",
+    "experience": "Experiencia",
+    "stats": "{views} vistas · {applicants} solicitantes",
+    "coverLetterLabel": "Carta de presentación (opcional)",
+    "coverLetterPlaceholder": "Cuéntanos por qué eres un gran candidato para este puesto...",
+    "applySuccessBody": "Tu solicitud ha sido enviada correctamente.",
+    "contactDefault": "Estoy muy interesado en el puesto de \"{title}\" y agradecería la oportunidad de conversar sobre cómo mi perfil encaja con su equipo.\n\nGracias por su tiempo.",
+    "contactConfirm": "Confirmo que quiero enviar este mensaje al empleador (no solo un borrador).",
+    "contactSent": "Mensaje enviado al empleador.",
+    "contactDraftReady": "Borrador listo",
+    "contactSubject": "Asunto (opcional)",
+    "contactMessage": "Mensaje",
+    "contactDraft": "Borrador",
+    "contactGenerateDraft": "Generar borrador",
+    "contactCopy": "Copiar",
+    "contactSend": "Enviar"
   },
   "Companies": {
     "title": "Empresas",
