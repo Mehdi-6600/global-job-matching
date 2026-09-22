@@ -15,6 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 interface ApplicationItem {
   id: string;
@@ -124,10 +125,10 @@ export default function MyApplicationsPage() {
           window.location.href = "/login?callbackUrl=/my-applications";
           return null;
         }
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (!res.ok) {
-          setError(data.error || t("Applications.errorLoad", "Failed to load"));
+          setError(messageFromApiError(res.status, data, t));
           setLoading(false);
           return;
         }
