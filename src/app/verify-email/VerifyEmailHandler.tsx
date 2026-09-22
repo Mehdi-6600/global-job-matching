@@ -7,13 +7,14 @@ import { Loader2 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 
 type Status = "success" | "error" | "missing";
+type VerifyErrorCode = "INVALID" | "EXPIRED" | "UNKNOWN";
 
 export default function VerifyEmailHandler({
   status,
-  errorMessage,
+  errorCode,
 }: {
   status: Status;
-  errorMessage?: string;
+  errorCode?: VerifyErrorCode;
 }) {
   const { t } = useLocale();
   const { data: session } = useSession();
@@ -101,7 +102,18 @@ export default function VerifyEmailHandler({
     );
   }
 
-  /* -------- Error -------- */
+  /* -------- Error --------
+   * All error codes map to the same localized message because the
+   * user-facing distinction between "invalid" and "expired" is not
+   * meaningful in the UI — both resolve to "request a new link".
+   * errorCode is preserved on the component boundary for future
+   * differentiation without needing a messages/ change.
+   */
+  const localizedError = t(
+    "Auth.verifyEmailErrorBody",
+    "The link is invalid or has expired.",
+  );
+
   return (
     <>
       <div className="mx-auto w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
@@ -123,13 +135,7 @@ export default function VerifyEmailHandler({
       <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
         {t("Auth.verifyEmailErrorTitle", "Verification Failed")}
       </h1>
-      <p className="text-[var(--text-muted)] mb-6">
-        {errorMessage ||
-          t(
-            "Auth.verifyEmailErrorBody",
-            "The link is invalid or has expired.",
-          )}
-      </p>
+      <p className="text-[var(--text-muted)] mb-6">{localizedError}</p>
 
       {isLoggedIn ? (
         <div className="space-y-3">
