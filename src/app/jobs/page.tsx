@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 interface Job {
   id: string;
@@ -69,21 +70,19 @@ const TEXT_DEBOUNCE_MS = 350;
 export default function JobsPage() {
   const { t, locale } = useLocale();
 
-  // Raw input state — what the user types immediately.
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  // Debounced version — what we send to the API.
   const [debouncedFilters, setDebouncedFilters] =
     useState<Filters>(EMPTY_FILTERS);
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(false);
+  const [fetchError, setFetchError] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
   /* --------------------------------------------------------------- */
-  /* Debounce free-text fields (search, location, tag)               */
+  /* Debounce free-text fields                                       */
   /* --------------------------------------------------------------- */
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -99,13 +98,12 @@ export default function JobsPage() {
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchJobs = useCallback(async () => {
-    // Cancel any in-flight request before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
     setLoading(true);
-    setFetchError(false);
+    setFetchError("");
 
     const params = new URLSearchParams();
     params.set("page", page.toString());
@@ -118,7 +116,6 @@ export default function JobsPage() {
     if (f.remote) params.set("remote", "true");
     if (f.tag) params.set("tag", f.tag);
 
-    // Only send salary if the string looks numeric.
     const minNum = parseInt(f.minSalary, 10);
     const maxNum = parseInt(f.maxSalary, 10);
     if (Number.isFinite(minNum) && minNum >= 0) {
@@ -132,13 +129,14 @@ export default function JobsPage() {
       const res = await fetch(`/api/jobs?${params.toString()}`, {
         signal: controller.signal,
       });
-      const data = await res.json();
 
       if (controller.signal.aborted) return;
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
         setJobs([]);
-        setFetchError(true);
+        setFetchError(messageFromApiError(res.status, data, t));
         return;
       }
 
@@ -147,13 +145,15 @@ export default function JobsPage() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setJobs([]);
-      setFetchError(true);
+      setFetchError(
+        t("Common.errorNetwork", "Network error. Please try again."),
+      );
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
       }
     }
-  }, [page, debouncedFilters]);
+  }, [page, debouncedFilters, t]);
 
   useEffect(() => {
     void fetchJobs();
@@ -225,11 +225,10 @@ export default function JobsPage() {
             {t("Jobs.title", "Find Your Dream Job")}
           </h1>
           <p className="text-slate-400">
-            {t("Jobs.subtitle", "Search through thousands of opportunities")}
+            {t("Jobs.subtitle", "Search among thousands of opportunities")}
           </p>
         </div>
 
-        {/* Filter shell */}
         <div className="glass rounded-2xl p-4 mb-6 border border-white/10">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -455,7 +454,6 @@ export default function JobsPage() {
           )}
         </div>
 
-        {/* Results */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
@@ -466,12 +464,7 @@ export default function JobsPage() {
             <h3 className="text-lg font-semibold text-white mb-2">
               {t("Jobs.loadErrorTitle", "Could not load jobs")}
             </h3>
-            <p className="text-slate-400 text-sm mb-4">
-              {t(
-                "Jobs.loadErrorBody",
-                "Something went wrong. Please try again.",
-              )}
-            </p>
+            <p className="text-slate-400 text-sm mb-4">{fetchError}</p>
             <button
               type="button"
               onClick={() => void fetchJobs()}
