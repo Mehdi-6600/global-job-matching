@@ -624,7 +624,10 @@
     "toneConfident": "Selbstbewusst",
     "toneConcise": "Prägnant",
     "saveToProfile": "Notiz im Profil speichern",
-    "previewEmpty": "Dein generierter Lebenslauf erscheint hier"
+    "previewEmpty": "Dein generierter Lebenslauf erscheint hier",
+    "printTitle": "Lebenslauf",
+    "sourceAi": "KI",
+    "sourceTemplate": "Vorlage"
   },
   "Employer": {
     "title": "Arbeitgeber-Dashboard",
@@ -755,7 +758,27 @@
     "contactEmployer": "Arbeitgeber kontaktieren",
     "remote": "Remote",
     "salaryNA": "Gehalt nicht angegeben",
-    "loginToApply": "Anmelden, um dich zu bewerben"
+    "loginToApply": "Anmelden, um dich zu bewerben",
+    "deadline": "Bewerbungsfrist",
+    "responsibilities": "Aufgaben",
+    "matchScoreTitle": "Dein Match-Score",
+    "overallFit": "Gesamtpassung",
+    "skills": "Fähigkeiten",
+    "experience": "Erfahrung",
+    "stats": "{views} Aufrufe · {applicants} Bewerber",
+    "coverLetterLabel": "Anschreiben (optional)",
+    "coverLetterPlaceholder": "Erzähl uns, warum du für diese Rolle geeignet bist...",
+    "applySuccessBody": "Deine Bewerbung wurde erfolgreich gesendet.",
+    "contactDefault": "Ich bin sehr an der Position „{title}“ interessiert und würde gerne besprechen, wie mein Profil zu Ihrem Team passt.\n\nVielen Dank für Ihre Zeit.",
+    "contactConfirm": "Ich bestätige, dass ich diese Nachricht an den Arbeitgeber senden möchte (nicht nur einen Entwurf).",
+    "contactSent": "Nachricht an den Arbeitgeber gesendet.",
+    "contactDraftReady": "Entwurf bereit",
+    "contactSubject": "Betreff (optional)",
+    "contactMessage": "Nachricht",
+    "contactDraft": "Entwurf",
+    "contactGenerateDraft": "Entwurf erstellen",
+    "contactCopy": "Kopieren",
+    "contactSend": "Senden"
   },
   "Companies": {
     "title": "Unternehmen",
