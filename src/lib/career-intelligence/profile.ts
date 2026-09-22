@@ -1,7 +1,10 @@
 /**
  * Shared deterministic Career Intelligence Core.
- * Fixes: targetRole pipeline, skill classification, tools vs technical,
- * management/full-stack ordering, skill aliases, experience influence.
+ *
+ * Locale-aware skill-gap generation: FAMILY_GROWTH_SKILLS and SPEC_GROWTH
+ * are keyed by locale so a Persian user gets Persian skill names, a German
+ * user gets German skill names, and so on. English remains the fallback
+ * when a locale entry is missing — no unintended language leakage.
  */
 
 import type { CareerRiskLocale } from "@/types/career-risk";
@@ -81,6 +84,16 @@ export type ProfileInput = {
   languages?: string | null;
   responsibilities?: string | null;
 };
+
+/* ------------------------------------------------------------------ */
+/* Localized helpers                                                   */
+/* ------------------------------------------------------------------ */
+
+type LocaleTable<T> = Partial<Record<CareerRiskLocale, T>> & { en: T };
+
+function L<T>(locale: CareerRiskLocale, table: LocaleTable<T>): T {
+  return (table[locale] ?? table.en) as T;
+}
 
 function norm(s: string): string {
   return s
@@ -534,98 +547,212 @@ function tasksForFamily(
   return tasks;
 }
 
-const FAMILY_GROWTH_SKILLS: Record<RoleFamily, string[]> = {
-  software_engineering: [
-    "System design",
-    "AI-assisted development workflows",
-    "Observability",
-    "Domain modeling",
-    "Technical writing",
-  ],
-  accounting_finance: [
-    "AI-assisted reporting automation",
-    "Controls and exception handling",
-    "Stakeholder advisory storytelling",
-    "FP&A scenario modeling",
-    "Data literacy (SQL/BI)",
-  ],
-  education: [
-    "Differentiated instruction design",
-    "Assessment literacy",
-    "EdTech facilitation",
-    "Parent/stakeholder communication",
-    "Classroom analytics basics",
-  ],
-  healthcare: [
-    "Clinical documentation quality",
-    "Interdisciplinary coordination",
-    "Patient education",
-    "Protocol exception judgment",
-    "Digital health literacy",
-  ],
-  design: [
-    "UX research synthesis",
-    "Design systems",
-    "Prototyping in Figma",
-    "Accessibility",
-    "Stakeholder critique facilitation",
-  ],
-  data: [
-    "Experiment design",
-    "Data storytelling",
-    "Pipeline reliability",
-    "SQL/analytics depth",
-    "Model monitoring",
-  ],
-  trades: [
-    "Diagnostics methodology",
-    "Safety and code updates",
-    "Digital quoting/CRM",
-    "Customer communication",
-    "Specialty certifications",
-  ],
-  operations_clerical: [
-    "Process exception handling",
-    "No-code workflow automation",
-    "Customer escalation judgment",
-    "Spreadsheet/BI literacy",
-    "Cross-team coordination",
-  ],
-  sales_marketing: [
-    "Consultative selling",
-    "CRM discipline",
-    "Content differentiation",
-    "Pipeline analytics",
-    "Negotiation",
-  ],
-  management: [
-    "Coaching conversations",
-    "Prioritization frameworks",
-    "Cross-functional influence",
-    "Hiring signal design",
-    "Operational metrics",
-  ],
-  generic: [
-    "Domain specialization",
-    "Digital literacy",
-    "Structured problem solving",
-    "Professional communication",
-    "Portfolio evidence building",
-  ],
+/* ------------------------------------------------------------------ */
+/* Locale-aware growth skills                                          */
+/* ------------------------------------------------------------------ */
+
+const FAMILY_GROWTH_SKILLS: Record<RoleFamily, LocaleTable<string[]>> = {
+  software_engineering: {
+    en: ["System design", "AI-assisted development workflows", "Observability", "Domain modeling", "Technical writing"],
+    fa: ["طراحی سیستم", "جریان‌های کاری با کمک AI", "قابلیت مشاهده‌پذیری", "مدل‌سازی دامنه", "نوشتن فنی"],
+    ar: ["تصميم الأنظمة", "سير عمل بمساعدة الذكاء الاصطناعي", "المراقبة", "نمذجة المجال", "الكتابة التقنية"],
+    es: ["Diseño de sistemas", "Flujos asistidos por IA", "Observabilidad", "Modelado de dominio", "Escritura técnica"],
+    fr: ["Conception système", "Flux assistés par IA", "Observabilité", "Modélisation métier", "Rédaction technique"],
+    de: ["Systemdesign", "KI-gestützte Workflows", "Observability", "Domain-Modellierung", "Technisches Schreiben"],
+    hi: ["सिस्टम डिज़ाइन", "AI-सहायित वर्कफ़्लो", "ऑब्ज़र्वेबिलिटी", "डोमेन मॉडलिंग", "तकनीकी लेखन"],
+  },
+  accounting_finance: {
+    en: ["AI-assisted reporting automation", "Controls and exception handling", "Stakeholder advisory storytelling", "FP&A scenario modeling", "Data literacy (SQL/BI)"],
+    fa: ["گزارش‌دهی خودکار با کمک AI", "کنترل و مدیریت استثنا", "روایت‌گری مشاوره‌ای برای ذی‌نفعان", "مدل‌سازی سناریوی FP&A", "سواد داده (SQL/BI)"],
+    ar: ["أتمتة التقارير بمساعدة الذكاء الاصطناعي", "الرقابة ومعالجة الاستثناءات", "سرد المشورة لأصحاب المصلحة", "نمذجة سيناريوهات FP&A", "محو الأمية البياناتية (SQL/BI)"],
+    es: ["Automatización de reporting asistida por IA", "Controles y manejo de excepciones", "Storytelling de asesoría a stakeholders", "Modelado de escenarios FP&A", "Alfabetización de datos (SQL/BI)"],
+    fr: ["Automatisation du reporting assistée par IA", "Contrôles et gestion des exceptions", "Storytelling de conseil aux parties prenantes", "Modélisation de scénarios FP&A", "Littératie des données (SQL/BI)"],
+    de: ["KI-gestützte Reporting-Automatisierung", "Controls und Ausnahmebehandlung", "Stakeholder-Beratungs-Storytelling", "FP&A-Szenario-Modellierung", "Datenkompetenz (SQL/BI)"],
+    hi: ["AI-सहायित रिपोर्टिंग स्वचालन", "नियंत्रण और अपवाद प्रबंधन", "हितधारक सलाहकार स्टोरीटेलिंग", "FP&A परिदृश्य मॉडलिंग", "डेटा साक्षरता (SQL/BI)"],
+  },
+  education: {
+    en: ["Differentiated instruction design", "Assessment literacy", "EdTech facilitation", "Parent/stakeholder communication", "Classroom analytics basics"],
+    fa: ["طراحی آموزش متمایز", "سواد سنجش", "تسهیل‌گری EdTech", "ارتباط با والدین و ذی‌نفعان", "مبانی تحلیل کلاس"],
+    ar: ["تصميم التعليم المتمايز", "ثقافة التقييم", "تيسير تقنيات التعليم", "التواصل مع الوالدين وأصحاب المصلحة", "أساسيات تحليلات الفصل"],
+    es: ["Diseño de instrucción diferenciada", "Alfabetización en evaluación", "Facilitación EdTech", "Comunicación con familias y stakeholders", "Analítica básica de aula"],
+    fr: ["Conception pédagogique différenciée", "Littératie d'évaluation", "Facilitation EdTech", "Communication familles et parties prenantes", "Analytique de classe (bases)"],
+    de: ["Differenziertes Unterrichtsdesign", "Assessment-Kompetenz", "EdTech-Moderation", "Eltern-/Stakeholder-Kommunikation", "Grundlagen Klassenraum-Analytik"],
+    hi: ["विभेदित शिक्षण डिज़ाइन", "मूल्यांकन साक्षरता", "EdTech सुविधा", "अभिभावक/हितधारक संचार", "कक्षा विश्लेषण मूल बातें"],
+  },
+  healthcare: {
+    en: ["Clinical documentation quality", "Interdisciplinary coordination", "Patient education", "Protocol exception judgment", "Digital health literacy"],
+    fa: ["کیفیت مستندسازی بالینی", "هماهنگی بین‌رشته‌ای", "آموزش بیمار", "قضاوت در استثناهای پروتکل", "سواد سلامت دیجیتال"],
+    ar: ["جودة التوثيق السريري", "التنسيق بين التخصصات", "تعليم المريض", "الحكم في استثناءات البروتوكول", "محو الأمية الصحية الرقمية"],
+    es: ["Calidad de documentación clínica", "Coordinación interdisciplinaria", "Educación del paciente", "Juicio en excepciones de protocolo", "Alfabetización en salud digital"],
+    fr: ["Qualité de documentation clinique", "Coordination interdisciplinaire", "Éducation patient", "Jugement sur exceptions de protocole", "Littératie santé numérique"],
+    de: ["Qualität der klinischen Dokumentation", "Interdisziplinäre Koordination", "Patientenschulung", "Protokoll-Ausnahmeurteil", "Digitale Gesundheitskompetenz"],
+    hi: ["क्लिनिकल दस्तावेज़ीकरण गुणवत्ता", "अंतर-विषय समन्वय", "रोगी शिक्षा", "प्रोटोकॉल अपवाद निर्णय", "डिजिटल स्वास्थ्य साक्षरता"],
+  },
+  design: {
+    en: ["UX research synthesis", "Design systems", "Prototyping in Figma", "Accessibility", "Stakeholder critique facilitation"],
+    fa: ["ترکیب پژوهش UX", "سیستم‌های طراحی", "نمونه‌سازی در فیگما", "دسترس‌پذیری", "تسهیل نقد ذی‌نفعان"],
+    ar: ["تركيب أبحاث UX", "أنظمة التصميم", "النماذج الأولية في Figma", "إمكانية الوصول", "تيسير نقد أصحاب المصلحة"],
+    es: ["Síntesis de investigación UX", "Sistemas de diseño", "Prototipado en Figma", "Accesibilidad", "Facilitación de crítica con stakeholders"],
+    fr: ["Synthèse de recherche UX", "Design systems", "Prototypage dans Figma", "Accessibilité", "Facilitation de critique parties prenantes"],
+    de: ["UX-Research-Synthese", "Design-Systems", "Prototyping in Figma", "Barrierefreiheit", "Stakeholder-Kritik-Moderation"],
+    hi: ["UX रिसर्च संश्लेषण", "डिज़ाइन सिस्टम", "Figma में प्रोटोटाइपिंग", "सुलभता", "हितधारक समीक्षा सुविधा"],
+  },
+  data: {
+    en: ["Experiment design", "Data storytelling", "Pipeline reliability", "SQL/analytics depth", "Model monitoring"],
+    fa: ["طراحی آزمایش", "روایت‌گری داده", "قابلیت اطمینان پایپ‌لاین", "تسلط بر SQL/تحلیل", "پایش مدل"],
+    ar: ["تصميم التجارب", "سرد البيانات", "موثوقية خطوط الأنابيب", "عمق SQL/التحليلات", "مراقبة النموذج"],
+    es: ["Diseño de experimentos", "Storytelling de datos", "Fiabilidad de pipelines", "Profundidad SQL/analítica", "Monitoreo de modelos"],
+    fr: ["Conception d'expériences", "Storytelling de données", "Fiabilité des pipelines", "Maîtrise SQL/analytique", "Suivi des modèles"],
+    de: ["Experimentdesign", "Data Storytelling", "Pipeline-Zuverlässigkeit", "SQL-/Analyse-Tiefe", "Modell-Monitoring"],
+    hi: ["प्रयोग डिज़ाइन", "डेटा स्टोरीटेलिंग", "पाइपलाइन विश्वसनीयता", "SQL/एनालिटिक्स गहराई", "मॉडल निगरानी"],
+  },
+  trades: {
+    en: ["Diagnostics methodology", "Safety and code updates", "Digital quoting/CRM", "Customer communication", "Specialty certifications"],
+    fa: ["روش‌شناسی عیب‌یابی", "به‌روزرسانی ایمنی و مقررات", "پیشنهاد قیمت دیجیتال / CRM", "ارتباط با مشتری", "گواهی‌های تخصصی"],
+    ar: ["منهجية التشخيص", "تحديثات السلامة والكود", "التسعير الرقمي / CRM", "التواصل مع العميل", "شهادات متخصصة"],
+    es: ["Metodología de diagnóstico", "Actualizaciones de seguridad y código", "Presupuestos digitales/CRM", "Comunicación con cliente", "Certificaciones especializadas"],
+    fr: ["Méthodologie de diagnostic", "Mises à jour sécurité et code", "Devis numérique/CRM", "Communication client", "Certifications spécialisées"],
+    de: ["Diagnose-Methodik", "Sicherheits- und Code-Updates", "Digitales Angebot/CRM", "Kundenkommunikation", "Spezialzertifizierungen"],
+    hi: ["डायग्नोस्टिक्स पद्धति", "सुरक्षा और कोड अपडेट", "डिजिटल कोटिंग/CRM", "ग्राहक संचार", "विशेष प्रमाणन"],
+  },
+  operations_clerical: {
+    en: ["Process exception handling", "No-code workflow automation", "Customer escalation judgment", "Spreadsheet/BI literacy", "Cross-team coordination"],
+    fa: ["مدیریت استثنای فرایند", "اتوماسیون جریان‌کار بدون کد", "قضاوت در ارجاع مشتری", "سواد صفحه‌گسترده / BI", "هماهنگی بین‌تیمی"],
+    ar: ["معالجة استثناءات العمليات", "أتمتة سير العمل بدون كود", "الحكم في تصعيد العملاء", "محو الأمية في الجداول / BI", "التنسيق بين الفرق"],
+    es: ["Manejo de excepciones de proceso", "Automatización de flujos no-code", "Juicio de escalado de cliente", "Alfabetización hoja de cálculo/BI", "Coordinación transversal"],
+    fr: ["Gestion des exceptions de processus", "Automatisation des flux no-code", "Jugement d'escalade client", "Littératie tableur/BI", "Coordination transverse"],
+    de: ["Prozess-Ausnahmebehandlung", "No-Code-Workflow-Automatisierung", "Kunden-Eskalations-Urteil", "Tabellen-/BI-Kompetenz", "Teamübergreifende Koordination"],
+    hi: ["प्रक्रिया अपवाद प्रबंधन", "नो-कोड वर्कफ़्लो स्वचालन", "ग्राहक एस्केलेशन निर्णय", "स्प्रेडशीट/BI साक्षरता", "क्रॉस-टीम समन्वय"],
+  },
+  sales_marketing: {
+    en: ["Consultative selling", "CRM discipline", "Content differentiation", "Pipeline analytics", "Negotiation"],
+    fa: ["فروش مشاوره‌ای", "نظم CRM", "تمایز محتوا", "تحلیل قیف فروش", "مذاکره"],
+    ar: ["البيع الاستشاري", "انضباط CRM", "تمييز المحتوى", "تحليلات خط الأنابيب", "التفاوض"],
+    es: ["Venta consultiva", "Disciplina CRM", "Diferenciación de contenido", "Analítica de pipeline", "Negociación"],
+    fr: ["Vente consultative", "Discipline CRM", "Différenciation de contenu", "Analytique pipeline", "Négociation"],
+    de: ["Beratender Verkauf", "CRM-Disziplin", "Content-Differenzierung", "Pipeline-Analytik", "Verhandlung"],
+    hi: ["परामर्शात्मक बिक्री", "CRM अनुशासन", "कंटेंट विभेदन", "पाइपलाइन एनालिटिक्स", "बातचीत"],
+  },
+  management: {
+    en: ["Coaching conversations", "Prioritization frameworks", "Cross-functional influence", "Hiring signal design", "Operational metrics"],
+    fa: ["گفتگوهای کوچینگ", "چارچوب‌های اولویت‌بندی", "نفوذ بین‌تیمی", "طراحی سیگنال استخدام", "معیارهای عملیاتی"],
+    ar: ["محادثات التدريب", "أطر تحديد الأولويات", "التأثير عبر الوظائف", "تصميم إشارات التوظيف", "المقاييس التشغيلية"],
+    es: ["Conversaciones de coaching", "Marcos de priorización", "Influencia transversal", "Diseño de señales de contratación", "Métricas operativas"],
+    fr: ["Conversations de coaching", "Cadres de priorisation", "Influence transverse", "Conception de signaux de recrutement", "Métriques opérationnelles"],
+    de: ["Coaching-Gespräche", "Priorisierungs-Frameworks", "Funktionsübergreifender Einfluss", "Hiring-Signal-Design", "Operative Metriken"],
+    hi: ["कोचिंग बातचीत", "प्राथमिकता फ्रेमवर्क", "क्रॉस-फंक्शनल प्रभाव", "हायरिंग सिग्नल डिज़ाइन", "ऑपरेशनल मेट्रिक्स"],
+  },
+  generic: {
+    en: ["Domain specialization", "Digital literacy", "Structured problem solving", "Professional communication", "Portfolio evidence building"],
+    fa: ["تخصص حوزه‌ای", "سواد دیجیتال", "حل مسئله ساخت‌یافته", "ارتباط حرفه‌ای", "ساخت شواهد نمونه‌کار"],
+    ar: ["التخصص في المجال", "محو الأمية الرقمية", "حل المشكلات المنظم", "التواصل المهني", "بناء أدلة الأعمال"],
+    es: ["Especialización de dominio", "Alfabetización digital", "Resolución estructurada de problemas", "Comunicación profesional", "Construcción de evidencia de portafolio"],
+    fr: ["Spécialisation métier", "Littératie numérique", "Résolution structurée de problèmes", "Communication professionnelle", "Construction de preuves de portfolio"],
+    de: ["Fachspezialisierung", "Digitale Kompetenz", "Strukturierte Problemlösung", "Professionelle Kommunikation", "Portfolio-Nachweise aufbauen"],
+    hi: ["डोमेन विशेषज्ञता", "डिजिटल साक्षरता", "संरचित समस्या समाधान", "पेशेवर संचार", "पोर्टफोलियो प्रमाण निर्माण"],
+  },
 };
 
-const SPEC_GROWTH: Record<string, string[]> = {
-  frontend: ["Accessibility", "Design systems collaboration", "Web performance"],
-  backend: ["API reliability", "Data modeling", "Observability"],
-  full_stack: ["End-to-end ownership", "System design", "Product sense"],
-  devops: ["Infrastructure as code", "Incident response", "Security hardening"],
-  ai_ml: ["Python for ML", "Experiment tracking", "Model evaluation"],
-  data_engineering: ["Pipeline reliability", "SQL depth", "Data quality tests"],
-  ux_ui: ["User research synthesis", "Interaction design", "Accessibility"],
-  tax: ["Tax research depth", "Advisory communication", "Automation of routine filings"],
-  audit: ["Controls design", "Exception investigation", "Stakeholder reporting"],
-  primary: ["Differentiated instruction", "Classroom analytics", "Parent communication"],
-  edtech: ["Learning product design", "Content systems", "Facilitation online"],
+const SPEC_GROWTH: Partial<Record<string, LocaleTable<string[]>>> = {
+  frontend: {
+    en: ["Accessibility", "Design systems collaboration", "Web performance"],
+    fa: ["دسترس‌پذیری", "همکاری در سیستم‌های طراحی", "کارایی وب"],
+    ar: ["إمكانية الوصول", "التعاون في أنظمة التصميم", "أداء الويب"],
+    es: ["Accesibilidad", "Colaboración en sistemas de diseño", "Rendimiento web"],
+    fr: ["Accessibilité", "Collaboration design systems", "Performance web"],
+    de: ["Barrierefreiheit", "Design-Systems-Zusammenarbeit", "Web-Performance"],
+    hi: ["सुलभता", "डिज़ाइन सिस्टम सहयोग", "वेब प्रदर्शन"],
+  },
+  backend: {
+    en: ["API reliability", "Data modeling", "Observability"],
+    fa: ["قابلیت اطمینان API", "مدل‌سازی داده", "قابلیت مشاهده‌پذیری"],
+    ar: ["موثوقية API", "نمذجة البيانات", "المراقبة"],
+    es: ["Fiabilidad de API", "Modelado de datos", "Observabilidad"],
+    fr: ["Fiabilité API", "Modélisation de données", "Observabilité"],
+    de: ["API-Zuverlässigkeit", "Datenmodellierung", "Observability"],
+    hi: ["API विश्वसनीयता", "डेटा मॉडलिंग", "ऑब्ज़र्वेबिलिटी"],
+  },
+  full_stack: {
+    en: ["End-to-end ownership", "System design", "Product sense"],
+    fa: ["مالکیت سرتاسری", "طراحی سیستم", "درک محصول"],
+    ar: ["الملكية الشاملة", "تصميم الأنظمة", "حس المنتج"],
+    es: ["Ownership end-to-end", "Diseño de sistemas", "Sentido de producto"],
+    fr: ["Ownership de bout en bout", "Conception système", "Sens produit"],
+    de: ["End-to-End-Ownership", "Systemdesign", "Produktsinn"],
+    hi: ["एंड-टू-एंड ओनरशिप", "सिस्टम डिज़ाइन", "उत्पाद बोध"],
+  },
+  devops: {
+    en: ["Infrastructure as code", "Incident response", "Security hardening"],
+    fa: ["زیرساخت به‌صورت کد", "واکنش به حادثه", "سخت‌سازی امنیتی"],
+    ar: ["البنية التحتية كشيفرة", "الاستجابة للحوادث", "تقوية الأمان"],
+    es: ["Infraestructura como código", "Respuesta a incidentes", "Endurecimiento de seguridad"],
+    fr: ["Infrastructure as code", "Réponse aux incidents", "Renforcement sécurité"],
+    de: ["Infrastructure as Code", "Incident Response", "Security-Hardening"],
+    hi: ["इन्फ़्रास्ट्रक्चर ऐज़ कोड", "घटना प्रतिक्रिया", "सुरक्षा सख़्ती"],
+  },
+  ai_ml: {
+    en: ["Python for ML", "Experiment tracking", "Model evaluation"],
+    fa: ["پایتون برای ML", "ردیابی آزمایش", "ارزیابی مدل"],
+    ar: ["Python للتعلم الآلي", "تتبع التجارب", "تقييم النموذج"],
+    es: ["Python para ML", "Seguimiento de experimentos", "Evaluación de modelos"],
+    fr: ["Python pour ML", "Suivi d'expériences", "Évaluation de modèles"],
+    de: ["Python für ML", "Experiment-Tracking", "Modell-Evaluierung"],
+    hi: ["ML के लिए Python", "प्रयोग ट्रैकिंग", "मॉडल मूल्यांकन"],
+  },
+  data_engineering: {
+    en: ["Pipeline reliability", "SQL depth", "Data quality tests"],
+    fa: ["قابلیت اطمینان پایپ‌لاین", "تسلط بر SQL", "تست‌های کیفیت داده"],
+    ar: ["موثوقية خطوط الأنابيب", "عمق SQL", "اختبارات جودة البيانات"],
+    es: ["Fiabilidad de pipelines", "Profundidad SQL", "Pruebas de calidad de datos"],
+    fr: ["Fiabilité des pipelines", "Maîtrise SQL", "Tests de qualité des données"],
+    de: ["Pipeline-Zuverlässigkeit", "SQL-Tiefe", "Datenqualitätstests"],
+    hi: ["पाइपलाइन विश्वसनीयता", "SQL गहराई", "डेटा गुणवत्ता परीक्षण"],
+  },
+  ux_ui: {
+    en: ["User research synthesis", "Interaction design", "Accessibility"],
+    fa: ["ترکیب پژوهش کاربر", "طراحی تعامل", "دسترس‌پذیری"],
+    ar: ["تركيب أبحاث المستخدم", "تصميم التفاعل", "إمكانية الوصول"],
+    es: ["Síntesis de investigación de usuarios", "Diseño de interacción", "Accesibilidad"],
+    fr: ["Synthèse recherche utilisateur", "Design d'interaction", "Accessibilité"],
+    de: ["User-Research-Synthese", "Interaction Design", "Barrierefreiheit"],
+    hi: ["उपयोगकर्ता रिसर्च संश्लेषण", "इंटरैक्शन डिज़ाइन", "सुलभता"],
+  },
+  tax: {
+    en: ["Tax research depth", "Advisory communication", "Automation of routine filings"],
+    fa: ["عمق پژوهش مالیاتی", "ارتباط مشاوره‌ای", "اتوماسیون اظهارنامه‌های روتین"],
+    ar: ["عمق البحث الضريبي", "التواصل الاستشاري", "أتمتة الإقرارات الروتينية"],
+    es: ["Profundidad en investigación fiscal", "Comunicación de asesoría", "Automatización de declaraciones rutinarias"],
+    fr: ["Profondeur de recherche fiscale", "Communication de conseil", "Automatisation des déclarations courantes"],
+    de: ["Steuerrecherche-Tiefe", "Beratungskommunikation", "Automatisierung routinemäßiger Erklärungen"],
+    hi: ["कर अनुसंधान गहराई", "सलाहकार संचार", "नियमित फाइलिंग का स्वचालन"],
+  },
+  audit: {
+    en: ["Controls design", "Exception investigation", "Stakeholder reporting"],
+    fa: ["طراحی کنترل‌ها", "بررسی استثناها", "گزارش‌دهی به ذی‌نفعان"],
+    ar: ["تصميم الضوابط", "التحقيق في الاستثناءات", "التقارير لأصحاب المصلحة"],
+    es: ["Diseño de controles", "Investigación de excepciones", "Reporte a stakeholders"],
+    fr: ["Conception des contrôles", "Investigation des exceptions", "Reporting parties prenantes"],
+    de: ["Controls-Design", "Ausnahmeuntersuchung", "Stakeholder-Reporting"],
+    hi: ["नियंत्रण डिज़ाइन", "अपवाद जाँच", "हितधारक रिपोर्टिंग"],
+  },
+  primary: {
+    en: ["Differentiated instruction", "Classroom analytics", "Parent communication"],
+    fa: ["آموزش متمایز", "تحلیل کلاس", "ارتباط با والدین"],
+    ar: ["التعليم المتمايز", "تحليلات الفصل", "التواصل مع الوالدين"],
+    es: ["Instrucción diferenciada", "Analítica de aula", "Comunicación con familias"],
+    fr: ["Pédagogie différenciée", "Analytique de classe", "Communication parents"],
+    de: ["Differenzierter Unterricht", "Klassenraum-Analytik", "Elternkommunikation"],
+    hi: ["विभेदित शिक्षण", "कक्षा विश्लेषण", "अभिभावक संचार"],
+  },
+  edtech: {
+    en: ["Learning product design", "Content systems", "Facilitation online"],
+    fa: ["طراحی محصول یادگیری", "سیستم‌های محتوا", "تسهیل آنلاین"],
+    ar: ["تصميم منتجات التعلم", "أنظمة المحتوى", "التيسير عبر الإنترنت"],
+    es: ["Diseño de producto de aprendizaje", "Sistemas de contenido", "Facilitación en línea"],
+    fr: ["Conception de produit d'apprentissage", "Systèmes de contenu", "Facilitation en ligne"],
+    de: ["Lernprodukt-Design", "Content-Systeme", "Online-Moderation"],
+    hi: ["लर्निंग उत्पाद डिज़ाइन", "कंटेंट सिस्टम", "ऑनलाइन सुविधा"],
+  },
 };
 
 function computeSkillGaps(
@@ -634,16 +761,22 @@ function computeSkillGaps(
   targetFamily: RoleFamily | null,
   targetSpec: string | null,
   currentSpec: string | null,
+  locale: CareerRiskLocale,
 ): string[] {
   const have = new Set(currentSkills.map(canonicalSkill));
   const family = targetFamily || currentFamily;
   const spec = targetSpec || currentSpec;
-  const fromSpec = (spec && SPEC_GROWTH[spec]) || [];
-  const fromFamily = FAMILY_GROWTH_SKILLS[family] || FAMILY_GROWTH_SKILLS.generic;
+
+  const specList: string[] = spec && SPEC_GROWTH[spec]
+    ? L(locale, SPEC_GROWTH[spec] as LocaleTable<string[]>)
+    : [];
+  const familyList: string[] = L(locale, FAMILY_GROWTH_SKILLS[family]);
+
   const growth = [
-    ...fromSpec,
-    ...fromFamily.filter((g) => !fromSpec.includes(g)),
+    ...specList,
+    ...familyList.filter((g) => !specList.includes(g)),
   ];
+
   return growth.filter((g) => !have.has(canonicalSkill(g)));
 }
 
@@ -781,6 +914,7 @@ export function buildCareerProfile(input: ProfileInput): CareerProfile {
     targetRoleFamily,
     targetSpecialization,
     specialization,
+    locale,
   ).slice(0, 8);
 
   const transferableSkills = Array.from(
