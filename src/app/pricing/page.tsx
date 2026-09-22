@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { PLAN_PRICES, type PlanId } from "@/lib/payment/plans";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
 type Wallet = {
   type: string;
@@ -97,7 +98,7 @@ export default function PricingPage() {
         },
         description: t(
           "Pricing.planFreeDesc",
-          "For job seekers getting started"
+          "For job seekers getting started",
         ),
         features: [
           t("Pricing.freeF1", "Up to 20 applications / month"),
@@ -137,7 +138,7 @@ export default function PricingPage() {
         },
         description: t(
           "Pricing.planBusinessDesc",
-          "For employers & recruiters"
+          "For employers & recruiters",
         ),
         features: [
           t("Pricing.bizF1", "Up to 10 active job posts"),
@@ -159,7 +160,7 @@ export default function PricingPage() {
         },
         description: t(
           "Pricing.planEnterpriseDesc",
-          "For larger hiring needs"
+          "For larger hiring needs",
         ),
         features: [
           t("Pricing.entF1", "Up to 50 active job posts"),
@@ -172,7 +173,7 @@ export default function PricingPage() {
         popular: false,
       },
     ],
-    [t]
+    [t],
   );
 
   const faqs = useMemo(
@@ -181,32 +182,32 @@ export default function PricingPage() {
         q: t("Pricing.faq1q", "How does crypto payment work?"),
         a: t(
           "Pricing.faq1a",
-          "We create a locked quote with exact crypto amount. Send that amount, paste the transaction hash, and we verify on-chain."
+          "We create a locked quote with exact crypto amount. Send that amount, paste the transaction hash, and we verify on-chain.",
         ),
       },
       {
         q: t("Pricing.faq2q", "When is my plan activated?"),
         a: t(
           "Pricing.faq2a",
-          "After an admin confirms your on-chain transaction (usually within 24 hours)."
+          "After an admin confirms your on-chain transaction (usually within 24 hours).",
         ),
       },
       {
         q: t("Pricing.faq3q", "Can I switch plans later?"),
         a: t(
           "Pricing.faq3a",
-          "Yes. Submit a new payment for the plan you want; support can adjust your account."
+          "Yes. Submit a new payment for the plan you want; support can adjust your account.",
         ),
       },
       {
         q: t("Pricing.faq4q", "Which cryptocurrencies are accepted?"),
         a: t(
           "Pricing.faq4a",
-          "BTC, ETH, BNB, USDT, USDC, DOGE (only those configured by the site)."
+          "BTC, ETH, BNB, USDT, USDC, DOGE (only those configured by the site).",
         ),
       },
     ],
-    [t]
+    [t],
   );
 
   const plan = plans.find((p) => p.id === selectedPlan) || null;
@@ -214,7 +215,9 @@ export default function PricingPage() {
   const createIntent = useCallback(async () => {
     if (!selectedPlan || selectedPlan === "free") return;
     if (!cryptoType) {
-      setError(t("Pricing.noWallet", "No payment wallet configured."));
+      setError(
+        t("Pricing.noWallet", "No payment wallet configured. Please try again later."),
+      );
       return;
     }
 
@@ -247,8 +250,8 @@ export default function PricingPage() {
           setError(
             t(
               "Pricing.errTooManyPending",
-              "You already have too many pending quotes. Wait a bit or finish one."
-            )
+              "You already have too many pending quotes. Wait a bit or finish one.",
+            ),
           );
         } else if (
           code === "RATE_FETCH_FAILED" ||
@@ -258,14 +261,11 @@ export default function PricingPage() {
           setError(
             t(
               "Pricing.errRate",
-              "Could not fetch live crypto rate. Please try again in a moment."
-            )
+              "Could not fetch live crypto rate. Please try again in a moment.",
+            ),
           );
         } else {
-          setError(
-            data.error ||
-              t("Pricing.errCreateIntent", "Could not create payment quote.")
-          );
+          setError(messageFromApiError(res.status, data, t));
         }
         return;
       }
@@ -273,138 +273,140 @@ export default function PricingPage() {
       if (data.intent) {
         setIntent(data.intent);
       } else {
-        setError(t("Pricing.errCreateIntent", "Could not create payment quote."));
+        setError(
+          t("Pricing.errCreateIntent", "Could not create payment quote."),
+        );
       }
     } catch {
-      setError(t("Common.errorNetwork", "Network error. Please try again."));
+      setError(
+        t("Common.errorNetwork", "Network error. Please try again."),
+      );
     } finally {
       setCreatingIntent(false);
     }
   }, [selectedPlan, cryptoType, yearly, t]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!intent || !txHash.trim()) return;
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!intent || !txHash.trim()) return;
 
-    setSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/crypto-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentIntentId: intent.id,
-          txHash: txHash.trim(),
-        }),
-      });
+      setSubmitting(true);
+      setError("");
+      try {
+        const res = await fetch("/api/crypto-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paymentIntentId: intent.id,
+            txHash: txHash.trim(),
+          }),
+        });
 
-      if (res.status === 401) {
-        window.location.href = "/login?callbackUrl=/pricing";
-        return;
+        if (res.status === 401) {
+          window.location.href = "/login?callbackUrl=/pricing";
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setSubmitted(true);
+          setTxHash("");
+          return;
+        }
+
+        const code = typeof data.code === "string" ? data.code : "";
+
+        if (code === "TX_FAILED_ON_CHAIN") {
+          setError(
+            t(
+              "Pricing.errTxFailed",
+              "This transaction failed on the blockchain or does not match the expected amount/recipient.",
+            ),
+          );
+        } else if (code === "INVALID_TX_HASH") {
+          setError(
+            t(
+              "Pricing.errInvalidHash",
+              "Transaction hash format is invalid for the selected crypto.",
+            ),
+          );
+        } else if (code === "DUPLICATE_TX") {
+          setError(
+            t(
+              "Pricing.errDuplicateTx",
+              "This transaction hash was already submitted.",
+            ),
+          );
+        } else if (code === "TOO_MANY_PENDING") {
+          setError(
+            t(
+              "Pricing.errTooManyPending",
+              "You already have too many pending payments. Wait for admin review.",
+            ),
+          );
+        } else if (
+          code === "INTENT_EXPIRED" ||
+          code === "INTENT_INVALID" ||
+          code === "ILLEGAL_INTENT_TRANSITION" ||
+          code === "INTENT_ALREADY_USED"
+        ) {
+          setError(
+            t(
+              "Pricing.errIntentExpired",
+              "This payment quote expired or was already used. Please create a new one.",
+            ),
+          );
+          setIntent(null);
+        } else if (code === "RECIPIENT_MISMATCH") {
+          setError(
+            t(
+              "Pricing.errRecipient",
+              "Wallet address changed. Please create a new quote.",
+            ),
+          );
+          setIntent(null);
+        } else {
+          setError(messageFromApiError(res.status, data, t));
+        }
+      } catch {
+        setError(
+          t("Common.errorNetwork", "Network error. Please try again."),
+        );
+      } finally {
+        setSubmitting(false);
       }
+    },
+    [intent, txHash, t],
+  );
 
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setSubmitted(true);
-        setTxHash("");
-        return;
-      }
-
-      const code = typeof data.code === "string" ? data.code : "";
-      const serverMsg = typeof data.error === "string" ? data.error : "";
-
-      if (code === "TX_FAILED_ON_CHAIN") {
-        setError(
-          t(
-            "Pricing.errTxFailed",
-            "This transaction failed on the blockchain or does not match the expected amount/recipient."
-          )
-        );
-      } else if (code === "INVALID_TX_HASH") {
-        setError(
-          t(
-            "Pricing.errInvalidHash",
-            "Transaction hash format is invalid for the selected crypto."
-          )
-        );
-      } else if (code === "DUPLICATE_TX") {
-        setError(
-          t(
-            "Pricing.errDuplicateTx",
-            "This transaction hash was already submitted."
-          )
-        );
-      } else if (code === "TOO_MANY_PENDING") {
-        setError(
-          t(
-            "Pricing.errTooManyPending",
-            "You already have too many pending payments. Wait for admin review."
-          )
-        );
-      } else if (
-        code === "INTENT_EXPIRED" ||
-        code === "INTENT_INVALID" ||
-        code === "ILLEGAL_INTENT_TRANSITION" ||
-        code === "INTENT_ALREADY_USED"
-      ) {
-        setError(
-          t(
-            "Pricing.errIntentExpired",
-            "This payment quote expired or was already used. Please create a new one."
-          )
-        );
-        setIntent(null);
-      } else if (code === "RECIPIENT_MISMATCH") {
-        setError(
-          t(
-            "Pricing.errRecipient",
-            "Wallet address changed. Please create a new quote."
-          )
-        );
-        setIntent(null);
-      } else if (res.status === 429) {
-        setError(
-          t(
-            "Auth.errors.rateLimited",
-            "Too many requests. Please wait a minute and try again."
-          )
-        );
-      } else {
-        setError(
-          serverMsg ||
-            t("Pricing.errSubmit", "Submission failed. Please try again.")
-        );
-      }
-    } catch {
-      setError(t("Common.errorNetwork", "Network error. Please try again."));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function copyAddress() {
+  const copyAddress = useCallback(() => {
     if (!intent?.recipientAddress) return;
     navigator.clipboard.writeText(intent.recipientAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }
+  }, [intent?.recipientAddress]);
 
-  function closeModal() {
+  const closeModal = useCallback(() => {
     setSelectedPlan(null);
     setSubmitted(false);
     setError("");
     setIntent(null);
     setTxHash("");
-  }
+  }, []);
 
   const expiresInMinutes = intent
     ? Math.max(
         0,
         Math.floor(
-          (new Date(intent.expiresAt).getTime() - Date.now()) / 1000 / 60
-        )
+          (new Date(intent.expiresAt).getTime() - Date.now()) / 1000 / 60,
+        ),
       )
     : 0;
+
+  const perPeriod = yearly
+    ? t("Pricing.perYear", "/year")
+    : t("Pricing.perMonth", "/month");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
@@ -416,7 +418,7 @@ export default function PricingPage() {
           <p className="text-slate-400 max-w-2xl mx-auto mb-8">
             {t(
               "Pricing.subtitle",
-              "Choose the plan that fits your needs. Upgrade or downgrade anytime."
+              "Choose the plan that fits your needs. Upgrade or downgrade anytime.",
             )}
           </p>
 
@@ -471,13 +473,15 @@ export default function PricingPage() {
                 >
                   {p.icon}
                 </div>
-                <h3 className="text-xl font-bold text-white mb-1">{p.name}</h3>
+                <h3 className="text-xl font-bold text-white mb-1">
+                  {p.name}
+                </h3>
                 <p className="text-slate-400 text-sm mb-4">{p.description}</p>
                 <p className="text-3xl font-bold text-white mb-1">
                   ${price}
                   {p.id !== "free" && (
                     <span className="text-sm font-normal text-slate-400">
-                      /{yearly ? "yr" : "mo"}
+                      {perPeriod}
                     </span>
                   )}
                 </p>
@@ -526,6 +530,7 @@ export default function PricingPage() {
                 type="button"
                 onClick={closeModal}
                 className="absolute top-4 left-4 text-slate-400 hover:text-white"
+                aria-label={t("Common.back", "Back")}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -538,7 +543,7 @@ export default function PricingPage() {
                   <p className="text-slate-400 text-sm text-center mb-6">
                     {plan.name} — $
                     {yearly ? plan.price.yearly : plan.price.monthly}
-                    /{yearly ? "year" : "month"}
+                    {perPeriod}
                   </p>
 
                   {walletsLoading ? (
@@ -550,7 +555,7 @@ export default function PricingPage() {
                       <p className="text-amber-300 text-sm">
                         {t(
                           "Pricing.walletsEmpty",
-                          "Crypto wallets are not configured yet. Please log in or contact support."
+                          "Crypto wallets are not configured yet. Please log in or contact support.",
                         )}
                       </p>
                       <Link
@@ -563,10 +568,14 @@ export default function PricingPage() {
                   ) : !intent ? (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1.5">
+                        <label
+                          htmlFor="pricing-asset"
+                          className="block text-xs text-slate-400 mb-1.5"
+                        >
                           {t("Pricing.asset", "Asset")}
                         </label>
                         <select
+                          id="pricing-asset"
                           value={cryptoType}
                           onChange={(e) => setCryptoType(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
@@ -605,7 +614,7 @@ export default function PricingPage() {
                       <p className="text-xs text-slate-500 text-center">
                         {t(
                           "Pricing.quoteNote",
-                          "We lock the exact crypto amount for 30 minutes so price changes cannot affect your payment."
+                          "We lock the exact crypto amount for 30 minutes so price changes cannot affect your payment.",
                         )}
                       </p>
                     </div>
@@ -627,18 +636,25 @@ export default function PricingPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1.5">
+                        <label
+                          htmlFor="pricing-recipient"
+                          className="block text-xs text-slate-400 mb-1.5"
+                        >
                           {t("Pricing.sendTo", "Send payment to")}
                         </label>
                         <div className="flex items-center gap-2">
-                          <code className="flex-1 text-xs text-cyan-300 break-all bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                          <code
+                            id="pricing-recipient"
+                            className="flex-1 text-xs text-cyan-300 break-all bg-white/5 border border-white/10 rounded-xl px-3 py-2"
+                          >
                             {intent.recipientAddress}
                           </code>
                           <button
                             type="button"
                             onClick={copyAddress}
                             className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white"
-                            title="Copy"
+                            title={t("Common.copy", "Copy")}
+                            aria-label={t("Common.copy", "Copy")}
                           >
                             {copied ? (
                               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -653,25 +669,35 @@ export default function PricingPage() {
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>
                           {expiresInMinutes > 0
-                            ? t("Pricing.expiresIn", "Quote expires in {minutes} min").replace(
+                            ? t(
+                                "Pricing.expiresIn",
+                                "Quote expires in {minutes} min",
+                              ).replace(
                                 "{minutes}",
-                                String(expiresInMinutes)
+                                String(expiresInMinutes),
                               )
-                            : t("Pricing.expired", "Quote expired — create a new one")}
+                            : t(
+                                "Pricing.expired",
+                                "Quote expired — create a new one",
+                              )}
                         </span>
                       </div>
 
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1.5">
+                        <label
+                          htmlFor="pricing-txhash"
+                          className="block text-xs text-slate-400 mb-1.5"
+                        >
                           {t("Pricing.txHash", "Transaction hash")}
                         </label>
                         <input
+                          id="pricing-txhash"
                           type="text"
                           value={txHash}
                           onChange={(e) => setTxHash(e.target.value)}
                           placeholder={t(
                             "Pricing.txHashPlaceholder",
-                            "Paste TX hash after sending"
+                            "Paste TX hash after sending",
                           )}
                           className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono"
                           required
@@ -722,7 +748,7 @@ export default function PricingPage() {
                   <p className="text-xs text-slate-500 mt-4 text-center">
                     {t(
                       "Pricing.verifyNote",
-                      "Your account will be upgraded after admin confirmation of the on-chain payment (usually within 24h)"
+                      "Your account will be upgraded after admin confirmation of the on-chain payment (usually within 24h)",
                     )}
                   </p>
                 </>
@@ -735,7 +761,7 @@ export default function PricingPage() {
                   <p className="text-slate-400 text-sm">
                     {t(
                       "Pricing.submittedDesc",
-                      "We will verify your transaction and upgrade your account soon."
+                      "We will verify your transaction and upgrade your account soon.",
                     )}
                   </p>
                   <Link
