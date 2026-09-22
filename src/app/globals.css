@@ -4020,3 +4020,205 @@ code {
   .gjm-home .gjm-job-card h3 {
     color: #1e3a8a;
   }
+
+
+/* ============================================================
+   NEWSLETTER — clean component-scoped styles
+   (replaces legacy utility-class layout; RTL-aware)
+   ============================================================ */
+.gjm-newsletter-section { padding-block: 3rem 4rem; }
+
+.gjm-newsletter-container { display: flex; justify-content: center; }
+
+.gjm-newsletter-card {
+  width: 100%;
+  max-width: 42rem;
+  padding: 1.75rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--elev-3);
+}
+
+@media (min-width: 640px) {
+  .gjm-newsletter-card {
+    padding: 2rem 2rem 1.75rem;
+  }
+}
+
+.gjm-newsletter-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+.gjm-newsletter-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--brand-primary-tint);
+  color: var(--brand-primary-hover);
+  box-shadow: var(--inset-1);
+  flex-shrink: 0;
+}
+
+.gjm-newsletter-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.gjm-newsletter-heading h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.gjm-newsletter-heading p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.gjm-newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+@media (min-width: 640px) {
+  .gjm-newsletter-form {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.gjm-newsletter-input {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--inset-2);
+  outline: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.gjm-newsletter-input::placeholder {
+  color: var(--text-subtle);
+}
+
+.gjm-newsletter-input:focus-visible {
+  box-shadow: 0 0 0 4px var(--brand-primary-soft), var(--inset-2);
+  border-color: var(--brand-primary);
+}
+
+.gjm-newsletter-input--name {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 640px) {
+  .gjm-newsletter-input--name {
+    width: 11rem;
+  }
+}
+
+.gjm-newsletter-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.gjm-newsletter-mail-icon {
+  position: absolute;
+  inset-inline-start: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+
+.gjm-newsletter-input--email {
+  padding-inline-start: 2.5rem;
+}
+
+.gjm-newsletter-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--brand-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow:
+    4px 4px 10px rgba(8, 145, 178, 0.35),
+    -3px -3px 8px rgba(255, 255, 255, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.gjm-newsletter-submit:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  transform: translateY(-1px);
+  box-shadow:
+    6px 6px 14px rgba(8, 145, 178, 0.4),
+    -4px -4px 10px rgba(255, 255, 255, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.gjm-newsletter-submit:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: var(--inset-2);
+}
+
+.gjm-newsletter-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.gjm-newsletter-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  color: #047857;
+  background: var(--success-soft);
+  border: 1px solid #34d399;
+  border-radius: var(--radius-lg);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.gjm-newsletter-success svg {
+  color: #059669;
+  margin-top: 0.0625rem;
+}
+
+.gjm-newsletter-error {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--error);
+}
+
+.gjm-newsletter-footnote {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
