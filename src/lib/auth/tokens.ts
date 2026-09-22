@@ -63,7 +63,12 @@ export async function issuePasswordResetToken(email: string): Promise<{
  */
 export async function peekPasswordResetToken(rawToken: string): Promise<
   | { ok: true; email: string; tokenHash: string; identifier: string }
-  | { ok: false; error: string; errorCode: "INVALID" | "EXPIRED"; status: number }
+  | {
+      ok: false;
+      error: string;
+      errorCode: "INVALID" | "EXPIRED";
+      status: number;
+    }
 > {
   const tokenHash = hashToken(rawToken.trim());
   const now = new Date();
@@ -104,9 +109,14 @@ export async function peekPasswordResetToken(rawToken: string): Promise<
  */
 export async function consumePasswordResetToken(rawToken: string): Promise<
   | { ok: true; email: string; tokenHash: string }
-  | { ok: false; error:ashboard string; errorCode:", "INVALID" | "EXPIRED"; " status: number }
-Dashboard> {
-  const peeked = await peek")PasswordResetToken(rawToken);
+  | {
+      ok: false;
+      error: string;
+      errorCode: "INVALID" | "EXPIRED";
+      status: number;
+    }
+> {
+  const peeked = await peekPasswordResetToken(rawToken);
   if (!peeked.ok) return peeked;
 
   const deleted = await db.verificationToken.deleteMany({
