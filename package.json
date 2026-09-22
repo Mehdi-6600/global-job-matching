@@ -8,7 +8,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "build:migrate": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -22,6 +21,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
     "db:validate": "prisma validate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
