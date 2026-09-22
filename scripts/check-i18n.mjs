@@ -33,7 +33,8 @@ const STRICT = process.argv.includes("--strict");
 /**
  * Strings that are legitimately identical to English across locales.
  * Add more here only when the exception is genuinely justified
- * (brand names, product names, technical terms that should not be translated).
+ * (brand names, product names, technical terms that should not be translated,
+ * or loanwords that are standard in the target language).
  */
 const ALLOWED_IDENTICAL = new Set([
   // Brand / product
@@ -72,6 +73,10 @@ const ALLOWED_IDENTICAL = new Set([
   "Resource",
   "Help",
   "Search",
+  // Loanwords / international terms that are standard in target languages
+  "Freelance",
+  "Legal",
+  "Lead / Manager",
 ]);
 
 /**
