@@ -428,7 +428,11 @@
     "notFound": "Perfil no encontrado",
     "planTitle": "Plan actual",
     "paymentHistory": "Historial de pagos",
-    "noPayments": "Aún no hay pagos."
+    "noPayments": "Aún no hay pagos.",
+    "resumeUploaded": "Currículum subido correctamente.",
+    "resumeDeleteConfirm": "¿Seguro que quieres eliminar tu currículum?",
+    "resumeRemoved": "Currículum eliminado.",
+    "removeResume": "Eliminar currículum"
   },
   "CareerRisk": {
     "title": "Riesgo profesional con IA",
@@ -558,7 +562,9 @@
     "category": "Categoría",
     "noJobs": "No se encontraron empleos",
     "pending": "Pendiente",
-    "salaryNA": "Salario no especificado"
+    "salaryNA": "Salario no especificado",
+    "loadErrorTitle": "No se pudieron cargar los empleos",
+    "loadErrorBody": "Algo salió mal. Inténtalo de nuevo."
   },
   "Applications": {
     "title": "Mis solicitudes",
@@ -688,7 +694,20 @@
     "school": "Escuela / Universidad",
     "degree": "Título",
     "year": "Año",
-    "role": "Puesto"
+    "role": "Puesto",
+    "loading": "Cargando perfil...",
+    "saved": "Perfil guardado",
+    "anonymous": "Anónimo",
+    "name": "Nombre completo",
+    "headline": "Titular / cargo",
+    "location": "Ubicación",
+    "bioEmpty": "Aún no hay biografía.",
+    "linksEmpty": "Aún no se han añadido enlaces.",
+    "skillsEmpty": "Aún no se han añadido habilidades.",
+    "removeSkill": "Eliminar habilidad",
+    "experiencePlaceholder": "Puestos, años, logros",
+    "experienceEmpty": "Aún no se ha añadido experiencia.",
+    "educationPlaceholder": "Detalles de tu formación"
   },
   "Blog": {
     "title": "Blog de carrera",
