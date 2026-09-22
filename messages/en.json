@@ -180,6 +180,36 @@
     "print": "Print",
     "copied": "Copied"
   },
+  "ApiErrors": {
+    "badRequest": "The request was invalid. Please check your input.",
+    "unauthorized": "Please sign in to continue.",
+    "forbidden": "You do not have access to this action.",
+    "notFound": "We could not find what you were looking for.",
+    "conflict": "This action conflicts with the current state.",
+    "tooLarge": "The data you submitted is too large.",
+    "unprocessable": "We could not process this request.",
+    "validation": "Some fields need to be fixed.",
+    "rateLimited": "Too many requests. Please wait a moment and try again.",
+    "internal": "Something went wrong on our side. Please try again.",
+    "serviceUnavailable": "Service temporarily unavailable. Please try again shortly.",
+
+    "planLimitAi": "You have reached your monthly AI limit. Upgrade your plan or try next month.",
+    "planLimitApplications": "You have reached your monthly application limit. Upgrade your plan for more.",
+    "planLimitSavedJobs": "You have reached your saved jobs limit. Upgrade your plan for more.",
+    "planLimitJobAlerts": "You have reached your job alerts limit. Upgrade your plan for more.",
+    "planLimitJobs": "You have reached your active job posting limit. Upgrade your plan for more.",
+    "planRequired": "This feature requires a higher plan.",
+    "quotaExceeded": "Monthly quota exceeded. Try again later or upgrade.",
+    "quotaInfraError": "Service temporarily unavailable. Please try again shortly.",
+    "rateLimitInfraError": "Service temporarily unavailable. Please try again shortly.",
+
+    "emailExists": "This email is already registered.",
+    "alreadyApplied": "You have already applied for this job.",
+    "alreadySaved": "This job is already in your saved list.",
+    "jobNotActive": "This job is no longer active.",
+    "jobNotFound": "This job is no longer available.",
+    "aiFailed": "AI analysis failed. Please try again in a moment."
+  },
   "Auth": {
     "loginTitle": "Login",
     "loginSubtitle": "Welcome to Global Job Matching",
