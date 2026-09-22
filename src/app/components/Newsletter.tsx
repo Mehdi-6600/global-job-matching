@@ -27,70 +27,86 @@ export default function Newsletter() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || t("Common.newsletterErrorSubscribe", "Failed to subscribe"));
+        setError(
+          data.error ||
+            t("Common.newsletterErrorSubscribe", "Failed to subscribe")
+        );
       } else {
         setSuccess(true);
         setEmail("");
         setName("");
       }
     } catch {
-      setError(t("Common.newsletterErrorNetwork", "Network error. Please try again."));
+      setError(
+        t("Common.newsletterErrorNetwork", "Network error. Please try again.")
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="rounded-2xl p-8 bg-white/5 border border-white/10">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center">
-          <Sparkles className="w-5 h-5 text-sky-400" />
+    <div className="gjm-newsletter-card">
+      <div className="gjm-newsletter-head">
+        <div className="gjm-newsletter-icon">
+          <Sparkles className="w-5 h-5" aria-hidden="true" />
         </div>
-        <div>
-          <h3 className="text-xl font-bold text-white">{t("Common.newsletterTitle", "Stay Updated")}</h3>
-          <p className="text-slate-400 text-sm">
-            {t("Common.newsletterSubtitle", "Get the best jobs delivered to your inbox weekly")}
+        <div className="gjm-newsletter-heading">
+          <h3>{t("Common.newsletterTitle", "Stay Updated")}</h3>
+          <p>
+            {t(
+              "Common.newsletterSubtitle",
+              "Get the best jobs delivered to your inbox weekly"
+            )}
           </p>
         </div>
       </div>
 
       {success ? (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <p className="text-emerald-400 text-sm font-medium">
-            {t("Common.newsletterSuccess", "You are subscribed! Check your inbox soon.")}
+        <div className="gjm-newsletter-success" role="status">
+          <CheckCircle2 className="w-5 h-5 shrink-0" aria-hidden="true" />
+          <p>
+            {t(
+              "Common.newsletterSuccess",
+              "You are subscribed! Check your inbox soon."
+            )}
           </p>
         </div>
       ) : (
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col sm:flex-row gap-3"
-        >
+        <form onSubmit={handleSubmit} className="gjm-newsletter-form">
           <input
             type="text"
-            placeholder={t("Common.newsletterNamePlaceholder", "Your name (optional)")}
+            placeholder={t(
+              "Common.newsletterNamePlaceholder",
+              "Your name (optional)"
+            )}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm sm:w-40"
+            className="gjm-newsletter-input gjm-newsletter-input--name"
+            autoComplete="name"
           />
-          <div className="relative flex-1">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <div className="gjm-newsletter-input-wrap">
+            <Mail className="gjm-newsletter-mail-icon" aria-hidden="true" />
             <input
               type="email"
               required
-              placeholder={t("Common.newsletterEmailPlaceholder", "Enter your email")}
+              placeholder={t(
+                "Common.newsletterEmailPlaceholder",
+                "Enter your email"
+              )}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
+              className="gjm-newsletter-input gjm-newsletter-input--email"
+              autoComplete="email"
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white font-medium text-sm transition-all flex items-center justify-center gap-2 shrink-0"
+            className="gjm-newsletter-submit"
           >
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             ) : (
               t("Common.newsletterSubscribe", "Subscribe")
             )}
@@ -98,9 +114,13 @@ export default function Newsletter() {
         </form>
       )}
 
-      {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
+      {error && (
+        <p className="gjm-newsletter-error" role="alert">
+          {error}
+        </p>
+      )}
 
-      <p className="text-slate-500 text-xs mt-4">
+      <p className="gjm-newsletter-footnote">
         {t("Common.newsletterFooter", "No spam. Unsubscribe anytime.")}
       </p>
     </div>
