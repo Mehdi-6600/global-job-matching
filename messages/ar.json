@@ -624,7 +624,10 @@
     "toneConfident": "واثقة",
     "toneConcise": "موجزة",
     "saveToProfile": "احفظ ملاحظة في الملف الشخصي",
-    "previewEmpty": "ستظهر سيرتك الذاتية المنشأة هنا"
+    "previewEmpty": "ستظهر سيرتك الذاتية المنشأة هنا",
+    "printTitle": "السيرة الذاتية",
+    "sourceAi": "ذكاء اصطناعي",
+    "sourceTemplate": "قالب"
   },
   "Employer": {
     "title": "لوحة صاحب العمل",
@@ -755,7 +758,27 @@
     "contactEmployer": "تواصل مع صاحب العمل",
     "remote": "عن بُعد",
     "salaryNA": "الراتب غير محدد",
-    "loginToApply": "سجّل الدخول للتقديم"
+    "loginToApply": "سجّل الدخول للتقديم",
+    "deadline": "الموعد النهائي",
+    "responsibilities": "المسؤوليات",
+    "matchScoreTitle": "درجة التطابق",
+    "overallFit": "مدى التوافق",
+    "skills": "المهارات",
+    "experience": "الخبرة",
+    "stats": "{views} مشاهدة · {applicants} متقدم",
+    "coverLetterLabel": "خطاب التقديم (اختياري)",
+    "coverLetterPlaceholder": "أخبرنا لماذا أنت مناسب لهذا الدور...",
+    "applySuccessBody": "تم إرسال طلبك بنجاح.",
+    "contactDefault": "أنا مهتم جدًا بوظيفة «{title}» وأرحّب بفرصة الحديث حول مدى توافق خلفيتي مع فريقكم.\n\nشكرًا لوقتكم.",
+    "contactConfirm": "أؤكد رغبتي في إرسال هذه الرسالة إلى صاحب العمل (وليس مسودة فقط).",
+    "contactSent": "تم إرسال الرسالة إلى صاحب العمل.",
+    "contactDraftReady": "المسودة جاهزة",
+    "contactSubject": "الموضوع (اختياري)",
+    "contactMessage": "الرسالة",
+    "contactDraft": "مسودة",
+    "contactGenerateDraft": "أنشئ مسودة",
+    "contactCopy": "نسخ",
+    "contactSend": "إرسال"
   },
   "Companies": {
     "title": "الشركات",
