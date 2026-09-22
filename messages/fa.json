@@ -428,7 +428,11 @@
     "notFound": "پروفایل پیدا نشد",
     "planTitle": "پلن فعلی",
     "paymentHistory": "تاریخچه‌ی پرداخت‌ها",
-    "noPayments": "هنوز پرداختی ثبت نشده است."
+    "noPayments": "هنوز پرداختی ثبت نشده است.",
+    "resumeUploaded": "رزومه با موفقیت بارگذاری شد.",
+    "resumeDeleteConfirm": "آیا مطمئن هستید که می‌خواهید رزومه‌تان را حذف کنید؟",
+    "resumeRemoved": "رزومه حذف شد.",
+    "removeResume": "حذف رزومه"
   },
   "CareerRisk": {
     "title": "ریسک شغلی هوش مصنوعی",
@@ -558,7 +562,9 @@
     "category": "دسته",
     "noJobs": "شغلی پیدا نشد",
     "pending": "در انتظار",
-    "salaryNA": "حقوق مشخص نشده"
+    "salaryNA": "حقوق مشخص نشده",
+    "loadErrorTitle": "بارگذاری شغل‌ها ممکن نبود",
+    "loadErrorBody": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
   },
   "Applications": {
     "title": "درخواست‌های من",
@@ -688,7 +694,20 @@
     "school": "دانشگاه / مدرسه",
     "degree": "مدرک",
     "year": "سال",
-    "role": "نقش"
+    "role": "نقش",
+    "loading": "در حال بارگذاری پروفایل...",
+    "saved": "پروفایل ذخیره شد",
+    "anonymous": "ناشناس",
+    "name": "نام کامل",
+    "headline": "عنوان / سمت",
+    "location": "مکان",
+    "bioEmpty": "هنوز توضیحی اضافه نشده.",
+    "linksEmpty": "هنوز لینکی اضافه نشده.",
+    "skillsEmpty": "هنوز مهارتی اضافه نشده.",
+    "removeSkill": "حذف مهارت",
+    "experiencePlaceholder": "نقش‌ها، سال‌ها، دستاوردها",
+    "experienceEmpty": "هنوز تجربه‌ای اضافه نشده.",
+    "educationPlaceholder": "جزئیات تحصیلات شما"
   },
   "Blog": {
     "title": "بلاگ شغلی",
