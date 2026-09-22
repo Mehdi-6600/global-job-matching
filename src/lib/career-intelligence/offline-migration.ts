@@ -12,6 +12,11 @@
  *  - Never invents visa rules, quotas, points, or eligibility.
  *  - Always labels the output as general guidance, not legal advice.
  *  - Deterministic: same input → same output.
+ *
+ * Phase 4+:
+ *  - roleFamily and specialization are rendered through a locale-aware
+ *    humanizer so internal identifiers like "software_engineering" never
+ *    leak into user-visible text.
  */
 
 import type { CareerRiskLocale } from "@/types/career-risk";
@@ -103,6 +108,122 @@ function formatYears(
     fr: `${years} ans d'expérience`,
     de: `${years} Jahre Erfahrung`,
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Humanizers for internal roleFamily / specialization identifiers     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Human-readable label for a RoleFamily, localized. Never leaks the
+ * internal identifier (e.g. "software_engineering") into user text.
+ */
+function roleFamilyLabel(
+  family: RoleFamily,
+  locale: CareerRiskLocale,
+): string {
+  const table: Record<RoleFamily, LocaleCopy> = {
+    software_engineering: {
+      en: "software engineering",
+      fa: "مهندسی نرم‌افزار",
+      ar: "هندسة البرمجيات",
+      es: "ingeniería de software",
+      fr: "ingénierie logicielle",
+      de: "Software-Engineering",
+      hi: "सॉफ़्टवेयर इंजीनियरिंग",
+    },
+    data: {
+      en: "data / analytics",
+      fa: "داده و تحلیل",
+      ar: "البيانات والتحليلات",
+      es: "datos / analítica",
+      fr: "data / analytique",
+      de: "Daten / Analytik",
+      hi: "डेटा / एनालिटिक्स",
+    },
+    design: {
+      en: "design / product design",
+      fa: "طراحی / طراحی محصول",
+      ar: "التصميم / تصميم المنتج",
+      es: "diseño / diseño de producto",
+      fr: "design / design produit",
+      de: "Design / Produktdesign",
+      hi: "डिज़ाइन / उत्पाद डिज़ाइन",
+    },
+    education: {
+      en: "education / teaching",
+      fa: "آموزش و تدریس",
+      ar: "التعليم / التدريس",
+      es: "educación / docencia",
+      fr: "éducation / enseignement",
+      de: "Bildung / Lehre",
+      hi: "शिक्षा / शिक्षण",
+    },
+    healthcare: {
+      en: "healthcare",
+      fa: "سلامت و درمان",
+      ar: "الرعاية الصحية",
+      es: "salud",
+      fr: "santé",
+      de: "Gesundheitswesen",
+      hi: "स्वास्थ्य सेवा",
+    },
+    accounting_finance: {
+      en: "accounting / finance",
+      fa: "حسابداری و مالی",
+      ar: "المحاسبة والمالية",
+      es: "contabilidad / finanzas",
+      fr: "comptabilité / finance",
+      de: "Buchhaltung / Finanzen",
+      hi: "लेखांकन / वित्त",
+    },
+    trades: {
+      en: "skilled trades",
+      fa: "حرفه‌های فنی",
+      ar: "المهن الفنية",
+      es: "oficios especializados",
+      fr: "métiers spécialisés",
+      de: "Handwerk",
+      hi: "कुशल ट्रेड्स",
+    },
+    operations_clerical: {
+      en: "operations / clerical",
+      fa: "عملیات و امور دفتری",
+      ar: "العمليات / الأعمال المكتبية",
+      es: "operaciones / administrativo",
+      fr: "opérations / administratif",
+      de: "Operations / Verwaltung",
+      hi: "ऑपरेशन्स / क्लेरिकल",
+    },
+    sales_marketing: {
+      en: "sales / marketing",
+      fa: "فروش و بازاریابی",
+      ar: "المبيعات والتسويق",
+      es: "ventas / marketing",
+      fr: "ventes / marketing",
+      de: "Vertrieb / Marketing",
+      hi: "बिक्री / मार्केटिंग",
+    },
+    management: {
+      en: "management / leadership",
+      fa: "مدیریت و رهبری",
+      ar: "الإدارة / القيادة",
+      es: "gestión / liderazgo",
+      fr: "management / leadership",
+      de: "Management / Führung",
+      hi: "प्रबंधन / नेतृत्व",
+    },
+    generic: {
+      en: "professional roles",
+      fa: "نقش‌های حرفه‌ای",
+      ar: "الأدوار المهنية",
+      es: "roles profesionales",
+      fr: "rôles professionnels",
+      de: "professionelle Rollen",
+      hi: "पेशेवर भूमिकाएँ",
+    },
+  };
+  return L(locale, table[family]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -583,14 +704,27 @@ function demandLine(
   roleFamily: RoleFamily,
   leadSkill: string | undefined
 ): string {
+  const familyHuman = roleFamilyLabel(roleFamily, locale);
+  const skillBit = leadSkill
+    ? L(locale, {
+        en: ` and the skill «${leadSkill}»`,
+        es: ` y la habilidad «${leadSkill}»`,
+        ar: ` والمهارة «${leadSkill}»`,
+        fa: ` و مهارت «${leadSkill}»`,
+        hi: ` और कौशल «${leadSkill}»`,
+        fr: ` et la compétence «${leadSkill}»`,
+        de: ` und die Fähigkeit „${leadSkill}“`,
+      })
+    : "";
+
   return L(locale, {
-    en: `Likely relevance to ${roleFamily}${leadSkill ? ` and skill ${leadSkill}` : ""}`,
-    es: `Relevancia probable para ${roleFamily}${leadSkill ? ` y habilidad ${leadSkill}` : ""}`,
-    ar: `ملاءمة محتملة لـ ${roleFamily}${leadSkill ? ` ومهارة ${leadSkill}` : ""}`,
-    fa: `تناسب محتمل با خانواده شغلی ${roleFamily}${leadSkill ? ` و مهارت ${leadSkill}` : ""}`,
-    hi: `${roleFamily} के लिए संभावित प्रासंगिकता${leadSkill ? ` और कौशल ${leadSkill}` : ""}`,
-    fr: `Pertinence probable pour ${roleFamily}${leadSkill ? ` et compétence ${leadSkill}` : ""}`,
-    de: `Wahrscheinliche Relevanz für ${roleFamily}${leadSkill ? ` und Skill ${leadSkill}` : ""}`,
+    en: `Likely relevance to ${familyHuman}${skillBit}`,
+    es: `Relevancia probable para ${familyHuman}${skillBit}`,
+    ar: `ملاءمة محتملة لـ ${familyHuman}${skillBit}`,
+    fa: `تناسب محتمل با ${familyHuman}${skillBit}`,
+    hi: `${familyHuman} के लिए संभावित प्रासंगिकता${skillBit}`,
+    fr: `Pertinence probable pour ${familyHuman}${skillBit}`,
+    de: `Wahrscheinliche Relevanz für ${familyHuman}${skillBit}`,
   });
 }
 
@@ -599,13 +733,13 @@ function pathwayLine(
   currentRole: string
 ): string {
   return L(locale, {
-    en: `Skilled/employer-led pathways related to ${currentRole} — verify official criteria`,
-    es: `Rutas cualificadas/por empleador relacionadas con ${currentRole} — verifique criterios oficiales`,
-    ar: `مسارات ماهرة/بقيادة صاحب العمل مرتبطة بـ ${currentRole} — تحقق من المعايير الرسمية`,
-    fa: `مسیرهای مهارتی/استخدام‌محور مرتبط با ${currentRole} — جزئیات را رسمی چک کنید`,
-    hi: `${currentRole} से संबंधित कुशल/नियोक्ता-नेतृत्व मार्ग — आधिकारिक मानदंड जाँचें`,
-    fr: `Voies qualifiées/employeur liées à ${currentRole} — vérifiez les critères officiels`,
-    de: `Qualifizierte/arbeitgebergeführte Wege für ${currentRole} — offizielle Kriterien prüfen`,
+    en: `Skilled/employer-led pathways related to «${currentRole}» — verify official criteria`,
+    es: `Rutas cualificadas/por empleador relacionadas con «${currentRole}» — verifique criterios oficiales`,
+    ar: `مسارات ماهرة/بقيادة صاحب العمل مرتبطة بـ «${currentRole}» — تحقق من المعايير الرسمية`,
+    fa: `مسیرهای مهارتی/استخدام‌محور مرتبط با «${currentRole}» — جزئیات را رسمی چک کنید`,
+    hi: `«${currentRole}» से संबंधित कुशल/नियोक्ता-नेतृत्व मार्ग — आधिकारिक मानदंड जाँचें`,
+    fr: `Voies qualifiées/employeur liées à «${currentRole}» — vérifiez les critères officiels`,
+    de: `Qualifizierte/arbeitgebergeführte Wege für „${currentRole}“ — offizielle Kriterien prüfen`,
   });
 }
 
@@ -712,7 +846,8 @@ export function buildOfflineMigration(input: ProfileInput): OfflineMigration {
   const locale = normalizeCareerLocale(input.locale);
   const profile = buildCareerProfile(input);
 
-  const dest = FAMILY_DESTINATIONS[profile.roleFamily] ?? FAMILY_DESTINATIONS.generic;
+  const dest =
+    FAMILY_DESTINATIONS[profile.roleFamily] ?? FAMILY_DESTINATIONS.generic;
 
   // Score each destination on career-fit grounds, then sort:
   //   1. score desc
@@ -753,12 +888,26 @@ export function buildOfflineMigration(input: ProfileInput): OfflineMigration {
     fa: `مسیرهای مهاجرتی مرتبط با «${profile.currentRole}»`,
     hi: `«${profile.currentRole}» के लिए प्रवास-उन्मुख मार्ग`,
     fr: `Parcours orientés migration pour «${profile.currentRole}»`,
-    de: `Migrationsorientierte Wege für «${profile.currentRole}»`,
+    de: `Migrationsorientierte Wege für „${profile.currentRole}“`,
   });
 
-  const roleDescriptor =
-    profile.roleFamily +
-    (profile.specialization ? ` / ${profile.specialization}` : "");
+  // Human-readable role descriptor — never leak internal identifiers.
+  const roleDescriptor = L(locale, {
+    en: roleFamilyLabel(profile.roleFamily, "en") +
+      (profile.specialization ? ` / ${profile.specialization}` : ""),
+    fa: roleFamilyLabel(profile.roleFamily, "fa") +
+      (profile.specialization ? ` / ${profile.specialization}` : ""),
+    ar: roleFamilyLabel(profile.roleFamily, "ar") +
+      (profile.specialization ? ` / ${profile.specialization}` : ""),
+    es: roleFamilyLabel(profile.roleFamily, "es") +
+      (profile.specialization ? ` / ${profile.specialization}` : ""),
+    fr: roleFamilyLabel(profile.roleFamily, "fr") +
+      (profile.specialization ? ` / ${profile.specialization}` : ""),
+    de: roleFamilyLabel(profile.roleFamily, "de") +
+      (profile.specialization ? ` / ${profile.specialization}` : ""),
+    hi: roleFamilyLabel(profile.roleFamily, "hi") +
+      (profile.specialization ? ` / ${profile.specialization}` : ""),
+  });
 
   const summary = L(locale, {
     en: `Based on role «${profile.currentRole}» (${roleDescriptor}), ${yearsBit}, and skills (${skillBit}), these destinations are relatively closer on career-fit grounds. This is occupational-fit guidance only — not legal advice.`,
@@ -767,7 +916,7 @@ export function buildOfflineMigration(input: ProfileInput): OfflineMigration {
     fa: `بر اساس نقش «${profile.currentRole}» (${roleDescriptor})، ${yearsBit}، و مهارت‌ها (${skillBit}) این مقاصد از نظر تناسب شغلی منطقی‌ترند. این ارزیابی تناسب مسیر شغلی است نه رأی حقوقی.`,
     hi: `भूमिका «${profile.currentRole}» (${roleDescriptor}), ${yearsBit}, और कौशल (${skillBit}) के आधार पर, ये गंतव्य करियर-उपयुक्तता के आधार पर अपेक्षाकृत निकट हैं। यह व्यावसायिक-उपयुक्तता मार्गदर्शन है — कानूनी सलाह नहीं।`,
     fr: `Selon le rôle « ${profile.currentRole} » (${roleDescriptor}), ${yearsBit} et compétences (${skillBit}), ces destinations sont relativement plus proches en termes d'adéquation professionnelle. Orientation d'adéquation professionnelle — pas un conseil juridique.`,
-    de: `Basierend auf der Rolle «${profile.currentRole}» (${roleDescriptor}), ${yearsBit} und Fähigkeiten (${skillBit}) liegen diese Ziele hinsichtlich der Berufseignung relativ näher. Dies ist eine Orientierung zur beruflichen Eignung — keine Rechtsberatung.`,
+    de: `Basierend auf der Rolle „${profile.currentRole}“ (${roleDescriptor}), ${yearsBit} und Fähigkeiten (${skillBit}) liegen diese Ziele hinsichtlich der Berufseignung relativ näher. Dies ist eine Orientierung zur beruflichen Eignung — keine Rechtsberatung.`,
   });
 
   const countries: MigrationCountry[] = chosen.map((d) => {
