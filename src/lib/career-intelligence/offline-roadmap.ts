@@ -1,5 +1,12 @@
 /**
  * Profile-aware offline 90-day roadmap — all 7 locales, no EN/locale mix.
+ *
+ * Phase 4+:
+ *  - Task labels are pulled through `taskLabel()` from profile.ts so the
+ *    "high-exposure task" reference is localized instead of using the
+ *    raw English label.
+ *  - Internal role-family identifiers are humanized via a locale-aware
+ *    label table before being shown to the user.
  */
 
 import type { CareerRiskLocale } from "@/types/career-risk";
@@ -7,6 +14,7 @@ import { normalizeCareerLocale } from "@/lib/career-risk";
 import {
   buildCareerProfile,
   highAutomationTasks,
+  taskLabel,
   type ProfileInput,
   type RoleFamily,
 } from "@/lib/career-intelligence/profile";
@@ -27,6 +35,118 @@ function t(locale: CareerRiskLocale, table: L7, vars: Record<string, string> = {
     s = s.split(`{${k}}`).join(v);
   }
   return s;
+}
+
+/* ------------------------------------------------------------------ */
+/* Human-readable role-family label (never leaks internal ids)        */
+/* ------------------------------------------------------------------ */
+
+function roleFamilyLabel(
+  family: RoleFamily,
+  locale: CareerRiskLocale,
+): string {
+  const table: Record<RoleFamily, L7> = {
+    software_engineering: {
+      en: "software engineering",
+      fa: "مهندسی نرم‌افزار",
+      ar: "هندسة البرمجيات",
+      es: "ingeniería de software",
+      fr: "ingénierie logicielle",
+      de: "Software-Engineering",
+      hi: "सॉफ़्टवेयर इंजीनियरिंग",
+    },
+    data: {
+      en: "data / analytics",
+      fa: "داده و تحلیل",
+      ar: "البيانات والتحليلات",
+      es: "datos / analítica",
+      fr: "data / analytique",
+      de: "Daten / Analytik",
+      hi: "डेटा / एनालिटिक्स",
+    },
+    design: {
+      en: "design / product design",
+      fa: "طراحی / طراحی محصول",
+      ar: "التصميم / تصميم المنتج",
+      es: "diseño / diseño de producto",
+      fr: "design / design produit",
+      de: "Design / Produktdesign",
+      hi: "डिज़ाइन / उत्पाद डिज़ाइन",
+    },
+    education: {
+      en: "education / teaching",
+      fa: "آموزش و تدریس",
+      ar: "التعليم / التدريس",
+      es: "educación / docencia",
+      fr: "éducation / enseignement",
+      de: "Bildung / Lehre",
+      hi: "शिक्षा / शिक्षण",
+    },
+    healthcare: {
+      en: "healthcare",
+      fa: "سلامت و درمان",
+      ar: "الرعاية الصحية",
+      es: "salud",
+      fr: "santé",
+      de: "Gesundheitswesen",
+      hi: "स्वास्थ्य सेवा",
+    },
+    accounting_finance: {
+      en: "accounting / finance",
+      fa: "حسابداری و مالی",
+      ar: "المحاسبة والمالية",
+      es: "contabilidad / finanzas",
+      fr: "comptabilité / finance",
+      de: "Buchhaltung / Finanzen",
+      hi: "लेखांकन / वित्त",
+    },
+    trades: {
+      en: "skilled trades",
+      fa: "حرفه‌های فنی",
+      ar: "المهن الفنية",
+      es: "oficios especializados",
+      fr: "métiers spécialisés",
+      de: "Handwerk",
+      hi: "कुशल ट्रेड्स",
+    },
+    operations_clerical: {
+      en: "operations / clerical",
+      fa: "عملیات و امور دفتری",
+      ar: "العمليات / الأعمال المكتبية",
+      es: "operaciones / administrativo",
+      fr: "opérations / administratif",
+      de: "Operations / Verwaltung",
+      hi: "ऑपरेशन्स / क्लेरिकल",
+    },
+    sales_marketing: {
+      en: "sales / marketing",
+      fa: "فروش و بازاریابی",
+      ar: "المبيعات والتسويق",
+      es: "ventas / marketing",
+      fr: "ventes / marketing",
+      de: "Vertrieb / Marketing",
+      hi: "बिक्री / मार्केटिंग",
+    },
+    management: {
+      en: "management / leadership",
+      fa: "مدیریت و رهبری",
+      ar: "الإدارة / القيادة",
+      es: "gestión / liderazgo",
+      fr: "management / leadership",
+      de: "Management / Führung",
+      hi: "प्रबंधन / नेतृत्व",
+    },
+    generic: {
+      en: "professional roles",
+      fa: "نقش‌های حرفه‌ای",
+      ar: "الأدوار المهنية",
+      es: "roles profesionales",
+      fr: "rôles professionnels",
+      de: "professionelle Rollen",
+      hi: "पेशेवर भूमिकाएँ",
+    },
+  };
+  return table[family][locale] || table[family].en;
 }
 
 const WEEK1: L7 = {
@@ -175,6 +295,20 @@ export function buildOfflineRoadmap(
   const locale = normalizeCareerLocale(input.locale);
   const profile = buildCareerProfile(input);
   const exposed = highAutomationTasks(profile);
+
+  // Locale-aware exposure label — never the raw English task label.
+  const exposeLabel = exposed[0]
+    ? taskLabel(exposed[0], locale)
+    : t(locale, {
+        en: "repetitive tasks",
+        fa: "وظایف تکراری",
+        ar: "مهام متكررة",
+        es: "tareas repetitivas",
+        fr: "tâches répétitives",
+        de: "wiederkehrende Aufgaben",
+        hi: "दोहराव वाले कार्य",
+      });
+
   const gapsBase =
     input.skillsToBuild && input.skillsToBuild.length > 0
       ? input.skillsToBuild.slice(0, 6)
@@ -183,15 +317,6 @@ export function buildOfflineRoadmap(
   const g1 = gapsBase[0] || fb[0];
   const g2 = gapsBase[1] || fb[1];
   const g3 = gapsBase[2] || fb[2];
-  const exposeLabel = exposed[0]?.label || t(locale, {
-    en: "repetitive tasks",
-    fa: "وظایف تکراری",
-    ar: "مهام متكررة",
-    es: "tareas repetitivas",
-    fr: "tâches répétitives",
-    de: "wiederkehrende Aufgaben",
-    hi: "दोहराव वाले कार्य",
-  });
   const target = profile.targetRole;
   const role = profile.currentRole;
 
@@ -204,7 +329,7 @@ export function buildOfflineRoadmap(
           ar: `خارطة طريق ٩٠ يومًا: من «{role}» إلى «{target}»`,
           es: `Hoja de ruta 90 días: «{role}» → «{target}»`,
           fr: `Feuille de route 90 jours : «{role}» → «{target}»`,
-          de: `90-Tage-Roadmap: «{role}» → «{target}»`,
+          de: `90-Tage-Roadmap: „{role}“ → „{target}“`,
           hi: `90-दिन रोडमैप: «{role}» → «{target}»`,
         },
         { role, target }
@@ -217,7 +342,7 @@ export function buildOfflineRoadmap(
           ar: `خارطة طريق ٩٠ يومًا لـ «{role}» (لم يُحدد الدور المستهدف)`,
           es: `Hoja de ruta 90 días para «{role}» (sin rol objetivo)`,
           fr: `Feuille de route 90 jours pour «{role}» (pas de rôle cible)`,
-          de: `90-Tage-Roadmap für «{role}» (kein Zielrolle angegeben)`,
+          de: `90-Tage-Roadmap für „{role}“ (keine Zielrolle angegeben)`,
           hi: `«{role}» के लिए 90-दिन रोडमैप (लक्ष्य भूमिका नहीं)`,
         },
         { role }
@@ -248,8 +373,10 @@ export function buildOfflineRoadmap(
         : null;
 
   const family = profile.targetRoleFamily || profile.roleFamily;
-  const resources = (FAMILY_RESOURCES[family] || FAMILY_RESOURCES.generic)[locale]
-    || FAMILY_RESOURCES.generic.en;
+  const familyHuman = roleFamilyLabel(family, locale);
+  const resources =
+    (FAMILY_RESOURCES[family] || FAMILY_RESOURCES.generic)[locale] ||
+    FAMILY_RESOURCES.generic.en;
 
   const focus1 = target
     ? t(locale, {
@@ -258,7 +385,7 @@ export function buildOfflineRoadmap(
         ar: `الفجوة نحو «{target}»: {g1}`,
         es: `Brecha hacia «{target}»: {g1}`,
         fr: `Écart vers «{target}» : {g1}`,
-        de: `Lücke Richtung «{target}»: {g1}`,
+        de: `Lücke Richtung „{target}“: {g1}`,
         hi: `«{target}» की ओर अंतराल: {g1}`,
       }, { target, g1 })
     : t(locale, {
@@ -278,7 +405,7 @@ export function buildOfflineRoadmap(
         ar: `صفحة واحدة: كفاءات «{target}» مقابل الدور الحالي «{role}»`,
         es: `Una página: competencias de «{target}» vs rol actual «{role}»`,
         fr: `Une page : compétences «{target}» vs rôle actuel «{role}»`,
-        de: `Einseiter: Kompetenzen für «{target}» vs. aktuelle Rolle «{role}»`,
+        de: `Einseiter: Kompetenzen für „{target}“ vs. aktuelle Rolle „{role}“`,
         hi: `एक पेज: «{target}» बनाम वर्तमान «{role}» की क्षमताएँ`,
       }, { target, role })
     : t(locale, {
@@ -287,7 +414,7 @@ export function buildOfflineRoadmap(
         ar: `ارسم فجوة «{g1}» مقابل الدور «{role}»`,
         es: `Mapea la brecha «{g1}» frente al rol «{role}»`,
         fr: `Cartographiez l'écart «{g1}» par rapport au rôle «{role}»`,
-        de: `Lücke «{g1}» gegenüber Rolle «{role}» abbilden`,
+        de: `Lücke „{g1}“ gegenüber Rolle „{role}“ abbilden`,
         hi: `«{g1}» अंतराल को भूमिका «{role}» के विरुद्ध मैप करें`,
       }, { g1, role });
 
@@ -297,7 +424,7 @@ export function buildOfflineRoadmap(
     ar: `مقاييس أساسية للمهمة عالية التعرض «{expose}»`,
     es: `Métricas base para la tarea de alta exposición «{expose}»`,
     fr: `Métriques de base pour la tâche à forte exposition «{expose}»`,
-    de: `Ausgangswerte für risikoreiche Aufgabe «{expose}»`,
+    de: `Ausgangswerte für risikoreiche Aufgabe „{expose}“`,
     hi: `उच्च-जोखिम कार्य «{expose}» के लिए आधार मेट्रिक्स`,
   }, { expose: exposeLabel });
 
@@ -327,7 +454,7 @@ export function buildOfflineRoadmap(
     ar: `أنشئ مسار عمل يؤتمت جزئيًا «{expose}»`,
     es: `Entrega un flujo que automatice parcialmente «{expose}»`,
     fr: `Livrez un flux qui automatise partiellement «{expose}»`,
-    de: `Liefern Sie einen Workflow, der «{expose}» teilweise automatisiert`,
+    de: `Liefern Sie einen Workflow, der „{expose}“ teilweise automatisiert`,
     hi: `एक वर्कफ़्लो बनाएँ जो «{expose}» को आंशिक रूप से स्वचालित करे`,
   }, { expose: exposeLabel });
 
@@ -338,7 +465,7 @@ export function buildOfflineRoadmap(
         ar: `قطعة محفظة تُظهر التقدم نحو «{target}»`,
         es: `Pieza de portafolio que evidencie progreso hacia «{target}»`,
         fr: `Pièce de portfolio prouvant le progrès vers «{target}»`,
-        de: `Portfolio-Stück als Nachweis des Fortschritts zu «{target}»`,
+        de: `Portfolio-Stück als Nachweis des Fortschritts zu „{target}“`,
         hi: `«{target}» की ओर प्रगति दिखाने वाला पोर्टफोलियो टुकड़ा`,
       }, { target })
     : t(locale, {
@@ -359,7 +486,7 @@ export function buildOfflineRoadmap(
         ar: `ادمج المهارة الحالية «{skill}» مع {g2}`,
         es: `Combina «{skill}» existente con {g2}`,
         fr: `Combinez «{skill}» existant avec {g2}`,
-        de: `Vorhandenes «{skill}» mit {g2} kombinieren`,
+        de: `Vorhandenes „{skill}“ mit {g2} kombinieren`,
         hi: `मौजूदा «{skill}» को {g2} के साथ जोड़ें`,
       }, { skill: skill0, g2 })
     : t(locale, {
@@ -389,7 +516,7 @@ export function buildOfflineRoadmap(
         ar: `أعد كتابة السيرة لعنوان «{target}» باستخدام نتائج «{expose}»`,
         es: `Reescribe el CV para el título «{target}» con resultados de «{expose}»`,
         fr: `Réécrivez le CV pour le titre «{target}» avec les résultats sur «{expose}»`,
-        de: `Lebenslauf für Titel «{target}» mit Ergebnissen zu «{expose}» neu schreiben`,
+        de: `Lebenslauf für Titel „{target}“ mit Ergebnissen zu „{expose}“ neu schreiben`,
         hi: `«{expose}» के परिणामों से शीर्षक «{target}» के लिए रिज़्यूमे फिर लिखें`,
       }, { target, expose: exposeLabel })
     : t(locale, {
@@ -398,7 +525,7 @@ export function buildOfflineRoadmap(
         ar: `حدّث السيرة حول «{expose}» و{g1}`,
         es: `Actualiza el CV en torno a «{expose}» y {g1}`,
         fr: `Mettez à jour le CV autour de «{expose}» et {g1}`,
-        de: `Lebenslauf um «{expose}» und {g1} aktualisieren`,
+        de: `Lebenslauf um „{expose}“ und {g1} aktualisieren`,
         hi: `«{expose}» और {g1} के इर्द-गिर्द रिज़्यूमे अपडेट करें`,
       }, { expose: exposeLabel, g1 });
 
@@ -410,7 +537,7 @@ export function buildOfflineRoadmap(
     fr: `Visez 3 rôles alignés sur {family}`,
     de: `3 Rollen passend zu {family} anvisieren`,
     hi: `{family} से जुड़े 3 रोल लक्षित करें`,
-  }, { family });
+  }, { family: familyHuman });
 
   const action3c = t(locale, {
     en: `Interview story: problem → {g1}/{g2} → result`,
