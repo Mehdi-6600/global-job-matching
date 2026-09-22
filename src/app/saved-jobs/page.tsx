@@ -119,20 +119,20 @@ export default function SavedJobsPage() {
           window.location.href = "/login?callbackUrl=/saved-jobs";
           return null;
         }
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return data;
+        const data = (await res.json().catch(() => ({}))) as Record<
+          string,
+          unknown
+        >;
+        if (cancelled) return null;
         return { res, data };
       })
       .then((payload) => {
         if (cancelled || !payload) return;
-        const { res, data } = payload as {
-          res: Response;
-          data: { jobs?: SavedJob[] };
-        };
+        const { res, data } = payload;
         if (!res.ok) {
           setError(messageFromApiError(res.status, data, t));
-        } else if (data.jobs) {
-          setJobs(data.jobs);
+        } else if (Array.isArray(data.jobs)) {
+          setJobs(data.jobs as SavedJob[]);
         } else {
           setError(t("SavedJobs.errorLoad", "Failed to load saved jobs"));
         }
