@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
-import { messageFromApiError } from "@/lib/api-error-i18n";
 
 interface Job {
   id: string;
@@ -64,7 +63,6 @@ const EMPTY_FILTERS: Filters = {
   tag: "",
 };
 
-/** Debounce delay for free-text fields (search, location, tag). */
 const TEXT_DEBOUNCE_MS = 350;
 
 export default function JobsPage() {
@@ -76,14 +74,11 @@ export default function JobsPage() {
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState("");
+  const [fetchError, setFetchError] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
-  /* --------------------------------------------------------------- */
-  /* Debounce free-text fields                                       */
-  /* --------------------------------------------------------------- */
   useEffect(() => {
     const handle = setTimeout(() => {
       setDebouncedFilters(filters);
@@ -92,9 +87,6 @@ export default function JobsPage() {
     return () => clearTimeout(handle);
   }, [filters]);
 
-  /* --------------------------------------------------------------- */
-  /* Fetch jobs                                                       */
-  /* --------------------------------------------------------------- */
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchJobs = useCallback(async () => {
@@ -103,7 +95,7 @@ export default function JobsPage() {
     abortRef.current = controller;
 
     setLoading(true);
-    setFetchError("");
+    setFetchError(false);
 
     const params = new URLSearchParams();
     params.set("page", page.toString());
@@ -129,14 +121,13 @@ export default function JobsPage() {
       const res = await fetch(`/api/jobs?${params.toString()}`, {
         signal: controller.signal,
       });
+      const data = await res.json();
 
       if (controller.signal.aborted) return;
 
-      const data = await res.json().catch(() => ({}));
-
       if (!res.ok) {
         setJobs([]);
-        setFetchError(messageFromApiError(res.status, data, t));
+        setFetchError(true);
         return;
       }
 
@@ -145,15 +136,13 @@ export default function JobsPage() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setJobs([]);
-      setFetchError(
-        t("Common.errorNetwork", "Network error. Please try again."),
-      );
+      setFetchError(true);
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
       }
     }
-  }, [page, debouncedFilters, t]);
+  }, [page, debouncedFilters]);
 
   useEffect(() => {
     void fetchJobs();
@@ -162,9 +151,6 @@ export default function JobsPage() {
     };
   }, [fetchJobs]);
 
-  /* --------------------------------------------------------------- */
-  /* Filter mutations                                                 */
-  /* --------------------------------------------------------------- */
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setPage(1);
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -187,9 +173,6 @@ export default function JobsPage() {
       filters.tag,
   );
 
-  /* --------------------------------------------------------------- */
-  /* Salary formatting                                                */
-  /* --------------------------------------------------------------- */
   const formatSalary = useCallback(
     (
       currency: string | null | undefined,
@@ -214,9 +197,6 @@ export default function JobsPage() {
     [t, locale],
   );
 
-  /* --------------------------------------------------------------- */
-  /* Render                                                           */
-  /* --------------------------------------------------------------- */
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -464,7 +444,12 @@ export default function JobsPage() {
             <h3 className="text-lg font-semibold text-white mb-2">
               {t("Jobs.loadErrorTitle", "Could not load jobs")}
             </h3>
-            <p className="text-slate-400 text-sm mb-4">{fetchError}</p>
+            <p className="text-slate-400 text-sm mb-4">
+              {t(
+                "Jobs.loadErrorBody",
+                "Something went wrong. Please try again.",
+              )}
+            </p>
             <button
               type="button"
               onClick={() => void fetchJobs()}
