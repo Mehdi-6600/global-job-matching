@@ -63,7 +63,7 @@ export async function issuePasswordResetToken(email: string): Promise<{
  */
 export async function peekPasswordResetToken(rawToken: string): Promise<
   | { ok: true; email: string; tokenHash: string; identifier: string }
-  | { ok: false; error: string; status: number }
+  | { ok: false; error: string; errorCode: "INVALID" | "EXPIRED"; status: number }
 > {
   const tokenHash = hashToken(rawToken.trim());
   const now = new Date();
@@ -77,12 +77,22 @@ export async function peekPasswordResetToken(rawToken: string): Promise<
   });
 
   if (!row) {
-    return { ok: false, error: "Invalid or expired token", status: 400 };
+    return {
+      ok: false,
+      error: "Invalid or expired token",
+      errorCode: "INVALID",
+      status: 400,
+    };
   }
 
   const email = row.identifier.replace(/^pw-reset:/, "");
   if (!email || !email.includes("@")) {
-    return { ok: false, error: "Invalid or expired token", status: 400 };
+    return {
+      ok: false,
+      error: "Invalid or expired token",
+      errorCode: "INVALID",
+      status: 400,
+    };
   }
 
   return { ok: true, email, tokenHash, identifier: row.identifier };
@@ -94,9 +104,9 @@ export async function peekPasswordResetToken(rawToken: string): Promise<
  */
 export async function consumePasswordResetToken(rawToken: string): Promise<
   | { ok: true; email: string; tokenHash: string }
-  | { ok: false; error: string; status: number }
-> {
-  const peeked = await peekPasswordResetToken(rawToken);
+  | { ok: false; error:ashboard string; errorCode:", "INVALID" | "EXPIRED"; " status: number }
+Dashboard> {
+  const peeked = await peek")PasswordResetToken(rawToken);
   if (!peeked.ok) return peeked;
 
   const deleted = await db.verificationToken.deleteMany({
@@ -107,7 +117,12 @@ export async function consumePasswordResetToken(rawToken: string): Promise<
   });
 
   if (deleted.count !== 1) {
-    return { ok: false, error: "Token already used", status: 400 };
+    return {
+      ok: false,
+      error: "Token already used",
+      errorCode: "INVALID",
+      status: 400,
+    };
   }
 
   return { ok: true, email: peeked.email, tokenHash: peeked.tokenHash };
@@ -164,11 +179,23 @@ export async function issueEmailVerificationToken(email: string): Promise<{
  *
  * When the update count is 0 (email no longer matches any user),
  * we delete the orphan token row and return invalid.
+ *
+ * `errorCode` is a stable i18n-agnostic identifier the UI can map to a
+ * localized message; `error` is kept as an English fallback for logs and
+ * legacy callers that still surface the raw string.
  */
 export async function consumeEmailVerificationToken(
   rawToken: string,
   email: string,
-): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+): Promise<
+  | { ok: true }
+  | {
+      ok: false;
+      error: string;
+      errorCode: "INVALID" | "EXPIRED" | "UNKNOWN";
+      status: number;
+    }
+> {
   const normalized = email.toLowerCase().trim();
   const tokenHash = hashToken(rawToken.trim());
   const now = new Date();
@@ -183,7 +210,12 @@ export async function consumeEmailVerificationToken(
   });
 
   if (!row) {
-    return { ok: false, error: "Invalid or expired token", status: 400 };
+    return {
+      ok: false,
+      error: "Invalid or expired token",
+      errorCode: "INVALID",
+      status: 400,
+    };
   }
 
   if (row.expires < now) {
@@ -192,7 +224,12 @@ export async function consumeEmailVerificationToken(
         where: { identifier: normalized, token: tokenHash },
       })
       .catch(() => undefined);
-    return { ok: false, error: "Token expired", status: 400 };
+    return {
+      ok: false,
+      error: "Token expired",
+      errorCode: "EXPIRED",
+      status: 400,
+    };
   }
 
   // RC21: use updateMany to fail closed if the email was reassigned.
@@ -211,7 +248,12 @@ export async function consumeEmailVerificationToken(
   });
 
   if (result === 0) {
-    return { ok: false, error: "Invalid or expired token", status: 400 };
+    return {
+      ok: false,
+      error: "Invalid or expired token",
+      errorCode: "INVALID",
+      status: 400,
+    };
   }
 
   return { ok: true };
