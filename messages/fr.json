@@ -428,7 +428,11 @@
     "notFound": "Profil introuvable",
     "planTitle": "Plan actuel",
     "paymentHistory": "Historique des paiements",
-    "noPayments": "Aucun paiement pour l'instant."
+    "noPayments": "Aucun paiement pour l'instant.",
+    "resumeUploaded": "CV téléversé avec succès.",
+    "resumeDeleteConfirm": "Voulez-vous vraiment supprimer votre CV ?",
+    "resumeRemoved": "CV supprimé.",
+    "removeResume": "Supprimer le CV"
   },
   "CareerRisk": {
     "title": "Risque de carrière par IA",
@@ -558,7 +562,9 @@
     "category": "Catégorie",
     "noJobs": "Aucun emploi trouvé",
     "pending": "En attente",
-    "salaryNA": "Salaire non précisé"
+    "salaryNA": "Salaire non précisé",
+    "loadErrorTitle": "Impossible de charger les emplois",
+    "loadErrorBody": "Une erreur est survenue. Veuillez réessayer."
   },
   "Applications": {
     "title": "Mes candidatures",
@@ -688,7 +694,20 @@
     "school": "École / Université",
     "degree": "Diplôme",
     "year": "Année",
-    "role": "Rôle"
+    "role": "Rôle",
+    "loading": "Chargement du profil...",
+    "saved": "Profil enregistré",
+    "anonymous": "Anonyme",
+    "name": "Nom complet",
+    "headline": "Titre / intitulé",
+    "location": "Localisation",
+    "bioEmpty": "Aucune bio pour l'instant.",
+    "linksEmpty": "Aucun lien ajouté pour l'instant.",
+    "skillsEmpty": "Aucune compétence ajoutée pour l'instant.",
+    "removeSkill": "Supprimer la compétence",
+    "experiencePlaceholder": "Postes, années, réalisations",
+    "experienceEmpty": "Aucune expérience ajoutée pour l'instant.",
+    "educationPlaceholder": "Détails de votre formation"
   },
   "Blog": {
     "title": "Blog carrière",
