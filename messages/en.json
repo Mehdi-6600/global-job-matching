@@ -192,7 +192,6 @@
     "rateLimited": "Too many requests. Please wait a moment and try again.",
     "internal": "Something went wrong on our side. Please try again.",
     "serviceUnavailable": "Service temporarily unavailable. Please try again shortly.",
-
     "planLimitAi": "You have reached your monthly AI limit. Upgrade your plan or try next month.",
     "planLimitApplications": "You have reached your monthly application limit. Upgrade your plan for more.",
     "planLimitSavedJobs": "You have reached your saved jobs limit. Upgrade your plan for more.",
@@ -202,7 +201,6 @@
     "quotaExceeded": "Monthly quota exceeded. Try again later or upgrade.",
     "quotaInfraError": "Service temporarily unavailable. Please try again shortly.",
     "rateLimitInfraError": "Service temporarily unavailable. Please try again shortly.",
-
     "emailExists": "This email is already registered.",
     "alreadyApplied": "You have already applied for this job.",
     "alreadySaved": "This job is already in your saved list.",
@@ -626,7 +624,10 @@
     "toneConfident": "Confident",
     "toneConcise": "Concise",
     "saveToProfile": "Save note to profile",
-    "previewEmpty": "Your generated resume will appear here"
+    "previewEmpty": "Your generated resume will appear here",
+    "printTitle": "Resume",
+    "sourceAi": "AI",
+    "sourceTemplate": "Template"
   },
   "Employer": {
     "title": "Employer Dashboard",
@@ -757,7 +758,27 @@
     "contactEmployer": "Contact employer",
     "remote": "Remote",
     "salaryNA": "Salary not specified",
-    "loginToApply": "Sign in to apply"
+    "loginToApply": "Sign in to apply",
+    "deadline": "Deadline",
+    "responsibilities": "Responsibilities",
+    "matchScoreTitle": "Your match score",
+    "overallFit": "overall fit",
+    "skills": "Skills",
+    "experience": "Experience",
+    "stats": "{views} views · {applicants} applicants",
+    "coverLetterLabel": "Cover Letter (Optional)",
+    "coverLetterPlaceholder": "Tell us why you are a great fit for this role...",
+    "applySuccessBody": "Your application has been sent successfully.",
+    "contactDefault": "I am very interested in the \"{title}\" position and would welcome the chance to discuss how my background fits your team.\n\nThank you for your time.",
+    "contactConfirm": "I confirm I want to send this message to the employer (not only a draft).",
+    "contactSent": "Message sent to the employer.",
+    "contactDraftReady": "Draft ready",
+    "contactSubject": "Subject (optional)",
+    "contactMessage": "Message",
+    "contactDraft": "Draft",
+    "contactGenerateDraft": "Generate draft",
+    "contactCopy": "Copy",
+    "contactSend": "Send"
   },
   "Companies": {
     "title": "Companies",
