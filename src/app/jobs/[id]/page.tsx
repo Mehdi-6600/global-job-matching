@@ -203,18 +203,12 @@ export default function JobDetailPage() {
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchMessage, setMatchMessage] = useState("");
 
-  /* -------------------------------------------------------------- */
-  /* Share URL                                                      */
-  /* -------------------------------------------------------------- */
   useEffect(() => {
     if (typeof window !== "undefined") {
       setShareUrl(window.location.href);
     }
   }, []);
 
-  /* -------------------------------------------------------------- */
-  /* Load job                                                       */
-  /* -------------------------------------------------------------- */
   useEffect(() => {
     if (!id) {
       setError(t("JobDetail.notFound", "Invalid job ID"));
@@ -237,10 +231,9 @@ export default function JobDetailPage() {
           setJob({
             ...j,
             title: typeof j.title === "string" ? j.title : "",
-           (() description: typeof j.description === "string" ? => j.description : {
- "",
-            location: typeof j.location === "string" ? j.location        : "",
-            type: typeof if j.type === "string" ? (! j.type : "",
+            description: typeof j.description === "string" ? j.description : "",
+            location: typeof j.location === "string" ? j.location : "",
+            type: typeof j.type === "string" ? j.type : "",
             remote: Boolean(j.remote),
             requirements: asStringArray(j.requirements),
             responsibilities: asStringArray(j.responsibilities),
@@ -278,9 +271,6 @@ export default function JobDetailPage() {
     };
   }, [id, t]);
 
-  /* -------------------------------------------------------------- */
-  /* Load saved-state                                                */
-  /* -------------------------------------------------------------- */
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -308,9 +298,6 @@ export default function JobDetailPage() {
     };
   }, [id]);
 
-  /* -------------------------------------------------------------- */
-  /* Load match                                                     */
-  /* -------------------------------------------------------------- */
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -365,7 +352,8 @@ export default function JobDetailPage() {
           setMatchMessage(t("Common.error", "Could not load match score"));
         }
       })
-      .finallycancelled) setMatchLoading(false);
+      .finally(() => {
+        if (!cancelled) setMatchLoading(false);
       });
 
     return () => {
@@ -373,9 +361,6 @@ export default function JobDetailPage() {
     };
   }, [id, t]);
 
-  /* -------------------------------------------------------------- */
-  /* Save / unsave                                                  */
-  /* -------------------------------------------------------------- */
   const handleSave = useCallback(async () => {
     if (saveLoading) return;
     setPlanLimit(null);
@@ -407,15 +392,12 @@ export default function JobDetailPage() {
 
       setSaved(!saved);
     } catch {
-      /* silent — button state will be re-derived on next load */
+      /* silent */
     } finally {
       setSaveLoading(false);
     }
   }, [id, saved, saveLoading, router]);
 
-  /* -------------------------------------------------------------- */
-  /* Apply                                                          */
-  /* -------------------------------------------------------------- */
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     setApplyError("");
@@ -461,9 +443,6 @@ export default function JobDetailPage() {
     }
   };
 
-  /* -------------------------------------------------------------- */
-  /* Render: loading / error                                        */
-  /* -------------------------------------------------------------- */
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
