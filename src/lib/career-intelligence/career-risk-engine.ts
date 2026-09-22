@@ -1,5 +1,5 @@
 /**
- * Career Risk heuristic engine — Phase 2.
+ * Career Risk heuristic engine — Phase 2+.
  *
  * Uses the normalized profile, narrative composer, and achievement
  * extractor so the offline output reads as if written by a human
@@ -12,6 +12,14 @@
  *
  * Never fabricates facts: metrics, employers, titles, degrees, and
  * certifications come only from the caller's input.
+ *
+ * Phase 2+ changes:
+ *  - Summary is richer (uses transition, evidence, uncertainty, place).
+ *  - Reasons are ordered by signal strength and avoid generic filler.
+ *  - Skills-to-build is fully locale-aware (no English leakage).
+ *  - Alternatives are locale-aware with per-family expansion.
+ *  - Industry outlook is meaningful rather than a plain label.
+ *  - Quality gate is invoked (advisory only) to detect fabrication.
  */
 import type {
   CareerRiskAnalysis,
@@ -46,11 +54,16 @@ import {
   disclaimerLine,
   uniqueSentences,
 } from "@/lib/career-intelligence/narrative";
+import { runQualityGate } from "@/lib/career-intelligence/quality-gate";
 
 export type CareerRiskEngineInput = ExtendedProfileInput & {
   jobTitle: string;
   skills?: string;
 };
+
+/* ------------------------------------------------------------------ */
+/* Sub-scores                                                          */
+/* ------------------------------------------------------------------ */
 
 function computeSubScores(
   profile: NormalizedCareerProfile,
@@ -89,6 +102,10 @@ function computeSubScores(
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* Reasons — ordered by signal strength, no filler                     */
+/* ------------------------------------------------------------------ */
+
 function buildReasons(
   profile: NormalizedCareerProfile,
   locale: CareerRiskLocale,
@@ -97,29 +114,8 @@ function buildReasons(
   const resilient = resilientTasks(profile);
   const reasons: string[] = [];
 
-  for (const task of exposed.slice(0, 2)) {
-    const label = taskLabel(task, locale);
-    reasons.push(reasonAutomation(locale, { label, pct: task.automation }));
-  }
-
-  for (const task of resilient.slice(0, 2)) {
-    const label = taskLabel(task, locale);
-    reasons.push(reasonResilience(locale, { label, judgment: task.judgment }));
-  }
-
-  if (profile.yearsExperience != null) {
-    const yrs = formatYears(locale, profile.yearsExperience);
-    const sen = formatSeniority(locale, profile.seniority);
-    reasons.push(yearsSentence(locale, yrs, sen));
-  }
-
-  if (profile.evidence.achievements.length > 0) {
-    reasons.push(
-      evidenceSentence(locale, profile.evidence.achievements.length),
-    );
-  }
-
-  if (profile.transition) {
+  // 1. Transition gap is the strongest signal when a target role differs.
+  if (profile.transition && profile.transition.toRole) {
     const t = profile.transition;
     reasons.push(
       transitionSentence(locale, {
@@ -131,14 +127,47 @@ function buildReasons(
     );
   }
 
-  if (profile.uncertainty.length > 0) {
+  // 2. Concrete exposure on the highest-automation task.
+  for (const task of exposed.slice(0, 2)) {
+    const label = taskLabel(task, locale);
+    reasons.push(reasonAutomation(locale, { label, pct: task.automation }));
+  }
+
+  // 3. Resilience on judgment-heavy tasks.
+  for (const task of resilient.slice(0, 2)) {
+    const label = taskLabel(task, locale);
+    reasons.push(reasonResilience(locale, { label, judgment: task.judgment }));
+  }
+
+  // 4. Seniority signal — only when it actually adds information.
+  if (
+    profile.yearsExperience != null &&
+    profile.yearsExperience >= 2 &&
+    profile.seniority !== "unknown"
+  ) {
+    const yrs = formatYears(locale, profile.yearsExperience);
+    const sen = formatSeniority(locale, profile.seniority);
+    reasons.push(yearsSentence(locale, yrs, sen));
+  }
+
+  // 5. Evidence — only when the user actually provided evidence.
+  const evidenceCount =
+    profile.evidence.achievements.length +
+    profile.evidence.metrics.length +
+    profile.evidence.certifications.length;
+  if (evidenceCount > 0) {
+    reasons.push(evidenceSentence(locale, evidenceCount));
+  }
+
+  // 6. Uncertainty — a natural, honest signal that the profile is thin.
+  if (profile.uncertainty.length >= 2) {
     reasons.push(uncertaintySentence(locale, profile.uncertainty.length));
   }
 
-  let fallbackIdx = 0;
-  while (reasons.length < 3 && fallbackIdx < 3) {
+  // 7. Last-resort filler: at most once. Only if the reasons list is
+  //    still thin after the six real signals above.
+  if (reasons.length < 3) {
     reasons.push(fallbackSentence(locale, profile.currentRole));
-    fallbackIdx++;
   }
 
   return uniqueSentences(reasons).slice(0, 8);
@@ -219,6 +248,10 @@ function fallbackSentence(locale: CareerRiskLocale, role: string): string {
   return t[locale] || t.en;
 }
 
+/* ------------------------------------------------------------------ */
+/* Summary — richer, uses more profile signals                         */
+/* ------------------------------------------------------------------ */
+
 function buildSummary(
   profile: NormalizedCareerProfile,
   locale: CareerRiskLocale,
@@ -236,7 +269,19 @@ function buildSummary(
   );
 
   const parts: string[] = [open];
+
   if (place) parts.push(summaryPlaceSentence(locale, place));
+
+  // Transition context — the single most useful personalization signal.
+  if (profile.transition && profile.transition.toRole) {
+    parts.push(
+      summaryTransitionSentence(locale, {
+        to: profile.transition.toRole,
+        bridgeCount: profile.transition.bridgeSkills.length,
+        gapCount: profile.transition.gapSkills.length,
+      }),
+    );
+  }
 
   const top = highAutomationTasks(profile)[0];
   if (top) {
@@ -248,6 +293,15 @@ function buildSummary(
   if (resil) {
     const label = taskLabel(resil, locale);
     parts.push(summaryResilienceSentence(locale, label));
+  }
+
+  // Evidence-aware closing signal — only when the user actually provided.
+  const evidenceCount =
+    profile.evidence.achievements.length +
+    profile.evidence.metrics.length +
+    profile.evidence.certifications.length;
+  if (evidenceCount >= 2) {
+    parts.push(summaryEvidenceSentence(locale, evidenceCount));
   }
 
   parts.push(summaryScoreSentence(locale, score));
@@ -268,6 +322,22 @@ function summaryPlaceSentence(
     fr: `Basé à ${place},`,
     de: `Mit Standort in ${place}`,
     hi: `${place} में स्थित,`,
+  };
+  return t[locale] || t.en;
+}
+
+function summaryTransitionSentence(
+  locale: CareerRiskLocale,
+  p: { to: string; bridgeCount: number; gapCount: number },
+): string {
+  const t: Record<CareerRiskLocale, string> = {
+    en: `your move toward «${p.to}» has ${p.bridgeCount} bridge skill${p.bridgeCount === 1 ? "" : "s"} already in place and ${p.gapCount} gap${p.gapCount === 1 ? "" : "s"} worth closing.`,
+    fa: `مسیر شما به سمت «${p.to}» ${p.bridgeCount} مهارت پل و ${p.gapCount} شکاف برای پر کردن دارد.`,
+    ar: `مسارك نحو «${p.to}» يضم ${p.bridgeCount} مهارة جسرية و${p.gapCount} فجوة ينبغي سدّها.`,
+    es: `tu paso hacia «${p.to}» cuenta con ${p.bridgeCount} habilidad(es) puente y ${p.gapCount} brecha(s) por cerrar.`,
+    fr: `votre passage vers «${p.to}» compte ${p.bridgeCount} compétence(s) passerelle et ${p.gapCount} écart(s) à combler.`,
+    de: `Ihr Weg Richtung „${p.to}“ hat ${p.bridgeCount} Brückenkompetenz(en) und ${p.gapCount} zu schließende Lücke(n).`,
+    hi: `«${p.to}» की ओर आपकी दिशा में ${p.bridgeCount} ब्रिज कौशल और ${p.gapCount} अंतराल भरने योग्य हैं।`,
   };
   return t[locale] || t.en;
 }
@@ -305,6 +375,22 @@ function summaryResilienceSentence(
   return t[locale] || t.en;
 }
 
+function summaryEvidenceSentence(
+  locale: CareerRiskLocale,
+  count: number,
+): string {
+  const t: Record<CareerRiskLocale, string> = {
+    en: `Your ${count} evidence points raise confidence in the judgment-heavy findings.`,
+    fa: `${count} شاهد ارائه‌شده شما اعتماد به یافته‌های قضاوت‌محور را بالا می‌برد.`,
+    ar: `${count} من الأدلة التي قدّمتها ترفع ثقة النتائج المعتمدة على الحكم.`,
+    es: `Tus ${count} evidencias elevan la confianza en los hallazgos de juicio.`,
+    fr: `Vos ${count} éléments de preuve renforcent la confiance dans les conclusions de jugement.`,
+    de: `Ihre ${count} Belege erhöhen das Vertrauen in die urteilsintensiven Befunde.`,
+    hi: `आपके ${count} प्रमाण निर्णय-केंद्रित निष्कर्षों पर भरोसा बढ़ाते हैं।`,
+  };
+  return t[locale] || t.en;
+}
+
 function summaryScoreSentence(
   locale: CareerRiskLocale,
   score: number,
@@ -320,6 +406,10 @@ function summaryScoreSentence(
   };
   return t[locale] || t.en;
 }
+
+/* ------------------------------------------------------------------ */
+/* Alternatives — per-family, locale-aware                             */
+/* ------------------------------------------------------------------ */
 
 function buildAlternatives(
   profile: NormalizedCareerProfile,
@@ -714,6 +804,16 @@ function buildAlternatives(
   return pack[locale] || pack.en;
 }
 
+/* ------------------------------------------------------------------ */
+/* Skills-to-build — fully locale-aware                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Prefer the profile's already-localized gap skills (produced by
+ * `computeSkillGaps` in profile.ts). If the profile has no gaps, fall
+ * back to a per-family growth list in the user's locale — never the
+ * raw English fallback strings.
+ */
 function buildSkillsToBuild(
   profile: NormalizedCareerProfile,
   locale: CareerRiskLocale,
@@ -724,565 +824,103 @@ function buildSkillsToBuild(
 
   const tables: Record<string, Record<CareerRiskLocale, string[]>> = {
     software_engineering: {
-      en: [
-        "System design",
-        "AI-assisted workflows",
-        "Observability",
-        "Domain modeling",
-        "Technical writing",
-      ],
-      fa: [
-        "طراحی سیستم",
-        "جریان‌های کاری با کمک AI",
-        "قابلیت مشاهده‌پذیری",
-        "مدل‌سازی دامنه",
-        "نوشتن فنی",
-      ],
-      ar: [
-        "تصميم الأنظمة",
-        "سير عمل بمساعدة الذكاء الاصطناعي",
-        "المراقبة",
-        "نمذجة المجال",
-        "الكتابة التقنية",
-      ],
-      es: [
-        "Diseño de sistemas",
-        "Flujos asistidos por IA",
-        "Observabilidad",
-        "Modelado de dominio",
-        "Escritura técnica",
-      ],
-      fr: [
-        "Conception système",
-        "Flux assistés par IA",
-        "Observabilité",
-        "Modélisation métier",
-        "Rédaction technique",
-      ],
-      de: [
-        "Systemdesign",
-        "KI-gestützte Workflows",
-        "Observability",
-        "Domain-Modellierung",
-        "Technisches Schreiben",
-      ],
-      hi: [
-        "सिस्टम डिज़ाइन",
-        "AI-सहायित वर्कफ़्लो",
-        "ऑब्ज़र्वेबिलिटी",
-        "डोमेन मॉडलिंग",
-        "तकनीकी लेखन",
-      ],
+      en: ["System design", "AI-assisted workflows", "Observability", "Domain modeling", "Technical writing"],
+      fa: ["طراحی سیستم", "جریان‌های کاری با کمک AI", "قابلیت مشاهده‌پذیری", "مدل‌سازی دامنه", "نوشتن فنی"],
+      ar: ["تصميم الأنظمة", "سير عمل بمساعدة الذكاء الاصطناعي", "المراقبة", "نمذجة المجال", "الكتابة التقنية"],
+      es: ["Diseño de sistemas", "Flujos asistidos por IA", "Observabilidad", "Modelado de dominio", "Escritura técnica"],
+      fr: ["Conception système", "Flux assistés par IA", "Observabilité", "Modélisation métier", "Rédaction technique"],
+      de: ["Systemdesign", "KI-gestützte Workflows", "Observability", "Domain-Modellierung", "Technisches Schreiben"],
+      hi: ["सिस्टम डिज़ाइन", "AI-सहायित वर्कफ़्लो", "ऑब्ज़र्वेबिलिटी", "डोमेन मॉडलिंग", "तकनीकी लेखन"],
     },
     data: {
-      en: [
-        "Experiment design",
-        "Data storytelling",
-        "Pipeline reliability",
-        "SQL depth",
-        "Model monitoring",
-      ],
-      fa: [
-        "طراحی آزمایش",
-        "روایت‌گری داده",
-        "قابلیت اطمینان پایپ‌لاین",
-        "تسلط بر SQL",
-        "پایش مدل",
-      ],
-      ar: [
-        "تصميم التجارب",
-        "سرد البيانات",
-        "موثوقية خطوط الأنابيب",
-        "عمق SQL",
-        "مراقبة النموذج",
-      ],
-      es: [
-        "Diseño de experimentos",
-        "Storytelling de datos",
-        "Fiabilidad de pipelines",
-        "Profundidad SQL",
-        "Monitoreo de modelos",
-      ],
-      fr: [
-        "Conception d'expériences",
-        "Storytelling de données",
-        "Fiabilité des pipelines",
-        "Maîtrise SQL",
-        "Suivi des modèles",
-      ],
-      de: [
-        "Experimentdesign",
-        "Data Storytelling",
-        "Pipeline-Zuverlässigkeit",
-        "SQL-Tiefe",
-        "Modell-Monitoring",
-      ],
-      hi: [
-        "प्रयोग डिज़ाइन",
-        "डेटा स्टोरीटेलिंग",
-        "पाइपलाइन विश्वसनीयता",
-        "SQL गहराई",
-        "मॉडल निगरानी",
-      ],
+      en: ["Experiment design", "Data storytelling", "Pipeline reliability", "SQL depth", "Model monitoring"],
+      fa: ["طراحی آزمایش", "روایت‌گری داده", "قابلیت اطمینان پایپ‌لاین", "تسلط بر SQL", "پایش مدل"],
+      ar: ["تصميم التجارب", "سرد البيانات", "موثوقية خطوط الأنابيب", "عمق SQL", "مراقبة النموذج"],
+      es: ["Diseño de experimentos", "Storytelling de datos", "Fiabilidad de pipelines", "Profundidad SQL", "Monitoreo de modelos"],
+      fr: ["Conception d'expériences", "Storytelling de données", "Fiabilité des pipelines", "Maîtrise SQL", "Suivi des modèles"],
+      de: ["Experimentdesign", "Data Storytelling", "Pipeline-Zuverlässigkeit", "SQL-Tiefe", "Modell-Monitoring"],
+      hi: ["प्रयोग डिज़ाइन", "डेटा स्टोरीटेलिंग", "पाइपलाइन विश्वसनीयता", "SQL गहराई", "मॉडल निगरानी"],
     },
     design: {
-      en: [
-        "UX research synthesis",
-        "Design systems",
-        "Prototyping",
-        "Accessibility",
-        "Stakeholder critique",
-      ],
-      fa: [
-        "ترکیب پژوهش UX",
-        "سیستم‌های طراحی",
-        "نمونه‌سازی",
-        "دسترس‌پذیری",
-        "نقد ذی‌نفعان",
-      ],
-      ar: [
-        "تركيب أبحاث UX",
-        "أنظمة التصميم",
-        "النماذج الأولية",
-        "إمكانية الوصول",
-        "نقد أصحاب المصلحة",
-      ],
-      es: [
-        "Síntesis de investigación UX",
-        "Sistemas de diseño",
-        "Prototipado",
-        "Accesibilidad",
-        "Crítica con stakeholders",
-      ],
-      fr: [
-        "Synthèse recherche UX",
-        "Design systems",
-        "Prototypage",
-        "Accessibilité",
-        "Critique parties prenantes",
-      ],
-      de: [
-        "UX-Research-Synthese",
-        "Design-Systems",
-        "Prototyping",
-        "Barrierefreiheit",
-        "Stakeholder-Kritik",
-      ],
-      hi: [
-        "UX रिसर्च संश्लेषण",
-        "डिज़ाइन सिस्टम",
-        "प्रोटोटाइपिंग",
-        "सुलभता",
-        "हितधारक समीक्षा",
-      ],
+      en: ["UX research synthesis", "Design systems", "Prototyping", "Accessibility", "Stakeholder critique"],
+      fa: ["ترکیب پژوهش UX", "سیستم‌های طراحی", "نمونه‌سازی", "دسترس‌پذیری", "نقد ذی‌نفعان"],
+      ar: ["تركيب أبحاث UX", "أنظمة التصميم", "النماذج الأولية", "إمكانية الوصول", "نقد أصحاب المصلحة"],
+      es: ["Síntesis de investigación UX", "Sistemas de diseño", "Prototipado", "Accesibilidad", "Crítica con stakeholders"],
+      fr: ["Synthèse recherche UX", "Design systems", "Prototypage", "Accessibilité", "Critique parties prenantes"],
+      de: ["UX-Research-Synthese", "Design-Systems", "Prototyping", "Barrierefreiheit", "Stakeholder-Kritik"],
+      hi: ["UX रिसर्च संश्लेषण", "डिज़ाइन सिस्टम", "प्रोटोटाइपिंग", "सुलभता", "हितधारक समीक्षा"],
     },
     education: {
-      en: [
-        "Differentiated instruction",
-        "Assessment literacy",
-        "EdTech facilitation",
-        "Parent communication",
-        "Classroom analytics",
-      ],
-      fa: [
-        "آموزش متمایز",
-        "سواد سنجش",
-        "تسهیل‌گری EdTech",
-        "ارتباط با والدین",
-        "تحلیل کلاس",
-      ],
-      ar: [
-        "التعليم المتمايز",
-        "ثقافة التقييم",
-        "تيسير تقنيات التعليم",
-        "التواصل مع الوالدين",
-        "تحليلات الفصل",
-      ],
-      es: [
-        "Instrucción diferenciada",
-        "Alfabetización en evaluación",
-        "Facilitación EdTech",
-        "Comunicación con padres",
-        "Analítica de aula",
-      ],
-      fr: [
-        "Pédagogie différenciée",
-        "Littératie d'évaluation",
-        "Facilitation EdTech",
-        "Communication parents",
-        "Analytique de classe",
-      ],
-      de: [
-        "Differenzierter Unterricht",
-        "Assessment-Kompetenz",
-        "EdTech-Moderation",
-        "Elternkommunikation",
-        "Klassenraum-Analytik",
-      ],
-      hi: [
-        "विभेदित शिक्षण",
-        "मूल्यांकन साक्षरता",
-        "EdTech सुविधा",
-        "अभिभावक संचार",
-        "कक्षा विश्लेषण",
-      ],
+      en: ["Differentiated instruction", "Assessment literacy", "EdTech facilitation", "Parent communication", "Classroom analytics"],
+      fa: ["آموزش متمایز", "سواد سنجش", "تسهیل‌گری EdTech", "ارتباط با والدین", "تحلیل کلاس"],
+      ar: ["التعليم المتمايز", "ثقافة التقييم", "تيسير تقنيات التعليم", "التواصل مع الوالدين", "تحليلات الفصل"],
+      es: ["Instrucción diferenciada", "Alfabetización en evaluación", "Facilitación EdTech", "Comunicación con padres", "Analítica de aula"],
+      fr: ["Pédagogie différenciée", "Littératie d'évaluation", "Facilitation EdTech", "Communication parents", "Analytique de classe"],
+      de: ["Differenzierter Unterricht", "Assessment-Kompetenz", "EdTech-Moderation", "Elternkommunikation", "Klassenraum-Analytik"],
+      hi: ["विभेदित शिक्षण", "मूल्यांकन साक्षरता", "EdTech सुविधा", "अभिभावक संचार", "कक्षा विश्लेषण"],
     },
     healthcare: {
-      en: [
-        "Clinical documentation",
-        "Interdisciplinary coordination",
-        "Patient education",
-        "Protocol judgment",
-        "Digital health literacy",
-      ],
-      fa: [
-        "مستندسازی بالینی",
-        "هماهنگی بین‌رشته‌ای",
-        "آموزش بیمار",
-        "قضاوت پروتکلی",
-        "سواد سلامت دیجیتال",
-      ],
-      ar: [
-        "التوثيق السريري",
-        "التنسيق بين التخصصات",
-        "تعليم المريض",
-        "الحكم بالبروتوكول",
-        "محو الأمية الصحية الرقمية",
-      ],
-      es: [
-        "Documentación clínica",
-        "Coordinación interdisciplinaria",
-        "Educación del paciente",
-        "Juicio de protocolo",
-        "Alfabetización en salud digital",
-      ],
-      fr: [
-        "Documentation clinique",
-        "Coordination interdisciplinaire",
-        "Éducation patient",
-        "Jugement protocolaire",
-        "Littératie santé numérique",
-      ],
-      de: [
-        "Klinische Dokumentation",
-        "Interdisziplinäre Koordination",
-        "Patientenschulung",
-        "Protokoll-Urteil",
-        "Digitale Gesundheitskompetenz",
-      ],
-      hi: [
-        "क्लिनिकल दस्तावेज़ीकरण",
-        "अंतर-विषय समन्वय",
-        "रोगी शिक्षा",
-        "प्रोटोकॉल निर्णय",
-        "डिजिटल स्वास्थ्य साक्षरता",
-      ],
+      en: ["Clinical documentation", "Interdisciplinary coordination", "Patient education", "Protocol judgment", "Digital health literacy"],
+      fa: ["مستندسازی بالینی", "هماهنگی بین‌رشته‌ای", "آموزش بیمار", "قضاوت پروتکلی", "سواد سلامت دیجیتال"],
+      ar: ["التوثيق السريري", "التنسيق بين التخصصات", "تعليم المريض", "الحكم بالبروتوكول", "محو الأمية الصحية الرقمية"],
+      es: ["Documentación clínica", "Coordinación interdisciplinaria", "Educación del paciente", "Juicio de protocolo", "Alfabetización en salud digital"],
+      fr: ["Documentation clinique", "Coordination interdisciplinaire", "Éducation patient", "Jugement protocolaire", "Littératie santé numérique"],
+      de: ["Klinische Dokumentation", "Interdisziplinäre Koordination", "Patientenschulung", "Protokoll-Urteil", "Digitale Gesundheitskompetenz"],
+      hi: ["क्लिनिकल दस्तावेज़ीकरण", "अंतर-विषय समन्वय", "रोगी शिक्षा", "प्रोटोकॉल निर्णय", "डिजिटल स्वास्थ्य साक्षरता"],
     },
     accounting_finance: {
-      en: [
-        "AI-assisted reporting",
-        "Controls and exception handling",
-        "Advisory storytelling",
-        "FP&A scenario modeling",
-        "Data literacy",
-      ],
-      fa: [
-        "گزارش‌دهی با کمک AI",
-        "کنترل و مدیریت استثنا",
-        "روایت‌گری مشاوره‌ای",
-        "مدل‌سازی سناریوی FP&A",
-        "سواد داده",
-      ],
-      ar: [
-        "التقارير بمساعدة الذكاء الاصطناعي",
-        "الرقابة ومعالجة الاستثناءات",
-        "سرد المشورة",
-        "نمذجة سيناريوهات FP&A",
-        "محو الأمية البياناتية",
-      ],
-      es: [
-        "Reporting asistido por IA",
-        "Controles y manejo de excepciones",
-        "Storytelling de asesoría",
-        "Modelado de escenarios FP&A",
-        "Alfabetización de datos",
-      ],
-      fr: [
-        "Reporting assisté par IA",
-        "Contrôles et exceptions",
-        "Storytelling de conseil",
-        "Modélisation de scénarios FP&A",
-        "Littératie des données",
-      ],
-      de: [
-        "KI-gestütztes Reporting",
-        "Controls und Ausnahmen",
-        "Beratungs-Storytelling",
-        "FP&A-Szenario-Modellierung",
-        "Datenkompetenz",
-      ],
-      hi: [
-        "AI-सहायित रिपोर्टिंग",
-        "नियंत्रण और अपवाद प्रबंधन",
-        "सलाहकार स्टोरीटेलिंग",
-        "FP&A परिदृश्य मॉडलिंग",
-        "डेटा साक्षरता",
-      ],
+      en: ["AI-assisted reporting", "Controls and exception handling", "Advisory storytelling", "FP&A scenario modeling", "Data literacy"],
+      fa: ["گزارش‌دهی با کمک AI", "کنترل و مدیریت استثنا", "روایت‌گری مشاوره‌ای", "مدل‌سازی سناریوی FP&A", "سواد داده"],
+      ar: ["التقارير بمساعدة الذكاء الاصطناعي", "الرقابة ومعالجة الاستثناءات", "سرد المشورة", "نمذجة سيناريوهات FP&A", "محو الأمية البياناتية"],
+      es: ["Reporting asistido por IA", "Controles y manejo de excepciones", "Storytelling de asesoría", "Modelado de escenarios FP&A", "Alfabetización de datos"],
+      fr: ["Reporting assisté par IA", "Contrôles et exceptions", "Storytelling de conseil", "Modélisation de scénarios FP&A", "Littératie des données"],
+      de: ["KI-gestütztes Reporting", "Controls und Ausnahmen", "Beratungs-Storytelling", "FP&A-Szenario-Modellierung", "Datenkompetenz"],
+      hi: ["AI-सहायित रिपोर्टिंग", "नियंत्रण और अपवाद प्रबंधन", "सलाहकार स्टोरीटेलिंग", "FP&A परिदृश्य मॉडलिंग", "डेटा साक्षरता"],
     },
     trades: {
-      en: [
-        "Diagnostics methodology",
-        "Safety and code updates",
-        "Digital quoting/CRM",
-        "Customer communication",
-        "Specialty certifications",
-      ],
-      fa: [
-        "روش‌شناسی عیب‌یابی",
-        "به‌روزرسانی ایمنی و مقررات",
-        "پیشنهاد قیمت دیجیتال / CRM",
-        "ارتباط با مشتری",
-        "گواهی‌های تخصصی",
-      ],
-      ar: [
-        "منهجية التشخيص",
-        "تحديثات السلامة والكود",
-        "التسعير الرقمي / CRM",
-        "التواصل مع العميل",
-        "شهادات متخصصة",
-      ],
-      es: [
-        "Metodología de diagnóstico",
-        "Actualizaciones de seguridad y código",
-        "Presupuestos digitales/CRM",
-        "Comunicación con cliente",
-        "Certificaciones especializadas",
-      ],
-      fr: [
-        "Méthodologie de diagnostic",
-        "Mises à jour sécurité et code",
-        "Devis numérique/CRM",
-        "Communication client",
-        "Certifications spécialisées",
-      ],
-      de: [
-        "Diagnose-Methodik",
-        "Sicherheits- und Code-Updates",
-        "Digitales Angebot/CRM",
-        "Kundenkommunikation",
-        "Spezialzertifizierungen",
-      ],
-      hi: [
-        "डायग्नोस्टिक्स पद्धति",
-        "सुरक्षा और कोड अपडेट",
-        "डिजिटल कोटिंग/CRM",
-        "ग्राहक संचार",
-        "विशेष प्रमाणन",
-      ],
+      en: ["Diagnostics methodology", "Safety and code updates", "Digital quoting/CRM", "Customer communication", "Specialty certifications"],
+      fa: ["روش‌شناسی عیب‌یابی", "به‌روزرسانی ایمنی و مقررات", "پیشنهاد قیمت دیجیتال / CRM", "ارتباط با مشتری", "گواهی‌های تخصصی"],
+      ar: ["منهجية التشخيص", "تحديثات السلامة والكود", "التسعير الرقمي / CRM", "التواصل مع العميل", "شهادات متخصصة"],
+      es: ["Metodología de diagnóstico", "Actualizaciones de seguridad y código", "Presupuestos digitales/CRM", "Comunicación con cliente", "Certificaciones especializadas"],
+      fr: ["Méthodologie de diagnostic", "Mises à jour sécurité et code", "Devis numérique/CRM", "Communication client", "Certifications spécialisées"],
+      de: ["Diagnose-Methodik", "Sicherheits- und Code-Updates", "Digitales Angebot/CRM", "Kundenkommunikation", "Spezialzertifizierungen"],
+      hi: ["डायग्नोस्टिक्स पद्धति", "सुरक्षा और कोड अपडेट", "डिजिटल कोटिंग/CRM", "ग्राहक संचार", "विशेष प्रमाणन"],
     },
     operations_clerical: {
-      en: [
-        "Process exception handling",
-        "No-code automation",
-        "Customer escalation judgment",
-        "Spreadsheet/BI literacy",
-        "Cross-team coordination",
-      ],
-      fa: [
-        "مدیریت استثنای فرایند",
-        "اتوماسیون بدون کد",
-        "قضاوت در ارجاع مشتری",
-        "سواد صفحه‌گسترده / BI",
-        "هماهنگی بین‌تیمی",
-      ],
-      ar: [
-        "معالجة استثناءات العمليات",
-        "الأتمتة بدون كود",
-        "الحكم في تصعيد العملاء",
-        "محو الأمية في الجداول / BI",
-        "التنسيق بين الفرق",
-      ],
-      es: [
-        "Manejo de excepciones de proceso",
-        "Automatización no-code",
-        "Juicio de escalado de cliente",
-        "Alfabetización hoja de cálculo/BI",
-        "Coordinación transversal",
-      ],
-      fr: [
-        "Gestion des exceptions de processus",
-        "Automatisation no-code",
-        "Jugement d'escalade client",
-        "Littératie tableur/BI",
-        "Coordination transverse",
-      ],
-      de: [
-        "Prozess-Ausnahmen",
-        "No-Code-Automatisierung",
-        "Kunden-Eskalations-Urteil",
-        "Tabellen-/BI-Kompetenz",
-        "Teamübergreifende Koordination",
-      ],
-      hi: [
-        "प्रक्रिया अपवाद प्रबंधन",
-        "नो-कोड स्वचालन",
-        "ग्राहक एस्केलेशन निर्णय",
-        "स्प्रेडशीट/BI साक्षरता",
-        "क्रॉस-टीम समन्वय",
-      ],
+      en: ["Process exception handling", "No-code automation", "Customer escalation judgment", "Spreadsheet/BI literacy", "Cross-team coordination"],
+      fa: ["مدیریت استثنای فرایند", "اتوماسیون بدون کد", "قضاوت در ارجاع مشتری", "سواد صفحه‌گسترده / BI", "هماهنگی بین‌تیمی"],
+      ar: ["معالجة استثناءات العمليات", "الأتمتة بدون كود", "الحكم في تصعيد العملاء", "محو الأمية في الجداول / BI", "التنسيق بين الفرق"],
+      es: ["Manejo de excepciones de proceso", "Automatización no-code", "Juicio de escalado de cliente", "Alfabetización hoja de cálculo/BI", "Coordinación transversal"],
+      fr: ["Gestion des exceptions de processus", "Automatisation no-code", "Jugement d'escalade client", "Littératie tableur/BI", "Coordination transverse"],
+      de: ["Prozess-Ausnahmen", "No-Code-Automatisierung", "Kunden-Eskalations-Urteil", "Tabellen-/BI-Kompetenz", "Teamübergreifende Koordination"],
+      hi: ["प्रक्रिया अपवाद प्रबंधन", "नो-कोड स्वचालन", "ग्राहक एस्केलेशन निर्णय", "स्प्रेडशीट/BI साक्षरता", "क्रॉस-टीम समन्वय"],
     },
     sales_marketing: {
-      en: [
-        "Consultative selling",
-        "CRM discipline",
-        "Content differentiation",
-        "Pipeline analytics",
-        "Negotiation",
-      ],
-      fa: [
-        "فروش مشاوره‌ای",
-        "نظم CRM",
-        "تمایز محتوا",
-        "تحلیل قیف فروش",
-        "مذاکره",
-      ],
-      ar: [
-        "البيع الاستشاري",
-        "انضباط CRM",
-        "تمييز المحتوى",
-        "تحليلات خط الأنابيب",
-        "التفاوض",
-      ],
-      es: [
-        "Venta consultiva",
-        "Disciplina CRM",
-        "Diferenciación de contenido",
-        "Analítica de pipeline",
-        "Negociación",
-      ],
-      fr: [
-        "Vente consultative",
-        "Discipline CRM",
-        "Différenciation de contenu",
-        "Analytique pipeline",
-        "Négociation",
-      ],
-      de: [
-        "Beratender Verkauf",
-        "CRM-Disziplin",
-        "Content-Differenzierung",
-        "Pipeline-Analytik",
-        "Verhandlung",
-      ],
-      hi: [
-        "परामर्शात्मक बिक्री",
-        "CRM अनुशासन",
-        "कंटेंट विभेदन",
-        "पाइपलाइन एनालिटिक्स",
-        "बातचीत",
-      ],
+      en: ["Consultative selling", "CRM discipline", "Content differentiation", "Pipeline analytics", "Negotiation"],
+      fa: ["فروش مشاوره‌ای", "نظم CRM", "تمایز محتوا", "تحلیل قیف فروش", "مذاکره"],
+      ar: ["البيع الاستشاري", "انضباط CRM", "تمييز المحتوى", "تحليلات خط الأنابيب", "التفاوض"],
+      es: ["Venta consultiva", "Disciplina CRM", "Diferenciación de contenido", "Analítica de pipeline", "Negociación"],
+      fr: ["Vente consultative", "Discipline CRM", "Différenciation de contenu", "Analytique pipeline", "Négociation"],
+      de: ["Beratender Verkauf", "CRM-Disziplin", "Content-Differenzierung", "Pipeline-Analytik", "Verhandlung"],
+      hi: ["परामर्शात्मक बिक्री", "CRM अनुशासन", "कंटेंट विभेदन", "पाइपलाइन एनालिटिक्स", "बातचीत"],
     },
     management: {
-      en: [
-        "Coaching conversations",
-        "Prioritization frameworks",
-        "Cross-functional influence",
-        "Hiring signal design",
-        "Operational metrics",
-      ],
-      fa: [
-        "گفتگوهای کوچینگ",
-        "چارچوب‌های اولویت‌بندی",
-        "نفوذ بین‌تیمی",
-        "طراحی سیگنال استخدام",
-        "معیارهای عملیاتی",
-      ],
-      ar: [
-        "محادثات التدريب",
-        "أطر تحديد الأولويات",
-        "التأثير عبر الوظائف",
-        "تصميم إشارات التوظيف",
-        "المقاييس التشغيلية",
-      ],
-      es: [
-        "Conversaciones de coaching",
-        "Marcos de priorización",
-        "Influencia transversal",
-        "Diseño de señales de contratación",
-        "Métricas operativas",
-      ],
-      fr: [
-        "Conversations de coaching",
-        "Cadres de priorisation",
-        "Influence transverse",
-        "Conception de signaux de recrutement",
-        "Métriques opérationnelles",
-      ],
-      de: [
-        "Coaching-Gespräche",
-        "Priorisierungs-Frameworks",
-        "Funktionsübergreifender Einfluss",
-        "Hiring-Signal-Design",
-        "Operative Metriken",
-      ],
-      hi: [
-        "कोचिंग बातचीत",
-        "प्राथमिकता फ्रेमवर्क",
-        "क्रॉस-फंक्शनल प्रभाव",
-        "हायरिंग सिग्नल डिज़ाइन",
-        "ऑपरेशनल मेट्रिक्स",
-      ],
+      en: ["Coaching conversations", "Prioritization frameworks", "Cross-functional influence", "Hiring signal design", "Operational metrics"],
+      fa: ["گفتگوهای کوچینگ", "چارچوب‌های اولویت‌بندی", "نفوذ بین‌تیمی", "طراحی سیگنال استخدام", "معیارهای عملیاتی"],
+      ar: ["محادثات التدريب", "أطر تحديد الأولويات", "التأثير عبر الوظائف", "تصميم إشارات التوظيف", "المقاييس التشغيلية"],
+      es: ["Conversaciones de coaching", "Marcos de priorización", "Influencia transversal", "Diseño de señales de contratación", "Métricas operativas"],
+      fr: ["Conversations de coaching", "Cadres de priorisation", "Influence transverse", "Conception de signaux de recrutement", "Métriques opérationnelles"],
+      de: ["Coaching-Gespräche", "Priorisierungs-Frameworks", "Funktionsübergreifender Einfluss", "Hiring-Signal-Design", "Operative Metriken"],
+      hi: ["कोचिंग बातचीत", "प्राथमिकता फ्रेमवर्क", "क्रॉस-फंक्शनल प्रभाव", "हायरिंग सिग्नल डिज़ाइन", "ऑपरेशनल मेट्रिक्स"],
     },
     generic: {
-      en: [
-        "Domain specialization",
-        "Digital literacy",
-        "Structured problem solving",
-        "Professional communication",
-        "Portfolio evidence",
-      ],
-      fa: [
-        "تخصص حوزه‌ای",
-        "سواد دیجیتال",
-        "حل مسئله ساخت‌یافته",
-        "ارتباط حرفه‌ای",
-        "شواهد نمونه‌کار",
-      ],
-      ar: [
-        "التخصص في المجال",
-        "محو الأمية الرقمية",
-        "حل المشكلات المنظم",
-        "التواصل المهني",
-        "أدلة الأعمال",
-      ],
-      es: [
-        "Especialización de dominio",
-        "Alfabetización digital",
-        "Resolución estructurada de problemas",
-        "Comunicación profesional",
-        "Evidencia de portafolio",
-      ],
-      fr: [
-        "Spécialisation métier",
-        "Littératie numérique",
-        "Résolution structurée de problèmes",
-        "Communication professionnelle",
-        "Preuves de portfolio",
-      ],
-      de: [
-        "Fachspezialisierung",
-        "Digitale Kompetenz",
-        "Strukturierte Problemlösung",
-        "Professionelle Kommunikation",
-        "Portfolio-Nachweise",
-      ],
-      hi: [
-        "डोमेन विशेषज्ञता",
-        "डिजिटल साक्षरता",
-        "संरचित समस्या समाधान",
-        "पेशेवर संचार",
-        "पोर्टफोलियो प्रमाण",
-      ],
+      en: ["Domain specialization", "Digital literacy", "Structured problem solving", "Professional communication", "Portfolio evidence"],
+      fa: ["تخصص حوزه‌ای", "سواد دیجیتال", "حل مسئله ساخت‌یافته", "ارتباط حرفه‌ای", "شواهد نمونه‌کار"],
+      ar: ["التخصص في المجال", "محو الأمية الرقمية", "حل المشكلات المنظم", "التواصل المهني", "أدلة الأعمال"],
+      es: ["Especialización de dominio", "Alfabetización digital", "Resolución estructurada de problemas", "Comunicación profesional", "Evidencia de portafolio"],
+      fr: ["Spécialisation métier", "Littératie numérique", "Résolution structurée de problèmes", "Communication professionnelle", "Preuves de portfolio"],
+      de: ["Fachspezialisierung", "Digitale Kompetenz", "Strukturierte Problemlösung", "Professionelle Kommunikation", "Portfolio-Nachweise"],
+      hi: ["डोमेन विशेषज्ञता", "डिजिटल साक्षरता", "संरचित समस्या समाधान", "पेशेवर संचार", "पोर्टफोलियो प्रमाण"],
     },
   };
 
@@ -1290,69 +928,76 @@ function buildSkillsToBuild(
   return pack[locale] || pack.en;
 }
 
-/**
- * Build an industry outlook line.
- * When industry is missing, we produce a natural locale-aware phrase
- * instead of an ugly "—" placeholder.
- */
+/* ------------------------------------------------------------------ */
+/* Industry outlook — meaningful, not a label                          */
+/* ------------------------------------------------------------------ */
+
 function industryLine(
   locale: CareerRiskLocale,
   industry: string,
   place: string,
+  roleFamily: string,
+  riskLevel: "low" | "medium" | "high",
 ): string {
   const ind = industry.trim();
   const loc = place.trim();
+  const familyHuman = roleFamily.replace(/_/g, " ");
 
+  // When industry + place are present, we can produce a focused line.
   if (ind && loc) {
     const t: Record<CareerRiskLocale, string> = {
-      en: `Industry: ${ind} · Location: ${loc}`,
-      es: `Sector: ${ind} · Ubicación: ${loc}`,
-      ar: `القطاع: ${ind} · الموقع: ${loc}`,
-      fa: `صنعت: ${ind} · مکان: ${loc}`,
-      hi: `उद्योग: ${ind} · स्थान: ${loc}`,
-      fr: `Secteur : ${ind} · Lieu : ${loc}`,
-      de: `Branche: ${ind} · Ort: ${loc}`,
+      en: `Within ${ind}, ${familyHuman} roles near ${loc} typically see ${riskLevel === "high" ? "elevated" : riskLevel === "low" ? "muted" : "moderate"} automation pressure; monitor tooling and skill-shift signals quarterly.`,
+      fa: `در حوزه ${ind}، نقش‌های ${familyHuman} در نزدیکی ${loc} معمولاً فشار اتوماسیون ${riskLevel === "high" ? "بالا" : riskLevel === "low" ? "پایین" : "متوسط"} را تجربه می‌کنند؛ سیگنال‌های ابزار و تغییر مهارت را فصلی رصد کنید.`,
+      ar: `في قطاع ${ind}، غالبًا ما تواجه أدوار ${familyHuman} قرب ${loc} ضغط أتمتة ${riskLevel === "high" ? "مرتفعًا" : riskLevel === "low" ? "منخفضًا" : "متوسطًا"}؛ تابع إشارات الأدوات وتحوّل المهارات فصليًا.`,
+      es: `En ${ind}, los roles de ${familyHuman} cerca de ${loc} suelen ver una presión de automatización ${riskLevel === "high" ? "elevada" : riskLevel === "low" ? "baja" : "moderada"}; vigila señales de herramientas y cambio de habilidades cada trimestre.`,
+      fr: `Dans ${ind}, les rôles ${familyHuman} près de ${loc} subissent généralement une pression d'automatisation ${riskLevel === "high" ? "élevée" : riskLevel === "low" ? "faible" : "modérée"} ; suivez les signaux outils et compétences chaque trimestre.`,
+      de: `In ${ind} sehen ${familyHuman}-Rollen in der Nähe von ${loc} typischerweise ${riskLevel === "high" ? "erhöhten" : riskLevel === "low" ? "geringen" : "moderaten"} Automatisierungsdruck; Signale zu Tools und Skill-Shift quartalsweise beobachten.`,
+      hi: `${ind} में, ${loc} के आसपास ${familyHuman} भूमिकाएँ सामान्यतः ${riskLevel === "high" ? "ऊँचा" : riskLevel === "low" ? "कम" : "मध्यम"} स्वचालन दबाव देखती हैं; टूलिंग और कौशल-बदलाव संकेतों की त्रैमासिक निगरानी करें।`,
     };
     return t[locale] || t.en;
   }
 
   if (ind) {
     const t: Record<CareerRiskLocale, string> = {
-      en: `Industry: ${ind}`,
-      es: `Sector: ${ind}`,
-      ar: `القطاع: ${ind}`,
-      fa: `صنعت: ${ind}`,
-      hi: `उद्योग: ${ind}`,
-      fr: `Secteur : ${ind}`,
-      de: `Branche: ${ind}`,
+      en: `Within ${ind}, ${familyHuman} roles typically see ${riskLevel === "high" ? "elevated" : riskLevel === "low" ? "muted" : "moderate"} automation pressure; add location for sharper guidance.`,
+      fa: `در حوزه ${ind}، نقش‌های ${familyHuman} معمولاً فشار اتوماسیون ${riskLevel === "high" ? "بالا" : riskLevel === "low" ? "پایین" : "متوسط"} دارند؛ برای دقت بیشتر، مکان را هم وارد کنید.`,
+      ar: `في قطاع ${ind}، غالبًا ما تواجه أدوار ${familyHuman} ضغط أتمتة ${riskLevel === "high" ? "مرتفعًا" : riskLevel === "low" ? "منخفضًا" : "متوسطًا"}؛ أضف الموقع للحصول على توجيه أدق.`,
+      es: `En ${ind}, los roles de ${familyHuman} suelen ver presión de automatización ${riskLevel === "high" ? "elevada" : riskLevel === "low" ? "baja" : "moderada"}; añade ubicación para orientación más precisa.`,
+      fr: `Dans ${ind}, les rôles ${familyHuman} subissent généralement une pression d'automatisation ${riskLevel === "high" ? "élevée" : riskLevel === "low" ? "faible" : "modérée"} ; ajoutez un lieu pour un conseil plus précis.`,
+      de: `In ${ind} sehen ${familyHuman}-Rollen typischerweise ${riskLevel === "high" ? "erhöhten" : riskLevel === "low" ? "geringen" : "moderaten"} Automatisierungsdruck; Ort ergänzen für präzisere Orientierung.`,
+      hi: `${ind} में, ${familyHuman} भूमिकाएँ सामान्यतः ${riskLevel === "high" ? "ऊँचा" : riskLevel === "low" ? "कम" : "मध्यम"} स्वचालन दबाव देखती हैं; अधिक सटीक मार्गदर्शन के लिए स्थान जोड़ें।`,
     };
     return t[locale] || t.en;
   }
 
   if (loc) {
     const t: Record<CareerRiskLocale, string> = {
-      en: `Location: ${loc}`,
-      es: `Ubicación: ${loc}`,
-      ar: `الموقع: ${loc}`,
-      fa: `مکان: ${loc}`,
-      hi: `स्थान: ${loc}`,
-      fr: `Lieu : ${loc}`,
-      de: `Ort: ${loc}`,
+      en: `Near ${loc}, ${familyHuman} roles typically see ${riskLevel === "high" ? "elevated" : riskLevel === "low" ? "muted" : "moderate"} automation pressure; add industry for sharper guidance.`,
+      fa: `نزدیک ${loc}، نقش‌های ${familyHuman} معمولاً فشار اتوماسیون ${riskLevel === "high" ? "بالا" : riskLevel === "low" ? "پایین" : "متوسط"} دارند؛ برای دقت بیشتر، صنعت را وارد کنید.`,
+      ar: `قرب ${loc}، غالبًا ما تواجه أدوار ${familyHuman} ضغط أتمتة ${riskLevel === "high" ? "مرتفعًا" : riskLevel === "low" ? "منخفضًا" : "متوسطًا"}؛ أضف القطاع لتوجيه أدق.`,
+      es: `Cerca de ${loc}, los roles de ${familyHuman} suelen ver presión de automatización ${riskLevel === "high" ? "elevada" : riskLevel === "low" ? "baja" : "moderada"}; añade sector para orientación más precisa.`,
+      fr: `Près de ${loc}, les rôles ${familyHuman} subissent généralement une pression d'automatisation ${riskLevel === "high" ? "élevée" : riskLevel === "low" ? "faible" : "modérée"} ; ajoutez un secteur pour un conseil plus précis.`,
+      de: `Nahe ${loc} sehen ${familyHuman}-Rollen typischerweise ${riskLevel === "high" ? "erhöhten" : riskLevel === "low" ? "geringen" : "moderaten"} Automatisierungsdruck; Branche ergänzen für präzisere Orientierung.`,
+      hi: `${loc} के आसपास, ${familyHuman} भूमिकाएँ सामान्यतः ${riskLevel === "high" ? "ऊँचा" : riskLevel === "low" ? "कम" : "मध्यम"} स्वचालन दबाव देखती हैं; अधिक सटीक मार्गदर्शन के लिए उद्योग जोड़ें।`,
     };
     return t[locale] || t.en;
   }
 
   const t: Record<CareerRiskLocale, string> = {
-    en: "Broad labor-market outlook; add industry and location for a sharper picture.",
-    es: "Panorama general del mercado; añade sector y ubicación para un análisis más preciso.",
-    ar: "نظرة عامة على سوق العمل؛ أضف القطاع والموقع لصورة أدق.",
-    fa: "نمای کلی بازار کار؛ برای دقت بیشتر، صنعت و مکان را هم وارد کنید.",
-    hi: "सामान्य श्रम-बाज़ार परिदृश्य; सटीक तस्वीर के लिए उद्योग और स्थान जोड़ें।",
-    fr: "Perspective générale du marché ; ajoutez secteur et lieu pour un aperçu plus précis.",
-    de: "Allgemeiner Arbeitsmarktausblick; für ein genaueres Bild Branche und Ort ergänzen.",
+    en: `Broad ${familyHuman} labor-market outlook; add industry and location for a sharper picture.`,
+    fa: `نمای کلی بازار کار ${familyHuman}؛ برای دقت بیشتر، صنعت و مکان را وارد کنید.`,
+    ar: `نظرة عامة على سوق العمل لـ ${familyHuman}؛ أضف القطاع والموقع لصورة أدق.`,
+    es: `Perspectiva general del mercado para ${familyHuman}; añade sector y ubicación para un análisis más preciso.`,
+    fr: `Perspective générale du marché pour ${familyHuman} ; ajoutez secteur et lieu pour un aperçu plus précis.`,
+    de: `Allgemeiner Arbeitsmarktausblick für ${familyHuman}; für ein genaueres Bild Branche und Ort ergänzen.`,
+    hi: `${familyHuman} के लिए सामान्य श्रम-बाज़ार परिदृश्य; सटीक तस्वीर के लिए उद्योग और स्थान जोड़ें।`,
   };
   return t[locale] || t.en;
 }
+
+/* ------------------------------------------------------------------ */
+/* Public entry point                                                  */
+/* ------------------------------------------------------------------ */
 
 export function runCareerRiskEngine(
   input: CareerRiskEngineInput,
@@ -1371,11 +1016,44 @@ export function runCareerRiskEngine(
   const alternatives = buildAlternatives(profile, locale);
 
   const place = formatPlace(locale, [profile.location, profile.country]);
+  const riskLevel = scoreToRiskLevel(score);
+
+  const industryOutlook = industryLine(
+    locale,
+    profile.industry || "",
+    place,
+    profile.roleFamily,
+    riskLevel,
+  );
+
+  // Advisory quality gate — does not throw, only logs when issues are
+  // detected. This catches unexpected fabrication before the response
+  // reaches the user.
+  try {
+    const gate = runQualityGate(
+      summary,
+      locale,
+      profile,
+      [summary, ...reasons],
+    );
+    if (!gate.ok) {
+      console.warn("[career-risk-engine] quality gate flagged issues", {
+        issues: [
+          ...gate.quality.issues,
+          ...gate.repetition.duplicateSentences.map((s) => `dup:${s.slice(0, 40)}`),
+          ...gate.evidence.issues,
+        ],
+      });
+    }
+  } catch {
+    // Quality gate is advisory; a failure inside it must never block
+    // returning the analysis.
+  }
 
   return {
     jobTitle: profile.currentRole.slice(0, 120),
     riskScore: score,
-    riskLevel: scoreToRiskLevel(score),
+    riskLevel,
     summary,
     reasons,
     skillsToBuild,
@@ -1401,6 +1079,6 @@ export function runCareerRiskEngine(
       42 + Math.round(profile.profileCompleteness * 0.28),
     ),
     confidenceSource: "offline_estimate",
-    industryOutlook: industryLine(locale, profile.industry || "", place),
+    industryOutlook,
   };
 }
