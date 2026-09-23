@@ -113,12 +113,66 @@ function salaryLabel(job: Job) {
   return null;
 }
 
-const SHOW_MAP_SECTION = false;
-
 type Audience = "seeker" | "employer";
 
+/**
+ * Locale-aware split of the hero headline into two styled lines.
+ *
+ * English uses the canonical "Find Your Next Opportunity. Anywhere in
+ * the World." wording. Other locales have their own headline that does
+ * not always contain the exact English tokens "opportunity" / "world",
+ * so we fall back to a generic sentence split (first sentence on line
+ * 1, second sentence on line 2). If a locale has only one sentence, we
+ * render a single-line headline.
+ *
+ * We do NOT invent colored keywords per locale — the accent color is
+ * only applied in English, where the wording is guaranteed. All other
+ * locales render the whole headline in the base color, which is
+ * visually clean and avoids arbitrary per-locale keyword picking.
+ */
+function splitHeroTitle(
+  full: string,
+  locale: string,
+): { line1: string; line2: string; accentWord: string | null } {
+  const trimmed = full.trim();
+
+  if (locale === "en") {
+    const lower = trimmed.toLowerCase();
+    const oppIdx = lower.indexOf("opportunity");
+    const worldIdx = lower.indexOf("world");
+
+    if (oppIdx >= 0 && worldIdx > oppIdx) {
+      // Preferred EN: line1 = "...Opportunity." , line2 = "...World."
+      let goldEnd = oppIdx + "opportunity".length;
+      if (trimmed[goldEnd] === ".") goldEnd += 1;
+      const line1 = trimmed.slice(0, goldEnd).trim();
+
+      let rest = trimmed.slice(goldEnd).trim();
+      if (rest.startsWith(".")) rest = rest.slice(1).trim();
+
+      // Line 2 = the remainder (the "World." clause).
+      const line2 = rest || trimmed.slice(goldEnd).trim();
+
+      return {
+        line1,
+        line2,
+        accentWord: trimmed.slice(oppIdx, goldEnd),
+      };
+    }
+  }
+
+  // Generic split on first sentence-ending punctuation.
+  // Supports Latin "." / "!" / "?" and Arabic/Devanagari "؟" / "।".
+  const match = trimmed.match(/^([\s\S]*?[.!?؟।])\s+([\s\S]+)$/);
+  if (match) {
+    return { line1: match[1].trim(), line2: match[2].trim(), accentWord: null };
+  }
+
+  return { line1: trimmed, line2: "", accentWord: null };
+}
+
 export default function HomePage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
 
   const [audience, setAudience] = useState<Audience>("seeker");
@@ -348,6 +402,15 @@ export default function HomePage() {
     </div>
   );
 
+  const heroTitleRaw = t(
+    "Home.title",
+    "Find Your Next Opportunity. Anywhere in the World."
+  );
+  const heroTitle = useMemo(
+    () => splitHeroTitle(heroTitleRaw, locale),
+    [heroTitleRaw, locale],
+  );
+
   return (
     <main id="gjm-home" className="gjm-home">
       <section className="gjm-hero">
@@ -366,81 +429,37 @@ export default function HomePage() {
             </div>
 
             <h1 className="gjm-hero-title">
-              {(() => {
-                const full = t(
-                  "Home.title",
-                  "Find Your Next Opportunity. Anywhere in the World."
-                );
-                const lower = full.toLowerCase();
-                const oppIdx = lower.indexOf("opportunity");
-                const worldIdx = lower.indexOf("world");
-
-                // Preferred EN layout: two centered lines
-                // Line1: [silver before][gold Opportunity.] 
-                // Line2: [silver middle][red World][silver after]
-                if (oppIdx >= 0 && worldIdx > oppIdx) {
-                  let goldEnd = oppIdx + "opportunity".length;
-                  if (full[goldEnd] === ".") goldEnd += 1;
-                  const line1Before = full.slice(0, oppIdx);
-                  const goldWord = full.slice(oppIdx, goldEnd);
-
-                  // rest after Opportunity. → second line
-                  let rest = full.slice(goldEnd).trim();
-                  // strip leading period leftover
-                  if (rest.startsWith(".")) rest = rest.slice(1).trim();
-
-                  const restLower = rest.toLowerCase();
-                  const w = restLower.indexOf("world");
-                  if (w >= 0) {
-                    let worldEnd = w + "world".length;
-                    if (rest[worldEnd] === ".") worldEnd += 1;
-                    const line2Before = rest.slice(0, w);
-                    const redWord = rest.slice(w, worldEnd);
-                    const line2After = rest.slice(worldEnd);
-                    return (
-                      <>
-                        <span className="gjm-hero-title-line">
-                          <span className="gjm-hero-title-silver">
-                            {line1Before}
-                          </span>
-                          <span className="gjm-hero-title-gold">
-                            {goldWord}
-                          </span>
-                        </span>
-                        <span className="gjm-hero-title-line">
-                          <span className="gjm-hero-title-silver">
-                            {line2Before}
-                          </span>
-                          <span className="gjm-hero-title-red">
-                            {redWord}
-                          </span>
-                          <span className="gjm-hero-title-silver">
-                            {line2After}
-                          </span>
-                        </span>
-                      </>
-                    );
-                  }
-                }
-
-                // fallback: split on first ". "
-                const i = full.indexOf(". ");
-                if (i > 0 && i < full.length - 2) {
-                  return (
-                    <>
-                      <span className="gjm-hero-title-line gjm-hero-title-silver">
-                        {full.slice(0, i + 1)}
-                      </span>
-                      <span className="gjm-hero-title-line gjm-hero-title-silver">
-                        {full.slice(i + 2)}
-                      </span>
-                    </>
-                  );
-                }
-                return (
-                  <span className="gjm-hero-title-silver">{full}</span>
-                );
-              })()}
+              {heroTitle.accentWord ? (
+                <>
+                  <span className="gjm-hero-title-line">
+                    <span className="gjm-hero-title-silver">
+                      {heroTitle.line1.slice(
+                        0,
+                        heroTitle.line1.length - heroTitle.accentWord.length,
+                      )}
+                    </span>
+                    <span className="gjm-hero-title-gold">
+                      {heroTitle.accentWord}
+                    </span>
+                  </span>
+                  {heroTitle.line2 && (
+                    <span className="gjm-hero-title-line gjm-hero-title-silver">
+                      {heroTitle.line2}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="gjm-hero-title-line gjm-hero-title-silver">
+                    {heroTitle.line1}
+                  </span>
+                  {heroTitle.line2 && (
+                    <span className="gjm-hero-title-line gjm-hero-title-silver">
+                      {heroTitle.line2}
+                    </span>
+                  )}
+                </>
+              )}
             </h1>
 
             <p className="gjm-hero-description">
@@ -551,47 +570,61 @@ export default function HomePage() {
                     <strong>{job.title}</strong>
 
                     <span>
-                      {job.company?.name || "Global Job Matching"}
+                      {job.company?.name ||
+                        t("Home.globalCompany", "Global company")}
                     </span>
 
                     <small>
                       <MapPin size={11} />
-                      {job.location || "Worldwide"}
+                      {job.location ||
+                        t("Home.searchLocationLabel", "Where?")}
                     </small>
                   </div>
 
                   <div className="gjm-live-pill">
                     <span />
-                    Live
+                    {t("Home.dashboardLive", "Live")}
                   </div>
                 </div>
               ))
             ) : (
               <>
                 <div className="gjm-floating-job gjm-floating-job-1">
-                  <div className="gjm-job-mini-logo">G</div>
+                  <div className="gjm-job-mini-logo">
+                    {t("Home.globalCompany", "Global company")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
                   <div className="gjm-floating-job-content">
-                    <strong>Global Opportunities</strong>
-                    <span>Multiple markets</span>
+                    <strong>
+                      {t("Home.jobOpportunity", "Opportunity")}
+                    </strong>
+                    <span>
+                      {t("Home.trustGlobal", "Global opportunities")}
+                    </span>
                     <small>
                       <Globe2 size={11} />
-                      Worldwide
+                      {t("Home.globalStatValue", "Global")}
                     </small>
                   </div>
                   <div className="gjm-live-pill">
                     <span />
-                    Live
+                    {t("Home.dashboardLive", "Live")}
                   </div>
                 </div>
 
                 <div className="gjm-floating-job gjm-floating-job-2">
-                  <div className="gjm-job-mini-logo">J</div>
+                  <div className="gjm-job-mini-logo">
+                    {t("Home.remote", "Remote").charAt(0).toUpperCase()}
+                  </div>
                   <div className="gjm-floating-job-content">
-                    <strong>Remote Jobs</strong>
-                    <span>Work from anywhere</span>
+                    <strong>{t("Home.remote", "Remote")}</strong>
+                    <span>
+                      {t("Home.remoteStatLabel", "Work options")}
+                    </span>
                     <small>
                       <Laptop size={11} />
-                      Remote
+                      {t("Home.remote", "Remote")}
                     </small>
                   </div>
                 </div>
@@ -604,9 +637,7 @@ export default function HomePage() {
               </span>
               <div>
                 <strong>
-                  {totalJobs != null
-                    ? totalJobs.toLocaleString()
-                    : "—"}
+                  {totalJobs != null ? totalJobs.toLocaleString() : "—"}
                 </strong>
                 <span>{t("Home.activeJobs", "active jobs")}</span>
               </div>
@@ -818,12 +849,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {SHOW_MAP_SECTION && (
-        <section className="gjm-map-section">
-          {/* ... (map section unchanged — omitted for brevity) ... */}
-        </section>
-      )}
-
       <section className="gjm-section gjm-section-soft">
         <div className="gjm-container">
           <div className="gjm-section-heading compact">
@@ -899,7 +924,8 @@ export default function HomePage() {
                       <div className="gjm-job-meta">
                         <span>
                           <MapPin size={14} />
-                          {job.location || "Worldwide"}
+                          {job.location ||
+                            t("Home.searchLocationLabel", "Where?")}
                         </span>
 
                         <span>
@@ -1148,21 +1174,39 @@ export default function HomePage() {
                     </div>
 
                     <div className="gjm-candidate-row">
-                      <div className="gjm-candidate-avatar">A</div>
-                      <div>
-                        <strong>Candidate profile</strong>
-                        <small>Application</small>
+                      <div className="gjm-candidate-avatar">
+                        {t("Home.dashboardCandidates", "Candidates")
+                          .charAt(0)
+                          .toUpperCase()}
                       </div>
-                      <em>Review</em>
+                      <div>
+                        <strong>
+                          {t("Home.dashboardCandidates", "Candidates")}
+                        </strong>
+                        <small>
+                          {t("Home.dashboardApplications", "Applications")}
+                        </small>
+                      </div>
+                      <em>{t("Home.dashboardView", "View")}</em>
                     </div>
 
                     <div className="gjm-candidate-row">
-                      <div className="gjm-candidate-avatar blue">M</div>
-                      <div>
-                        <strong>Candidate profile</strong>
-                        <small>Interview</small>
+                      <div className="gjm-candidate-avatar blue">
+                        {t("Home.dashboardView", "View")
+                          .charAt(0)
+                          .toUpperCase()}
                       </div>
-                      <em className="green">Interview</em>
+                      <div>
+                        <strong>
+                          {t("Home.dashboardCandidates", "Candidates")}
+                        </strong>
+                        <small>
+                          {t("Home.dashboardApplications", "Applications")}
+                        </small>
+                      </div>
+                      <em className="green">
+                        {t("Home.dashboardLive", "Live")}
+                      </em>
                     </div>
                   </div>
                 </div>
