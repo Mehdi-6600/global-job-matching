@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { categoryLabel } from "@/lib/i18n/category-labels";
+import { locales, type Locale } from "@/lib/i18n/config";
 
 /**
  * Public list of categories with at least one active job.
@@ -7,19 +9,29 @@ import { db } from "@/lib/db";
  * Response shape:
  *   {
  *     categories: [
- *       { id: string; name: string; slug: string; count: number }
+ *       {
+ *         id: string;
+ *         name: string;         // raw DB name (English by default)
+ *         slug: string;         // stable identifier
+ *         count: number;        // active jobs in this category
+ *         labels: {             // precomputed localized labels
+ *           en: string;
+ *           fa: string;
+ *           ar: string;
+ *           es: string;
+ *           fr: string;
+ *           de: string;
+ *           hi: string;
+ *         };
+ *       }
  *     ]
  *   }
  *
- * The client (jobs page) uses this to render a category filter
- * without embedding a hardcoded list. Localized labels are derived
- * client-side via `categoryLabel()` in `lib/i18n/category-labels`.
- *
- * No auth required: this is public discovery metadata.
+ * The client picks `labels[locale]` — no client-side mapping needed.
  */
 export async function GET() {
   try {
-    const categories = await db.category.findMany({
+    const rows = await db.category.findMany({
       select: {
         id: true,
         name: true,
@@ -30,22 +42,28 @@ export async function GET() {
       take: 200,
     });
 
-    const rows = categories
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        slug: c.slug,
-        count: c._count.jobs,
-      }))
+    const categories = rows
+      .map((c) => {
+        const labels = {} as Record<Locale, string>;
+        for (const loc of locales) {
+          labels[loc] = categoryLabel(c.slug, c.name, loc);
+        }
+        return {
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          count: c._count.jobs,
+          labels,
+        };
+      })
       .filter((c) => c.count > 0);
 
     return NextResponse.json(
-      { categories: rows },
+      { categories },
       { headers: { "Cache-Control": "public, max-age=300" } },
     );
   } catch (err) {
     console.error("Categories GET error:", err);
-    // Graceful degradation: return empty list rather than 500.
     return NextResponse.json(
       { categories: [] },
       { headers: { "Cache-Control": "no-store" } },
