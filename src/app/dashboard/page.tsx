@@ -352,7 +352,7 @@ export default function DashboardPage() {
           </aside>
 
           <div className="flex-1 space-y-8">
-            <div className="glass rounded-2xl p-6 md:p-8 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
+            <div className="glass rounded-2xl p-6 md:p-8 gjm-card-accent gjm-card-accent--cyan">
               <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
                 {t("Dashboard.welcome", "Welcome back")},{" "}
                 {userName.split(" ")[0]}!
