@@ -60,7 +60,6 @@ async function upsertBoard(seed: SeedBoard): Promise<SeedResult> {
       return { ...base, action: "created" };
     }
 
-    // Existing row: only refresh safe metadata. Legal fields untouched.
     const sameMeta =
       existing.companyName === seed.companyName &&
       (existing.country ?? null) === (seed.country ?? null) &&
@@ -107,8 +106,7 @@ export async function seedAtsBoards(): Promise<SeedResult[]> {
 }
 
 /**
- * Manually register one board (for cases the operator wants to add
- * without editing the static seed list). Same fail-closed defaults.
+ * Manually register one board.
  */
 export async function registerAtsBoard(
   seed: SeedBoard,
@@ -142,4 +140,71 @@ export async function summarizeAtsBoards(): Promise<{
     byStatus,
     byLegalStatus,
   };
+}
+
+export type AdminBoardRow = {
+  id: string;
+  provider: string;
+  boardIdentifier: string;
+  companyName: string;
+  status: string;
+  legalStatus: string;
+  robotsStatus: string;
+  termsStatus: string;
+  healthStatus: string;
+  consecutiveFailures: number;
+  lastErrorAt: string | null;
+  lastError: string | null;
+  lastCheckedAt: string | null;
+};
+
+/**
+ * Server-side list used by the admin page. Returns serializable
+ * primitives only (no Date objects) so it can be handed to a client
+ * component without Next.js complaining about non-serializable props.
+ */
+export async function listAtsBoardsForAdmin(): Promise<{
+  rows: AdminBoardRow[];
+  summary: {
+    total: number;
+    byProvider: Record<string, number>;
+    byStatus: Record<string, number>;
+    byLegalStatus: Record<string, number>;
+  };
+}> {
+  const records = await db.sourceCompany.findMany({
+    orderBy: [{ provider: "asc" }, { boardIdentifier: "asc" }],
+    take: 2000,
+  });
+
+  const rows: AdminBoardRow[] = records.map((r) => ({
+    id: r.id,
+    provider: r.provider,
+    boardIdentifier: r.boardIdentifier,
+    companyName: r.companyName,
+    status: r.status,
+    legalStatus: r.legalStatus,
+    robotsStatus: r.robotsStatus,
+    termsStatus: r.termsStatus,
+    healthStatus: r.healthStatus,
+    consecutiveFailures: r.consecutiveFailures,
+    lastErrorAt: r.lastErrorAt ? r.lastErrorAt.toISOString() : null,
+    lastError: r.lastError,
+    lastCheckedAt: r.lastCheckedAt ? r.lastCheckedAt.toISOString() : null,
+  }));
+
+  const summary = {
+    total: rows.length,
+    byProvider: {} as Record<string, number>,
+    byStatus: {} as Record<string, number>,
+    byLegalStatus: {} as Record<string, number>,
+  };
+  for (const r of rows) {
+    summary.byProvider[r.provider] = (summary.byProvider[r.provider] ?? 0) + 1;
+    summary.byStatus[r.status] = (summary.byStatus[r.status] ?? 0) + 1;
+    summary.byLegalStatus[r.legalStatus] =
+      (summary.byLegalStatus[r.legalStatus] ?? 0) + 1;
+  }
+
+  return { rows, summary };
 }
