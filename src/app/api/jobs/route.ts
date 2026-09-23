@@ -35,6 +35,15 @@ const querySchema = z
     maxSalary: salaryNumber.optional(),
     tag: z.string().max(50).optional(),
     company: z.string().trim().min(1).max(64).optional(),
+    // Category slug filter (e.g. "customer-support"). Slug is the stable
+    // identity; the localized name is a client concern.
+    category: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .regex(/^[a-z0-9_-]+$/i)
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -130,14 +139,6 @@ type RankableJob = {
 
 /**
  * Weighted relevance score. Higher = better.
- *
- * title        → dominant signal
- * company      → medium signal
- * tags         → medium signal (metadata tags ignored)
- * description  → weak signal, only the head of the posting counts toward
- *                passing the minimum-relevance threshold.
- *
- * Returns 0 when the job has no meaningful relevance to the tokens.
  */
 function relevanceScore(job: RankableJob, tokens: string[]): number {
   if (tokens.length === 0) return 0;
@@ -156,19 +157,14 @@ function relevanceScore(job: RankableJob, tokens: string[]): number {
   for (const token of tokens) {
     if (STOPWORDS.has(token)) continue;
 
-    // Title: strongest signal.
     if (title === token) score += 150;
     else if (title.startsWith(token)) score += 90;
     else if (title.includes(token)) score += 60;
 
-    // Company name.
     if (companyName.includes(token)) score += 25;
 
-    // Tags (metadata stripped).
     if (cleanTags.includes(token)) score += 20;
 
-    // Description: weak. Only the head of the posting is counted here —
-    // a mention buried deep in a wall of text does not count.
     if (descHead.includes(token)) score += 8;
   }
 
@@ -179,7 +175,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const ip = getRequestIp(req);
 
-    // Public list: allow more than authenticated write paths, still anti-scrape.
     const limited = await ratelimit.limit(`jobs_get_${ip}`);
     if (!limited.success) {
       return NextResponse.json(
@@ -212,6 +207,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       remote,
       tag,
       company,
+      category,
       minSalary,
       maxSalary,
     } = result.data;
@@ -219,11 +215,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const skip = (page - 1) * limit;
     const where: Record<string, unknown> = { status: "active" };
 
-    // Search is intentionally restricted to title + company name.
-    // Matching inside `description` alone produces too much noise for short
-    // queries ("nurse", "teacher") and inflates `total`. Relevant jobs whose
-    // signal lives in tags / description head are still surfaced through the
-    // ranked path below (ranked candidates are drawn from `where`).
     if (search) {
       where.OR = [
         { title: { contains: search, mode: "insensitive" } },
@@ -238,10 +229,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (remote) where.remote = true;
     if (company) where.companyId = company;
     if (tag) where.tags = { has: tag };
+    if (category) where.category = { slug: category };
 
     const salaryWhere = prismaSalaryOverlapWhere({ minSalary, maxSalary });
     if (salaryWhere) {
-      // Merge into AND without clobbering existing conditions.
       where.AND = [
         ...(Array.isArray(where.AND) ? where.AND : []),
         salaryWhere,
@@ -262,7 +253,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     } as const;
 
-    // No search term → keep the existing fresh-first behavior exactly.
     if (!search || search.trim().length === 0) {
       const [jobs, total] = await Promise.all([
         db.job.findMany({
@@ -288,8 +278,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const tokens = tokenizeSearch(search);
 
-    // If the query is too short to tokenize meaningfully, fall back to the
-    // existing contains-filter + freshness ordering. No ranking noise.
     if (tokens.length === 0) {
       const [jobs, total] = await Promise.all([
         db.job.findMany({
@@ -313,14 +301,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // Ranked path:
-    //   1. Pull a bounded candidate set from the (already narrowed) where.
-    //   2. Score each candidate against tokens.
-    //   3. Drop candidates with no meaningful relevance (score === 0).
-    //   4. Sort by score, then createdAt, then id (stable).
-    //   5. Slice the requested page.
-    //
-    // Bounded so we never load the entire jobs table.
     const RANK_CANDIDATES = 500;
 
     const candidates = await db.job.findMany({
@@ -341,9 +321,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         return a.job.id < b.job.id ? -1 : a.job.id > b.job.id ? 1 : 0;
       });
 
-    // `total` reflects the real number of relevant results, not the raw
-    // `where` count. This keeps pagination honest: users never see a page
-    // filled with jobs that failed the relevance threshold.
     const total = scored.length;
     const pageSlice = scored
       .slice(skip, skip + limit)
