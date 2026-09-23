@@ -4222,3 +4222,61 @@ code {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+
+/* ============================================================
+   CARD ACCENT BORDER — subtle 1.5px inner outline
+   ============================================================
+   A thin, colored inset ring that visually anchors high-value
+   cards without resorting to a full border. The color is chosen
+   per card role, not per-page decoration:
+
+     cyan    → user info (welcome, profile header, plan)
+     emerald → healthy state (saved jobs, success)
+     amber   → attention / pending
+     red     → risk / error
+     violet  → AI features
+
+   Usage:
+     <div className="glass rounded-2xl gjm-card-accent gjm-card-accent--cyan">
+
+   The `--card-accent` variable is scoped to the modifier class,
+   so callers only need to combine two class names.
+   ============================================================ */
+
+.gjm-card-accent {
+  --card-accent: #22d3ee;
+  box-shadow:
+    var(--elev-2),
+    inset 0 0 0 1.5px var(--card-accent);
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.gjm-card-accent:hover {
+  box-shadow:
+    var(--elev-3),
+    inset 0 0 0 1.5px var(--card-accent);
+}
+
+.gjm-card-accent--cyan {
+  --card-accent: #22d3ee;
+}
+
+.gjm-card-accent--emerald {
+  --card-accent: #34d399;
+}
+
+.gjm-card-accent--amber {
+  --card-accent: #fbbf24;
+}
+
+.gjm-card-accent--red {
+  --card-accent: #f87171;
+}
+
+.gjm-card-accent--violet {
+  --card-accent: #a78bfa;
+}
+
+/* On RTL pages the inset ring is symmetric so no directional
+   override is needed — `inset` shadows apply on all sides. */
