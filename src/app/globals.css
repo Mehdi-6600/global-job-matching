@@ -3735,6 +3735,49 @@
 }
 
 /* ============================================================
+   PREVENT IOS INPUT AUTO-ZOOM
+   ============================================================
+   iOS Safari auto-zooms the whole page when the user focuses an
+   input whose computed font-size is below 16px. This is jarring
+   on mobile — the page appears to "jump" as soon as a user taps
+   a search field or a form. We normalize the font-size for all
+   text-entry elements at 16px on small viewports.
+
+   We only touch element types that receive keyboard input, so
+   visual layout of small utility text and buttons is unaffected.
+
+   Note: checkbox and radio inputs carry no text, so we
+   intentionally leave them alone.
+   ============================================================ */
+
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    font-size: initial !important;
+  }
+
+  /* Legacy Tailwind text-* utility classes were also shrinking
+     inputs below 16px on mobile and triggering the same zoom. */
+  input.text-xs,
+  input.text-sm,
+  textarea.text-xs,
+  textarea.text-sm,
+  select.text-xs,
+  select.text-sm,
+  input[class*="text-[0."],
+  textarea[class*="text-[0."],
+  select[class*="text-[0."] {
+    font-size: 16px !important;
+  }
+}
+
+/* ============================================================
    LEGACY PAGE SUPPORT
    ============================================================ */
 
