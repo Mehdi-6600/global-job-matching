@@ -1285,7 +1285,7 @@
   }
 
   /* ============================================================
-     NEW (CHECKPOINT) — AUDIENCE TOGGLE
+     AUDIENCE TOGGLE
      ============================================================ */
   .gjm-audience-toggle {
     display: inline-flex;
@@ -1347,7 +1347,7 @@
   }
 
   /* ============================================================
-     NEW (CHECKPOINT) — HERO VALUE PROPOSITION
+     HERO VALUE PROPOSITION
      ============================================================ */
   .gjm-hero-value {
     font-size: 0.9375rem;
@@ -1369,7 +1369,7 @@
   }
 
   /* ============================================================
-     NEW (CHECKPOINT) — TRUST SECTION (product evidence)
+     TRUST SECTION (product evidence)
      ============================================================ */
   .gjm-trust-section {
     background: var(--bg-page-soft);
@@ -1706,16 +1706,30 @@
     }
   }
 
+  /* Search fields: permanently inset so users see them as type-able inputs */
   .gjm-search-field {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-md);
-    transition: box-shadow 0.15s ease;
+    background: var(--surface-2);
+    box-shadow:
+      inset 2px 2px 4px rgba(200, 194, 184, 0.55),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.85);
+    transition: box-shadow 0.15s ease, background-color 0.15s ease;
   }
   .gjm-search-field:hover {
-    box-shadow: var(--inset-1);
+    box-shadow:
+      inset 3px 3px 6px rgba(200, 194, 184, 0.65),
+      inset -3px -3px 6px rgba(255, 255, 255, 0.9);
+  }
+  .gjm-search-field:focus-within {
+    background: var(--surface-2);
+    box-shadow:
+      inset 2px 2px 4px rgba(200, 194, 184, 0.5),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.85),
+      0 0 0 2px var(--brand-primary-soft);
   }
 
   .gjm-search-field > svg {
@@ -1866,7 +1880,7 @@
      ============================================================
      Sits directly under the Smart Job Search bar inside the hero.
      Three equal, slim, horizontal cards — NOT a dashboard.
-     Soft matte inner glow on press, subtle elevation on hover.
+     Elevated resting state + matte grass-green inner glow on press.
      ============================================================ */
 
   .gjm-ai-tools {
@@ -1903,9 +1917,10 @@
     border: 1px solid var(--border-soft);
     border-radius: 20px;
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.7) inset,
-      0 6px 18px rgba(160, 170, 190, 0.14),
-      0 2px 6px rgba(160, 170, 190, 0.08);
+      0 1px 0 rgba(255, 255, 255, 0.85) inset,
+      0 10px 24px rgba(140, 150, 175, 0.22),
+      0 4px 10px rgba(140, 150, 175, 0.14),
+      0 2px 4px rgba(140, 150, 175, 0.08);
     text-decoration: none;
     color: inherit;
     cursor: pointer;
@@ -1918,6 +1933,7 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Thin accent ring per card (subtle brand hint at rest). */
   .gjm-ai-tool-card::after {
     content: "";
     position: absolute;
@@ -1929,6 +1945,8 @@
     transition: opacity 200ms ease;
   }
 
+  /* Inner matte light — grass green for every card.
+     Hidden by default; faded in softly on hover, fully on press. */
   .gjm-ai-tool-card::before {
     content: "";
     position: absolute;
@@ -1936,9 +1954,11 @@
     border-radius: inherit;
     pointer-events: none;
     background: radial-gradient(
-      ellipse 120% 100% at 50% 50%,
-      var(--ai-tool-glow, rgba(255, 255, 255, 0)) 0%,
-      rgba(255, 255, 255, 0) 70%
+      ellipse 130% 120% at 50% 60%,
+      rgba(134, 239, 172, 0.55) 0%,
+      rgba(74, 222, 128, 0.32) 35%,
+      rgba(34, 197, 94, 0.14) 65%,
+      rgba(34, 197, 94, 0) 100%
     );
     opacity: 0;
     transition: opacity 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -1946,42 +1966,41 @@
 
   .gjm-ai-tool-card--risk {
     --ai-tool-accent: rgba(34, 211, 238, 0.35);
-    --ai-tool-glow: rgba(34, 211, 238, 0.14);
   }
   .gjm-ai-tool-card--plan {
     --ai-tool-accent: rgba(251, 191, 36, 0.35);
-    --ai-tool-glow: rgba(251, 191, 36, 0.14);
   }
   .gjm-ai-tool-card--migrate {
     --ai-tool-accent: rgba(167, 139, 250, 0.35);
-    --ai-tool-glow: rgba(167, 139, 250, 0.14);
   }
 
   @media (hover: hover) and (pointer: fine) {
     .gjm-ai-tool-card:hover {
       transform: translateY(-2px);
-      box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.8) inset,
-        0 10px 26px rgba(160, 170, 190, 0.2),
-        0 3px 8px rgba(160, 170, 190, 0.1);
       border-color: var(--border);
-    }
-    .gjm-ai-tool-card:hover::before {
-      opacity: 1;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9) inset,
+        0 14px 30px rgba(140, 150, 175, 0.28),
+        0 6px 14px rgba(140, 150, 175, 0.18),
+        0 2px 6px rgba(140, 150, 175, 0.1);
     }
     .gjm-ai-tool-card:hover::after {
-      opacity: 1;
+      opacity: 0.85;
+    }
+    .gjm-ai-tool-card:hover::before {
+      opacity: 0.35;
     }
   }
 
+  /* Pressed: full matte green inner light, card sinks slightly. */
   .gjm-ai-tool-card:active {
     transform: scale(0.982);
-    border-color: var(--ai-tool-accent, var(--border));
+    border-color: rgba(34, 197, 94, 0.35);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.6) inset,
-      0 2px 6px rgba(160, 170, 190, 0.1),
-      inset 0 0 20px var(--ai-tool-glow, rgba(255, 255, 255, 0.06));
-    transition-duration: 120ms;
+      0 2px 6px rgba(140, 150, 175, 0.12),
+      inset 0 0 24px rgba(34, 197, 94, 0.28);
+    transition-duration: 140ms;
   }
 
   .gjm-ai-tool-card:active::before {
@@ -1989,14 +2008,14 @@
   }
 
   .gjm-ai-tool-card:active::after {
-    opacity: 1;
+    opacity: 0.35;
   }
 
   .gjm-ai-tool-card:focus-visible {
     outline: none;
     box-shadow:
       0 0 0 3px var(--brand-primary-soft),
-      0 6px 18px rgba(160, 170, 190, 0.16);
+      0 10px 24px rgba(140, 150, 175, 0.22);
   }
 
   .gjm-ai-tool-icon {
@@ -3461,29 +3480,8 @@
 [dir="rtl"] .space-x-4 > :not([hidden]) ~ :not([hidden]) { --tw-space-x-reverse: 1; }
 
 /* ============================================================
-   NEWSLETTER FORM (legacy block)
-   ============================================================ */
-.gjm-newsletter-section input {
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  color: var(--text-primary);
-  border-radius: var(--radius-lg);
-  padding: 0.75rem 1rem;
-  font-size: 0.9375rem;
-  outline: none;
-  box-shadow: var(--inset-2);
-  transition: box-shadow 0.15s ease;
-}
-.gjm-newsletter-section input:focus {
-  box-shadow: 0 0 0 4px var(--brand-primary-soft), var(--inset-2);
-}
-.gjm-newsletter-section input::placeholder {
-  color: var(--text-subtle);
-}
-
-/* ============================================================
    NEWSLETTER — clean component-scoped styles
-   (replaces legacy utility-class layout; RTL-aware)
+   (RTL-aware; supersedes the legacy `.gjm-newsletter-section input` rule)
    ============================================================ */
 .gjm-newsletter-section { padding-block: 3rem 4rem; }
 
