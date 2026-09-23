@@ -1372,13 +1372,8 @@
      NEW (CHECKPOINT) — TRUST SECTION (product evidence)
      ============================================================ */
   .gjm-trust-section {
-    /* trust pastel */
-    background:
-      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(191, 219, 254, 0.4), transparent 60%),
-      linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
-
-    padding-block: 2.5rem 3rem;
     background: var(--bg-page-soft);
+    padding-block: 2.5rem 3rem;
   }
 
   @media (min-width: 768px) {
@@ -1866,288 +1861,246 @@
     text-overflow: ellipsis;
   }
 
-    /* ============================================================
-     CAREER TOOLS — dark premium section (after hero)
+  /* ============================================================
+     AI TOOLS — three compact premium action cards
+     ============================================================
+     Sits directly under the Smart Job Search bar inside the hero.
+     Three equal, slim, horizontal cards — NOT a dashboard.
+     Soft matte inner glow on press, subtle elevation on hover.
      ============================================================ */
-  .gjm-career-tools-section {
-    position: relative;
-    padding-block: 2rem 2.75rem;
-    background:
-      radial-gradient(
-        ellipse 60% 80% at 50% 0%,
-        rgba(6, 182, 212, 0.08) 0%,
-        transparent 60%
-      ),
-      linear-gradient(180deg, #1a1917 0%, #0f0e0d 100%);
-    color: #ffffff;
-    overflow: hidden;
-  }
 
-  @media (min-width: 768px) {
-    .gjm-career-tools-section {
-      padding-block: 2.75rem 3.5rem;
-    }
-  }
-
-  .gjm-career-tools-heading {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1.35rem;
-    max-width: 42rem;
-  }
-
-  .gjm-career-tools-heading .gjm-section-kicker {
-    color: var(--brand-primary);
-  }
-
-  .gjm-career-tools-heading h2 {
-    color: #ffffff;
-    font-size: var(--font-h2);
-    font-weight: 700;
-    line-height: 1.15;
-  }
-
-  .gjm-career-tools-heading p {
-    color: rgba(255, 255, 255, 0.65);
-    font-size: 1rem;
-    line-height: 1.6;
-  }
-
-  .gjm-career-tools-grid {
+  .gjm-ai-tools {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.875rem;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 68rem;
+    margin-inline: auto;
+    margin-top: 1.75rem;
   }
 
-  @media (min-width: 640px) {
-    .gjm-career-tools-grid {
-      grid-template-columns: repeat(2, 1fr);
+  @media (min-width: 720px) {
+    .gjm-ai-tools {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.875rem;
     }
   }
 
   @media (min-width: 1024px) {
-    .gjm-career-tools-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem;
+    .gjm-ai-tools {
+      gap: 1rem;
     }
   }
 
-/* ---------- Career tool cards — physical neumorphic keys ---------- */
-  .gjm-career-tool-card {
+  .gjm-ai-tool-card {
     position: relative;
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.1rem 1.15rem 1rem;
-    background: linear-gradient(165deg, #2a2826 0%, #1c1b19 55%, #161514 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 22px;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.95rem 1rem;
+    min-height: 88px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 20px;
     box-shadow:
-      6px 8px 16px rgba(0, 0, 0, 0.45),
-      -3px -3px 10px rgba(255, 255, 255, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.35);
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.18s ease,
-      border-color 0.18s ease,
-      background 0.18s ease;
-    overflow: hidden;
+      0 1px 0 rgba(255, 255, 255, 0.7) inset,
+      0 6px 18px rgba(160, 170, 190, 0.14),
+      0 2px 6px rgba(160, 170, 190, 0.08);
+    text-decoration: none;
+    color: inherit;
     cursor: pointer;
+    overflow: hidden;
+    isolation: isolate;
+    transition:
+      transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      box-shadow 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 200ms ease;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* soft rim like a physical key edge */
-  .gjm-career-tool-card::after {
+  .gjm-ai-tool-card::after {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 0 0 1px var(--ai-tool-accent, transparent);
+    opacity: 0.55;
+    transition: opacity 200ms ease;
   }
 
-  /* accent edge line (subtle, not full bar) */
-  .gjm-career-tool-card::before {
+  .gjm-ai-tool-card::before {
     content: "";
     position: absolute;
-    inset-inline-start: 0;
-    top: 18%;
-    bottom: 18%;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: var(--brand-primary);
-    opacity: 0.55;
-    transition: opacity 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 120% 100% at 50% 50%,
+      var(--ai-tool-glow, rgba(255, 255, 255, 0)) 0%,
+      rgba(255, 255, 255, 0) 70%
+    );
+    opacity: 0;
+    transition: opacity 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .gjm-career-tool-card.accent-cyan::before { background: #5eead4; }
-  .gjm-career-tool-card.accent-orange::before { background: #fcd34d; }
-  .gjm-career-tool-card.accent-red::before { background: #fca5a5; }
+  .gjm-ai-tool-card--risk {
+    --ai-tool-accent: rgba(34, 211, 238, 0.35);
+    --ai-tool-glow: rgba(34, 211, 238, 0.14);
+  }
+  .gjm-ai-tool-card--plan {
+    --ai-tool-accent: rgba(251, 191, 36, 0.35);
+    --ai-tool-glow: rgba(251, 191, 36, 0.14);
+  }
+  .gjm-ai-tool-card--migrate {
+    --ai-tool-accent: rgba(167, 139, 250, 0.35);
+    --ai-tool-glow: rgba(167, 139, 250, 0.14);
+  }
 
-  .gjm-career-tool-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.12);
+  @media (hover: hover) and (pointer: fine) {
+    .gjm-ai-tool-card:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 10px 26px rgba(160, 170, 190, 0.2),
+        0 3px 8px rgba(160, 170, 190, 0.1);
+      border-color: var(--border);
+    }
+    .gjm-ai-tool-card:hover::before {
+      opacity: 1;
+    }
+    .gjm-ai-tool-card:hover::after {
+      opacity: 1;
+    }
+  }
+
+  .gjm-ai-tool-card:active {
+    transform: scale(0.982);
+    border-color: var(--ai-tool-accent, var(--border));
     box-shadow:
-      8px 12px 22px rgba(0, 0, 0, 0.5),
-      -4px -4px 12px rgba(255, 255, 255, 0.07),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+      0 1px 0 rgba(255, 255, 255, 0.6) inset,
+      0 2px 6px rgba(160, 170, 190, 0.1),
+      inset 0 0 20px var(--ai-tool-glow, rgba(255, 255, 255, 0.06));
+    transition-duration: 120ms;
   }
 
-  .gjm-career-tool-card:hover::before {
-    opacity: 0.9;
-  }
-
-  /* pressed = physical key sink + pastel glow behind */
-  .gjm-career-tool-card:active {
-    transform: translateY(1px) scale(0.985);
-    box-shadow:
-      inset 4px 4px 10px rgba(0, 0, 0, 0.55),
-      inset -2px -2px 6px rgba(255, 255, 255, 0.04),
-      0 0 0 1px rgba(255, 255, 255, 0.04);
-  }
-
-  .gjm-career-tool-card.accent-cyan:active {
-    box-shadow:
-      inset 4px 4px 10px rgba(0, 0, 0, 0.5),
-      inset -2px -2px 6px rgba(255, 255, 255, 0.04),
-      0 0 28px 4px rgba(167, 243, 208, 0.35),
-      0 0 48px 8px rgba(110, 231, 183, 0.18);
-    border-color: rgba(167, 243, 208, 0.35);
-  }
-  .gjm-career-tool-card.accent-cyan:active::before {
+  .gjm-ai-tool-card:active::before {
     opacity: 1;
-    background: #a7f3d0;
-    box-shadow: 0 0 12px 2px rgba(167, 243, 208, 0.55);
   }
 
-  .gjm-career-tool-card.accent-orange:active {
-    box-shadow:
-      inset 4px 4px 10px rgba(0, 0, 0, 0.5),
-      inset -2px -2px 6px rgba(255, 255, 255, 0.04),
-      0 0 28px 4px rgba(254, 240, 138, 0.38),
-      0 0 48px 8px rgba(253, 224, 71, 0.18);
-    border-color: rgba(254, 240, 138, 0.35);
-  }
-  .gjm-career-tool-card.accent-orange:active::before {
+  .gjm-ai-tool-card:active::after {
     opacity: 1;
-    background: #fde68a;
-    box-shadow: 0 0 12px 2px rgba(253, 224, 71, 0.55);
   }
 
-  .gjm-career-tool-card.accent-red:active {
+  .gjm-ai-tool-card:focus-visible {
+    outline: none;
     box-shadow:
-      inset 4px 4px 10px rgba(0, 0, 0, 0.5),
-      inset -2px -2px 6px rgba(255, 255, 255, 0.04),
-      0 0 28px 4px rgba(254, 202, 202, 0.38),
-      0 0 48px 8px rgba(252, 165, 165, 0.18);
-    border-color: rgba(254, 202, 202, 0.35);
-  }
-  .gjm-career-tool-card.accent-red:active::before {
-    opacity: 1;
-    background: #fecaca;
-    box-shadow: 0 0 12px 2px rgba(252, 165, 165, 0.55);
+      0 0 0 3px var(--brand-primary-soft),
+      0 6px 18px rgba(160, 170, 190, 0.16);
   }
 
-  .gjm-career-tool-card h3 {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #ffffff;
-    line-height: 1.25;
-    padding-inline-end: 1.75rem;
-    margin: 0;
-  }
-
-  .gjm-career-tool-card p {
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.58);
-    margin: 0;
-  }
-
-  .gjm-career-tool-icon {
+  .gjm-ai-tool-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 42px;
     height: 42px;
     border-radius: 14px;
-    margin-bottom: 0.15rem;
     flex-shrink: 0;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    background: var(--brand-primary-tint);
+    color: var(--brand-primary-hover);
     box-shadow:
-      3px 3px 8px rgba(0, 0, 0, 0.35),
-      -2px -2px 6px rgba(255, 255, 255, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 2px 6px rgba(160, 170, 190, 0.1);
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .gjm-career-tool-card:hover .gjm-career-tool-icon {
+  .gjm-ai-tool-card--risk .gjm-ai-tool-icon {
+    background: #cffafe;
+    color: #0e7490;
+  }
+
+  .gjm-ai-tool-card--plan .gjm-ai-tool-icon {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .gjm-ai-tool-card--migrate .gjm-ai-tool-icon {
+    background: #ede9fe;
+    color: #6d28d9;
+  }
+
+  .gjm-ai-tool-card:hover .gjm-ai-tool-icon {
     transform: scale(1.04);
   }
-  .gjm-career-tool-card:active .gjm-career-tool-icon {
+
+  .gjm-ai-tool-card:active .gjm-ai-tool-icon {
     transform: scale(0.96);
-    box-shadow:
-      inset 2px 2px 5px rgba(0, 0, 0, 0.4),
-      inset -1px -1px 3px rgba(255, 255, 255, 0.05);
   }
 
-  .gjm-career-tool-card.accent-cyan .gjm-career-tool-icon {
-    background: rgba(94, 234, 212, 0.12);
-    color: #99f6e4;
-  }
-  .gjm-career-tool-card.accent-orange .gjm-career-tool-icon {
-    background: rgba(253, 224, 71, 0.12);
-    color: #fde68a;
-  }
-  .gjm-career-tool-card.accent-red .gjm-career-tool-icon {
-    background: rgba(252, 165, 165, 0.12);
-    color: #fecaca;
+  .gjm-ai-tool-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    flex: 1;
   }
 
-  .gjm-career-tool-badge {
-    position: absolute;
-    top: 0.85rem;
-    inset-inline-end: 0.85rem;
-    display: inline-flex;
-    align-items: center;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.6rem;
+  .gjm-ai-tool-title {
+    font-size: 0.9375rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #99f6e4;
-    background: rgba(94, 234, 212, 0.12);
-    border: 1px solid rgba(94, 234, 212, 0.22);
-    border-radius: var(--radius-pill);
+    color: var(--text-primary);
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .gjm-career-tool-cta {
+  .gjm-ai-tool-desc {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gjm-ai-tool-arrow {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    margin-top: 0.35rem;
-    padding-top: 0.35rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: #ffffff;
-    transition: gap 0.18s ease, color 0.18s ease;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    box-shadow: inset 0 0 0 1px var(--border-soft);
+    transition:
+      transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      color 200ms ease,
+      background-color 200ms ease,
+      box-shadow 200ms ease;
   }
 
-  .gjm-career-tool-card.accent-cyan .gjm-career-tool-cta { color: #99f6e4; }
-  .gjm-career-tool-card.accent-orange .gjm-career-tool-cta { color: #fde68a; }
-  .gjm-career-tool-card.accent-red .gjm-career-tool-cta { color: #fecaca; }
-
-  .gjm-career-tool-card:hover .gjm-career-tool-cta {
-    gap: 0.5rem;
+  .gjm-ai-tool-card:hover .gjm-ai-tool-arrow {
+    color: var(--brand-primary-hover);
+    background: var(--brand-primary-tint);
+    box-shadow: inset 0 0 0 1px var(--brand-primary-soft);
   }
 
-  [dir="rtl"] .gjm-career-tool-cta svg {
+  [dir="rtl"] .gjm-ai-tool-arrow svg {
     transform: scaleX(-1);
   }
 
-/* ---------- Feature cards (Why section) ---------- */
+  @media (max-width: 719px) {
+    .gjm-ai-tool-title,
+    .gjm-ai-tool-desc {
+      white-space: normal;
+    }
+  }
+
+  /* ---------- Feature cards (Why section) ---------- */
   .gjm-feature-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -3508,7 +3461,7 @@
 [dir="rtl"] .space-x-4 > :not([hidden]) ~ :not([hidden]) { --tw-space-x-reverse: 1; }
 
 /* ============================================================
-   NEWSLETTER FORM
+   NEWSLETTER FORM (legacy block)
    ============================================================ */
 .gjm-newsletter-section input {
   background: var(--surface-2);
@@ -3527,500 +3480,6 @@
 .gjm-newsletter-section input::placeholder {
   color: var(--text-subtle);
 }
-
-/* ============================================================
-   LEGACY PAGE SUPPORT
-   ============================================================ */
-
-.bg-gradient-to-br.from-slate-900.via-slate-800.to-slate-900,
-.bg-gradient-to-b.from-slate-900.via-slate-800.to-slate-900,
-.bg-gradient-to-br.from-slate-900,
-.bg-gradient-to-r.from-slate-900,
-.bg-slate-900,
-.bg-slate-950,
-.bg-slate-800 {
-  background-image: none !important;
-  background-color: var(--bg-page) !important;
-}
-
-.bg-black { background-color: var(--bg-page) !important; }
-
-.from-slate-900,
-.from-slate-950,
-.from-slate-800 {
-  --tw-gradient-from: var(--bg-page) !important;
-  --tw-gradient-to: rgba(232, 229, 224, 0) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
-}
-
-.via-slate-800,
-.via-slate-900 {
-  --tw-gradient-to: rgba(232, 229, 224, 0) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--surface-2), var(--tw-gradient-to) !important;
-}
-
-.to-slate-800,
-.to-slate-900,
-.to-slate-950 {
-  --tw-gradient-to: var(--bg-page) !important;
-}
-
-.bg-black\/60 { background-color: rgba(42, 39, 36, 0.5) !important; }
-
-.glass,
-.glass-strong {
-  background: var(--surface) !important;
-  border: 1px solid var(--border-soft) !important;
-  border-radius: var(--radius-2xl) !important;
-  box-shadow: var(--elev-2) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-.bg-white\/5,
-.bg-white\/10 {
-  background-color: var(--surface-2) !important;
-}
-
-.bg-white\/\[0\.03\] { background-color: var(--surface-3) !important; }
-
-.text-white { color: var(--text-primary) !important; }
-
-.text-slate-50,
-.text-slate-100,
-.text-slate-200 { color: var(--text-primary) !important; }
-
-.text-slate-300 { color: var(--text-body) !important; }
-
-.text-slate-400,
-.text-slate-500,
-.text-slate-600 { color: var(--text-muted) !important; }
-
-/* ============================================================
-   BUTTON CONTEXT — preserve white text inside solid buttons
-   ============================================================
-   Previously we used a blanket `.bg-sky-500 * { color: #fff }`
-   rule, but it lost specificity against later `.text-white`
-   overrides in some pages. This scoped block re-asserts the
-   correct contrast for solid brand buttons.
-*/
-.bg-sky-500,
-.bg-sky-600,
-.bg-sky-400,
-.bg-cyan-500,
-.bg-cyan-600,
-.bg-cyan-400,
-.bg-emerald-500,
-.bg-emerald-600,
-.bg-emerald-400,
-.bg-red-500,
-.bg-red-600,
-.bg-red-400,
-.bg-indigo-500,
-.bg-indigo-600,
-.bg-indigo-400,
-.bg-blue-500,
-.bg-blue-600,
-.bg-blue-400,
-.bg-amber-500,
-.bg-amber-600,
-.bg-amber-400 {
-  color: #ffffff !important;
-}
-
-.bg-sky-500 *,
-.bg-sky-600 *,
-.bg-sky-400 *,
-.bg-cyan-500 *,
-.bg-cyan-600 *,
-.bg-cyan-400 *,
-.bg-emerald-500 *,
-.bg-emerald-600 *,
-.bg-emerald-400 *,
-.bg-red-500 *,
-.bg-red-600 *,
-.bg-red-400 *,
-.bg-indigo-500 *,
-.bg-indigo-600 *,
-.bg-indigo-400 *,
-.bg-blue-500 *,
-.bg-blue-600 *,
-.bg-blue-400 *,
-.bg-amber-500 *,
-.bg-amber-600 *,
-.bg-amber-400 * {
-  color: #ffffff !important;
-}
-
-.bg-sky-500 svg,
-.bg-sky-600 svg,
-.bg-cyan-500 svg,
-.bg-cyan-600 svg,
-.bg-emerald-500 svg,
-.bg-emerald-600 svg,
-.bg-red-500 svg,
-.bg-red-600 svg,
-.bg-indigo-500 svg,
-.bg-indigo-600 svg,
-.bg-blue-500 svg,
-.bg-blue-600 svg,
-.bg-amber-500 svg,
-.bg-amber-600 svg {
-  color: #ffffff !important;
-  stroke: currentColor !important;
-}
-
-/* Solid buttons — also normalize hover to brand */
-.bg-sky-500:hover,
-.bg-sky-600:hover,
-.bg-cyan-500:hover,
-.bg-cyan-600:hover,
-.bg-indigo-500:hover,
-.bg-indigo-600:hover,
-.bg-blue-500:hover,
-.bg-blue-600:hover {
-  background-color: var(--brand-primary-hover) !important;
-  color: #ffffff !important;
-}
-
-.bg-emerald-500:hover,
-.bg-emerald-600:hover {
-  background-color: #059669 !important;
-  color: #ffffff !important;
-}
-
-.bg-red-500:hover,
-.bg-red-600:hover {
-  background-color: #b91c1c !important;
-  color: #ffffff !important;
-}
-
-.bg-amber-500:hover,
-.bg-amber-600:hover {
-  background-color: #b45309 !important;
-  color: #ffffff !important;
-}
-
-/* ============================================================
-   SOFT-BG COLORED BADGES (cyan / sky / emerald / amber / red / indigo)
-   ============================================================
-   Fixes the low-contrast "text-same-color-as-background" bug
-   on Career Risk skill chips and similar soft badges.
-
-   Strategy:
-     - background: a *visible* tint (higher alpha than Tailwind's
-       /10 default) — using a solid pastel so it works on the
-       cream page background.
-     - text: the dark brand shade for the same hue.
-     - border: a *visible* accent that defines the chip boundary.
-*/
-.bg-cyan-500\/10,
-.bg-cyan-500\/15,
-.bg-cyan-500\/20,
-.bg-cyan-500\/25 {
-  background-color: #cffafe !important;
-  border-color: #22d3ee !important;
-}
-
-.bg-sky-500\/10,
-.bg-sky-500\/15,
-.bg-sky-500\/20,
-.bg-sky-500\/25 {
-  background-color: #e0f2fe !important;
-  border-color: #38bdf8 !important;
-}
-
-.bg-emerald-500\/10,
-.bg-emerald-500\/15,
-.bg-emerald-500\/20,
-.bg-emerald-500\/25 {
-  background-color: #d1fae5 !important;
-  border-color: #34d399 !important;
-}
-
-.bg-amber-500\/10,
-.bg-amber-500\/15,
-.bg-amber-500\/20,
-.bg-amber-500\/25 {
-  background-color: #fef3c7 !important;
-  border-color: #fbbf24 !important;
-}
-
-.bg-red-500\/10,
-.bg-red-500\/15,
-.bg-red-500\/20,
-.bg-red-500\/25 {
-  background-color: #fee2e2 !important;
-  border-color: #f87171 !important;
-}
-
-.bg-indigo-500\/10,
-.bg-indigo-500\/15,
-.bg-indigo-500\/20,
-.bg-indigo-500\/25,
-.bg-violet-500\/10,
-.bg-violet-500\/15,
-.bg-purple-500\/10,
-.bg-purple-500\/15 {
-  background-color: #ede9fe !important;
-  border-color: #a78bfa !important;
-}
-
-/* Text inside soft badges — always the dark shade for the hue. */
-.text-cyan-100,
-.text-cyan-200,
-.text-cyan-300,
-.text-cyan-400,
-.text-cyan-500 {
-  color: #0e7490 !important;
-}
-
-.text-sky-100,
-.text-sky-200,
-.text-sky-300,
-.text-sky-400,
-.text-sky-500 {
-  color: #0369a1 !important;
-}
-
-.text-emerald-100,
-.text-emerald-200,
-.text-emerald-300,
-.text-emerald-400,
-.text-emerald-500 {
-  color: #047857 !important;
-}
-
-.text-amber-100,
-.text-amber-200,
-.text-amber-300,
-.text-amber-400,
-.text-amber-500 {
-  color: #b45309 !important;
-}
-
-.text-red-100,
-.text-red-200,
-.text-red-300,
-.text-red-400,
-.text-red-500 {
-  color: #b91c1c !important;
-}
-
-.text-indigo-100,
-.text-indigo-200,
-.text-indigo-300,
-.text-indigo-400,
-.text-indigo-500 {
-  color: #4338ca !important;
-}
-
-.text-violet-100,
-.text-violet-200,
-.text-violet-300,
-.text-violet-400 {
-  color: #6d28d9 !important;
-}
-
-.text-purple-100,
-.text-purple-200,
-.text-purple-300,
-.text-purple-400 {
-  color: #7e22ce !important;
-}
-
-/* ============================================================
-   SOFT-BG BORDER FIXES (badge outlines that faded to invisible)
-   ============================================================ */
-.border-cyan-500\/20,
-.border-cyan-500\/30,
-.border-cyan-500\/40 {
-  border-color: #22d3ee !important;
-}
-
-.border-sky-500\/20,
-.border-sky-500\/30,
-.border-sky-500\/40 {
-  border-color: #38bdf8 !important;
-}
-
-.border-emerald-500\/20,
-.border-emerald-500\/30,
-.border-emerald-500\/40 {
-  border-color: #34d399 !important;
-}
-
-.border-amber-500\/20,
-.border-amber-500\/30,
-.border-amber-500\/40 {
-  border-color: #fbbf24 !important;
-}
-
-.border-red-500\/20,
-.border-red-500\/30,
-.border-red-500\/40 {
-  border-color: #f87171 !important;
-}
-
-.border-indigo-500\/20,
-.border-indigo-500\/30,
-.border-indigo-500\/40 {
-  border-color: #a78bfa !important;
-}
-
-/* ============================================================
-   GENERIC LEGACY COLOR FIXES
-   ============================================================ */
-
-.text-indigo-300,
-.text-indigo-400,
-.text-indigo-500,
-.text-cyan-300,
-.text-cyan-400,
-.text-cyan-500,
-.text-sky-400,
-.text-sky-500 { color: var(--brand-primary-hover) !important; }
-
-.text-emerald-300,
-.text-emerald-400,
-.text-emerald-500 { color: #047857 !important; }
-
-.text-purple-400,
-.text-violet-400 { color: #7c3aed !important; }
-
-.text-amber-300,
-.text-amber-400,
-.text-amber-500 { color: #d97706 !important; }
-
-.text-red-400,
-.text-red-300,
-.text-red-500 { color: var(--error) !important; }
-
-.bg-indigo-600,
-.bg-indigo-500 {
-  background-color: var(--brand-primary) !important;
-  color: #ffffff !important;
-  box-shadow:
-    4px 4px 10px rgba(8, 145, 178, 0.35),
-    -3px -3px 8px rgba(255, 255, 255, 0.75) !important;
-}
-
-.bg-indigo-600:hover,
-.bg-indigo-500:hover {
-  background-color: var(--brand-primary-hover) !important;
-  transform: translateY(-1px);
-}
-
-.bg-indigo-600:disabled,
-.bg-indigo-500:disabled {
-  opacity: 0.5 !important;
-  cursor: not-allowed !important;
-}
-
-.bg-indigo-500\/10,
-.bg-indigo-500\/15 { background-color: var(--brand-primary-tint) !important; }
-
-.hover\:bg-white\/10:hover { background-color: var(--surface) !important; }
-
-.hover\:text-white:hover { color: var(--text-primary) !important; }
-
-.focus\:ring-indigo-500:focus,
-.focus\:ring-indigo-400:focus { --tw-ring-color: var(--brand-primary) !important; }
-
-.focus\:border-indigo-500:focus { border-color: var(--brand-primary) !important; }
-
-.shadow-indigo-500\/10 {
-  --tw-shadow-color: rgba(6, 182, 212, 0.2) !important;
-  --tw-shadow: 6px 6px 14px var(--tw-shadow-color) !important;
-  box-shadow: var(--tw-shadow) !important;
-}
-
-.shadow-lg { box-shadow: var(--elev-4) !important; }
-.shadow-xl { box-shadow: var(--elev-5) !important; }
-
-.bg-white\/5 input,
-input.bg-white\/5,
-select.bg-white\/5 {
-  background-color: var(--surface-2) !important;
-  color: var(--text-primary) !important;
-  border-color: var(--border-soft) !important;
-  box-shadow: var(--inset-1) !important;
-}
-
-input.bg-white\/5::placeholder,
-.bg-white\/5 input::placeholder { color: var(--text-subtle) !important; }
-
-code.bg-white\/5,
-.bg-white\/5 code {
-  background-color: var(--surface-2) !important;
-  color: var(--brand-primary-hover) !important;
-  border: 1px solid var(--border-soft) !important;
-  border-radius: var(--radius-md) !important;
-  box-shadow: var(--inset-1) !important;
-}
-
-.hover\:underline:hover { text-decoration: underline !important; }
-
-.bg-indigo-600.rounded-full,
-.bg-indigo-500.rounded-full { background-color: var(--brand-primary) !important; }
-
-code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-    "Liberation Mono", monospace;
-}
-
-.max-h-\[90vh\] { max-height: 90vh !important; }
-
-[dir="rtl"] svg.lucide-arrow-left { transform: scaleX(-1); }
-
-.glass.gjm-container,
-.gjm-container .glass {
-  background: var(--surface) !important;
-  box-shadow: var(--elev-2) !important;
-  backdrop-filter: none !important;
-}
-
-/* ============================================================
-   REDUCED MOTION
-   ============================================================ */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-  /* ---------- Home / page headers — blue ---------- */
-  .gjm-home h1:not(.gjm-hero-title),
-  .gjm-home h2,
-  .gjm-home .gjm-section-heading h2,
-  .gjm-home .gjm-platform-header h2,
-  .gjm-home .gjm-employer-copy h2,
-  .gjm-home .gjm-final-content h2,
-  .gjm-home .gjm-career-tools-heading h2,
-  .gjm-home .gjm-trust-section h2 {
-    color: #1d4ed8;
-  }
-
-  .gjm-home .gjm-section-kicker,
-  .gjm-home .gjm-career-tools-heading .gjm-section-kicker {
-    color: #2563eb;
-  }
-
-  .gjm-home .gjm-kicker-dark {
-    color: #93c5fd;
-  }
-
-  .gjm-home .gjm-feature-card h3,
-  .gjm-home .gjm-platform-card h3,
-  .gjm-home .gjm-job-card h3 {
-    color: #1e3a8a;
-  }
-
 
 /* ============================================================
    NEWSLETTER — clean component-scoped styles
@@ -4223,7 +3682,6 @@ code {
   color: var(--text-muted);
 }
 
-
 /* ============================================================
    CARD ACCENT BORDER — subtle 1.5px inner outline
    ============================================================
@@ -4278,5 +3736,473 @@ code {
   --card-accent: #a78bfa;
 }
 
-/* On RTL pages the inset ring is symmetric so no directional
-   override is needed — `inset` shadows apply on all sides. */
+/* ============================================================
+   LEGACY PAGE SUPPORT
+   ============================================================ */
+
+.bg-gradient-to-br.from-slate-900.via-slate-800.to-slate-900,
+.bg-gradient-to-b.from-slate-900.via-slate-800.to-slate-900,
+.bg-gradient-to-br.from-slate-900,
+.bg-gradient-to-r.from-slate-900,
+.bg-slate-900,
+.bg-slate-950,
+.bg-slate-800 {
+  background-image: none !important;
+  background-color: var(--bg-page) !important;
+}
+
+.bg-black { background-color: var(--bg-page) !important; }
+
+.from-slate-900,
+.from-slate-950,
+.from-slate-800 {
+  --tw-gradient-from: var(--bg-page) !important;
+  --tw-gradient-to: rgba(232, 229, 224, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.via-slate-800,
+.via-slate-900 {
+  --tw-gradient-to: rgba(232, 229, 224, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--surface-2), var(--tw-gradient-to) !important;
+}
+
+.to-slate-800,
+.to-slate-900,
+.to-slate-950 {
+  --tw-gradient-to: var(--bg-page) !important;
+}
+
+.bg-black\/60 { background-color: rgba(42, 39, 36, 0.5) !important; }
+
+.glass,
+.glass-strong {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: var(--radius-2xl) !important;
+  box-shadow: var(--elev-2) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.bg-white\/5,
+.bg-white\/10 {
+  background-color: var(--surface-2) !important;
+}
+
+.bg-white\/\[0\.03\] { background-color: var(--surface-3) !important; }
+
+.text-white { color: var(--text-primary) !important; }
+
+.text-slate-50,
+.text-slate-100,
+.text-slate-200 { color: var(--text-primary) !important; }
+
+.text-slate-300 { color: var(--text-body) !important; }
+
+.text-slate-400,
+.text-slate-500,
+.text-slate-600 { color: var(--text-muted) !important; }
+
+/* ============================================================
+   BUTTON CONTEXT — preserve white text inside solid buttons
+   ============================================================ */
+.bg-sky-500,
+.bg-sky-600,
+.bg-sky-400,
+.bg-cyan-500,
+.bg-cyan-600,
+.bg-cyan-400,
+.bg-emerald-500,
+.bg-emerald-600,
+.bg-emerald-400,
+.bg-red-500,
+.bg-red-600,
+.bg-red-400,
+.bg-indigo-500,
+.bg-indigo-600,
+.bg-indigo-400,
+.bg-blue-500,
+.bg-blue-600,
+.bg-blue-400,
+.bg-amber-500,
+.bg-amber-600,
+.bg-amber-400 {
+  color: #ffffff !important;
+}
+
+.bg-sky-500 *,
+.bg-sky-600 *,
+.bg-sky-400 *,
+.bg-cyan-500 *,
+.bg-cyan-600 *,
+.bg-cyan-400 *,
+.bg-emerald-500 *,
+.bg-emerald-600 *,
+.bg-emerald-400 *,
+.bg-red-500 *,
+.bg-red-600 *,
+.bg-red-400 *,
+.bg-indigo-500 *,
+.bg-indigo-600 *,
+.bg-indigo-400 *,
+.bg-blue-500 *,
+.bg-blue-600 *,
+.bg-blue-400 *,
+.bg-amber-500 *,
+.bg-amber-600 *,
+.bg-amber-400 * {
+  color: #ffffff !important;
+}
+
+.bg-sky-500 svg,
+.bg-sky-600 svg,
+.bg-cyan-500 svg,
+.bg-cyan-600 svg,
+.bg-emerald-500 svg,
+.bg-emerald-600 svg,
+.bg-red-500 svg,
+.bg-red-600 svg,
+.bg-indigo-500 svg,
+.bg-indigo-600 svg,
+.bg-blue-500 svg,
+.bg-blue-600 svg,
+.bg-amber-500 svg,
+.bg-amber-600 svg {
+  color: #ffffff !important;
+  stroke: currentColor !important;
+}
+
+.bg-sky-500:hover,
+.bg-sky-600:hover,
+.bg-cyan-500:hover,
+.bg-cyan-600:hover,
+.bg-indigo-500:hover,
+.bg-indigo-600:hover,
+.bg-blue-500:hover,
+.bg-blue-600:hover {
+  background-color: var(--brand-primary-hover) !important;
+  color: #ffffff !important;
+}
+
+.bg-emerald-500:hover,
+.bg-emerald-600:hover {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+.bg-red-500:hover,
+.bg-red-600:hover {
+  background-color: #b91c1c !important;
+  color: #ffffff !important;
+}
+
+.bg-amber-500:hover,
+.bg-amber-600:hover {
+  background-color: #b45309 !important;
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   SOFT-BG COLORED BADGES
+   ============================================================ */
+.bg-cyan-500\/10,
+.bg-cyan-500\/15,
+.bg-cyan-500\/20,
+.bg-cyan-500\/25 {
+  background-color: #cffafe !important;
+  border-color: #22d3ee !important;
+}
+
+.bg-sky-500\/10,
+.bg-sky-500\/15,
+.bg-sky-500\/20,
+.bg-sky-500\/25 {
+  background-color: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+}
+
+.bg-emerald-500\/10,
+.bg-emerald-500\/15,
+.bg-emerald-500\/20,
+.bg-emerald-500\/25 {
+  background-color: #d1fae5 !important;
+  border-color: #34d399 !important;
+}
+
+.bg-amber-500\/10,
+.bg-amber-500\/15,
+.bg-amber-500\/20,
+.bg-amber-500\/25 {
+  background-color: #fef3c7 !important;
+  border-color: #fbbf24 !important;
+}
+
+.bg-red-500\/10,
+.bg-red-500\/15,
+.bg-red-500\/20,
+.bg-red-500\/25 {
+  background-color: #fee2e2 !important;
+  border-color: #f87171 !important;
+}
+
+.bg-indigo-500\/10,
+.bg-indigo-500\/15,
+.bg-indigo-500\/20,
+.bg-indigo-500\/25,
+.bg-violet-500\/10,
+.bg-violet-500\/15,
+.bg-purple-500\/10,
+.bg-purple-500\/15 {
+  background-color: #ede9fe !important;
+  border-color: #a78bfa !important;
+}
+
+.text-cyan-100,
+.text-cyan-200,
+.text-cyan-300,
+.text-cyan-400,
+.text-cyan-500 {
+  color: #0e7490 !important;
+}
+
+.text-sky-100,
+.text-sky-200,
+.text-sky-300,
+.text-sky-400,
+.text-sky-500 {
+  color: #0369a1 !important;
+}
+
+.text-emerald-100,
+.text-emerald-200,
+.text-emerald-300,
+.text-emerald-400,
+.text-emerald-500 {
+  color: #047857 !important;
+}
+
+.text-amber-100,
+.text-amber-200,
+.text-amber-300,
+.text-amber-400,
+.text-amber-500 {
+  color: #b45309 !important;
+}
+
+.text-red-100,
+.text-red-200,
+.text-red-300,
+.text-red-400,
+.text-red-500 {
+  color: #b91c1c !important;
+}
+
+.text-indigo-100,
+.text-indigo-200,
+.text-indigo-300,
+.text-indigo-400,
+.text-indigo-500 {
+  color: #4338ca !important;
+}
+
+.text-violet-100,
+.text-violet-200,
+.text-violet-300,
+.text-violet-400 {
+  color: #6d28d9 !important;
+}
+
+.text-purple-100,
+.text-purple-200,
+.text-purple-300,
+.text-purple-400 {
+  color: #7e22ce !important;
+}
+
+.border-cyan-500\/20,
+.border-cyan-500\/30,
+.border-cyan-500\/40 {
+  border-color: #22d3ee !important;
+}
+
+.border-sky-500\/20,
+.border-sky-500\/30,
+.border-sky-500\/40 {
+  border-color: #38bdf8 !important;
+}
+
+.border-emerald-500\/20,
+.border-emerald-500\/30,
+.border-emerald-500\/40 {
+  border-color: #34d399 !important;
+}
+
+.border-amber-500\/20,
+.border-amber-500\/30,
+.border-amber-500\/40 {
+  border-color: #fbbf24 !important;
+}
+
+.border-red-500\/20,
+.border-red-500\/30,
+.border-red-500\/40 {
+  border-color: #f87171 !important;
+}
+
+.border-indigo-500\/20,
+.border-indigo-500\/30,
+.border-indigo-500\/40 {
+  border-color: #a78bfa !important;
+}
+
+/* ============================================================
+   GENERIC LEGACY COLOR FIXES
+   ============================================================ */
+
+.text-indigo-300,
+.text-indigo-400,
+.text-indigo-500,
+.text-cyan-300,
+.text-cyan-400,
+.text-cyan-500,
+.text-sky-400,
+.text-sky-500 { color: var(--brand-primary-hover) !important; }
+
+.text-emerald-300,
+.text-emerald-400,
+.text-emerald-500 { color: #047857 !important; }
+
+.text-purple-400,
+.text-violet-400 { color: #7c3aed !important; }
+
+.text-amber-300,
+.text-amber-400,
+.text-amber-500 { color: #d97706 !important; }
+
+.text-red-400,
+.text-red-300,
+.text-red-500 { color: var(--error) !important; }
+
+.bg-indigo-600,
+.bg-indigo-500 {
+  background-color: var(--brand-primary) !important;
+  color: #ffffff !important;
+  box-shadow:
+    4px 4px 10px rgba(8, 145, 178, 0.35),
+    -3px -3px 8px rgba(255, 255, 255, 0.75) !important;
+}
+
+.bg-indigo-600:hover,
+.bg-indigo-500:hover {
+  background-color: var(--brand-primary-hover) !important;
+  transform: translateY(-1px);
+}
+
+.bg-indigo-600:disabled,
+.bg-indigo-500:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.bg-indigo-500\/10,
+.bg-indigo-500\/15 { background-color: var(--brand-primary-tint) !important; }
+
+.hover\:bg-white\/10:hover { background-color: var(--surface) !important; }
+
+.hover\:text-white:hover { color: var(--text-primary) !important; }
+
+.focus\:ring-indigo-500:focus,
+.focus\:ring-indigo-400:focus { --tw-ring-color: var(--brand-primary) !important; }
+
+.focus\:border-indigo-500:focus { border-color: var(--brand-primary) !important; }
+
+.shadow-indigo-500\/10 {
+  --tw-shadow-color: rgba(6, 182, 212, 0.2) !important;
+  --tw-shadow: 6px 6px 14px var(--tw-shadow-color) !important;
+  box-shadow: var(--tw-shadow) !important;
+}
+
+.shadow-lg { box-shadow: var(--elev-4) !important; }
+.shadow-xl { box-shadow: var(--elev-5) !important; }
+
+.bg-white\/5 input,
+input.bg-white\/5,
+select.bg-white\/5 {
+  background-color: var(--surface-2) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-soft) !important;
+  box-shadow: var(--inset-1) !important;
+}
+
+input.bg-white\/5::placeholder,
+.bg-white\/5 input::placeholder { color: var(--text-subtle) !important; }
+
+code.bg-white\/5,
+.bg-white\/5 code {
+  background-color: var(--surface-2) !important;
+  color: var(--brand-primary-hover) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--inset-1) !important;
+}
+
+.hover\:underline:hover { text-decoration: underline !important; }
+
+.bg-indigo-600.rounded-full,
+.bg-indigo-500.rounded-full { background-color: var(--brand-primary) !important; }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
+.max-h-\[90vh\] { max-height: 90vh !important; }
+
+[dir="rtl"] svg.lucide-arrow-left { transform: scaleX(-1); }
+
+.glass.gjm-container,
+.gjm-container .glass {
+  background: var(--surface) !important;
+  box-shadow: var(--elev-2) !important;
+  backdrop-filter: none !important;
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+  /* ---------- Home / page headers — blue ---------- */
+  .gjm-home h1:not(.gjm-hero-title),
+  .gjm-home h2,
+  .gjm-home .gjm-section-heading h2,
+  .gjm-home .gjm-platform-header h2,
+  .gjm-home .gjm-employer-copy h2,
+  .gjm-home .gjm-final-content h2,
+  .gjm-home .gjm-trust-section h2 {
+    color: #1d4ed8;
+  }
+
+  .gjm-home .gjm-section-kicker {
+    color: #2563eb;
+  }
+
+  .gjm-home .gjm-kicker-dark {
+    color: #93c5fd;
+  }
+
+  .gjm-home .gjm-feature-card h3,
+  .gjm-home .gjm-platform-card h3,
+  .gjm-home .gjm-job-card h3 {
+    color: #1e3a8a;
+  }
