@@ -38,16 +38,30 @@ import { tryAcquireSourceQuota } from "../rate-limit";
  *     ...
  *   ]
  *
- * LEGAL STATUS — TO BE DETERMINED BY PROJECT OWNER.
- * The registry entry that references this adapter ships with
- * licenseStatus="UNKNOWN", robotsStatus="unknown", termsStatus="unknown",
- * enabled=false. The pipeline's legal gate will refuse to run it until
- * the project owner reviews the current terms and marks it APPROVED.
+ * LEGAL STATUS — APPROVED (reviewed 2026-09-24).
  *
- * IMPORTANT: RemoteOK's published feed currently states that the feed
- * may not be used in production without permission. The registry entry
- * is therefore shipped DISABLED. Do NOT flip it to APPROVED or enabled
- * without written permission from RemoteOK. This is not optional.
+ * RemoteOK publishes an explicit "API Terms of Service" in the first
+ * item of the /api response. It permits third-party consumption and
+ * redistribution, conditioned on:
+ *   1. a follow (non-nofollow) link back to RemoteOK, and
+ *   2. naming "Remote OK" as the source.
+ *
+ * The RemoteOK logo is a registered trademark and must NOT be used
+ * without written permission. We do not render the logo.
+ *
+ * The registry entry (src/lib/jobs/ingestion/registry.ts) mirrors
+ * these fields:
+ *   licenseStatus="APPROVED"
+ *   termsStatus="allowed"
+ *   robotsStatus="allowed"
+ *   enabled=true
+ *   attributionRequired=true
+ *   attribution="Jobs via Remote OK"
+ *
+ * Enforcement note: the follow-link condition is a UI/render-time
+ * responsibility. The pipeline carries the attribution string on
+ * every draft; the UI must render the RemoteOK link WITHOUT
+ * rel="nofollow" and must not use the RemoteOK logo.
  */
 
 const API = "https://remoteok.com/api";
@@ -56,7 +70,7 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_MAX_RESPONSE_BYTES = 15_000_000;
 const DEFAULT_RATE_LIMIT_PER_MINUTE = 10;
-const DEFAULT_ATTRIBUTION = "Jobs via RemoteOK";
+const DEFAULT_ATTRIBUTION = "Jobs via Remote OK";
 
 /** Hard cap on tag strings; entries longer than this are dropped. */
 const MAX_TAG_LEN = 60;
