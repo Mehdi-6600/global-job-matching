@@ -10,18 +10,41 @@ import {
 import { itemListJsonLd } from "@/lib/seo/json-ld";
 import { LOCALE_COOKIE } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
-import { getDictionary, t } from "@/lib/i18n/get-dictionary";
+import { getDictionary, t, type Dictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = buildPublicMetadata({
-  title: "Jobs by category",
-  description:
-    "Browse active jobs by category on Global Job Matching. Categories are only listed when they have open roles.",
-  path: "/categories",
-  index: true,
-  hreflang: true,
-});
+/** Display name for a category: prefers i18n key CategoryNames.{slug}, falls back to DB name. */
+function categoryDisplayName(
+  dict: Dictionary,
+  slug: string,
+  fallbackName: string
+): string {
+  return t(dict, `CategoryNames.${slug}`, fallbackName);
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const dict = getDictionary(locale);
+
+  const title = t(dict, "Categories.title", "Jobs by category");
+  const description = t(
+    dict,
+    "Categories.subtitle",
+    "Only categories that currently have active jobs are shown."
+  );
+
+  return buildPublicMetadata({
+    title,
+    description,
+    path: "/categories",
+    index: true,
+    hreflang: true,
+    locale,
+  });
+}
 
 export default async function CategoriesIndexPage() {
   const cookieStore = await cookies();
@@ -42,6 +65,7 @@ export default async function CategoriesIndexPage() {
       orderBy: { name: "asc" },
       take: 100,
     });
+
     rows = categories
       .map((c) => ({
         id: c.id,
@@ -75,7 +99,7 @@ export default async function CategoriesIndexPage() {
     description: subtitle,
     path: "/categories",
     items: rows.map((c) => ({
-      name: c.name,
+      name: categoryDisplayName(dict, c.slug, c.name),
       path: `/categories/${c.slug}`,
     })),
   });
@@ -102,21 +126,24 @@ export default async function CategoriesIndexPage() {
           </div>
         ) : (
           <ul className="grid sm:grid-cols-2 gap-4">
-            {rows.map((c) => (
-              <li key={c.id}>
-                <Link
-                  href={`/categories/${c.slug}`}
-                  className="glass block rounded-2xl border border-white/10 p-5 hover:border-indigo-500/30 transition-all"
-                >
-                  <span className="text-lg font-semibold text-white">
-                    {c.name}
-                  </span>
-                  <span className="block text-sm text-slate-400 mt-1">
-                    {c.count} {activeJobsLabel}
-                  </span>
-                </Link>
-              </li>
-            ))}
+            {rows.map((c) => {
+              const displayName = categoryDisplayName(dict, c.slug, c.name);
+              return (
+                <li key={c.id}>
+                  <Link
+                    href={`/categories/${c.slug}`}
+                    className="glass block rounded-2xl border border-white/10 p-5 hover:border-indigo-500/30 transition-all"
+                  >
+                    <span className="text-lg font-semibold text-white">
+                      {displayName}
+                    </span>
+                    <span className="block text-sm text-slate-400 mt-1">
+                      {c.count} {activeJobsLabel}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
 
