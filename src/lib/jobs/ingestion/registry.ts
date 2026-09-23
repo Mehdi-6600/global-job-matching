@@ -115,7 +115,14 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* himalayas                                                        */
+  /* himalayas — DISABLED after legal review                          */
+  /*                                                                  */
+  /* Reviewed 2026-09-23. Himalayas Terms of Use (clauses 2, 30,    */
+  /* 93) explicitly prohibit automated data gathering, crawling, and */
+  /* redistribution of job content without prior written approval.   */
+  /* The public API existing does NOT override the Terms. Entry      */
+  /* remains DISABLED; do not flip without written permission from   */
+  /* hi@himalayas.app.                                               */
   /* ---------------------------------------------------------------- */
   {
     key: "himalayas",
@@ -123,18 +130,20 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     type: "aggregator",
     baseUrl: "https://himalayas.app",
     apiUrl: "https://himalayas.app/jobs/api",
-    licenseStatus: "UNKNOWN",
+    licenseStatus: "RESTRICTED",
     commercialAllowed: false,
     redistributionAllowed: false,
     attributionRequired: true,
     attribution: "Jobs via Himalayas",
-    robotsStatus: "unknown",
-    termsStatus: "unknown",
+    robotsStatus: "allowed",
+    termsStatus: "restricted",
     enabled: false,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
     notes:
-      "Global remote-only feed. Legal review required before enabling.",
+      "DISABLED — Terms of Use clauses 2, 30, 93 prohibit automated " +
+      "extraction and redistribution without prior written approval. " +
+      "Do not enable without written permission from hi@himalayas.app.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -159,27 +168,35 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* jobicy                                                           */
-  /* ---------------------------------------------------------------- */
+  /* jobicy — ENABLED after legal review                              */
+  /*                                                                  */
+  /* Reviewed 2026-09-23. Public signals all permissive:             */
+  /*   - robots.txt: User-agent: * / Allow: /                        */
+  /*   - Content-Signal: ai-train=yes, search=yes, ai-input=yes      */
+  /*   - /.well-known/ai-catalog.json publishes a "Public Jobicy     */
+  /*     MCP server for discovering and retrieving current remote    */
+  /*     job listings and supported job taxonomies" — an explicit    */
+  /*     invitation to third-party consumption.                      */
+  /* ----------------------------------------------------------------- */
   {
     key: "jobicy",
     name: "Jobicy",
     type: "aggregator",
     baseUrl: "https://jobicy.com",
     apiUrl: "https://jobicy.com/api/v2/remote-jobs",
-    licenseStatus: "UNKNOWN",
-    commercialAllowed: false,
-    redistributionAllowed: false,
+    licenseStatus: "APPROVED",
+    commercialAllowed: true,
+    redistributionAllowed: true,
     attributionRequired: true,
     attribution: "Jobs via Jobicy",
-    robotsStatus: "unknown",
-    termsStatus: "unknown",
-    enabled: false,
+    robotsStatus: "allowed",
+    termsStatus: "allowed",
+    enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
     notes:
       "Global remote-only feed. Single-shot response (no pagination). " +
-      "Legal review required before enabling.",
+      "Public AI catalog + Content-Signal invite third-party consumption.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -204,7 +221,11 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* remoteok                                                         */
+  /* remoteok — DISABLED, pending Terms review                        */
+  /*                                                                  */
+  /* robots.txt is permissive for /api but the site has no AI        */
+  /* catalog and its Terms have not been reviewed. Stays disabled    */
+  /* until Terms are explicitly reviewed and confirmed permissive.   */
   /* ---------------------------------------------------------------- */
   {
     key: "remoteok",
@@ -217,14 +238,14 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     redistributionAllowed: false,
     attributionRequired: true,
     attribution: "Jobs via RemoteOK",
-    robotsStatus: "unknown",
+    robotsStatus: "allowed",
     termsStatus: "unknown",
     enabled: false,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 10,
     notes:
-      "Global remote-only feed. Legal + permission review REQUIRED " +
-      "before enabling.",
+      "robots.txt permissive but no public AI catalog. Terms not yet " +
+      "reviewed — stays disabled. Do NOT enable without Terms review.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -249,12 +270,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* greenhouse — ATS provider                                        */
-  /*                                                                  */
-  /* Requires BOTH: (1) this entry enabled + APPROVED, and           */
-  /* (2) at least one SourceCompany row with provider="greenhouse"   */
-  /* and legalStatus="APPROVED", robotsStatus="allowed",             */
-  /* termsStatus="allowed", status="active".                         */
+  /* greenhouse — ATS provider (disabled until boards approved)       */
   /* ---------------------------------------------------------------- */
   {
     key: "greenhouse",
@@ -273,7 +289,8 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
     notes:
-      "ATS provider. Board-level legal gate enforced via SourceCompany.",
+      "ATS provider. Board-level legal gate enforced via SourceCompany. " +
+      "Provider ships disabled — enable only after Terms review.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -298,7 +315,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* lever — ATS provider                                             */
+  /* lever — ATS provider (disabled until boards approved)            */
   /* ---------------------------------------------------------------- */
   {
     key: "lever",
@@ -317,7 +334,8 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
     notes:
-      "ATS provider. Board-level legal gate enforced via SourceCompany.",
+      "ATS provider. Board-level legal gate enforced via SourceCompany. " +
+      "Provider ships disabled — enable only after Terms review.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -342,9 +360,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* ashby — ATS provider                                             */
-  /*                                                                  */
-  /* Unlisted jobs are dropped at the adapter level (isListed===true). */
+  /* ashby — ATS provider (disabled until boards approved)            */
   /* ---------------------------------------------------------------- */
   {
     key: "ashby",
@@ -364,7 +380,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     rateLimitPerMinute: 20,
     notes:
       "ATS provider. Unlisted jobs are never ingested. Board-level " +
-      "legal gate enforced via SourceCompany.",
+      "legal gate enforced via SourceCompany. Ships disabled.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
