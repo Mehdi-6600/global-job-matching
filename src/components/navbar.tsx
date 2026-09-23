@@ -321,7 +321,7 @@ export default function Navbar() {
 
   return (
     <header className="gjm-header">
-      <nav className="gjm-nav">
+      <nav className="gjm-nav" aria-label="Main">
         <div className="gjm-nav-inner">
           <Link href="/" className="gjm-brand" onClick={closeMobile}>
             <span className="gjm-brand-mark" aria-hidden="true">
@@ -425,6 +425,7 @@ export default function Navbar() {
               onClick={() => setMobileOpen((v) => !v)}
               aria-label={mobileOpen ? menuCloseLabel : menuOpenLabel}
               aria-expanded={mobileOpen}
+              aria-controls="gjm-mobile-menu"
             >
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -432,7 +433,7 @@ export default function Navbar() {
         </div>
 
         {mobileOpen && (
-          <div className="gjm-mobile-menu">
+          <div className="gjm-mobile-menu" id="gjm-mobile-menu">
             <div className="gjm-mobile-scroll">
               <div className="gjm-mobile-links">
                 {links.map((link) => {
