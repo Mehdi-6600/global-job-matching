@@ -48,6 +48,8 @@ interface CategoryOption {
   name: string;
   slug: string;
   count: number;
+  /** Precomputed localized labels from /api/categories, keyed by locale code. */
+  labels?: Record<string, string>;
 }
 
 interface Filters {
@@ -356,7 +358,8 @@ export default function JobsPage() {
                       </option>
                       {categories.map((c) => (
                         <option key={c.id} value={c.slug}>
-                          {categoryLabel(c.slug, c.name, locale)}
+                          {c.labels?.[locale] ??
+                            categoryLabel(c.slug, c.name, locale)}
                         </option>
                       ))}
                     </select>
