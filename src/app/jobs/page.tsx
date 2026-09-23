@@ -15,9 +15,11 @@ import {
   Globe,
   Tag,
   AlertCircle,
+  Layers,
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
+import { categoryLabel } from "@/lib/i18n/category-labels";
 
 interface Job {
   id: string;
@@ -41,11 +43,19 @@ interface Job {
   category: { name: string; slug: string } | null;
 }
 
+interface CategoryOption {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
+}
+
 interface Filters {
   search: string;
   location: string;
   type: string;
   experience: string;
+  category: string;
   remote: boolean;
   minSalary: string;
   maxSalary: string;
@@ -57,6 +67,7 @@ const EMPTY_FILTERS: Filters = {
   location: "",
   type: "",
   experience: "",
+  category: "",
   remote: false,
   minSalary: "",
   maxSalary: "",
@@ -78,11 +89,34 @@ export default function JobsPage() {
   const [debouncedTag, setDebouncedTag] = useState("");
 
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<FetchError>(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Fetch categories once (dynamically, from the same DB the
+  // /categories index page uses). Silently degrades to an empty list
+  // if the endpoint fails — the filter simply hides.
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/categories", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const rows = Array.isArray(data?.categories) ? data.categories : [];
+        setCategories(rows);
+      })
+      .catch(() => {
+        /* silent — category filter is optional */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Debounce only free-text fields.
   useEffect(() => {
@@ -123,6 +157,7 @@ export default function JobsPage() {
     if (debouncedLocation) params.set("location", debouncedLocation);
     if (filters.type) params.set("type", filters.type);
     if (filters.experience) params.set("experience", filters.experience);
+    if (filters.category) params.set("category", filters.category);
     if (filters.remote) params.set("remote", "true");
     if (debouncedTag) params.set("tag", debouncedTag);
 
@@ -167,6 +202,7 @@ export default function JobsPage() {
     debouncedTag,
     filters.type,
     filters.experience,
+    filters.category,
     filters.remote,
     filters.minSalary,
     filters.maxSalary,
@@ -197,6 +233,7 @@ export default function JobsPage() {
       filters.location ||
       filters.type ||
       filters.experience ||
+      filters.category ||
       filters.remote ||
       filters.minSalary ||
       filters.maxSalary ||
@@ -295,6 +332,37 @@ export default function JobsPage() {
                   />
                 </div>
               </div>
+
+              {categories.length > 0 && (
+                <div>
+                  <label
+                    htmlFor="jobs-filter-category"
+                    className="block text-xs font-medium text-slate-400 mb-1.5"
+                  >
+                    {t("Jobs.category", "Category")}
+                  </label>
+                  <div className="relative">
+                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                    <select
+                      id="jobs-filter-category"
+                      value={filters.category}
+                      onChange={(e) =>
+                        updateFilter("category", e.target.value)
+                      }
+                      className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    >
+                      <option value="">
+                        {t("Jobs.allCategories", "All Categories")}
+                      </option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.slug}>
+                          {categoryLabel(c.slug, c.name, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label
@@ -557,6 +625,16 @@ export default function JobsPage() {
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300">
                         <Globe className="w-3 h-3" />
                         {t("Common.remote", "Remote")}
+                      </span>
+                    )}
+                    {job.category?.slug && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5">
+                        <Layers className="w-3 h-3" />
+                        {categoryLabel(
+                          job.category.slug,
+                          job.category.name,
+                          locale,
+                        )}
                       </span>
                     )}
                     {job.type && (
