@@ -117,18 +117,6 @@ type Audience = "seeker" | "employer";
 
 /**
  * Locale-aware split of the hero headline into two styled lines.
- *
- * English uses the canonical "Find Your Next Opportunity. Anywhere in
- * the World." wording. Other locales have their own headline that does
- * not always contain the exact English tokens "opportunity" / "world",
- * so we fall back to a generic sentence split (first sentence on line
- * 1, second sentence on line 2). If a locale has only one sentence, we
- * render a single-line headline.
- *
- * We do NOT invent colored keywords per locale — the accent color is
- * only applied in English, where the wording is guaranteed. All other
- * locales render the whole headline in the base color, which is
- * visually clean and avoids arbitrary per-locale keyword picking.
  */
 function splitHeroTitle(
   full: string,
@@ -142,7 +130,6 @@ function splitHeroTitle(
     const worldIdx = lower.indexOf("world");
 
     if (oppIdx >= 0 && worldIdx > oppIdx) {
-      // Preferred EN: line1 = "...Opportunity." , line2 = "...World."
       let goldEnd = oppIdx + "opportunity".length;
       if (trimmed[goldEnd] === ".") goldEnd += 1;
       const line1 = trimmed.slice(0, goldEnd).trim();
@@ -150,7 +137,6 @@ function splitHeroTitle(
       let rest = trimmed.slice(goldEnd).trim();
       if (rest.startsWith(".")) rest = rest.slice(1).trim();
 
-      // Line 2 = the remainder (the "World." clause).
       const line2 = rest || trimmed.slice(goldEnd).trim();
 
       return {
@@ -161,8 +147,6 @@ function splitHeroTitle(
     }
   }
 
-  // Generic split on first sentence-ending punctuation.
-  // Supports Latin "." / "!" / "?" and Arabic/Devanagari "؟" / "।".
   const match = trimmed.match(/^([\s\S]*?[.!?؟।])\s+([\s\S]+)$/);
   if (match) {
     return { line1: match[1].trim(), line2: match[2].trim(), accentWord: null };
@@ -279,18 +263,21 @@ export default function HomePage() {
     },
   ];
 
-  const careerTools = [
+  /**
+   * The three AI tools shown as compact cards directly under the
+   * search bar. Order is fixed: Career Risk → 90-Day Plan → Migration.
+   * All three are equally weighted (same width, height, spacing).
+   */
+  const aiTools = [
     {
       href: "/career-risk",
       icon: ShieldAlert,
       title: t("CareerRisk.title", "AI Career Risk"),
       description: t(
         "CareerRisk.subtitle",
-        "Estimate how automation might affect your role in the next 5–10 years."
+        "Estimate how automation might affect your role."
       ),
-      cta: t("Home.toolCtaAnalyze", "Analyze my risk"),
-      accent: "cyan",
-      badge: t("Home.toolBadgePopular", "Popular"),
+      variant: "risk" as const,
     },
     {
       href: "/career-risk",
@@ -298,10 +285,9 @@ export default function HomePage() {
       title: t("CareerRisk.roadmapTitle", "90-day roadmap"),
       description: t(
         "CareerRisk.roadmapCta",
-        "Build a 90-day skill roadmap tailored to your role."
+        "Build your personalized next 90 days."
       ),
-      cta: t("Home.toolCtaPlan", "Plan my next 90 days"),
-      accent: "orange",
+      variant: "plan" as const,
     },
     {
       href: "/career-risk",
@@ -309,10 +295,9 @@ export default function HomePage() {
       title: t("CareerRisk.migrationTitle", "Migration options"),
       description: t(
         "CareerRisk.migrationCta",
-        "Explore realistic skill-based migration pathways."
+        "Explore your potential migration paths."
       ),
-      cta: t("Home.toolCtaExplore", "Explore pathways"),
-      accent: "red",
+      variant: "migrate" as const,
     },
   ];
 
@@ -689,55 +674,34 @@ export default function HomePage() {
             </button>
           </form>
         </div>
-      </section>
 
-      {/* ============================================================
-          CAREER TOOLS — dark premium section, right after hero
-          Only for job seekers
-          ============================================================ */}
-      {audience === "seeker" && (
-        <section className="gjm-career-tools-section">
+        {audience === "seeker" && (
           <div className="gjm-container">
-            <div className="gjm-career-tools-heading">
-              <span className="gjm-section-kicker">
-                {t("Home.toolsKicker", "AI CAREER TOOLS")}
-              </span>
-              <h2>
-                {t("Home.toolsTitle", "Plan your career with AI.")}
-              </h2>
-              <p>
-                {t(
-                  "Home.toolsSubtitle",
-                  "Free tools to assess your risk, plan your next 90 days, and explore global opportunities."
-                )}
-              </p>
-            </div>
-
-            <div className="gjm-career-tools-grid">
-              {careerTools.map((tool) => {
+            <div className="gjm-ai-tools" role="list">
+              {aiTools.map((tool) => {
                 const Icon = tool.icon;
 
                 return (
                   <Link
-                    key={tool.title}
+                    key={tool.variant}
                     href={tool.href}
-                    className={`gjm-career-tool-card accent-${tool.accent}`}
+                    role="listitem"
+                    className={`gjm-ai-tool-card gjm-ai-tool-card--${tool.variant}`}
                   >
-                    {"badge" in tool && tool.badge ? (
-                      <span className="gjm-career-tool-badge">
-                        {tool.badge}
-                      </span>
-                    ) : null}
+                    <span className="gjm-ai-tool-icon" aria-hidden="true">
+                      <Icon size={20} />
+                    </span>
 
-                    <div className="gjm-career-tool-icon">
-                      <Icon size={24} />
+                    <div className="gjm-ai-tool-copy">
+                      <span className="gjm-ai-tool-title">
+                        {tool.title}
+                      </span>
+                      <span className="gjm-ai-tool-desc">
+                        {tool.description}
+                      </span>
                     </div>
 
-                    <h3>{tool.title}</h3>
-                    <p>{tool.description}</p>
-
-                    <span className="gjm-career-tool-cta">
-                      {tool.cta}
+                    <span className="gjm-ai-tool-arrow" aria-hidden="true">
                       <ArrowRight size={14} />
                     </span>
                   </Link>
@@ -745,8 +709,8 @@ export default function HomePage() {
               })}
             </div>
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* ============================================================
           TRUST SECTION — real product evidence, no fake testimonials
@@ -937,7 +901,7 @@ export default function HomePage() {
                           ) : (
                             <>
                               <BriefcaseBusiness size={14} />
-                              {job.type || t("Home.fullTime", "Full-time")}
+                              {t("Home.fullTime", "Full-time")}
                             </>
                           )}
                         </span>
