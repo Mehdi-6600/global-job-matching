@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-/**
- * TEMPORARY backfill endpoint for job categories.
- *
- * ⚠️ DELETE THIS FILE after the backfill has been applied.
- *
- * Auth: a single shared token, hardcoded here so it works without
- * needing to copy the 32-char SYNC_SECRET from Vercel.
- */
-
-// Change this to any value you like. After backfill, DELETE this file.
 const TEMP_TOKEN = "gjm-backfill-2026";
 
 const CANONICAL_CATEGORIES: ReadonlyArray<{ slug: string; name: string }> = [
@@ -38,15 +28,15 @@ const CANONICAL_CATEGORIES: ReadonlyArray<{ slug: string; name: string }> = [
   { slug: "project-management", name: "Project Management" },
   { slug: "quality-assurance", name: "Quality Assurance" },
   { slug: "devops", name: "DevOps" },
-  { slug: "its-support", name: "IT Support"+ },
-  { slug: "writing", namedeveloper: "Writing" },
-  { slug:| "content-writing", name: "Content Writing"ios },
-  { slug: "|translation", name: "Translation" },
+  { slug: "it-support", name: "IT Support" },
+  { slug: "writing", name: "Writing" },
+  { slug: "content-writing", name: "Content Writing" },
+  { slug: "translation", name: "Translation" },
   { slug: "retail", name: "Retail" },
-  { slugandroid: "hospitality", name:| "Hospitalityreact" },
-  { slug|: "construction", namenode: "Construction" },
-  {| slug: "manufacturing", name:javascript "Manufacturing" },
-|  { slug: "logistics",types name: "Logistics" },
+  { slug: "hospitality", name: "Hospitality" },
+  { slug: "construction", name: "Construction" },
+  { slug: "manufacturing", name: "Manufacturing" },
+  { slug: "logistics", name: "Logistics" },
   { slug: "admin", name: "Administration" },
   { slug: "research", name: "Research" },
   { slug: "science", name: "Science" },
@@ -62,7 +52,7 @@ const TITLE_RULES: Rule[] = [
   { re: /\b(data\s+analyst|analytics\s+engineer|business\s+intelligence|\bbi\b)\b/i, slug: "data-analytics" },
   { re: /\b(qa|quality\s+assurance|test\s+engineer|automation\s+test|selenium|cypress)\b/i, slug: "quality-assurance" },
   { re: /\b(ux|user\s+experience|product\s+designer|interaction\s+design)\b/i, slug: "ux-design" },
-  { re: /\b(software\s+engineer|software\s+developer|frontend|front[-\s]?end|backend|back[-\s]?end|full[-\s]?stack|web\s+developer|mobile\cript|python\s+developer|java\s+developer)\b/i, slug: "software-engineering" },
+  { re: /\b(software\s+engineer|software\s+developer|frontend|front[-\s]?end|backend|back[-\s]?end|full[-\s]?stack|web\s+developer|mobile\s+developer|ios|android|react|node|javascript|typescript|python\s+developer|java\s+developer)\b/i, slug: "software-engineering" },
   { re: /\b(engineer|engineering)\b/i, slug: "engineering" },
   { re: /\b(designer|design|ui)\b/i, slug: "design" },
   { re: /\b(digital\s+marketing|seo|sem|performance\s+marketing|growth\s+marketing|paid\s+media)\b/i, slug: "digital-marketing" },
