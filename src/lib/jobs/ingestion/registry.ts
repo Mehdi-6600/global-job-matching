@@ -24,9 +24,9 @@
  *      robotsStatus="unknown", termsStatus="unknown", enabled=false
  *      until review is complete.
  *   4. Add adapter contract tests (see ./adapters/<key>.test.ts).
- *   5. If the adapter exposes a public model file, ensure its
- *      attribution string is included in any UI surface where jobs
- *      are displayed (see JobsList / JobDetail).
+ *   5. For ATS providers (greenhouse / lever / ashby), boards must
+ *      additionally be approved in the SourceCompany table — the
+ *      registry entry alone is not sufficient to fetch their data.
  */
 import { db } from "@/lib/db";
 import type {
@@ -41,6 +41,9 @@ import { arbeitnowAdapter } from "./adapters/arbeitnow";
 import { himalayasAdapter } from "./adapters/himalayas";
 import { jobicyAdapter } from "./adapters/jobicy";
 import { remoteokAdapter } from "./adapters/remoteok";
+import { greenhouseAdapter } from "./adapters/greenhouse";
+import { leverAdapter } from "./adapters/lever";
+import { ashbyAdapter } from "./adapters/ashby";
 
 export type SourceRegistryEntry = {
   key: string;
@@ -52,54 +55,17 @@ export type SourceRegistryEntry = {
   commercialAllowed: boolean;
   redistributionAllowed: boolean;
   attributionRequired: boolean;
-  /**
-   * Human-readable attribution string written into imported Job rows
-   * (Job.attribution). If omitted, jobs from this source carry no
-   * attribution string even if attributionRequired is true — this is
-   * allowed but discouraged; prefer to always set it.
-   */
   attribution?: string;
-  /**
-   * Robots.txt posture. MUST be explicitly set to "allowed" (after a
-   * manual review of the source's robots.txt for the paths the adapter
-   * actually fetches) before the source can run in production. Missing
-   * or "unknown" is treated as blocked.
-   */
   robotsStatus?: RobotsStatus;
-  /**
-   * Terms-of-service posture. MUST be explicitly set to "allowed" (after
-   * a manual review of the source's terms for automated ingestion)
-   * before the source can run in production. Missing or "unknown" is
-   * treated as blocked.
-   */
   termsStatus?: TermsStatus;
   enabled: boolean;
   refreshIntervalMinutes: number;
   rateLimitPerMinute?: number | null;
   notes: string;
-
-  /** ISO 639-1 language code of the source content (e.g. "en", "de"). */
   language?: string;
-
-  /** Optional per-source HTTP tuning passed to the adapter. */
   httpConfig?: SourceHttpConfig;
-
-  /**
-   * Adapter implementation for this source.
-   *
-   * Declared here (not in a separate ADAPTERS map) so adding a new
-   * source is a single-file change: create the adapter, add a registry
-   * entry with the adapter reference, done.
-   */
   adapter?: JobSourceAdapter;
-
-  /**
-   * Optional capability declaration. The pipeline uses it to pick the
-   * right pagination strategy and to validate the adapter's behavior.
-   */
   capabilities?: SourceCapabilities;
-
-  /** Runtime health fields from JobSource (optional) */
   consecutiveFailures?: number;
   lastErrorAt?: Date | null;
 };
@@ -149,11 +115,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* himalayas — global remote job feed                              */
-  /*                                                                  */
-  /* Ships DISABLED. Do NOT enable until the project owner has       */
-  /* reviewed the current Himalaya terms + robots and set the        */
-  /* three status fields below to "allowed"/"APPROVED".              */
+  /* himalayas                                                        */
   /* ---------------------------------------------------------------- */
   {
     key: "himalayas",
@@ -172,8 +134,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
     notes:
-      "Global remote-only feed. Legal review required before enabling. " +
-      "See adapter header for response shape.",
+      "Global remote-only feed. Legal review required before enabling.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -198,9 +159,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* jobicy — global remote job feed                                 */
-  /*                                                                  */
-  /* Ships DISABLED. See himalayas note above.                       */
+  /* jobicy                                                           */
   /* ---------------------------------------------------------------- */
   {
     key: "jobicy",
@@ -245,11 +204,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* remoteok — global remote job feed                               */
-  /*                                                                  */
-  /* Ships DISABLED. IMPORTANT: RemoteOK's published feed currently  */
-  /* states the feed may not be used in production without written   */
-  /* permission. Do NOT enable without written permission.           */
+  /* remoteok                                                         */
   /* ---------------------------------------------------------------- */
   {
     key: "remoteok",
@@ -268,8 +223,8 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 10,
     notes:
-      "Global remote-only feed. Single-shot array with metadata header. " +
-      "Legal + permission review REQUIRED before enabling.",
+      "Global remote-only feed. Legal + permission review REQUIRED " +
+      "before enabling.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -292,21 +247,150 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesDescription: true,
     },
   },
+
+  /* ---------------------------------------------------------------- */
+  /* greenhouse — ATS provider                                        */
+  /*                                                                  */
+  /* Requires BOTH: (1) this entry enabled + APPROVED, and           */
+  /* (2) at least one SourceCompany row with provider="greenhouse"   */
+  /* and legalStatus="APPROVED", robotsStatus="allowed",             */
+  /* termsStatus="allowed", status="active".                         */
+  /* ---------------------------------------------------------------- */
+  {
+    key: "greenhouse",
+    name: "Greenhouse",
+    type: "ats_provider",
+    baseUrl: "https://boards.greenhouse.io",
+    apiUrl: "https://boards-api.greenhouse.io/v1/boards",
+    licenseStatus: "UNKNOWN",
+    commercialAllowed: false,
+    redistributionAllowed: false,
+    attributionRequired: true,
+    attribution: "Jobs via Greenhouse",
+    robotsStatus: "unknown",
+    termsStatus: "unknown",
+    enabled: false,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 20,
+    notes:
+      "ATS provider. Board-level legal gate enforced via SourceCompany.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 15_000_000,
+    },
+    adapter: greenhouseAdapter,
+    capabilities: {
+      pagination: "page",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: false,
+      providesDescription: true,
+    },
+  },
+
+  /* ---------------------------------------------------------------- */
+  /* lever — ATS provider                                             */
+  /* ---------------------------------------------------------------- */
+  {
+    key: "lever",
+    name: "Lever",
+    type: "ats_provider",
+    baseUrl: "https://jobs.lever.co",
+    apiUrl: "https://api.lever.co/v0/postings",
+    licenseStatus: "UNKNOWN",
+    commercialAllowed: false,
+    redistributionAllowed: false,
+    attributionRequired: true,
+    attribution: "Jobs via Lever",
+    robotsStatus: "unknown",
+    termsStatus: "unknown",
+    enabled: false,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 20,
+    notes:
+      "ATS provider. Board-level legal gate enforced via SourceCompany.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 15_000_000,
+    },
+    adapter: leverAdapter,
+    capabilities: {
+      pagination: "page",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: true,
+      providesDescription: true,
+    },
+  },
+
+  /* ---------------------------------------------------------------- */
+  /* ashby — ATS provider                                             */
+  /*                                                                  */
+  /* Unlisted jobs are dropped at the adapter level (isListed===true). */
+  /* ---------------------------------------------------------------- */
+  {
+    key: "ashby",
+    name: "Ashby",
+    type: "ats_provider",
+    baseUrl: "https://jobs.ashbyhq.com",
+    apiUrl: "https://api.ashbyhq.com/posting-api/job-board",
+    licenseStatus: "UNKNOWN",
+    commercialAllowed: false,
+    redistributionAllowed: false,
+    attributionRequired: true,
+    attribution: "Jobs via Ashby",
+    robotsStatus: "unknown",
+    termsStatus: "unknown",
+    enabled: false,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 20,
+    notes:
+      "ATS provider. Unlisted jobs are never ingested. Board-level " +
+      "legal gate enforced via SourceCompany.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 15_000_000,
+    },
+    adapter: ashbyAdapter,
+    capabilities: {
+      pagination: "page",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: true,
+      providesDescription: true,
+    },
+  },
 ];
 
 /**
  * Legal gate for production ingestion — FAIL-CLOSED.
- *
- * A source is allowed to run only when ALL of the following hold:
- *   - enabled === true
- *   - licenseStatus === "APPROVED"
- *   - robotsStatus === "allowed"
- *   - termsStatus === "allowed"
- *
- * Missing (undefined) or "unknown" is treated as NOT allowed. This
- * intentionally rejects sources that have not been reviewed — a new
- * adapter must set both robotsStatus and termsStatus explicitly after
- * a manual review.
  */
 export function isProductionIngestAllowed(
   entry: Pick<
@@ -321,16 +405,6 @@ export function isProductionIngestAllowed(
   return true;
 }
 
-/**
- * Human-readable reason a source is blocked, or null when allowed.
- * Used by the pipeline to record a specific error code.
- *
- * Error taxonomy (stable strings):
- *   source_disabled
- *   license_blocked:<status>
- *   robots_blocked:<status-or-missing>
- *   terms_blocked:<status-or-missing>
- */
 export function ingestBlockReason(
   entry: Pick<
     SourceRegistryEntry,
@@ -350,20 +424,10 @@ export function ingestBlockReason(
   return null;
 }
 
-/** Static-only enabled list (no DB). Prefer getRunnableSources() at runtime. */
 export function getEnabledSources(): SourceRegistryEntry[] {
   return SOURCE_REGISTRY.filter(isProductionIngestAllowed);
 }
 
-/**
- * Upsert static registry into JobSource table (idempotent).
- * Does not override DB licenseStatus/enabled once row exists — only fills missing.
- * To hard-sync defaults, pass forceDefaults=true (admin use).
- *
- * Note: robotsStatus / termsStatus / attribution live only in the static
- * registry (not in the DB schema) — they are policy metadata, not runtime
- * state, and are intentionally not persisted to JobSource.
- */
 export async function ensureSourcesInDb(
   forceDefaults = false,
 ): Promise<void> {
@@ -410,13 +474,6 @@ export async function ensureSourcesInDb(
   }
 }
 
-/**
- * Runnable sources = registry metadata ∩ DB enabled+APPROVED.
- * If DB row missing, falls back to static entry (and ensureSourcesInDb should have run).
- *
- * Adapter reference, capabilities, attribution, and HTTP config are carried
- * through so the pipeline can resolve them without a separate lookup table.
- */
 export async function getRunnableSources(
   sourceKeys?: string[],
 ): Promise<SourceRegistryEntry[]> {
