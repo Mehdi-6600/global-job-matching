@@ -836,15 +836,6 @@
     "viewAllJobs": "View all jobs →",
     "browseLocations": "Browse locations →"
   },
-  "Locations": {
-    "title": "Jobs by Location",
-    "subtitle": "These pages only appear when at least one active job matches that location in our database — no empty landing pages.",
-    "empty": "No location hubs with active jobs yet. Check back soon or",
-    "browseJobs": "Browse all jobs",
-    "activeJobs": "active jobs",
-    "viewAllJobs": "View all jobs →",
-    "browseCategories": "Browse categories →"
-  },
   "CategoryNames": {
     "accounting": "Accounting",
     "artificial-intelligence": "Artificial Intelligence",
@@ -892,6 +883,15 @@
     "nonprofit": "Nonprofit",
     "government": "Government",
     "other": "Other"
+  },
+  "Locations": {
+    "title": "Jobs by Location",
+    "subtitle": "These pages only appear when at least one active job matches that location in our database — no empty landing pages.",
+    "empty": "No location hubs with active jobs yet. Check back soon or",
+    "browseJobs": "Browse all jobs",
+    "activeJobs": "active jobs",
+    "viewAllJobs": "View all jobs →",
+    "browseCategories": "Browse categories →"
   },
   "Admin": {
     "roleAll": "All roles",
