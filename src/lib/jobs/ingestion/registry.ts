@@ -14,6 +14,19 @@
  * Any missing or non-ALLOWED value blocks the source. "UNKNOWN" is NOT
  * a synonym for "allowed": a new source must be reviewed and explicitly
  * marked allowed before it can run in production.
+ *
+ * ── Adding a new source checklist ──────────────────────────────────
+ *   1. Create adapter at ./adapters/<key>.ts implementing JobSourceAdapter.
+ *   2. Review terms + robots for the source. If either is unclear, DO
+ *      NOT flip the entry to enabled/APPROVED. Shipping disabled is
+ *      the correct default.
+ *   3. Add an entry below. Keep licenseStatus="UNKNOWN",
+ *      robotsStatus="unknown", termsStatus="unknown", enabled=false
+ *      until review is complete.
+ *   4. Add adapter contract tests (see ./adapters/<key>.test.ts).
+ *   5. If the adapter exposes a public model file, ensure its
+ *      attribution string is included in any UI surface where jobs
+ *      are displayed (see JobsList / JobDetail).
  */
 import { db } from "@/lib/db";
 import type {
@@ -25,6 +38,9 @@ import type {
   TermsStatus,
 } from "./types";
 import { arbeitnowAdapter } from "./adapters/arbeitnow";
+import { himalayasAdapter } from "./adapters/himalayas";
+import { jobicyAdapter } from "./adapters/jobicy";
+import { remoteokAdapter } from "./adapters/remoteok";
 
 export type SourceRegistryEntry = {
   key: string;
@@ -89,6 +105,9 @@ export type SourceRegistryEntry = {
 };
 
 export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
+  /* ---------------------------------------------------------------- */
+  /* arbeitnow — existing production source                           */
+  /* ---------------------------------------------------------------- */
   {
     key: "arbeitnow",
     name: "Arbeitnow",
@@ -125,6 +144,151 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesCompany: true,
       providesLocation: true,
       providesEmploymentType: true,
+      providesDescription: true,
+    },
+  },
+
+  /* ---------------------------------------------------------------- */
+  /* himalayas — global remote job feed                              */
+  /*                                                                  */
+  /* Ships DISABLED. Do NOT enable until the project owner has       */
+  /* reviewed the current Himalaya terms + robots and set the        */
+  /* three status fields below to "allowed"/"APPROVED".              */
+  /* ---------------------------------------------------------------- */
+  {
+    key: "himalayas",
+    name: "Himalayas",
+    type: "aggregator",
+    baseUrl: "https://himalayas.app",
+    apiUrl: "https://himalayas.app/jobs/api",
+    licenseStatus: "UNKNOWN",
+    commercialAllowed: false,
+    redistributionAllowed: false,
+    attributionRequired: true,
+    attribution: "Jobs via Himalayas",
+    robotsStatus: "unknown",
+    termsStatus: "unknown",
+    enabled: false,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 20,
+    notes:
+      "Global remote-only feed. Legal review required before enabling. " +
+      "See adapter header for response shape.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 15_000_000,
+    },
+    adapter: himalayasAdapter,
+    capabilities: {
+      pagination: "page",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: true,
+      providesDescription: true,
+    },
+  },
+
+  /* ---------------------------------------------------------------- */
+  /* jobicy — global remote job feed                                 */
+  /*                                                                  */
+  /* Ships DISABLED. See himalayas note above.                       */
+  /* ---------------------------------------------------------------- */
+  {
+    key: "jobicy",
+    name: "Jobicy",
+    type: "aggregator",
+    baseUrl: "https://jobicy.com",
+    apiUrl: "https://jobicy.com/api/v2/remote-jobs",
+    licenseStatus: "UNKNOWN",
+    commercialAllowed: false,
+    redistributionAllowed: false,
+    attributionRequired: true,
+    attribution: "Jobs via Jobicy",
+    robotsStatus: "unknown",
+    termsStatus: "unknown",
+    enabled: false,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 20,
+    notes:
+      "Global remote-only feed. Single-shot response (no pagination). " +
+      "Legal review required before enabling.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 15_000_000,
+    },
+    adapter: jobicyAdapter,
+    capabilities: {
+      pagination: "single",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: true,
+      providesDescription: true,
+    },
+  },
+
+  /* ---------------------------------------------------------------- */
+  /* remoteok — global remote job feed                               */
+  /*                                                                  */
+  /* Ships DISABLED. IMPORTANT: RemoteOK's published feed currently  */
+  /* states the feed may not be used in production without written   */
+  /* permission. Do NOT enable without written permission.           */
+  /* ---------------------------------------------------------------- */
+  {
+    key: "remoteok",
+    name: "Remote OK",
+    type: "aggregator",
+    baseUrl: "https://remoteok.com",
+    apiUrl: "https://remoteok.com/api",
+    licenseStatus: "UNKNOWN",
+    commercialAllowed: false,
+    redistributionAllowed: false,
+    attributionRequired: true,
+    attribution: "Jobs via RemoteOK",
+    robotsStatus: "unknown",
+    termsStatus: "unknown",
+    enabled: false,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 10,
+    notes:
+      "Global remote-only feed. Single-shot array with metadata header. " +
+      "Legal + permission review REQUIRED before enabling.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 15_000_000,
+    },
+    adapter: remoteokAdapter,
+    capabilities: {
+      pagination: "single",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: true,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: false,
       providesDescription: true,
     },
   },
