@@ -20,15 +20,13 @@ import { tryAcquireSourceQuota } from "../rate-limit";
  *       {
  *         "title": "...",
  *         "companyName": "...",
- *         "companyLogo": "...",
  *         "locationRestrictions": ["Worldwide"],
  *         "pubDate": 1700000000,
  *         "guid": "https://himalayas.app/companies/x/jobs/y-1234567890",
  *         "applicationLink": "https://...",
  *         "description": "<p>...</p>",
  *         "jobType": "Full Time",
- *         "categories": ["Engineering"],
- *         ...
+ *         "categories": ["Engineering"]
  *       }
  *     ],
  *     "offset": 0,
@@ -46,14 +44,11 @@ import { tryAcquireSourceQuota } from "../rate-limit";
 
 const API = "https://himalayas.app/jobs/api";
 
-/** Adapter-local defaults; overridable via `sourceConfig.httpConfig`. */
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_MAX_RESPONSE_BYTES = 15_000_000;
 const DEFAULT_RATE_LIMIT_PER_MINUTE = 20;
 const DEFAULT_ATTRIBUTION = "Jobs via Himalayas";
-
-/** Hard cap on jobType strings we accept as-is; longer falls back to full-time. */
 const MAX_EMPLOYMENT_TYPE_LEN = 40;
 
 function asRecord(v: unknown): Record<string, unknown> | null {
@@ -71,13 +66,8 @@ function str(v: unknown, max = 50_000): string {
   return v.slice(0, max);
 }
 
-/**
- * Himalayas uses a mix of `pubDate` (unix seconds) and occasionally
- * ISO strings. Return a Date or null — never throw.
- */
 function toDate(v: unknown): Date | null {
   if (typeof v === "number" && Number.isFinite(v) && v > 0) {
-    // Heuristic: values < 10^11 are seconds; above are milliseconds.
     const ms = v < 1e11 ? v * 1000 : v;
     const d = new Date(ms);
     return Number.isNaN(d.getTime()) ? null : d;
@@ -89,14 +79,6 @@ function toDate(v: unknown): Date | null {
   return null;
 }
 
-/**
- * Stable source-level job id.
- *
- * Himalayas supplies both a `guid` (usually a URL) and an
- * `applicationLink`. We prefer the guid's last path segment when it
- * looks like an id, otherwise we fall back to a slug built from the
- * application link. As a last resort we hash the guid.
- */
 function deriveSourceJobId(
   guid: string,
   applicationLink: string,
@@ -115,7 +97,6 @@ function deriveSourceJobId(
     // not a URL; fall through
   }
 
-  // Hash fallback — deterministic, collision-resistant enough for ids.
   let h = 0x811c9dc5;
   for (let i = 0; i < source.length; i++) {
     h ^= source.charCodeAt(i);
@@ -125,12 +106,6 @@ function deriveSourceJobId(
   return hash || null;
 }
 
-/**
- * Himalayas surfaces location restrictions as an array (e.g.
- * ["Worldwide"], ["United States"], ["Europe", "United Kingdom"]).
- * We join them into a single string for the pipeline's location
- * normalizer; empty/missing becomes "Remote".
- */
 function joinLocations(raw: unknown): string {
   const parts = asArray(raw)
     .map((x) => str(x, 100).trim())
@@ -153,12 +128,11 @@ function mapItem(item: unknown, attribution: string): IngestJobDraft | null {
   const sourceJobId = deriveSourceJobId(guid, applicationLink);
   if (!sourceJobId) return null;
 
-  // Apply URL preference: applicationLink first, then guid.
   const rawApply = applicationLink || guid;
   const applyUrl = normalizeJobUrl(rawApply) || (rawApply || null);
   const externalUrl = normalizeJobUrl(guid) || (guid || null);
 
-  constjob rawHtml =Description str(j.description, 200_000);
+  const rawHtml = str(j.description, 200_000);
   const description = stripHtml(rawHtml) || title;
 
   const categories = asArray(j.categories)
@@ -175,7 +149,6 @@ function mapItem(item: unknown, attribution: string): IngestJobDraft | null {
       ? rawJobType
       : "full-time";
 
-  // Himalayas is a remote-first source; treat missing as remote=true.
   const remote = typeof j.remote === "boolean" ? j.remote : true;
 
   return {
@@ -226,11 +199,6 @@ export const himalayasAdapter: JobSourceAdapter = {
       };
     }
 
-    /*
-     * Himalayas uses `offset` + `limit`. We translate the pipeline's
-     * `page` into an offset so the existing checkpoint system works
-     * unchanged. `perPage` from the pipeline is honoured up to 100.
-     */
     const page = Math.max(1, options.page ?? 1);
     const perPage = Math.min(Math.max(1, options.perPage ?? 100), 100);
     const offset = (page - 1) * perPage;
@@ -271,11 +239,13 @@ export const himalayasAdapter: JobSourceAdapter = {
 
     const root = asRecord(data);
     const list = root ? asArray(root.jobs) : [];
-    const jobs = list
-      .map((item) => mapItem(item, attribution))
-      .filter((d): d is IngestJobDraft => Boolean(d));
 
-    // hasMore derives from totalCount when present, else from list size.
+    const jobs: IngestJobDraft[] = [];
+    for (const item of list) {
+      const draft = mapItem(item, attribution);
+      if (draft) jobs.push(draft);
+    }
+
     const totalCount =
       root && typeof root.totalCount === "number"
         ? Math.max(0, Math.floor(root.totalCount))
