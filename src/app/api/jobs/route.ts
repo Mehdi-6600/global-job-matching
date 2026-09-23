@@ -75,6 +75,81 @@ function mapJob<T extends JobForMapping>(job: T): T {
   };
 }
 
+/**
+ * Splits a user query into lowercase tokens.
+ * Ignores tokens shorter than 2 chars to avoid noise from "a", "e", "it".
+ */
+function tokenizeSearch(search: string): string[] {
+  return search
+    .toLowerCase()
+    .split(/[\s,;|/]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+}
+
+/**
+ * Very small stopword set — enough to avoid accidental matches from
+ * common filler words. Kept intentionally tiny to stay general-purpose.
+ */
+const STOPWORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "job",
+  "jobs",
+  "role",
+  "work",
+]);
+
+type RankableJob = {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  createdAt: Date;
+  company: { name: string | null } | null;
+};
+
+/**
+ * Weighted relevance score. Higher = better.
+ * Title match dominates, then company, then tags, then description.
+ * Uses token-level matching so multi-word queries behave sensibly.
+ */
+function relevanceScore(job: RankableJob, tokens: string[]): number {
+  if (tokens.length === 0) return 0;
+
+  const title = job.title.toLowerCase();
+  const companyName = (job.company?.name ?? "").toLowerCase();
+  const tagsJoined = job.tags.join(" ").toLowerCase();
+  const description = job.description.toLowerCase();
+
+  let score = 0;
+
+  for (const token of tokens) {
+    if (STOPWORDS.has(token)) continue;
+
+    // Title: strongest signal.
+    if (title === token) score += 100;
+    else if (title.startsWith(token)) score += 60;
+    else if (title.includes(token)) score += 40;
+
+    // Company name.
+    if (companyName.includes(token)) score += 20;
+
+    // Tags.
+    if (tagsJoined.includes(token)) score += 15;
+
+    // Description: weakest, and only if it appears early (first 500 chars).
+    // Reduces the "one random mention deep in a wall of text" problem.
+    const head = description.slice(0, 500);
+    if (head.includes(token)) score += 5;
+    else if (description.includes(token)) score += 1;
+  }
+
+  return score;
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const ip = getRequestIp(req);
@@ -144,31 +219,106 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       ];
     }
 
-    const [jobs, total] = await Promise.all([
+    const includeClause = {
+      company: {
+        select: {
+          id: true,
+          name: true,
+          logo: true,
+          location: true,
+        },
+      },
+      category: {
+        select: { id: true, name: true, slug: true, color: true },
+      },
+    } as const;
+
+    // Without a search term: keep the existing fresh-first behavior exactly.
+    if (!search || search.trim().length === 0) {
+      const [jobs, total] = await Promise.all([
+        db.job.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          include: includeClause,
+        }),
+        db.job.count({ where }),
+      ]);
+
+      return NextResponse.json({
+        jobs: jobs.map(mapJob),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 1,
+        },
+      });
+    }
+
+    const tokens = tokenizeSearch(search);
+
+    // If the query is too short to tokenize meaningfully, fall back to the
+    // existing contains-filter + freshness ordering. No ranking noise.
+    if (tokens.length === 0) {
+      const [jobs, total] = await Promise.all([
+        db.job.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          include: includeClause,
+        }),
+        db.job.count({ where }),
+      ]);
+
+      return NextResponse.json({
+        jobs: jobs.map(mapJob),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 1,
+        },
+      });
+    }
+
+    // Ranked path: pull a bounded candidate set, score it in memory,
+    // sort with a stable tie-breaker, then paginate.
+    //
+    // Bounded so we never load the entire jobs table.
+    // 500 candidates covers deep enough for meaningful ranking at the
+    // top of the results without unbounded memory cost.
+    const RANK_CANDIDATES = 500;
+
+    const [candidates, total] = await Promise.all([
       db.job.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        include: {
-          company: {
-            select: {
-              id: true,
-              name: true,
-              logo: true,
-              location: true,
-            },
-          },
-          category: {
-            select: { id: true, name: true, slug: true, color: true },
-          },
-        },
+        take: RANK_CANDIDATES,
+        include: includeClause,
       }),
       db.job.count({ where }),
     ]);
 
+    const scored = (candidates as unknown as RankableJob[])
+      .map((job) => ({ job, score: relevanceScore(job, tokens) }))
+      .filter((row) => row.score > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const ta = a.job.createdAt.getTime();
+        const tb = b.job.createdAt.getTime();
+        if (tb !== ta) return tb - ta;
+        return a.job.id < b.job.id ? -1 : a.job.id > b.job.id ? 1 : 0;
+      });
+
+    const pageSlice = scored
+      .slice(skip, skip + limit)
+      .map((row) => row.job as unknown as Parameters<typeof mapJob>[0]);
+
     return NextResponse.json({
-      jobs: jobs.map(mapJob),
+      jobs: pageSlice.map(mapJob),
       pagination: {
         page,
         limit,
