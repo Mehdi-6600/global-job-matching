@@ -1,40 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
 
 /**
- * One-shot backfill endpoint for job categories.
+ * TEMPORARY backfill endpoint for job categories.
  *
- * Security
- * --------
- *   Protected by the same `SYNC_SECRET` used by other internal jobs.
- *   Accept either:
- *     - Authorization: Bearer <SYNC_SECRET>
- *     - ?secret=<SYNC_SECRET>
+ * ⚠️ DELETE THIS FILE after the backfill has been applied.
  *
- * Query params
- * ------------
- *   ?dry=1     → read-only preview; no writes to the DB
- *   ?limit=N   → process at most N jobs (useful for a staged rollout)
- *
- * Behavior
- * --------
- *   1. Ensures every canonical category exists in `Category` (idempotent
- *      upsert on slug; never overwrites an admin-edited name).
- *   2. Finds every Job with `categoryId = NULL`, infers a slug from the
- *      title (fallback: tags), and sets `categoryId`.
- *   3. Returns a JSON summary.
- *
- * This endpoint is idempotent. Running it again after a successful pass
- * only re-checks the (now-empty) set of uncategorized jobs.
- *
- * DELETE THIS FILE after the backfill has been applied at least once.
+ * Auth: a single shared token, hardcoded here so it works without
+ * needing to copy the 32-char SYNC_SECRET from Vercel.
  */
 
-/* ------------------------------------------------------------------ */
-/* Canonical categories                                                */
-/* Keep in sync with src/lib/jobs/ingestion/categorize.ts              */
-/* ------------------------------------------------------------------ */
+// Change this to any value you like. After backfill, DELETE this file.
+const TEMP_TOKEN = "gjm-backfill-2026";
 
 const CANONICAL_CATEGORIES: ReadonlyArray<{ slug: string; name: string }> = [
   { slug: "software-engineering", name: "Software Engineering" },
@@ -61,23 +38,19 @@ const CANONICAL_CATEGORIES: ReadonlyArray<{ slug: string; name: string }> = [
   { slug: "project-management", name: "Project Management" },
   { slug: "quality-assurance", name: "Quality Assurance" },
   { slug: "devops", name: "DevOps" },
-  { slug: "it-support", name: "IT Support" },
-  { slug: "writing", name: "Writing" },
-  { slug: "content-writing", name: "Content Writing" },
-  { slug: "translation", name: "Translation" },
+  { slug: "its-support", name: "IT Support"+ },
+  { slug: "writing", namedeveloper: "Writing" },
+  { slug:| "content-writing", name: "Content Writing"ios },
+  { slug: "|translation", name: "Translation" },
   { slug: "retail", name: "Retail" },
-  { slug: "hospitality", name: "Hospitality" },
-  { slug: "construction", name: "Construction" },
-  { slug: "manufacturing", name: "Manufacturing" },
-  { slug: "logistics", name: "Logistics" },
+  { slugandroid: "hospitality", name:| "Hospitalityreact" },
+  { slug|: "construction", namenode: "Construction" },
+  {| slug: "manufacturing", name:javascript "Manufacturing" },
+|  { slug: "logistics",types name: "Logistics" },
   { slug: "admin", name: "Administration" },
   { slug: "research", name: "Research" },
   { slug: "science", name: "Science" },
 ];
-
-/* ------------------------------------------------------------------ */
-/* Inference rules — must stay in sync with categorize.ts              */
-/* ------------------------------------------------------------------ */
 
 type Rule = { re: RegExp; slug: string };
 
@@ -89,7 +62,7 @@ const TITLE_RULES: Rule[] = [
   { re: /\b(data\s+analyst|analytics\s+engineer|business\s+intelligence|\bbi\b)\b/i, slug: "data-analytics" },
   { re: /\b(qa|quality\s+assurance|test\s+engineer|automation\s+test|selenium|cypress)\b/i, slug: "quality-assurance" },
   { re: /\b(ux|user\s+experience|product\s+designer|interaction\s+design)\b/i, slug: "ux-design" },
-  { re: /\b(software\s+engineer|software\s+developer|frontend|front[-\s]?end|backend|back[-\s]?end|full[-\s]?stack|web\s+developer|mobile\s+developer|ios|android|react|node|javascript|typescript|python\s+developer|java\s+developer)\b/i, slug: "software-engineering" },
+  { re: /\b(software\s+engineer|software\s+developer|frontend|front[-\s]?end|backend|back[-\s]?end|full[-\s]?stack|web\s+developer|mobile\cript|python\s+developer|java\s+developer)\b/i, slug: "software-engineering" },
   { re: /\b(engineer|engineering)\b/i, slug: "engineering" },
   { re: /\b(designer|design|ui)\b/i, slug: "design" },
   { re: /\b(digital\s+marketing|seo|sem|performance\s+marketing|growth\s+marketing|paid\s+media)\b/i, slug: "digital-marketing" },
@@ -158,53 +131,16 @@ function inferCategorySlug(
   return null;
 }
 
-/* ------------------------------------------------------------------ */
-/* Auth                                                                */
-/* ------------------------------------------------------------------ */
-
-function authorize(req: NextRequest): boolean {
-  const { searchParams } = new URL(req.url);
-
-  const headerAuth = req.headers.get("authorization") || "";
-  const bearer =
-    headerAuth.toLowerCase().startsWith("bearer ")
-      ? headerAuth.slice(7).trim()
-      : "";
-
-  const querySecret = (searchParams.get("secret") || "").trim();
-  const provided = bearer || querySecret;
-
-  if (!provided) return false;
-
-  // Constant-time comparison — cheap, but avoids trivially leaking the
-  // secret length via early-exit timing.
-  const expected = env.SYNC_SECRET;
-  if (provided.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-/* ------------------------------------------------------------------ */
-/* Main handler                                                        */
-/* ------------------------------------------------------------------ */
-
 async function handle(req: NextRequest) {
-  if (!authorize(req)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 },
-    );
+  const { searchParams } = new URL(req.url);
+  const token = searchParams.get("token");
+  if (token !== TEMP_TOKEN) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { searchParams } = new URL(req.url);
   const dry = searchParams.get("dry") === "1";
   const limitParam = parseInt(searchParams.get("limit") || "0", 10);
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 0;
-
-  /* -------- Step 1: seed canonical categories -------- */
 
   let catCreated = 0;
   let catExisting = 0;
@@ -214,12 +150,10 @@ async function handle(req: NextRequest) {
       where: { slug: c.slug },
       select: { id: true },
     });
-
     if (before) {
       catExisting += 1;
       continue;
     }
-
     if (!dry) {
       await db.category.upsert({
         where: { slug: c.slug },
@@ -230,17 +164,12 @@ async function handle(req: NextRequest) {
     catCreated += 1;
   }
 
-  /* -------- Step 2: backfill job.categoryId -------- */
-
   const allCategories = await db.category.findMany({
     select: { id: true, slug: true },
   });
   const slugToId = new Map(allCategories.map((c) => [c.slug, c.id]));
 
-  const totalNull = await db.job.count({
-    where: { categoryId: null },
-  });
-
+  const totalNull = await db.job.count({ where: { categoryId: null } });
   const batchSize = 200;
   const maxToProcess = limit > 0 ? Math.min(limit, totalNull) : totalNull;
 
@@ -273,12 +202,8 @@ async function handle(req: NextRequest) {
       const catId = slugToId.get(slug);
       if (!catId) {
         skipped += 1;
-        if (skippedSamples.length < 20) {
-          skippedSamples.push(`[missing-category:${slug}] ${job.title}`);
-        }
         continue;
       }
-
       if (!dry) {
         try {
           await db.job.update({
