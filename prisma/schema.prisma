@@ -88,20 +88,22 @@ model User {
 }
 
 model Company {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String?  @unique
-  description String?  @db.Text
-  location    String?
-  website     String?
-  logo        String?
-  ownerId     String?
-  email       String?
-  status      String   @default("active")
-  isActive    Boolean  @default(true)
-  verified    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  slug             String?  @unique
+  description      String?  @db.Text
+  location         String?
+  website          String?
+  logo             String?
+  ownerId          String?
+  email            String?
+  status           String   @default("active")
+  isActive         Boolean  @default(true)
+  verified         Boolean  @default(false)
+  externalProvider String?
+  externalBoardId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
 
   owner      User?       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   jobs       Job[]
@@ -111,6 +113,7 @@ model Company {
   @@index([status])
   @@index([isActive])
   @@index([verified])
+  @@index([externalProvider])
 }
 
 model Job {
@@ -236,6 +239,36 @@ model JobSourceListing {
   @@index([sourceKey])
   @@index([externalId])
   @@index([lastSeenAt])
+}
+
+model SourceCompany {
+  id                  String    @id @default(cuid())
+  provider            String
+  boardIdentifier     String
+  companyName         String
+  careersUrl          String?
+  sourceUrl           String?
+  country             String?
+  language            String?
+  legalStatus         String    @default("UNKNOWN")
+  robotsStatus        String    @default("unknown")
+  termsStatus         String    @default("unknown")
+  status              String    @default("discovered")
+  healthStatus        String    @default("unknown")
+  consecutiveFailures Int       @default(0)
+  lastErrorAt         DateTime?
+  lastError           String?
+  lastCheckedAt       DateTime?
+  lastSuccessAt       DateTime?
+  discoveredAt        DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+
+  @@unique([provider, boardIdentifier])
+  @@index([provider])
+  @@index([status])
+  @@index([legalStatus])
+  @@index([healthStatus])
 }
 
 model Application {
