@@ -311,7 +311,7 @@ export default function ProfilePage() {
         )}
 
         {/* Header card */}
-        <div className="glass rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden">
+        <div className="glass rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden gjm-card-accent gjm-card-accent--cyan">
           <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
           <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6">
