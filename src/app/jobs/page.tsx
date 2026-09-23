@@ -65,27 +65,46 @@ const EMPTY_FILTERS: Filters = {
 
 const TEXT_DEBOUNCE_MS = 350;
 
+type FetchError = false | "rate_limit" | "generic";
+
 export default function JobsPage() {
   const { t, locale } = useLocale();
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [debouncedFilters, setDebouncedFilters] =
-    useState<Filters>(EMPTY_FILTERS);
+  // Only the text inputs are debounced. Selects/checkboxes apply instantly,
+  // which keeps the request count low when a user interacts with filters.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedLocation, setDebouncedLocation] = useState("");
+  const [debouncedTag, setDebouncedTag] = useState("");
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(false);
+  const [fetchError, setFetchError] = useState<FetchError>(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Debounce only free-text fields.
   useEffect(() => {
     const handle = setTimeout(() => {
-      setDebouncedFilters(filters);
+      setDebouncedSearch(filters.search);
     }, TEXT_DEBOUNCE_MS);
-
     return () => clearTimeout(handle);
-  }, [filters]);
+  }, [filters.search]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedLocation(filters.location);
+    }, TEXT_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [filters.location]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedTag(filters.tag);
+    }, TEXT_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [filters.tag]);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -100,16 +119,15 @@ export default function JobsPage() {
     const params = new URLSearchParams();
     params.set("page", page.toString());
 
-    const f = debouncedFilters;
-    if (f.search) params.set("search", f.search);
-    if (f.location) params.set("location", f.location);
-    if (f.type) params.set("type", f.type);
-    if (f.experience) params.set("experience", f.experience);
-    if (f.remote) params.set("remote", "true");
-    if (f.tag) params.set("tag", f.tag);
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (debouncedLocation) params.set("location", debouncedLocation);
+    if (filters.type) params.set("type", filters.type);
+    if (filters.experience) params.set("experience", filters.experience);
+    if (filters.remote) params.set("remote", "true");
+    if (debouncedTag) params.set("tag", debouncedTag);
 
-    const minNum = parseInt(f.minSalary, 10);
-    const maxNum = parseInt(f.maxSalary, 10);
+    const minNum = parseInt(filters.minSalary, 10);
+    const maxNum = parseInt(filters.maxSalary, 10);
     if (Number.isFinite(minNum) && minNum >= 0) {
       params.set("minSalary", String(minNum));
     }
@@ -127,7 +145,7 @@ export default function JobsPage() {
 
       if (!res.ok) {
         setJobs([]);
-        setFetchError(true);
+        setFetchError(res.status === 429 ? "rate_limit" : "generic");
         return;
       }
 
@@ -136,13 +154,23 @@ export default function JobsPage() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setJobs([]);
-      setFetchError(true);
+      setFetchError("generic");
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
       }
     }
-  }, [page, debouncedFilters]);
+  }, [
+    page,
+    debouncedSearch,
+    debouncedLocation,
+    debouncedTag,
+    filters.type,
+    filters.experience,
+    filters.remote,
+    filters.minSalary,
+    filters.maxSalary,
+  ]);
 
   useEffect(() => {
     void fetchJobs();
@@ -159,7 +187,9 @@ export default function JobsPage() {
   function clearFilters() {
     setPage(1);
     setFilters(EMPTY_FILTERS);
-    setDebouncedFilters(EMPTY_FILTERS);
+    setDebouncedSearch("");
+    setDebouncedLocation("");
+    setDebouncedTag("");
   }
 
   const hasFilters = Boolean(
@@ -442,13 +472,20 @@ export default function JobsPage() {
           <div className="text-center py-20 glass rounded-2xl border border-red-500/20">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">
-              {t("Jobs.loadErrorTitle", "Could not load jobs")}
+              {fetchError === "rate_limit"
+                ? t("Jobs.rateLimitTitle", "Too many requests")
+                : t("Jobs.loadErrorTitle", "Could not load jobs")}
             </h3>
             <p className="text-slate-400 text-sm mb-4">
-              {t(
-                "Jobs.loadErrorBody",
-                "Something went wrong. Please try again.",
-              )}
+              {fetchError === "rate_limit"
+                ? t(
+                    "Jobs.rateLimitBody",
+                    "Please wait a moment before trying again.",
+                  )
+                : t(
+                    "Jobs.loadErrorBody",
+                    "Something went wrong. Please try again.",
+                  )}
             </p>
             <button
               type="button"
