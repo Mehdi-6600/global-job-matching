@@ -59,12 +59,17 @@ const siteUrl = (
  * themeColor is aligned with --bg-page (#e8e5e0) so the mobile
  * browser chrome matches the soft neumorphic cream surface instead
  * of a jarring white bar.
+ *
+ * maximumScale: 1 prevents double-tap zoom on mobile, which is
+ * what causes the page to "jump" when a user taps an input.
+ * Accessibility is preserved — iOS/Android system-level zoom
+ * (three-finger tap, accessibility shortcuts) still works.
  */
 export const viewport: Viewport = {
   themeColor: "#e8e5e0",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  maximumScale: 1,
 };
 
 /*
