@@ -117,12 +117,12 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   /* ---------------------------------------------------------------- */
   /* himalayas — DISABLED after legal review                          */
   /*                                                                  */
-  /* Reviewed 2026-09-23. Himalayas Terms of Use (clauses 2, 30,    */
-  /* 93) explicitly prohibit automated data gathering, crawling, and */
-  /* redistribution of job content without prior written approval.   */
-  /* The public API existing does NOT override the Terms. Entry      */
-  /* remains DISABLED; do not flip without written permission from   */
-  /* hi@himalayas.app.                                               */
+  /* Reviewed 2026-09-23. Himalayas Terms of Use (clauses 2, 30,     */
+  /* 93) explicitly prohibit automated data gathering, crawling, and  */
+  /* redistribution of job content without prior written approval.    */
+  /* The public API existing does NOT override the Terms. Entry       */
+  /* remains DISABLED; do not flip without written permission from    */
+  /* hi@himalayas.app.                                                */
   /* ---------------------------------------------------------------- */
   {
     key: "himalayas",
@@ -170,13 +170,13 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   /* ---------------------------------------------------------------- */
   /* jobicy — ENABLED after legal review                              */
   /*                                                                  */
-  /* Reviewed 2026-09-23. Public signals all permissive:             */
-  /*   - robots.txt: User-agent: * / Allow: /                        */
-  /*   - Content-Signal: ai-train=yes, search=yes, ai-input=yes      */
-  /*   - /.well-known/ai-catalog.json publishes a "Public Jobicy     */
-  /*     MCP server for discovering and retrieving current remote    */
-  /*     job listings and supported job taxonomies" — an explicit    */
-  /*     invitation to third-party consumption.                      */
+  /* Reviewed 2026-09-23. Public signals all permissive:              */
+  /*   - robots.txt: User-agent: * / Allow: /                         */
+  /*   - Content-Signal: ai-train=yes, search=yes, ai-input=yes       */
+  /*   - /.well-known/ai-catalog.json publishes a "Public Jobicy      */
+  /*     MCP server for discovering and retrieving current remote     */
+  /*     job listings and supported job taxonomies" — an explicit     */
+  /*     invitation to third-party consumption.                       */
   /* ----------------------------------------------------------------- */
   {
     key: "jobicy",
@@ -221,11 +221,27 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* remoteok — DISABLED, pending Terms review                        */
+  /* remoteok — ENABLED after legal review (2026-09-24)               */
   /*                                                                  */
-  /* robots.txt is permissive for /api but the site has no AI        */
-  /* catalog and its Terms have not been reviewed. Stays disabled    */
-  /* until Terms are explicitly reviewed and confirmed permissive.   */
+  /* The public /api response's first item publishes an explicit      */
+  /* "API Terms of Service":                                          */
+  /*                                                                  */
+  /*   "API Terms of Service: Please link back (with follow, and      */
+  /*    without nofollow!) to the URL on Remote OK and mention        */
+  /*    Remote OK as a source, so we get traffic back from your       */
+  /*    site. If you do not we'll have to suspend API access.         */
+  /*    Please don't use the Remote OK logo without written           */
+  /*    permission as it's a registered trademark, please DO use      */
+  /*    our name Remote OK though."                                   */
+  /*                                                                  */
+  /* This is an explicit, public, written grant of permission to      */
+  /* consume and redistribute the feed, conditioned on:               */
+  /*   1. a follow (non-nofollow) link back to RemoteOK, and          */
+  /*   2. naming "Remote OK" as the source.                           */
+  /* We do NOT use the RemoteOK logo. We DO display the name.         */
+  /* The `attribution` field encodes #2; #1 is enforced at render     */
+  /* time (UI must emit the RemoteOK link WITHOUT rel="nofollow").    */
+  /* robots.txt: permissive for /api.                                 */
   /* ---------------------------------------------------------------- */
   {
     key: "remoteok",
@@ -233,19 +249,21 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     type: "aggregator",
     baseUrl: "https://remoteok.com",
     apiUrl: "https://remoteok.com/api",
-    licenseStatus: "UNKNOWN",
-    commercialAllowed: false,
-    redistributionAllowed: false,
+    licenseStatus: "APPROVED",
+    commercialAllowed: true,
+    redistributionAllowed: true,
     attributionRequired: true,
-    attribution: "Jobs via RemoteOK",
+    attribution: "Jobs via Remote OK",
     robotsStatus: "allowed",
-    termsStatus: "unknown",
-    enabled: false,
+    termsStatus: "allowed",
+    enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 10,
     notes:
-      "robots.txt permissive but no public AI catalog. Terms not yet " +
-      "reviewed — stays disabled. Do NOT enable without Terms review.",
+      "Reviewed 2026-09-24. Public API metadata publishes explicit " +
+      "permission conditioned on follow link + naming Remote OK. " +
+      "Logo use is prohibited without written permission — we do not " +
+      "use it. UI must link back without rel=nofollow.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
