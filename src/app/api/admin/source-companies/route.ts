@@ -4,10 +4,18 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
 import { adminRatelimit } from "@/lib/ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
-import { seedAtsBoards, summarizeAtsBoards, registerAtsBoard } from "@/lib/jobs/ingestion/ats-seeding";
+import {
+  seedAtsBoards,
+  summarizeAtsBoards,
+  registerAtsBoard,
+} from "@/lib/jobs/ingestion/ats-seeding";
 
 /* ------------------------------------------------------------------ */
 /* POST schemas                                                        */
+/*                                                                    */
+/* Note: z.discriminatedUnion requires plain ZodObject members. We    */
+/* therefore do NOT use .refine() on the update schema — the "at      */
+/* least one field" rule is enforced inside the handler instead.      */
 /* ------------------------------------------------------------------ */
 
 const seedSchema = z.object({
@@ -31,20 +39,18 @@ const updateSchema = z
     id: z.string().min(1),
     status: z.enum(["discovered", "active", "paused", "blocked"]).optional(),
     legalStatus: z
-      .enum(["APPROVED", "NEEDS_PERMISSION", "RESTRICTED", "DISABLED", "UNKNOWN"])
+      .enum([
+        "APPROVED",
+        "NEEDS_PERMISSION",
+        "RESTRICTED",
+        "DISABLED",
+        "UNKNOWN",
+      ])
       .optional(),
     robotsStatus: z.enum(["allowed", "disallowed", "unknown"]).optional(),
     termsStatus: z.enum(["allowed", "restricted", "unknown"]).optional(),
   })
-  .strict()
-  .refine(
-    (d) =>
-      d.status !== undefined ||
-      d.legalStatus !== undefined ||
-      d.robotsStatus !== undefined ||
-      d.termsStatus !== undefined,
-    { message: "At least one field required" },
-  );
+  .strict();
 
 const bodySchema = z.discriminatedUnion("action", [
   seedSchema,
@@ -66,7 +72,10 @@ export async function GET(req: NextRequest) {
       `admin_source_companies_get_${authz.user.id}_${ip}`,
     );
     if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 },
+      );
     }
 
     const [rows, summary] = await Promise.all([
@@ -101,20 +110,29 @@ export async function POST(req: NextRequest) {
       `admin_source_companies_post_${authz.user.id}_${ip}`,
     );
     if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 },
+      );
     }
 
     let body: unknown;
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 },
+      );
     }
 
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
@@ -125,15 +143,37 @@ export async function POST(req: NextRequest) {
     }
 
     if (parsed.data.action === "register") {
-      const { action: _a, ...seed } = parsed.data;
-      void _a;
+      const { action: _action, ...seed } = parsed.data;
+      void _action;
       const result = await registerAtsBoard(seed);
       return NextResponse.json({ success: true, result });
     }
 
-    // action === "update"
-    const { action: _a, id, ...patch } = parsed.data;
-    void _a;
+    /* action === "update" — enforce "at least one field" here. */
+    const {
+      action: _action,
+      id,
+      status,
+      legalStatus,
+      robotsStatus,
+      termsStatus,
+    } = parsed.data;
+    void _action;
+
+    if (
+      status === undefined &&
+      legalStatus === undefined &&
+      robotsStatus === undefined &&
+      termsStatus === undefined
+    ) {
+      return NextResponse.json(
+        {
+          error: "Invalid input",
+          details: { _errors: ["At least one field required"] },
+        },
+        { status: 400 },
+      );
+    }
 
     const existing = await db.sourceCompany.findUnique({
       where: { id },
@@ -144,10 +184,10 @@ export async function POST(req: NextRequest) {
     }
 
     const data: Record<string, unknown> = {};
-    if (patch.status !== undefined) data.status = patch.status;
-    if (patch.legalStatus !== undefined) data.legalStatus = patch.legalStatus;
-    if (patch.robotsStatus !== undefined) data.robotsStatus = patch.robotsStatus;
-    if (patch.termsStatus !== undefined) data.termsStatus = patch.termsStatus;
+    if (status !== undefined) data.status = status;
+    if (legalStatus !== undefined) data.legalStatus = legalStatus;
+    if (robotsStatus !== undefined) data.robotsStatus = robotsStatus;
+    if (termsStatus !== undefined) data.termsStatus = termsStatus;
 
     const company = await db.sourceCompany.update({
       where: { id },
