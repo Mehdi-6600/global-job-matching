@@ -102,27 +102,52 @@ const STOPWORDS = new Set([
   "work",
 ]);
 
+/**
+ * Metadata tags injected by the ingestion pipeline (e.g. "source:arbeitnow",
+ * "synced:2026-09-22", "attribution:..."). They must not contribute to
+ * relevance — otherwise every job from the same source gets the same boost
+ * and ranking collapses.
+ */
+function isMetadataTag(tag: string): boolean {
+  const t = tag.toLowerCase();
+  return (
+    t.startsWith("source:") ||
+    t.startsWith("synced:") ||
+    t.startsWith("attribution:") ||
+    t.startsWith("external:") ||
+    t.startsWith("imported:")
+  );
+}
+
 type RankableJob = {
   id: string;
   title: string;
   description: string;
   tags: string[];
   createdAt: Date;
-  company: { name: string | null } | null;
+  company: { id: string | null; name: string | null } | null;
 };
 
 /**
  * Weighted relevance score. Higher = better.
- * Title match dominates, then company, then tags, then description.
- * Uses token-level matching so multi-word queries behave sensibly.
+ *
+ * title       → dominant signal
+ * company     → medium signal
+ * tags        → medium signal (metadata tags ignored)
+ * description → weak signal, boosted only when the token appears in the
+ *               first ~400 chars (title/head of posting), not buried deep.
  */
 function relevanceScore(job: RankableJob, tokens: string[]): number {
   if (tokens.length === 0) return 0;
 
   const title = job.title.toLowerCase();
   const companyName = (job.company?.name ?? "").toLowerCase();
-  const tagsJoined = job.tags.join(" ").toLowerCase();
+  const cleanTags = job.tags
+    .filter((tag) => !isMetadataTag(tag))
+    .join(" ")
+    .toLowerCase();
   const description = job.description.toLowerCase();
+  const descHead = description.slice(0, 400);
 
   let score = 0;
 
@@ -130,21 +155,19 @@ function relevanceScore(job: RankableJob, tokens: string[]): number {
     if (STOPWORDS.has(token)) continue;
 
     // Title: strongest signal.
-    if (title === token) score += 100;
-    else if (title.startsWith(token)) score += 60;
-    else if (title.includes(token)) score += 40;
+    if (title === token) score += 150;
+    else if (title.startsWith(token)) score += 90;
+    else if (title.includes(token)) score += 60;
 
     // Company name.
-    if (companyName.includes(token)) score += 20;
+    if (companyName.includes(token)) score += 25;
 
-    // Tags.
-    if (tagsJoined.includes(token)) score += 15;
+    // Tags (metadata stripped).
+    if (cleanTags.includes(token)) score += 20;
 
-    // Description: weakest, and only if it appears early (first 500 chars).
-    // Reduces the "one random mention deep in a wall of text" problem.
-    const head = description.slice(0, 500);
-    if (head.includes(token)) score += 5;
-    else if (description.includes(token)) score += 1;
+    // Description: weak. Head-of-posting gets a small extra nudge.
+    if (descHead.includes(token)) score += 8;
+    else if (description.includes(token)) score += 2;
   }
 
   return score;
@@ -233,7 +256,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     } as const;
 
-    // Without a search term: keep the existing fresh-first behavior exactly.
+    // No search term → keep the existing fresh-first behavior exactly.
     if (!search || search.trim().length === 0) {
       const [jobs, total] = await Promise.all([
         db.job.findMany({
@@ -284,13 +307,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // Ranked path: pull a bounded candidate set, score it in memory,
-    // sort with a stable tie-breaker, then paginate.
+    // Ranked path:
+    //   1. Pull a bounded candidate set ordered by recency.
+    //   2. Score each candidate against tokens.
+    //   3. Sort by score, then createdAt, then id (stable).
+    //   4. Apply per-company diversity (max 2 per company id per page).
+    //   5. Slice the requested page.
     //
     // Bounded so we never load the entire jobs table.
-    // 500 candidates covers deep enough for meaningful ranking at the
-    // top of the results without unbounded memory cost.
     const RANK_CANDIDATES = 500;
+    const MAX_PER_COMPANY_PER_PAGE = 2;
 
     const [candidates, total] = await Promise.all([
       db.job.findMany({
@@ -313,12 +339,26 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         return a.job.id < b.job.id ? -1 : a.job.id > b.job.id ? 1 : 0;
       });
 
-    const pageSlice = scored
-      .slice(skip, skip + limit)
-      .map((row) => row.job as unknown as Parameters<typeof mapJob>[0]);
+    // Diversity: rebuild the ordered stream limiting jobs per company.
+    // We do this over the whole ranked list, not just the page, so page 2
+    // does not accidentally re-introduce the same company.
+    const companyCounts = new Map<string, number>();
+    const diverseOrder: RankableJob[] = [];
+
+    for (const row of scored) {
+      const cid = row.job.company?.id ?? "__no_company__";
+      const used = companyCounts.get(cid) ?? 0;
+      if (used >= MAX_PER_COMPANY_PER_PAGE) continue;
+      companyCounts.set(cid, used + 1);
+      diverseOrder.push(row.job);
+    }
+
+    const pageSlice = diverseOrder.slice(skip, skip + limit);
 
     return NextResponse.json({
-      jobs: pageSlice.map(mapJob),
+      jobs: (pageSlice as unknown as Parameters<typeof mapJob>[0][]).map(
+        mapJob,
+      ),
       pagination: {
         page,
         limit,
