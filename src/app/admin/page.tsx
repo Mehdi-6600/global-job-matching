@@ -13,6 +13,8 @@ import {
   BarChart3,
   Mail,
   CreditCard,
+  RefreshCw,
+  Database,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 
@@ -227,7 +229,19 @@ export default function AdminPage() {
               {t("Dashboard.welcomeSub", "Manage platform settings")}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/sync"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium"
+            >
+              <RefreshCw className="w-4 h-4" /> Sync
+            </Link>
+            <Link
+              href="/admin/source-companies"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 transition-all text-sm font-medium"
+            >
+              <Database className="w-4 h-4" /> Sources
+            </Link>
             <Link
               href="/admin/analytics"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
