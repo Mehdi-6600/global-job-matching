@@ -321,7 +321,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesEmploymentType: true,
       providesDescription: true,
     },
-  },,
+  },
   {
     key: "smartrecruiters",
     name: "SmartRecruiters",
