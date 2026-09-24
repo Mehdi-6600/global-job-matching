@@ -36,6 +36,7 @@ export type SeedBoard = {
  * activation. Do NOT treat this list as an approval.
  */
 export const ATS_SEED_BOARDS: SeedBoard[] = [
+  /* ---- Greenhouse (provider enabled 2026-09-24) ---------------- */
   {
     provider: "greenhouse",
     boardIdentifier: "airbnb",
@@ -49,11 +50,45 @@ export const ATS_SEED_BOARDS: SeedBoard[] = [
     language: "en",
   },
   {
+    provider: "greenhouse",
+    boardIdentifier: "figma",
+    companyName: "Figma",
+    language: "en",
+  },
+  {
+    provider: "greenhouse",
+    boardIdentifier: "notion",
+    companyName: "Notion",
+    language: "en",
+  },
+  {
+    provider: "greenhouse",
+    boardIdentifier: "coinbase",
+    companyName: "Coinbase",
+    language: "en",
+  },
+  {
+    provider: "greenhouse",
+    boardIdentifier: "discord",
+    companyName: "Discord",
+    language: "en",
+  },
+  {
+    provider: "greenhouse",
+    boardIdentifier: "reddit",
+    companyName: "Reddit",
+    language: "en",
+  },
+
+  /* ---- Lever (provider DISABLED — pending ToS review) ---------- */
+  {
     provider: "lever",
     boardIdentifier: "netflix",
     companyName: "Netflix",
     language: "en",
   },
+
+  /* ---- Ashby (provider DISABLED — pending ToS review) ---------- */
   {
     provider: "ashby",
     boardIdentifier: "openai",
