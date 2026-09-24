@@ -21,6 +21,7 @@ import {
   Wifi,
   AlertCircle,
   Target,
+  ExternalLink,
 } from "lucide-react";
 import ShareButtons from "@/app/components/ShareButtons";
 import { ContactEmployer } from "@/components/contact-employer";
@@ -53,6 +54,12 @@ interface JobDetail {
   viewCount: number;
   applicantCount: number;
   createdAt: string;
+  // Ingestion provenance — null for employer-posted jobs.
+  postedById: string | null;
+  source: string | null;
+  attribution: string | null;
+  externalUrl: string | null;
+  applyUrl: string | null;
   company: {
     id: string;
     name: string;
@@ -199,9 +206,6 @@ export default function JobDetailPage() {
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchMessage, setMatchMessage] = useState("");
 
-  /* -------------------------------------------------------------- */
-  /* Relative time (localized)                                      */
-  /* -------------------------------------------------------------- */
   const timeAgo = useCallback(
     (dateString: string): string => {
       const date = new Date(dateString);
@@ -277,6 +281,15 @@ export default function JobDetailPage() {
             applicantCount:
               typeof j.applicantCount === "number" ? j.applicantCount : 0,
             viewCount: typeof j.viewCount === "number" ? j.viewCount : 0,
+            // Provenance fields — pass through as-is (may be null).
+            postedById:
+              typeof j.postedById === "string" ? j.postedById : null,
+            source: typeof j.source === "string" ? j.source : null,
+            attribution:
+              typeof j.attribution === "string" ? j.attribution : null,
+            externalUrl:
+              typeof j.externalUrl === "string" ? j.externalUrl : null,
+            applyUrl: typeof j.applyUrl === "string" ? j.applyUrl : null,
             company:
               j.company && typeof j.company === "object" ? j.company : null,
             category:
@@ -478,6 +491,23 @@ export default function JobDetailPage() {
     }
   };
 
+  /**
+   * Aggregated jobs (postedById === null) cannot accept in-app applications —
+   * we do not own them. Instead, "Apply" opens the canonical applyUrl on the
+   * source site. Employer jobs keep the existing in-app flow.
+   */
+  const isAggregated = job?.postedById == null;
+  const externalApplyUrl = job?.applyUrl || job?.externalUrl || null;
+  const useExternalApply = isAggregated && Boolean(externalApplyUrl);
+
+  function handleApplyClick() {
+    if (useExternalApply && externalApplyUrl) {
+      window.open(externalApplyUrl, "_blank", "noopener");
+      return;
+    }
+    setApplyOpen(true);
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
@@ -632,7 +662,7 @@ export default function JobDetailPage() {
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => setApplyOpen(true)}
+                  onClick={handleApplyClick}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/20"
                 >
                   <Send className="w-4 h-4" />
@@ -650,6 +680,23 @@ export default function JobDetailPage() {
                   </a>
                 )}
               </div>
+
+              {/* Source attribution for aggregated jobs (RemoteOK, Jobicy, ...).
+                  RemoteOK's API ToS requires a follow link (no rel="nofollow")
+                  plus naming the source. */}
+              {job.attribution && job.externalUrl && (
+                <p className="text-xs text-slate-500 mt-3">
+                  <a
+                    href={job.externalUrl}
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex items-center gap-1 underline decoration-dotted hover:text-slate-300 transition-colors"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    {job.attribution}
+                  </a>
+                </p>
+              )}
             </div>
 
             <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
@@ -837,11 +884,24 @@ export default function JobDetailPage() {
               </p>
               <button
                 type="button"
-                onClick={() => setApplyOpen(true)}
+                onClick={handleApplyClick}
                 className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold"
               >
                 {t("JobDetail.apply", "Apply now")}
               </button>
+              {/* Sidebar attribution — appears only for aggregated jobs. */}
+              {job.attribution && job.externalUrl && (
+                <p className="text-[11px] text-slate-500">
+                  <a
+                    href={job.externalUrl}
+                    target="_blank"
+                    rel="noopener"
+                    className="underline decoration-dotted hover:text-slate-300 transition-colors"
+                  >
+                    {job.attribution}
+                  </a>
+                </p>
+              )}
               <ContactEmployer jobId={job.id} jobTitle={job.title} />
               {shareUrl && (
                 <ShareButtons
