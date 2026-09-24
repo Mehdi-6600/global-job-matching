@@ -185,7 +185,7 @@ export const smartrecruitersAdapter: JobSourceAdapter = {
 
     for (const board of slice) {
       const company = board.boardIdentifier;
-      let offset = 0;
+      const offset = 0;
       let boardFetched = 0;
 
       // One list page per board per fetchPage (Hobby time budget).
