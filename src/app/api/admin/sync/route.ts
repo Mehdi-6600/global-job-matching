@@ -12,7 +12,9 @@ import { runIngestion } from "@/lib/jobs/ingestion/pipeline";
  * check still runs for every source. This endpoint only removes the
  * need to hold SYNC_SECRET in a browser.
  *
- * Optional query param: ?source=jobicy (comma-separated list also ok)
+ * Optional query params:
+ *   ?source=greenhouse          (comma-separated list also ok)
+ *   ?resetCheckpoint=1          clear saved page/cursor before run
  */
 export async function POST(req: NextRequest) {
   try {
@@ -35,12 +37,19 @@ export async function POST(req: NextRequest) {
       ? sourceParam.split(",").map((s) => s.trim()).filter(Boolean)
       : undefined;
 
+    const resetRaw = req.nextUrl.searchParams.get("resetCheckpoint");
+    const resetCheckpoint =
+      resetRaw === "1" ||
+      resetRaw === "true" ||
+      resetRaw === "yes";
+
     const started = Date.now();
-    const stats = await runIngestion({ sourceKeys });
+    const stats = await runIngestion({ sourceKeys, resetCheckpoint });
 
     return NextResponse.json({
       success: true,
       durationMs: Date.now() - started,
+      resetCheckpoint,
       stats,
     });
   } catch (error) {
