@@ -16,7 +16,13 @@
 import { db } from "@/lib/db";
 import { logIngestionEvent } from "./log";
 
-export type AtsProvider = "greenhouse" | "lever" | "ashby";
+export type AtsProvider =
+  | "greenhouse"
+  | "lever"
+  | "ashby"
+  | "smartrecruiters"
+  | "workable"
+  | "recruitee";
 
 export type EligibleBoard = {
   provider: AtsProvider;
