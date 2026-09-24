@@ -20,33 +20,14 @@ import {
  * Endpoint (public, per board):
  *   https://boards-api.greenhouse.io/v1/boards/<board>/jobs?content=true
  *
- * Response shape:
- *   {
- *     "jobs": [
- *       {
- *         "id": 123456,
- *         "internal_job_id": 987,
- *         "title": "...",
- *         "updated_at": "2024-01-01T12:00:00-05:00",
- *         "requisition_id": "...",
- *         "location": { "name": "Berlin, Germany" },
- *         "absolute_url": "https://boards.greenhouse.io/<board>/jobs/123456",
- *         "content": "<p>...</p>",
- *         "departments": [{ "name": "Engineering" }],
- *         "offices": [{ "name": "Berlin" }]
- *       }
- *     ]
- *   }
- *
  * Identity:
  *   sourceJobId = "<board>:<jobId>"
  *   externalId  = "greenhouse:<board>:<jobId>"
- *   This keeps different companies' jobs from colliding even when
- *   Greenhouse reuses numeric ids across boards.
  *
- * LEGAL STATUS — TO BE DETERMINED BY PROJECT OWNER.
- * Registry entry ships DISABLED. Boards must additionally be approved
- * in the SourceCompany table before the adapter will fetch them.
+ * Rate limit:
+ *   tryAcquireSourceQuota is called ONCE per fetchPage, not per board.
+ *   Boards are processed sequentially with the same quota grant.
+ *   Individual board failures are recorded but do not abort the page.
  */
 
 const PROVIDER: AtsProvider = "greenhouse";
@@ -60,7 +41,9 @@ const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_MAX_RESPONSE_BYTES = 15_000_000;
 const DEFAULT_RATE_LIMIT_PER_MINUTE = 20;
 const DEFAULT_ATTRIBUTION = "Jobs via Greenhouse";
-const DEFAULT_BOARDS_PER_PAGE = 25;
+
+/** Hard ceiling on boards processed per fetchPage. */
+const MAX_BOARDS_PER_PAGE = 50;
 
 function asRecord(v: unknown): Record<string, unknown> | null {
   return v !== null && typeof v === "object"
@@ -103,7 +86,6 @@ function mapJob(
   const title = str(j.title, 300).trim();
   if (!title) return null;
 
-  // Location is { name: string } in current API.
   const locRec = asRecord(j.location);
   const location = locRec
     ? str(locRec.name, 200).trim() || "Remote"
@@ -123,7 +105,6 @@ function mapJob(
     .filter(Boolean);
   const tags = Array.from(new Set([...departments, ...offices]));
 
-  // Greenhouse has no explicit remote boolean here; infer from location.
   const remote = /remote/i.test(location);
 
   return {
@@ -131,7 +112,6 @@ function mapJob(
     sourceJobId: `${board}:${jobId}`,
     externalId: `greenhouse:${board}:${jobId}`,
     title,
-    // company name comes from the board record, not the job payload.
     company: board,
     location,
     description,
@@ -165,10 +145,24 @@ export const greenhouseAdapter: JobSourceAdapter = {
       cfg?.httpConfig?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
     const attribution = cfg?.attribution || DEFAULT_ATTRIBUTION;
 
-    // Boards per pipeline page. Keeps a single fetchPage bounded.
+    /*
+     * ONE quota grant per fetchPage. Pipeline calls fetchPage repeatedly
+     * (page 1, 2, 3, ...); each call gets a fresh grant. Boards within
+     * a single page share that grant — no per-board quota consumption.
+     */
+    if (!tryAcquireSourceQuota("greenhouse", rateLimit)) {
+      return {
+        jobs: [],
+        hasMore: false,
+        fetched: 0,
+        errors: ["rate_limited"],
+        nextCursor: null,
+      };
+    }
+
     const perPage = Math.min(
-      Math.max(1, options.perPage ?? DEFAULT_BOARDS_PER_PAGE),
-      DEFAULT_BOARDS_PER_PAGE,
+      Math.max(1, options.perPage ?? MAX_BOARDS_PER_PAGE),
+      MAX_BOARDS_PER_PAGE,
     );
     const page = Math.max(1, options.page ?? 1);
 
@@ -202,11 +196,6 @@ export const greenhouseAdapter: JobSourceAdapter = {
     let fetched = 0;
 
     for (const board of slice) {
-      if (!tryAcquireSourceQuota("greenhouse", rateLimit)) {
-        errors.push("rate_limited");
-        break;
-      }
-
       const url = BOARD_API(board.boardIdentifier);
       const result = await fetchWithRetry(url, {
         signal: options.signal,
@@ -243,7 +232,6 @@ export const greenhouseAdapter: JobSourceAdapter = {
       for (const item of list) {
         const draft = mapJob(item, board.boardIdentifier, attribution);
         if (!draft) continue;
-        // Company name from SourceCompany takes precedence over board token.
         drafts.push({ ...draft, company: board.companyName || draft.company });
       }
 
