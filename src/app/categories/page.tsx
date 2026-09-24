@@ -10,14 +10,16 @@ import {
 import { itemListJsonLd } from "@/lib/seo/json-ld";
 import { LOCALE_COOKIE } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
-import { getDictionary, t, type Dictionary } from "@/lib/i18n/get-dictionary";
-import type { Locale } from "@/lib/i18n/config";
+import { getDictionary, t } from "@/lib/i18n/get-dictionary";
+import {
+  CategoriesSearch,
+  type CategoryRow,
+} from "@/components/categories/CategoriesSearch";
 
 export const revalidate = 300;
 
-/** Display name for a category: prefers i18n key CategoryNames.{slug}, falls back to DB name. */
 function categoryDisplayName(
-  dict: Dictionary,
+  dict: ReturnType<typeof getDictionary>,
   slug: string,
   fallbackName: string
 ): string {
@@ -51,8 +53,7 @@ export default async function CategoriesIndexPage() {
   const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
   const dict = getDictionary(locale);
 
-  let rows: Array<{ id: string; name: string; slug: string; count: number }> =
-    [];
+  let rows: CategoryRow[] = [];
 
   try {
     const categories = await db.category.findMany({
@@ -63,7 +64,7 @@ export default async function CategoriesIndexPage() {
         _count: { select: { jobs: { where: { status: "active" } } } },
       },
       orderBy: { name: "asc" },
-      take: 100,
+      take: 500,
     });
 
     rows = categories
@@ -72,8 +73,14 @@ export default async function CategoriesIndexPage() {
         name: c.name,
         slug: c.slug,
         count: c._count.jobs,
+        displayName: categoryDisplayName(dict, c.slug, c.name),
       }))
-      .filter((c) => c.count > 0);
+      .filter((c) => c.count > 0)
+      .sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, undefined, {
+          sensitivity: "base",
+        })
+      );
   } catch (e) {
     console.error("Categories index error:", e);
   }
@@ -89,17 +96,28 @@ export default async function CategoriesIndexPage() {
     "Categories.empty",
     "No categories with active jobs yet."
   );
-  const browseJobs = t(dict, "Categories.browseJobs", "Browse all jobs");
+  const browseJobs = t(dict, "Categories.browseJobs", "Browse jobs");
   const viewAll = t(dict, "Categories.viewAllJobs", "View all jobs →");
   const browseLoc = t(dict, "Categories.browseLocations", "Browse locations →");
   const activeJobsLabel = t(dict, "Categories.activeJobs", "active jobs");
+  const searchPlaceholder = t(
+    dict,
+    "Categories.searchPlaceholder",
+    "Search categories…"
+  );
+  const noResults = t(
+    dict,
+    "Categories.noResults",
+    "No categories match your search."
+  );
+  const clearLabel = t(dict, "Categories.clearSearch", "Clear");
 
   const listLd = itemListJsonLd({
     name: title,
     description: subtitle,
     path: "/categories",
     items: rows.map((c) => ({
-      name: categoryDisplayName(dict, c.slug, c.name),
+      name: c.displayName,
       path: `/categories/${c.slug}`,
     })),
   });
@@ -125,26 +143,13 @@ export default async function CategoriesIndexPage() {
             </Link>
           </div>
         ) : (
-          <ul className="grid sm:grid-cols-2 gap-4">
-            {rows.map((c) => {
-              const displayName = categoryDisplayName(dict, c.slug, c.name);
-              return (
-                <li key={c.id}>
-                  <Link
-                    href={`/categories/${c.slug}`}
-                    className="glass block rounded-2xl border border-white/10 p-5 hover:border-indigo-500/30 transition-all"
-                  >
-                    <span className="text-lg font-semibold text-white">
-                      {displayName}
-                    </span>
-                    <span className="block text-sm text-slate-400 mt-1">
-                      {c.count} {activeJobsLabel}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <CategoriesSearch
+            rows={rows}
+            searchPlaceholder={searchPlaceholder}
+            activeJobsLabel={activeJobsLabel}
+            noResults={noResults}
+            clearLabel={clearLabel}
+          />
         )}
 
         <p className="text-center mt-10 flex flex-wrap justify-center gap-4 text-sm">
