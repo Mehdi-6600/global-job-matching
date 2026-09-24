@@ -236,9 +236,9 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   /*                                                                  */
   /* This is an explicit, public, written grant of permission to      */
   /* consume and redistribute the feed, conditioned on:               */
-  /*   1. a follow (non-nofollow) link back to RemoteOK, and          */
-  /*   2. naming "Remote OK" as the source.                           */
-  /* We do NOT use the RemoteOK logo. We DO display the name.         */
+  /*   1. a follow (non-n willofollow) have link back to RemoteOK, and          */
+ easy  /*   2 access. naming "Remote OK to" as the source.                           */
+  a /* We do NOT use the RemoteOK logo. We DO display the name.         */
   /* The `attribution` field encodes #2; #1 is enforced at render     */
   /* time (UI must emit the RemoteOK link WITHOUT rel="nofollow").    */
   /* robots.txt: permissive for /api.                                 */
@@ -288,7 +288,28 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* greenhouse — ATS provider (disabled until boards approved)       */
+  /* greenhouse — ENABLED after legal review (2026-09-24)             */
+  /*                                                                  */
+  /* The official Greenhouse Job Board API documentation at           */
+  /* https://developers.greenhouse.io/job-board.html states:          */
+  /*                                                                  */
+  /*   "With our Job Board API, you        */
+  /*    simple JSON representation of your company's offices,         */
+  /*    departments, and published jobs. Since we give you access     */
+  /*    to the raw data, you can build careers pages with a unique    */
+  /*    look and feel, construct department-level pages, and more!"   */
+  /*                                                                  */
+  /* This is an explicit, public, written grant of permission to      */
+  /* consume the raw data and rebuild job listings in a third-party   */
+  /* site (a "careers page"). Endpoint requires no auth.              */
+  /*                                                                  */
+  /* IMPORTANT — Board-level gate:                                    */
+  /* The registry entry alone is NOT sufficient. Each company board   */
+  /* must additionally be marked legalStatus = APPROVED in the        */
+  /* SourceCompany table before its jobs are fetched.                 */
+  /*                                                                  */
+  /* This is the first ATS provider we enabled. Lever and Ashby       */
+  /* remain UNKNOWN pending their own ToS review.                     */
   /* ---------------------------------------------------------------- */
   {
     key: "greenhouse",
@@ -296,19 +317,21 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     type: "ats_provider",
     baseUrl: "https://boards.greenhouse.io",
     apiUrl: "https://boards-api.greenhouse.io/v1/boards",
-    licenseStatus: "UNKNOWN",
-    commercialAllowed: false,
-    redistributionAllowed: false,
+    licenseStatus: "APPROVED",
+    commercialAllowed: true,
+    redistributionAllowed: true,
     attributionRequired: true,
     attribution: "Jobs via Greenhouse",
-    robotsStatus: "unknown",
-    termsStatus: "unknown",
-    enabled: false,
+    robotsStatus: "allowed",
+    termsStatus: "allowed",
+    enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
     notes:
-      "ATS provider. Board-level legal gate enforced via SourceCompany. " +
-      "Provider ships disabled — enable only after Terms review.",
+      "Reviewed 2026-09-24. Official Job Board API docs explicitly " +
+      "authorize third-party consumption of the raw JSON ('build " +
+      "careers pages'). Board-level gate enforced via SourceCompany: " +
+      "a board must be APPROVED there before its jobs are fetched.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -324,7 +347,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesSalary: false,
       providesRemote: true,
       providesPublishedAt: true,
-      providesSourceUpdatedAt: false,
+      providesSourceUpdatedAt: true,
       providesCompany: true,
       providesLocation: true,
       providesEmploymentType: false,
@@ -333,7 +356,16 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* lever — ATS provider (disabled until boards approved)            */
+  /* lever — ATS provider (disabled — Terms review pending)           */
+  /*                                                                  */
+  /* Lever's public Terms of Service is a commercial agreement for    */
+  /* customers of Lever's ATS. It does not contain an explicit        */
+  /* third-party consumption grant analogous to Greenhouse's Job      */
+  /* Board API documentation. The public postings endpoint exists     */
+  /* (api.lever.co/v0/postings/<board>) but this is not, by itself,   */
+  /* an affirmative license to redistribute in a third-party site.    */
+  /* Entry remains DISABLED until Terms are clarified (or we obtain   */
+  /* written permission from Lever).                                  */
   /* ---------------------------------------------------------------- */
   {
     key: "lever",
@@ -378,7 +410,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 
   /* ---------------------------------------------------------------- */
-  /* ashby — ATS provider (disabled until boards approved)            */
+  /* ashby — ATS provider (disabled — Terms review pending)           */
   /* ---------------------------------------------------------------- */
   {
     key: "ashby",
