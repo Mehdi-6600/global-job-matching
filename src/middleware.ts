@@ -11,6 +11,27 @@ import { localeCookieOptions } from "@/lib/i18n/cookie";
 
 const { auth } = NextAuth(authConfig);
 
+/**
+ * Paths that must never be indexed by search engines, regardless of query
+ * string. These are private / authenticated / API routes.
+ */
+function isAlwaysNoindex(pathname: string): boolean {
+  return (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/employer") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/admin")
+  );
+}
+
+/**
+ * Paths that must not be cached by shared caches (private data).
+ */
+function isPrivateNoStore(pathname: string): boolean {
+  return isAlwaysNoindex(pathname);
+}
+
 export default auth((req) => {
   const url = req.nextUrl.clone();
   const { localeFromPath, pathname: strippedPath } = parseLocalePath(
@@ -33,20 +54,23 @@ export default auth((req) => {
       "camera=(), microphone=(), geolocation=()"
     );
 
-    if (
-      strippedPath.startsWith("/dashboard") ||
-      strippedPath.startsWith("/employer") ||
-      strippedPath.startsWith("/settings") ||
-      strippedPath.startsWith("/api/")
-    ) {
+    if (isPrivateNoStore(strippedPath)) {
       response.headers.set("Cache-Control", "private, no-store");
     }
 
+    // Private paths → always noindex. Public listing pages → noindex only
+    // when the query string carries indexable noise (filters, sort, page...).
     if (
-      pathShouldNoindexWhenQueried(strippedPath) &&
-      urlHasIndexableQueryNoise(req.nextUrl.searchParams)
+      isAlwaysNoindex(strippedPath) ||
+      (pathShouldNoindexWhenQueried(strippedPath) &&
+        urlHasIndexableQueryNoise(req.nextUrl.searchParams))
     ) {
-      response.headers.set("X-Robots-Tag", "noindex, follow");
+      response.headers.set(
+        "X-Robots-Tag",
+        isAlwaysNoindex(strippedPath)
+          ? "noindex, nofollow"
+          : "noindex, follow"
+      );
     }
 
     return response;
@@ -63,20 +87,20 @@ export default auth((req) => {
   );
 
   const path = req.nextUrl.pathname;
-  if (
-    path.startsWith("/dashboard") ||
-    path.startsWith("/employer") ||
-    path.startsWith("/settings") ||
-    path.startsWith("/api/")
-  ) {
+
+  if (isPrivateNoStore(path)) {
     response.headers.set("Cache-Control", "private, no-store");
   }
 
   if (
-    pathShouldNoindexWhenQueried(path) &&
-    urlHasIndexableQueryNoise(req.nextUrl.searchParams)
+    isAlwaysNoindex(path) ||
+    (pathShouldNoindexWhenQueried(path) &&
+      urlHasIndexableQueryNoise(req.nextUrl.searchParams))
   ) {
-    response.headers.set("X-Robots-Tag", "noindex, follow");
+    response.headers.set(
+      "X-Robots-Tag",
+      isAlwaysNoindex(path) ? "noindex, nofollow" : "noindex, follow"
+    );
   }
 
   return response;
