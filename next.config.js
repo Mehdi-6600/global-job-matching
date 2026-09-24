@@ -2,16 +2,16 @@
 /** @type {import('next').NextConfig} */
 
 // ---------------------------------------------------------------------------
-// ثابت‌ها
+// Constants
 // ---------------------------------------------------------------------------
 
-/** یک هفته بر حسب ثانیه */
+/** One week in seconds */
 const ONE_WEEK_IN_SECONDS = 60 * 60 * 24 * 7;
 
-/** دو سال بر حسب ثانیه (برای HSTS) */
+/** Two years in seconds (for HSTS) */
 const TWO_YEARS_IN_SECONDS = 60 * 60 * 24 * 365 * 2;
 
-/** هاست‌های مجاز برای تصاویر ریموت */
+/** Allowed hosts for remote images */
 const REMOTE_IMAGE_PATTERNS = [
   { protocol: "https", hostname: "lh3.googleusercontent.com" },
   { protocol: "https", hostname: "avatars.githubusercontent.com" },
@@ -23,19 +23,48 @@ const REMOTE_IMAGE_PATTERNS = [
 ];
 
 /**
- * سیاست امنیتی محتوا (CSP) در حالت Enforcing.
+ * Content Security Policy (enforcing mode).
  *
- * نکته: تا زمانی که اسکریپت‌ها بر پایهٔ nonce سیم‌کشی نشوند،
- * استفاده از 'unsafe-inline' و 'unsafe-eval' در script-src اجتناب‌ناپذیر است.
- * موارد framing، plugins و base-uri از همان ابتدا fail-closed هستند.
+ * connect-src / img-src are allowlisted to the exact third-party origins the
+ * app actually talks to at runtime:
+ *   - Resend (transactional email)
+ *   - OpenAI / OpenRouter (AI features)
+ *   - Upstash Redis REST (rate limiting, if configured)
+ *   - Blockstream (BTC), Blockchair (DOGE), TronGrid (USDT-TRC20)
+ *   - Vercel Blob (uploads)
+ *   - Google / GitHub avatars
+ *
+ * script-src still needs 'unsafe-inline' + 'unsafe-eval' until nonce-based
+ * script loading is wired. frame-ancestors, base-uri, object-src are
+ * fail-closed from day one.
  */
 const CSP_ENFORCE = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
+  [
+    "img-src 'self' data: blob:",
+    "https://lh3.googleusercontent.com",
+    "https://avatars.githubusercontent.com",
+    "https://public.blob.vercel-storage.com",
+    "https://*.public.blob.vercel-storage.com",
+    "https://images.unsplash.com",
+    "https://remoteok.com",
+    "https://www.arbeitnow.com",
+  ].join(" "),
   "font-src 'self' data:",
-  "connect-src 'self' https:",
+  [
+    "connect-src 'self'",
+    "https://api.resend.com",
+    "https://api.openai.com",
+    "https://openrouter.ai",
+    "https://*.upstash.io",
+    "https://blockstream.info",
+    "https://api.blockchair.com",
+    "https://api.trongrid.io",
+    "https://public.blob.vercel-storage.com",
+    "https://*.public.blob.vercel-storage.com",
+  ].join(" "),
   "worker-src 'self' blob:",
   "child-src 'self'",
   "frame-src 'none'",
@@ -47,34 +76,25 @@ const CSP_ENFORCE = [
 ].join("; ");
 
 // ---------------------------------------------------------------------------
-// پیکربندی Next.js
+// Next.js config
 // ---------------------------------------------------------------------------
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // -------------------------------------------------------------------------
-  // Experimental
-  // -------------------------------------------------------------------------
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
 
-  // -------------------------------------------------------------------------
-  // Linting & Type Checking
-  // -------------------------------------------------------------------------
   eslint: {
     // Lint errors fail the production build (ESLint build gate).
     ignoreDuringBuilds: false,
   },
 
   typescript: {
-    // خطاهای تایپ باید build را متوقف کنند.
+    // Type errors must fail the build.
     ignoreBuildErrors: false,
   },
 
-  // -------------------------------------------------------------------------
-  // Images
-  // -------------------------------------------------------------------------
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: REMOTE_IMAGE_PATTERNS,
@@ -83,19 +103,13 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
-  // -------------------------------------------------------------------------
-  // General
-  // -------------------------------------------------------------------------
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
 
-  // -------------------------------------------------------------------------
-  // HTTP Headers
-  // -------------------------------------------------------------------------
   async headers() {
     return [
-      // هدرهای امنیتی سراسری
+      // Global security headers
       {
         source: "/:path*",
         headers: [
@@ -121,7 +135,7 @@ const nextConfig = {
         ],
       },
 
-      // کش طولانی‌مدت برای assetهای استاتیک Next.js
+      // Long-term cache for Next.js static assets
       {
         source: "/_next/static/:path*",
         headers: [
@@ -132,7 +146,7 @@ const nextConfig = {
         ],
       },
 
-      // کش هفتگی با stale-while-revalidate برای image optimizer
+      // Weekly cache with stale-while-revalidate for image optimizer
       {
         source: "/_next/image",
         headers: [
