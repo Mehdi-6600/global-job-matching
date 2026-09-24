@@ -55,7 +55,9 @@ export async function getEligibleBoards(
         boardIdentifier: true,
         companyName: true,
       },
-      orderBy: [{ updatedAt: "asc" }],
+      // Prefer boards that never succeeded / succeeded longest ago so a
+      // large board (e.g. stripe) does not monopolize page 1 forever.
+      orderBy: [{ lastSuccessAt: "asc" }, { updatedAt: "asc" }],
       take: Math.max(1, Math.min(limit, 2000)),
     });
     return rows.map((r) => ({
