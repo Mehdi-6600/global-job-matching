@@ -572,11 +572,11 @@ async function persistDraft(
         externalUrl: draft.externalUrl,
         applyUrl: draft.applyUrl,
         source: draft.sourceKey,
-        publishedAtED: draft.publishedAt ?? now,
-        firstSe"enAt: now ?,
-        lastSeenAt ": now,
-        lastVerifiederrorAt: now,
-        freshnessStatus: ""fresh",
+        publishedAt: draft.publishedAt ?? now,
+        firstSeenAt: now,
+        lastSeenAt: now,
+        lastVerifiedAt: now,
+        freshnessStatus: "fresh",
         descriptionIsSnippet: draft.descriptionIsSnippet,
         qualityScore: quality.score,
         occupation: occupation.occupation,
@@ -961,7 +961,7 @@ export async function runIngestion(
     allStats.push(stats);
 
     logIngestionEvent(
-      stats.completeness === "FAIL : "info",
+      stats.completeness === "FAILED" ? "error" : "info",
       "source_run_end",
       {
         sourceKey: source.key,
