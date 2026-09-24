@@ -26,7 +26,7 @@ import {
  *
  * Rate limit:
  *   tryAcquireSourceQuota is called ONCE per fetchPage, not per board.
- *   Boards are processed sequentially with the same quota grant.
+ *   With MAX_BOARDS_PER_PAGE=1 each page is one board (fits Vercel Hobby).
  *   Individual board failures are recorded but do not abort the page.
  */
 
@@ -42,8 +42,15 @@ const DEFAULT_MAX_RESPONSE_BYTES = 15_000_000;
 const DEFAULT_RATE_LIMIT_PER_MINUTE = 20;
 const DEFAULT_ATTRIBUTION = "Jobs via Greenhouse";
 
-/** Hard ceiling on boards processed per fetchPage. */
-const MAX_BOARDS_PER_PAGE = 50;
+/**
+ * Boards per fetchPage.
+ *
+ * MUST stay at 1 on Vercel Hobby (~60s limit). Packing all boards into one
+ * page produced ~1400 drafts; pipeline timed out after ~484 Stripe updates
+ * (PARTIAL) and never persisted figma/coinbase/discord/reddit/airbnb/notion.
+ * One board per page → hasMore advances → checkpoint → next board next page.
+ */
+const MAX_BOARDS_PER_PAGE = 1;
 
 function asRecord(v: unknown): Record<string, unknown> | null {
   return v !== null && typeof v === "object"
