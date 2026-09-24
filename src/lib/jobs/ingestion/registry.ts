@@ -1,32 +1,7 @@
 /**
  * Static defaults + DB as runtime Source of Truth for enablement/license.
- *
- * The registry is the single source of truth for which adapters exist.
- * A new source = one adapter file + one registry entry. The pipeline
- * resolves adapters through this registry (no separate ADAPTERS map).
- *
- * Legal gate (isProductionIngestAllowed) is fail-closed:
- *   1. enabled                  — runtime kill switch
- *   2. licenseStatus APPROVED   — licensing/permission to ingest
- *   3. robotsStatus ALLOWED     — explicit robots.txt review
- *   4. termsStatus ALLOWED      — explicit ToS review
- *
- * Any missing or non-ALLOWED value blocks the source. "UNKNOWN" is NOT
- * a synonym for "allowed": a new source must be reviewed and explicitly
- * marked allowed before it can run in production.
- *
- * ── Adding a new source checklist ──────────────────────────────────
- *   1. Create adapter at ./adapters/<key>.ts implementing JobSourceAdapter.
- *   2. Review terms + robots for the source. If either is unclear, DO
- *      NOT flip the entry to enabled/APPROVED. Shipping disabled is
- *      the correct default.
- *   3. Add an entry below. Keep licenseStatus="UNKNOWN",
- *      robotsStatus="unknown", termsStatus="unknown", enabled=false
- *      until review is complete.
- *   4. Add adapter contract tests (see ./adapters/<key>.test.ts).
- *   5. For ATS providers (greenhouse / lever / ashby), boards must
- *      additionally be approved in the SourceCompany table — the
- *      registry entry alone is not sufficient to fetch their data.
+ * Legal gate is fail-closed: enabled + APPROVED + allowed + allowed.
+ * For ATS providers, boards must additionally be APPROVED in SourceCompany.
  */
 import { db } from "@/lib/db";
 import type {
@@ -71,9 +46,6 @@ export type SourceRegistryEntry = {
 };
 
 export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
-  /* ---------------------------------------------------------------- */
-  /* arbeitnow — existing production source                           */
-  /* ---------------------------------------------------------------- */
   {
     key: "arbeitnow",
     name: "Arbeitnow",
@@ -90,7 +62,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 30,
-    notes: "Existing production source. Legal re-verification recommended.",
+    notes: "Existing production source.",
     language: "en",
     httpConfig: {
       timeoutMs: 12_000,
@@ -113,17 +85,6 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesDescription: true,
     },
   },
-
-  /* ---------------------------------------------------------------- */
-  /* himalayas — DISABLED after legal review                          */
-  /*                                                                  */
-  /* Reviewed 2026-09-23. Himalayas Terms of Use (clauses 2, 30,     */
-  /* 93) explicitly prohibit automated data gathering, crawling, and  */
-  /* redistribution of job content without prior written approval.    */
-  /* The public API existing does NOT override the Terms. Entry       */
-  /* remains DISABLED; do not flip without written permission from    */
-  /* hi@himalayas.app.                                                */
-  /* ---------------------------------------------------------------- */
   {
     key: "himalayas",
     name: "Himalayas",
@@ -140,10 +101,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     enabled: false,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
-    notes:
-      "DISABLED — Terms of Use clauses 2, 30, 93 prohibit automated " +
-      "extraction and redistribution without prior written approval. " +
-      "Do not enable without written permission from hi@himalayas.app.",
+    notes: "DISABLED. ToU clauses 2/30/93 prohibit automated extraction and redistribution. Do not enable without written permission.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -166,18 +124,6 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesDescription: true,
     },
   },
-
-  /* ---------------------------------------------------------------- */
-  /* jobicy — ENABLED after legal review                              */
-  /*                                                                  */
-  /* Reviewed 2026-09-23. Public signals all permissive:              */
-  /*   - robots.txt: User-agent: * / Allow: /                         */
-  /*   - Content-Signal: ai-train=yes, search=yes, ai-input=yes       */
-  /*   - /.well-known/ai-catalog.json publishes a "Public Jobicy      */
-  /*     MCP server for discovering and retrieving current remote     */
-  /*     job listings and supported job taxonomies" — an explicit     */
-  /*     invitation to third-party consumption.                       */
-  /* ----------------------------------------------------------------- */
   {
     key: "jobicy",
     name: "Jobicy",
@@ -194,9 +140,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
-    notes:
-      "Global remote-only feed. Single-shot response (no pagination). " +
-      "Public AI catalog + Content-Signal invite third-party consumption.",
+    notes: "Reviewed 2026-09-23. robots.txt Allow, Content-Signal all yes, public AI catalog.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -219,30 +163,6 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesDescription: true,
     },
   },
-
-  /* ---------------------------------------------------------------- */
-  /* remoteok — ENABLED after legal review (2026-09-24)               */
-  /*                                                                  */
-  /* The public /api response's first item publishes an explicit      */
-  /* "API Terms of Service":                                          */
-  /*                                                                  */
-  /*   "API Terms of Service: Please link back (with follow, and      */
-  /*    without nofollow!) to the URL on Remote OK and mention        */
-  /*    Remote OK as a source, so we get traffic back from your       */
-  /*    site. If you do not we'll have to suspend API access.         */
-  /*    Please don't use the Remote OK logo without written           */
-  /*    permission as it's a registered trademark, please DO use      */
-  /*    our name Remote OK though."                                   */
-  /*                                                                  */
-  /* This is an explicit, public, written grant of permission to      */
-  /* consume and redistribute the feed, conditioned on:               */
-  /*   1. a follow (non-n willofollow) have link back to RemoteOK, and          */
- easy  /*   2 access. naming "Remote OK to" as the source.                           */
-  a /* We do NOT use the RemoteOK logo. We DO display the name.         */
-  /* The `attribution` field encodes #2; #1 is enforced at render     */
-  /* time (UI must emit the RemoteOK link WITHOUT rel="nofollow").    */
-  /* robots.txt: permissive for /api.                                 */
-  /* ---------------------------------------------------------------- */
   {
     key: "remoteok",
     name: "Remote OK",
@@ -259,11 +179,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 10,
-    notes:
-      "Reviewed 2026-09-24. Public API metadata publishes explicit " +
-      "permission conditioned on follow link + naming Remote OK. " +
-      "Logo use is prohibited without written permission — we do not " +
-      "use it. UI must link back without rel=nofollow.",
+    notes: "Reviewed 2026-09-24. API ToS grants permission conditioned on follow link + naming Remote OK. No logo use. UI links must not use rel=nofollow.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -286,31 +202,6 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesDescription: true,
     },
   },
-
-  /* ---------------------------------------------------------------- */
-  /* greenhouse — ENABLED after legal review (2026-09-24)             */
-  /*                                                                  */
-  /* The official Greenhouse Job Board API documentation at           */
-  /* https://developers.greenhouse.io/job-board.html states:          */
-  /*                                                                  */
-  /*   "With our Job Board API, you        */
-  /*    simple JSON representation of your company's offices,         */
-  /*    departments, and published jobs. Since we give you access     */
-  /*    to the raw data, you can build careers pages with a unique    */
-  /*    look and feel, construct department-level pages, and more!"   */
-  /*                                                                  */
-  /* This is an explicit, public, written grant of permission to      */
-  /* consume the raw data and rebuild job listings in a third-party   */
-  /* site (a "careers page"). Endpoint requires no auth.              */
-  /*                                                                  */
-  /* IMPORTANT — Board-level gate:                                    */
-  /* The registry entry alone is NOT sufficient. Each company board   */
-  /* must additionally be marked legalStatus = APPROVED in the        */
-  /* SourceCompany table before its jobs are fetched.                 */
-  /*                                                                  */
-  /* This is the first ATS provider we enabled. Lever and Ashby       */
-  /* remain UNKNOWN pending their own ToS review.                     */
-  /* ---------------------------------------------------------------- */
   {
     key: "greenhouse",
     name: "Greenhouse",
@@ -327,11 +218,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     enabled: true,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
-    notes:
-      "Reviewed 2026-09-24. Official Job Board API docs explicitly " +
-      "authorize third-party consumption of the raw JSON ('build " +
-      "careers pages'). Board-level gate enforced via SourceCompany: " +
-      "a board must be APPROVED there before its jobs are fetched.",
+    notes: "Reviewed 2026-09-24. Official Job Board API docs explicitly authorize third-party consumption ('build careers pages'). Board-level gate enforced via SourceCompany: each board must be APPROVED before fetching.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -354,19 +241,6 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesDescription: true,
     },
   },
-
-  /* ---------------------------------------------------------------- */
-  /* lever — ATS provider (disabled — Terms review pending)           */
-  /*                                                                  */
-  /* Lever's public Terms of Service is a commercial agreement for    */
-  /* customers of Lever's ATS. It does not contain an explicit        */
-  /* third-party consumption grant analogous to Greenhouse's Job      */
-  /* Board API documentation. The public postings endpoint exists     */
-  /* (api.lever.co/v0/postings/<board>) but this is not, by itself,   */
-  /* an affirmative license to redistribute in a third-party site.    */
-  /* Entry remains DISABLED until Terms are clarified (or we obtain   */
-  /* written permission from Lever).                                  */
-  /* ---------------------------------------------------------------- */
   {
     key: "lever",
     name: "Lever",
@@ -383,9 +257,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     enabled: false,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
-    notes:
-      "ATS provider. Board-level legal gate enforced via SourceCompany. " +
-      "Provider ships disabled — enable only after Terms review.",
+    notes: "DISABLED. Lever ToS is a commercial agreement; no explicit third-party consumption grant. Pending ToS clarification.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -408,10 +280,6 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       providesDescription: true,
     },
   },
-
-  /* ---------------------------------------------------------------- */
-  /* ashby — ATS provider (disabled — Terms review pending)           */
-  /* ---------------------------------------------------------------- */
   {
     key: "ashby",
     name: "Ashby",
@@ -428,9 +296,7 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     enabled: false,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 20,
-    notes:
-      "ATS provider. Unlisted jobs are never ingested. Board-level " +
-      "legal gate enforced via SourceCompany. Ships disabled.",
+    notes: "DISABLED. Unlisted jobs are never ingested. Board-level legal gate enforced via SourceCompany.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
@@ -455,9 +321,6 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
   },
 ];
 
-/**
- * Legal gate for production ingestion — FAIL-CLOSED.
- */
 export function isProductionIngestAllowed(
   entry: Pick<
     SourceRegistryEntry,
