@@ -1,1036 +1,1032 @@
-/**
- * Central ingestion pipeline — adapters feed drafts; this layer
- * quality-gates, dedups, and persists. Never mutates employer jobs.
- *
- * Design invariants:
- *  - Employer-owned jobs (postedById != null) are never touched.
- *  - Dedup is strictly 3-level: externalId → externalUrl → applyUrl.
- *  - Whole run has a hard time budget (MAX_EXECUTION_MS).
- *  - License-blocked sources are reported, never ingested.
- *  - Imported jobs are the only jobs eligible for ingestion updates.
- *  - Source lease is fail-closed: if ownership cannot be confirmed, the
- *    worker stops instead of silently continuing without a valid lease.
- *  - Adapter resolution goes through the registry (single source of truth).
- *  - Cursor-based pagination is loop-protected.
- *  - Attribution fallback: registry attribution is used when the adapter
- *    does not set draft.attribution.
- *  - Every source run carries a `runId` for structured logging.
- *  - Declared capabilities influence pipeline behavior:
- *      * pagination "single"  → one page only, no loop
- *      * pagination "cursor" | "token" → cursor-based loop (loop-protected)
- *      * pagination "page" or undeclared → page-based loop (default)
- */
-import { randomBytes } from "crypto";
-import { db } from "@/lib/db";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  parseLocation,
-  mapJobType,
-  generateSlug,
-  guessCurrency,
-  guessExperience,
-} from "@/lib/jobs/sync-normalize";
-import { assessJobQuality } from "./quality";
-import { scoreDedup, type ExistingJobRef } from "./dedup";
-import { inferOccupation } from "./occupation";
+  ArrowLeft,
+  MapPin,
+  DollarSign,
+  Clock,
+  Briefcase,
+  Building2,
+  Heart,
+  Globe,
+  Calendar,
+  Users,
+  CheckCircle2,
+  Loader2,
+  X,
+  Send,
+  Wifi,
+  AlertCircle,
+  Target,
+  ExternalLink,
+} from "lucide-react";
+import ShareButtons from "@/app/components/ShareButtons";
+import { ContactEmployer } from "@/components/contact-employer";
 import {
-  ingestBlockReason,
-  isProductionIngestAllowed,
-  SOURCE_REGISTRY,
-} from "./registry";
-import type {
-  IngestJobDraft,
-  IngestStats,
-  SourceCapabilities,
-} from "./types";
-import { getRunnableSources } from "./registry";
-import { recordSourceRun } from "./source-run";
-import { upsertSourceListing } from "./provenance";
-import { applyAbsenceFreshness } from "./absence-freshness";
-import { makeNamespacedExternalId } from "./identity";
-import {
-  loadSourceCheckpoint,
-  saveSourceCheckpoint,
-  clearSourceCheckpoint,
-} from "./checkpoint";
-import { evaluateCircuit } from "./circuit-breaker";
-import { contentFingerprint } from "./content-fingerprint";
-import {
-  tryAcquireSourceLease,
-  renewSourceLease,
-  releaseSourceLease,
-} from "./source-lease";
-import { tryAcquireSourceQuota } from "./rate-limit";
-import { logIngestionEvent } from "./log";
+  PlanLimitBanner,
+  getPlanLimitFromResponse,
+} from "@/components/plan-limit-banner";
+import { CompanyLogo } from "@/components/company-logo";
+import { useLocale } from "@/components/locale-provider";
+import { JobMatchBadge } from "@/components/jobs/job-match-badge";
+import { messageFromApiError } from "@/lib/api-error-i18n";
 
-
-/* -------------------------------------------------------------------------- */
-/*  Configuration                                                             */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Hard time budget for a single ingestion run.
- *
- * Vercel Hobby serverless functions cap at 60s. We stop at 58s to leave
- * a 2s safety margin for final bookkeeping (checkpoint save, lease
- * release, source-run metrics). Anything beyond 60s risks a hard kill
- * which would lose the checkpoint and stall the source.
- */
-const MAX_EXECUTION_MS = 58_000;
-const MAX_PAGES_PER_SOURCE = 5;
-const DEDUP_CONFIDENCE_THRESHOLD = 0.9;
-const PER_PAGE = 100;
-
-/* -------------------------------------------------------------------------- */
-/*  Capability helpers                                                        */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Whether the pipeline should stop after the first successful page.
- * True when the source declares `pagination: "single"`.
- */
-function shouldStopAfterFirstPage(
-  capabilities: SourceCapabilities | undefined,
-): boolean {
-  return capabilities?.pagination === "single";
-}
-
-/**
- * Whether the source uses a cursor/token-based loop.
- * Both map to the same runtime behavior (resumeCursor + nextCursor).
- */
-function isCursorBasedPagination(
-  capabilities: SourceCapabilities | undefined,
-): boolean {
-  return (
-    capabilities?.pagination === "cursor" ||
-    capabilities?.pagination === "token"
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Helpers                                                                   */
-/* -------------------------------------------------------------------------- */
-
-function generateRunId(): string {
-  return randomBytes(8).toString("hex");
-}
-
-function isTimedOut(started: number): boolean {
-  return Date.now() - started >= MAX_EXECUTION_MS;
-}
-
-function remainingTimeMs(started: number): number {
-  return Math.max(0, MAX_EXECUTION_MS - (Date.now() - started));
-}
-
-function safeTags(
-  base: readonly string[] | undefined | null,
-  extras: readonly string[] = [],
-): string[] {
-  return Array.from(
-    new Set([...(base ?? []), ...extras].filter((t): t is string => Boolean(t))),
-  );
-}
-
-function formatLocation(city: string, country: string): string {
-  const joined = `${city ?? ""}, ${country ?? ""}`
-    .replace(/^,\s*|,\s*$/g, "")
-    .trim();
-  return joined || "Remote";
-}
-
-function emptyStats(sourceKey: string): IngestStats {
-  return {
-    sourceKey,
-    runId: generateRunId(),
-    startedAt: new Date().toISOString(),
-    fetched: 0,
-    validated: 0,
-    created: 0,
-    updated: 0,
-    duplicates: 0,
-    skipped: 0,
-    qualityRejected: 0,
-    failed: 0,
-    timedOut: false,
-    completeness: "PARTIAL",
-    errors: [],
-  };
-}
-
-function clampMaxPages(value: number | undefined): number {
-  if (value === undefined || !Number.isFinite(value)) {
-    return MAX_PAGES_PER_SOURCE;
-  }
-  return Math.max(1, Math.min(Math.floor(value), MAX_PAGES_PER_SOURCE));
-}
-
-function pushError(
-  stats: IngestStats,
-  error: unknown,
-  fallback: string,
-): void {
-  const message =
-    error instanceof Error && error.message.trim()
-      ? error.message.trim().slice(0, 200)
-      : fallback;
-  stats.errors.push(message);
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Company resolution                                                        */
-/* -------------------------------------------------------------------------- */
-
-async function resolveCompany(
-  name: string,
-  location: string,
-) {
-  const cleanName = name.trim().slice(0, 200);
-  if (!cleanName) {
-    throw new Error("company_name_missing");
-  }
-
-  const baseSlug =
-    generateSlug(cleanName) ||
-    `company-${Date.now().toString(36)}`;
-
-  const existing = await db.company.findFirst({
-    where: {
-      OR: [
-        { slug: baseSlug },
-        {
-          name: {
-            equals: cleanName,
-            mode: "insensitive",
-          },
-        },
-      ],
-    },
-  });
-
-  if (existing) return existing;
-
-  const uniqueSlug =
-    `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
-
-  try {
-    return await db.company.create({
-      data: {
-        name: cleanName,
-        slug: uniqueSlug,
-        location: location.trim().slice(0, 200) || "Remote",
-        status: "verified",
-      },
-    });
-  } catch (error) {
-    const concurrent = await db.company.findFirst({
-      where: {
-        OR: [
-          { slug: baseSlug },
-          {
-            name: {
-              equals: cleanName,
-              mode: "insensitive",
-            },
-          },
-        ],
-      },
-    });
-
-    if (concurrent) return concurrent;
-    throw error;
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Dedup helpers                                                             */
-/* -------------------------------------------------------------------------- */
-
-function toExistingJobRef(
-  job: {
-    id: string;
-    externalId: string | null;
-    externalUrl: string | null;
-    applyUrl: string | null;
-    title: string;
-    location: string;
-    postedById: string | null;
-    description?: string | null;
-    type?: string | null;
-    remote?: boolean | null;
-    salary?: string | null;
-    company: { name: string } | null;
-  },
-): ExistingJobRef {
-  return {
-    id: job.id,
-    externalId: job.externalId,
-    externalUrl: job.externalUrl,
-    applyUrl: job.applyUrl,
-    title: job.title,
-    location: job.location,
-    postedById: job.postedById,
-    companyName: job.company?.name,
-    description: job.description ?? null,
-    type: job.type ?? null,
-    remote: job.remote ?? null,
-    salary: job.salary ?? null,
-  };
-}
-
-const existingJobSelect = {
-  id: true,
-  externalId: true,
-  externalUrl: true,
-  applyUrl: true,
-  title: true,
-  location: true,
-  postedById: true,
-  description: true,
-  type: true,
-  remote: true,
-  salary: true,
+interface JobDetail {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  remote: boolean;
+  type: string;
+  experience: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  currency: string;
+  requirements: string[];
+  responsibilities: string[];
+  benefits: string[];
+  tags: string[];
+  status: string;
+  deadline: string | null;
+  viewCount: number;
+  applicantCount: number;
+  createdAt: string;
+  // Ingestion provenance — null for employer-posted jobs.
+  postedById: string | null;
+  source: string | null;
+  attribution: string | null;
+  externalUrl: string | null;
+  applyUrl: string | null;
   company: {
-    select: {
-      name: true,
-    },
-  },
-} as const;
-
-async function findDedupCandidate(
-  draft: IngestJobDraft,
-): Promise<{ ref: ExistingJobRef; confidence: number } | null> {
-  const listingClient = (
-    db as unknown as {
-      jobSourceListing?: {
-        findUnique: (args: unknown) => Promise<{ jobId: string } | null>;
-      };
-    }
-  ).jobSourceListing;
-
-  if (listingClient && draft.sourceKey && draft.sourceJobId) {
-    try {
-      const listing = await listingClient.findUnique({
-        where: {
-          sourceKey_sourceJobId: {
-            sourceKey: draft.sourceKey,
-            sourceJobId: draft.sourceJobId,
-          },
-        },
-      });
-      if (listing?.jobId) {
-        const byListing = await db.job.findFirst({
-          where: { id: listing.jobId, postedById: null },
-          select: existingJobSelect,
-        });
-        if (byListing) {
-          return { ref: toExistingJobRef(byListing), confidence: 1.0 };
-        }
-      }
-    } catch {
-      // listing table may be missing before migrate
-    }
-  }
-
-  const externalId = draft.externalId?.trim();
-  if (externalId) {
-    const byExternalId = await db.job.findFirst({
-      where: {
-        postedById: null,
-        externalId,
-      },
-      select: existingJobSelect,
-    });
-
-    if (byExternalId) {
-      return {
-        ref: toExistingJobRef(byExternalId),
-        confidence: 1.0,
-      };
-    }
-  }
-
-  const externalUrl = draft.externalUrl?.trim();
-  if (externalUrl) {
-    const byExternalUrl = await db.job.findFirst({
-      where: {
-        postedById: null,
-        externalUrl,
-      },
-      select: existingJobSelect,
-    });
-
-    if (byExternalUrl) {
-      const ref = toExistingJobRef(byExternalUrl);
-      const match = scoreDedup(draft, ref);
-      if (
-        match &&
-        match.confidence >= DEDUP_CONFIDENCE_THRESHOLD
-      ) {
-        return {
-          ref,
-          confidence: match.confidence,
-        };
-      }
-    }
-  }
-
-  const applyUrl = draft.applyUrl?.trim();
-  if (applyUrl) {
-    const byApplyUrl = await db.job.findFirst({
-      where: {
-        postedById: null,
-        applyUrl,
-      },
-      select: existingJobSelect,
-    });
-
-    if (byApplyUrl) {
-      const ref = toExistingJobRef(byApplyUrl);
-      const match = scoreDedup(draft, ref);
-      if (
-        match &&
-        match.confidence >= DEDUP_CONFIDENCE_THRESHOLD
-      ) {
-        return {
-          ref,
-          confidence: match.confidence,
-        };
-      }
-    }
-  }
-
-  return null;
+    id: string;
+    name: string;
+    logo: string | null;
+    location: string | null;
+    description: string | null;
+    website: string | null;
+  } | null;
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+    color: string | null;
+  } | null;
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Persistence                                                               */
-/* -------------------------------------------------------------------------- */
+type MatchData = {
+  score: number;
+  breakdown: {
+    skills: number;
+    location: number;
+    experience: number;
+    remote: number;
+    overall: number;
+  };
+  reasons: string[];
+};
 
-async function persistDraft(
-  draft: IngestJobDraft,
-  stats: IngestStats,
-  sourceAttribution: string | null,
-): Promise<string | null> {
-  const quality = assessJobQuality(draft);
-  if (!quality.ok) {
-    stats.qualityRejected++;
-    stats.skipped++;
-    return null;
+function asStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string");
   }
+  if (typeof value === "string" && value.trim()) {
+    return [value];
+  }
+  return [];
+}
 
-  stats.validated++;
+function parseMatchData(raw: unknown): MatchData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const m = raw as Record<string, unknown>;
+  const score =
+    typeof m.score === "number" && Number.isFinite(m.score) ? m.score : null;
+  if (score == null) return null;
 
-  const namespacedExternalId = makeNamespacedExternalId(
-    draft.sourceKey,
-    draft.sourceJobId || draft.externalId,
+  const bd =
+    m.breakdown && typeof m.breakdown === "object"
+      ? (m.breakdown as Record<string, unknown>)
+      : {};
+
+  const num = (v: unknown, fallback = 0) =>
+    typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+  const reasons = Array.isArray(m.reasons)
+    ? m.reasons.filter((r): r is string => typeof r === "string")
+    : [];
+
+  return {
+    score,
+    breakdown: {
+      skills: num(bd.skills),
+      location: num(bd.location),
+      experience: num(bd.experience),
+      remote: num(bd.remote),
+      overall: num(bd.overall, score),
+    },
+    reasons,
+  };
+}
+
+function interpolate(
+  template: string,
+  replacements: Record<string, string | number>,
+): string {
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.split(`{${key}}`).join(String(value));
+  }
+  return result;
+}
+
+function formatSalary(
+  t: (key: string, fallback?: string) => string,
+  locale: string,
+  currency: string | null | undefined,
+  min: number | null | undefined,
+  max: number | null | undefined,
+) {
+  const cur = currency || "USD";
+  if (min == null && max == null) {
+    return t("JobDetail.salaryNA", "Salary not specified");
+  }
+  if (min != null && max != null && min !== max) {
+    return `${cur} ${min.toLocaleString(locale)} – ${max.toLocaleString(locale)}`;
+  }
+  if (min != null && max != null) {
+    return `${cur} ${min.toLocaleString(locale)}`;
+  }
+  if (min != null) {
+    return `${t("Jobs.from", "From")} ${cur} ${min.toLocaleString(locale)}`;
+  }
+  return `${t("Jobs.upTo", "Up to")} ${cur} ${max!.toLocaleString(locale)}`;
+}
+
+function scoreColor(score: number): string {
+  if (score >= 75) return "text-emerald-400";
+  if (score >= 50) return "text-amber-400";
+  return "text-slate-400";
+}
+
+function scoreBar(score: number): string {
+  if (score >= 75) return "bg-emerald-500";
+  if (score >= 50) return "bg-amber-500";
+  return "bg-slate-500";
+}
+
+export default function JobDetailPage() {
+  const { t, locale } = useLocale();
+  const params = useParams();
+  const router = useRouter();
+  const rawParam = params?.id;
+  const id = Array.isArray(rawParam)
+    ? String(rawParam[0] || "")
+    : String(rawParam || "");
+
+  const [job, setJob] = useState<JobDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [savedInitialized, setSavedInitialized] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [coverLetter, setCoverLetter] = useState("");
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState("");
+  const [applySuccess, setApplySuccess] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [planLimit, setPlanLimit] = useState<{
+    message: string;
+    code?: string;
+  } | null>(null);
+
+  const [match, setMatch] = useState<MatchData | null>(null);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchMessage, setMatchMessage] = useState("");
+
+  const timeAgo = useCallback(
+    (dateString: string): string => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      const months = Math.floor(days / 30);
+
+      if (months > 0) {
+        return interpolate(t("Common.timeAgo.months", "{count} months ago"), {
+          count: months,
+        });
+      }
+      if (days > 0) {
+        return interpolate(t("Common.timeAgo.days", "{count} days ago"), {
+          count: days,
+        });
+      }
+      if (hours > 0) {
+        return interpolate(t("Common.timeAgo.hours", "{count} hours ago"), {
+          count: hours,
+        });
+      }
+      if (minutes > 0) {
+        return interpolate(
+          t("Common.timeAgo.minutes", "{count} minutes ago"),
+          { count: minutes },
+        );
+      }
+      return t("Common.timeAgo.justNow", "Just now");
+    },
+    [t],
   );
-  const draftForDedup: IngestJobDraft = {
-    ...draft,
-    externalId: namespacedExternalId,
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setShareUrl(window.location.href);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!id) {
+      setError(t("JobDetail.notFound", "Invalid job ID"));
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    fetch(`/api/jobs/${id}`, { cache: "no-store" })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(messageFromApiError(res.status, data, t));
+          return;
+        }
+        if (data.job) {
+          const j = data.job;
+          setJob({
+            ...j,
+            title: typeof j.title === "string" ? j.title : "",
+            description: typeof j.description === "string" ? j.description : "",
+            location: typeof j.location === "string" ? j.location : "",
+            type: typeof j.type === "string" ? j.type : "",
+            remote: Boolean(j.remote),
+            requirements: asStringArray(j.requirements),
+            responsibilities: asStringArray(j.responsibilities),
+            benefits: asStringArray(j.benefits),
+            tags: asStringArray(j.tags),
+            applicantCount:
+              typeof j.applicantCount === "number" ? j.applicantCount : 0,
+            viewCount: typeof j.viewCount === "number" ? j.viewCount : 0,
+            // Provenance fields — pass through as-is (may be null).
+            postedById:
+              typeof j.postedById === "string" ? j.postedById : null,
+            source: typeof j.source === "string" ? j.source : null,
+            attribution:
+              typeof j.attribution === "string" ? j.attribution : null,
+            externalUrl:
+              typeof j.externalUrl === "string" ? j.externalUrl : null,
+            applyUrl: typeof j.applyUrl === "string" ? j.applyUrl : null,
+            company:
+              j.company && typeof j.company === "object" ? j.company : null,
+            category:
+              j.category && typeof j.category === "object" ? j.category : null,
+          });
+        } else {
+          setError(t("JobDetail.notFound", "Job not found"));
+        }
+      })
+      .catch((err) => {
+        console.error("[job-detail] load failed", err);
+        if (!cancelled) {
+          setError(
+            t(
+              "Common.errorNetwork",
+              "Network error. Please try again.",
+            ),
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, t]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    fetch(`/api/saved-jobs`, { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return res.json().catch(() => null);
+      })
+      .then((data) => {
+        if (cancelled || !data) return;
+        const list = Array.isArray(data.jobs) ? data.jobs : [];
+        const isSaved = list.some((j: { id: string }) => j.id === id);
+        setSaved(isSaved);
+      })
+      .catch(() => {
+        /* silent */
+      })
+      .finally(() => {
+        if (!cancelled) setSavedInitialized(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    setMatchLoading(true);
+    setMatchMessage("");
+    fetch(`/api/jobs/${id}/match`, { cache: "no-store" })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+
+        if (res.status === 401) {
+          setMatch(null);
+          setMatchMessage(
+            t(
+              "JobDetail.loginToApply",
+              "Sign in to see your match score for this job.",
+            ),
+          );
+          return;
+        }
+        if (!res.ok) {
+          setMatch(null);
+          setMatchMessage(messageFromApiError(res.status, data, t));
+          return;
+        }
+        if (data.match) {
+          const parsed = parseMatchData(data.match);
+          if (parsed) {
+            setMatch(parsed);
+            setMatchMessage("");
+          } else {
+            setMatch(null);
+            setMatchMessage(
+              t("Common.error", "Could not load match score"),
+            );
+          }
+        } else {
+          setMatch(null);
+          setMatchMessage(
+            data.message ||
+              t(
+                "JobDetail.loginToApply",
+                "Complete your profile to see a match score for this job.",
+              ),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMatch(null);
+          setMatchMessage(t("Common.error", "Could not load match score"));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMatchLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, t]);
+
+  const handleSave = useCallback(async () => {
+    if (saveLoading) return;
+    setPlanLimit(null);
+    setSaveLoading(true);
+
+    const method = saved ? "DELETE" : "POST";
+
+    try {
+      const res = await fetch("/api/saved-jobs", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: id }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 401) {
+        router.push(`/login?callbackUrl=/jobs/${id}`);
+        return;
+      }
+
+      if (!res.ok) {
+        const limit = getPlanLimitFromResponse(data);
+        if (limit) {
+          setPlanLimit(limit);
+        }
+        return;
+      }
+
+      setSaved(!saved);
+    } catch {
+      /* silent */
+    } finally {
+      setSaveLoading(false);
+    }
+  }, [id, saved, saveLoading, router]);
+
+  const handleApply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApplyError("");
+    setPlanLimit(null);
+    setApplying(true);
+
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: id, coverLetter }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push(`/login?callbackUrl=/jobs/${id}`);
+          return;
+        }
+
+        const limit = getPlanLimitFromResponse(data);
+        if (limit) {
+          setPlanLimit(limit);
+          return;
+        }
+
+        setApplyError(messageFromApiError(res.status, data, t));
+        return;
+      }
+
+      setApplySuccess(true);
+      setCoverLetter("");
+      if (job) {
+        setJob({ ...job, applicantCount: (job.applicantCount || 0) + 1 });
+      }
+    } catch {
+      setApplyError(
+        t("Common.errorNetwork", "Network error. Please try again."),
+      );
+    } finally {
+      setApplying(false);
+    }
   };
 
-  const existing = await findDedupCandidate(draftForDedup);
+  /**
+   * Aggregated jobs (postedById === null) cannot accept in-app applications —
+   * we do not own them. Instead, "Apply" opens the canonical applyUrl on the
+   * source site. Employer jobs keep the existing in-app flow.
+   */
+  const isAggregated = job?.postedById == null;
+  const externalApplyUrl = job?.applyUrl || job?.externalUrl || null;
+  const useExternalApply = isAggregated && Boolean(externalApplyUrl);
 
-  const { city, country } = parseLocation(draft.location);
-  const location = formatLocation(city, country);
-  const occupation = inferOccupation(draft.title);
-  const now = new Date();
-  const syncTag = `synced:${now.toISOString().slice(0, 10)}`;
-
-  const effectiveAttribution = draft.attribution ?? sourceAttribution;
-
-  if (existing) {
-    const fp = contentFingerprint({
-      title: draft.title,
-      description: draft.description,
-      location,
-      applyUrl: draft.applyUrl,
-      externalUrl: draft.externalUrl,
-      employmentType: draft.employmentType,
-      remote: draft.remote,
-      salaryText: draft.salaryText,
-      company: draft.company,
-    });
-    const storedDesc = existing.ref.description ?? "";
-    const prevFp = contentFingerprint({
-      title: existing.ref.title,
-      description: storedDesc,
-      location: existing.ref.location,
-      applyUrl: existing.ref.applyUrl ?? null,
-      externalUrl: existing.ref.externalUrl ?? null,
-      employmentType: existing.ref.type ?? "",
-      remote: existing.ref.remote ?? false,
-      salaryText: existing.ref.salary ?? null,
-      company: existing.ref.companyName ?? "",
-    });
-
-    if (fp === prevFp && storedDesc.length > 0) {
-      const touched = await db.job.updateMany({
-        where: { id: existing.ref.id, postedById: null },
-        data: {
-          lastSeenAt: now,
-          lastVerifiedAt: now,
-          freshnessStatus: "fresh",
-        },
-      });
-      if (touched.count === 0) {
-        stats.skipped++;
-        stats.duplicates++;
-        return null;
-      }
-      stats.updated++;
-      try {
-        await upsertSourceListing(existing.ref.id, draftForDedup);
-      } catch {
-        // provenance best-effort
-      }
-      return namespacedExternalId;
+  function handleApplyClick() {
+    if (useExternalApply && externalApplyUrl) {
+      window.open(externalApplyUrl, "_blank", "noopener");
+      return;
     }
-
-    const updated = await db.job.updateMany({
-      where: {
-        id: existing.ref.id,
-        postedById: null,
-      },
-      data: {
-        title: draft.title,
-        description: draft.description,
-        location,
-        remote: draft.remote,
-        type: mapJobType(draft.employmentType),
-        externalUrl: draft.externalUrl,
-        applyUrl: draft.applyUrl,
-        source: draft.sourceKey,
-        externalId: namespacedExternalId,
-        lastSeenAt: now,
-        lastVerifiedAt: now,
-        freshnessStatus: "fresh",
-        descriptionIsSnippet: draft.descriptionIsSnippet,
-        qualityScore: quality.score,
-        occupation: occupation.occupation,
-        occupationFamily: occupation.occupationFamily,
-        seniority: occupation.seniority,
-        attribution: effectiveAttribution,
-        tags: safeTags(draft.tags, [
-          `source:${draft.sourceKey}`,
-          syncTag,
-        ]),
-      },
-    });
-
-    if (updated.count === 0) {
-      stats.skipped++;
-      stats.duplicates++;
-      return null;
-    }
-
-    stats.updated++;
-    try {
-      await upsertSourceListing(existing.ref.id, draftForDedup);
-    } catch {
-      // provenance best-effort
-    }
-    return namespacedExternalId;
+    setApplyOpen(true);
   }
 
-  const company = await resolveCompany(
-    draft.company,
-    draft.location,
-  );
-
-  try {
-    const created = await db.job.create({
-      data: {
-        title: draft.title,
-        description: draft.description,
-        location,
-        remote: draft.remote,
-        type: mapJobType(draft.employmentType),
-        experience: guessExperience(
-          draft.title,
-          [...draft.tags],
-          draft.description,
-        ),
-        currency:
-          draft.currency ||
-          guessCurrency(draft.location, country),
-        salaryMin: draft.salaryMin ?? null,
-        salaryMax: draft.salaryMax ?? null,
-        salary: draft.salaryText ?? null,
-        requirements: [...draft.skills].slice(0, 40),
-        responsibilities: [],
-        benefits: [],
-        tags: safeTags(draft.tags, [
-          `source:${draft.sourceKey}`,
-          syncTag,
-        ]),
-        status: "active",
-        companyId: company.id,
-        postedById: null,
-        externalId: namespacedExternalId,
-        externalUrl: draft.externalUrl,
-        applyUrl: draft.applyUrl,
-        source: draft.sourceKey,
-        publishedAt: draft.publishedAt ?? now,
-        firstSeenAt: now,
-        lastSeenAt: now,
-        lastVerifiedAt: now,
-        freshnessStatus: "fresh",
-        descriptionIsSnippet: draft.descriptionIsSnippet,
-        qualityScore: quality.score,
-        occupation: occupation.occupation,
-        occupationFamily: occupation.occupationFamily,
-        seniority: occupation.seniority,
-        attribution: effectiveAttribution,
-        expiresAt: draft.expiresAt ?? null,
-      },
-    });
-
-    stats.created++;
-    try {
-      await upsertSourceListing(created.id, draftForDedup);
-    } catch {
-      // provenance best-effort
-    }
-    return namespacedExternalId;
-  } catch (error) {
-    const racedCandidate = await findDedupCandidate(draft);
-    if (racedCandidate) {
-      stats.duplicates++;
-      return null;
-    }
-    throw error;
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Completeness evaluation                                                   */
-/* -------------------------------------------------------------------------- */
-
-function computeCompleteness(
-  stats: IngestStats,
-): IngestStats["completeness"] {
-  if (stats.timedOut) {
-    return "PARTIAL";
-  }
-
-  if (stats.leaseLost) {
-    return "PARTIAL";
-  }
-
-  if (
-    stats.fetched === 0 &&
-    (stats.failed > 0 || stats.errors.length > 0)
-  ) {
-    return "FAILED";
-  }
-
-  if (
-    stats.failed === 0 &&
-    stats.errors.length === 0
-  ) {
-    return "FULL";
-  }
-
-  return "PARTIAL";
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Public entrypoint                                                         */
-/* -------------------------------------------------------------------------- */
-
-export async function runIngestion(
-  options?: {
-    sourceKeys?: string[];
-    maxPages?: number;
-    /** When true, ignore saved cursor and start at page 1. */
-    resetCheckpoint?: boolean;
-  },
-): Promise<IngestStats[]> {
-  const started = Date.now();
-  const requestedKeys = options?.sourceKeys;
-  const maxPages = clampMaxPages(options?.maxPages);
-
-  const enabled = await getRunnableSources(requestedKeys);
-
-  const allStats: IngestStats[] = [];
-  const processedKeys = new Set<string>();
-
-  for (const source of enabled) {
-    if (isTimedOut(started)) {
-      break;
-    }
-
-    processedKeys.add(source.key);
-
-    if (!isProductionIngestAllowed(source)) {
-      const blocked = emptyStats(source.key);
-      blocked.finishedAt = new Date().toISOString();
-      blocked.completeness = "FAILED";
-      const reason = ingestBlockReason(source) ?? "source_blocked";
-      blocked.errors.push(reason);
-      allStats.push(blocked);
-      logIngestionEvent("warn", "source_blocked", {
-        sourceKey: source.key,
-        runId: blocked.runId,
-        reason,
-      });
-      continue;
-    }
-
-    const adapter = source.adapter;
-    if (!adapter) {
-      const missing = emptyStats(source.key);
-      missing.finishedAt = new Date().toISOString();
-      missing.completeness = "FAILED";
-      missing.errors.push("adapter_missing");
-      allStats.push(missing);
-      logIngestionEvent("error", "adapter_missing", {
-        sourceKey: source.key,
-        runId: missing.runId,
-      });
-      continue;
-    }
-
-    const stats = emptyStats(source.key);
-    const seenExternalIds: string[] = [];
-    const sourceAttribution = source.attribution ?? null;
-
-    const capabilities = source.capabilities;
-    const singlePage = shouldStopAfterFirstPage(capabilities);
-    const cursorBased = isCursorBasedPagination(capabilities);
-
-    logIngestionEvent("info", "source_run_start", {
-      sourceKey: source.key,
-      runId: stats.runId,
-    });
-
-    const circuit = evaluateCircuit({
-      enabled: source.enabled !== false,
-      consecutiveFailures:
-        typeof (source as { consecutiveFailures?: number }).consecutiveFailures ===
-        "number"
-          ? ((source as { consecutiveFailures?: number }).consecutiveFailures ?? 0)
-          : 0,
-      lastErrorAt: (source as { lastErrorAt?: Date | null }).lastErrorAt ?? null,
-    });
-    if (!circuit.allowRequest) {
-      stats.finishedAt = new Date().toISOString();
-      stats.completeness = "FAILED";
-      stats.errors.push(circuit.reason);
-      allStats.push(stats);
-      logIngestionEvent("warn", "source_circuit_open", {
-        sourceKey: source.key,
-        runId: stats.runId,
-        reason: circuit.reason,
-      });
-      continue;
-    }
-
-    const lease = await tryAcquireSourceLease(source.key);
-    if (!lease) {
-      stats.finishedAt = new Date().toISOString();
-      stats.completeness = "PARTIAL";
-      stats.errors.push("source_lease_held");
-      allStats.push(stats);
-      logIngestionEvent("info", "source_lease_held", {
-        sourceKey: source.key,
-        runId: stats.runId,
-      });
-      continue;
-    }
-
-    const rateLimit =
-      (source as { rateLimitPerMinute?: number | null }).rateLimitPerMinute;
-    if (!tryAcquireSourceQuota(source.key, rateLimit)) {
-      stats.finishedAt = new Date().toISOString();
-      stats.completeness = "PARTIAL";
-      stats.errors.push("rate_limited");
-      allStats.push(stats);
-      await releaseSourceLease(lease);
-      logIngestionEvent("warn", "source_rate_limited", {
-        sourceKey: source.key,
-        runId: stats.runId,
-      });
-      continue;
-    }
-
-    let startPage = 1;
-    let resumeCursor: string | null | undefined;
-    if (!options?.resetCheckpoint) {
-      const cp = await loadSourceCheckpoint(source.key);
-      if (cp?.page != null && cp.page > 1) {
-        startPage = cp.page;
-      }
-      if (cp?.cursor) {
-        resumeCursor = cp.cursor;
-      } else if (cp?.token) {
-        resumeCursor = cp.token;
-      }
-    } else {
-      await clearSourceCheckpoint(source.key);
-    }
-
-    const seenCursors = new Set<string>();
-
-    if (typeof resumeCursor === "string" && resumeCursor.length > 0) {
-      seenCursors.add(resumeCursor);
-    }
-
-    let pagesThisRun = 0;
-
-    try {
-      for (
-        let page = startPage;
-        page <= maxPages;
-        page++
-      ) {
-        if (isTimedOut(started)) {
-          stats.timedOut = true;
-          break;
-        }
-
-        if (remainingTimeMs(started) <= 0) {
-          stats.timedOut = true;
-          break;
-        }
-
-        let result;
-        try {
-          result = await adapter.fetchPage({
-            page,
-            perPage: PER_PAGE,
-            cursor: resumeCursor,
-            sourceConfig: {
-              key: source.key,
-              name: source.name,
-              language: source.language,
-              rateLimitPerMinute: source.rateLimitPerMinute,
-              httpConfig: source.httpConfig,
-              attribution: source.attribution ?? null,
-            },
-          });
-        } catch (error) {
-          stats.failed++;
-          pushError(
-            stats,
-            error,
-            "source_fetch_failed",
-          );
-          logIngestionEvent("error", "source_fetch_failed", {
-            sourceKey: source.key,
-            runId: stats.runId,
-            page,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          break;
-        }
-
-        if (cursorBased) {
-          if (
-            result.nextCursor !== undefined &&
-            result.nextCursor !== null &&
-            result.nextCursor !== ""
-          ) {
-            if (seenCursors.has(result.nextCursor)) {
-              stats.errors.push("pagination_loop_detected");
-              logIngestionEvent("warn", "pagination_loop_detected", {
-                sourceKey: source.key,
-                runId: stats.runId,
-                page,
-              });
-              try {
-                await saveSourceCheckpoint(source.key, {
-                  page,
-                  cursor: result.nextCursor,
-                });
-              } catch {
-                // best-effort
-              }
-              break;
-            }
-            seenCursors.add(result.nextCursor);
-            resumeCursor = result.nextCursor;
-          } else if (result.nextCursor === undefined) {
-            // no cursor concept returned by adapter
-          } else {
-            resumeCursor = result.nextCursor ?? null;
-          }
-        }
-
-        const renewed = await renewSourceLease(lease);
-        if (!renewed) {
-          stats.leaseLost = true;
-          stats.errors.push("source_lease_lost");
-          logIngestionEvent("warn", "source_lease_lost", {
-            sourceKey: source.key,
-            runId: stats.runId,
-            page,
-          });
-          try {
-            await saveSourceCheckpoint(source.key, {
-              page,
-              cursor: resumeCursor ?? null,
-            });
-          } catch {
-            // best-effort
-          }
-          break;
-        }
-
-        stats.fetched += result.fetched;
-
-        if (result.errors?.length) {
-          stats.errors.push(
-            ...result.errors
-              .map((error) => String(error).slice(0, 200))
-              .filter(Boolean),
-          );
-        }
-
-        for (const draft of result.jobs) {
-          if (isTimedOut(started)) {
-            stats.timedOut = true;
-            break;
-          }
-
-          try {
-            const seenId = await persistDraft(
-              draft,
-              stats,
-              sourceAttribution,
-            );
-            if (seenId) seenExternalIds.push(seenId);
-          } catch (error) {
-            stats.failed++;
-            pushError(
-              stats,
-              error,
-              "persist_error",
-            );
-          }
-        }
-
-        pagesThisRun += 1;
-
-        if (stats.timedOut) {
-          await saveSourceCheckpoint(source.key, {
-            page,
-            cursor: resumeCursor ?? null,
-          });
-          break;
-        }
-
-        if (singlePage) {
-          await clearSourceCheckpoint(source.key);
-          break;
-        }
-
-        if (!result.hasMore) {
-          await clearSourceCheckpoint(source.key);
-          break;
-        }
-
-        await saveSourceCheckpoint(source.key, {
-          page: page + 1,
-          cursor: resumeCursor ?? null,
-        });
-      }
-    } catch (error) {
-      stats.failed++;
-      pushError(
-        stats,
-        error,
-        "source_failed",
-      );
-      logIngestionEvent("error", "source_failed", {
-        sourceKey: source.key,
-        runId: stats.runId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      await releaseSourceLease(lease);
-    }
-
-    stats.finishedAt = new Date().toISOString();
-    stats.durationMs =
-      new Date(stats.finishedAt).getTime() -
-      new Date(stats.startedAt).getTime();
-    stats.completeness = computeCompleteness(stats);
-    allStats.push(stats);
-
-    logIngestionEvent(
-      stats.completeness === "FAILED" ? "error" : "info",
-      "source_run_end",
-      {
-        sourceKey: source.key,
-        runId: stats.runId,
-        status: stats.completeness,
-        durationMs: stats.durationMs,
-        fetched: stats.fetched,
-        created: stats.created,
-        updated: stats.updated,
-        duplicates: stats.duplicates,
-        skipped: stats.skipped,
-        qualityRejected: stats.qualityRejected,
-        failed: stats.failed,
-        pages: pagesThisRun,
-      },
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">
+            {t("Common.loading", "Loading...")}
+          </p>
+        </div>
+      </main>
     );
-
-    if (stats.completeness === "FULL") {
-      await clearSourceCheckpoint(source.key);
-    } else if (stats.completeness === "FAILED" && pagesThisRun === 0) {
-      // Hard fail before any page — do not advance cursor
-    }
-
-    try {
-      await recordSourceRun(stats);
-    } catch {
-      // best-effort: metrics must never fail the ingestion run
-    }
-    if (stats.completeness === "FULL") {
-      try {
-        await applyAbsenceFreshness({
-          sourceKey: source.key,
-          completeness: stats.completeness,
-          sourceKeys: [source.key],
-          seenExternalIds,
-        } as never);
-      } catch {
-        // best-effort
-      }
-    }
   }
 
-  if (requestedKeys?.length) {
-    for (const key of requestedKeys) {
-      if (processedKeys.has(key)) {
-        continue;
-      }
-
-      const reg = SOURCE_REGISTRY.find(
-        (source) => source.key === key,
-      );
-
-      if (!reg) {
-        continue;
-      }
-
-      const skipped = emptyStats(key);
-      skipped.finishedAt = new Date().toISOString();
-      skipped.completeness = "FAILED";
-      const reason = ingestBlockReason(reg) ?? "source_blocked";
-      skipped.errors.push(reason);
-      allStats.push(skipped);
-      logIngestionEvent("warn", "source_not_processed", {
-        sourceKey: key,
-        runId: skipped.runId,
-        reason,
-      });
-    }
+  if (error || !job) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
+        <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-400 font-medium mb-4">
+            {error || t("JobDetail.notFound", "Job not found")}
+          </p>
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t("JobDetail.backToJobs", "Back to Jobs")}
+          </Link>
+        </div>
+      </main>
+    );
   }
 
-  return allStats;
+  const companyName =
+    job.company?.name || t("Companies.unknown", "Unknown company");
+
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
+        <Link
+          href="/jobs"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t("JobDetail.backToJobs", "Back to all jobs")}
+        </Link>
+
+        {planLimit && (
+          <div className="mb-6">
+            <PlanLimitBanner
+              message={planLimit.message}
+              code={planLimit.code}
+              onClose={() => setPlanLimit(null)}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-0 space-y-6">
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+                <div className="flex items-start gap-4">
+                  <CompanyLogo
+                    name={companyName}
+                    logo={job.company?.logo}
+                    size={56}
+                    priority
+                  />
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">
+                      {job.title}
+                    </h1>
+                    <div className="mb-2">
+                      <JobMatchBadge jobId={job.id} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Building2 className="w-3.5 h-3.5" />
+                        {companyName}
+                      </span>
+                      {job.category && (
+                        <span className="px-2 py-0.5 rounded-full bg-white/5 text-xs">
+                          {job.category.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saveLoading || !savedInitialized}
+                  className={`p-2.5 rounded-xl border transition-all disabled:opacity-60 ${
+                    saved
+                      ? "bg-pink-500/10 border-pink-500/30 text-pink-400"
+                      : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                  }`}
+                  title={
+                    saved
+                      ? t("JobDetail.unsave", "Unsave")
+                      : t("JobDetail.save", "Save job")
+                  }
+                >
+                  {saveLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Heart
+                      className={`w-5 h-5 ${saved ? "fill-current" : ""}`}
+                    />
+                  )}
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-3 text-sm text-slate-300 mb-6">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                  {job.location}
+                </span>
+                {job.remote && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300">
+                    <Wifi className="w-3.5 h-3.5" />
+                    {t("JobDetail.remote", "Remote")}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
+                  {job.type}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+                  {formatSalary(
+                    t,
+                    locale,
+                    job.currency,
+                    job.salaryMin,
+                    job.salaryMax,
+                  )}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  {timeAgo(job.createdAt)}
+                </span>
+                {job.deadline && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                    <Calendar className="w-3.5 h-3.5 text-rose-400" />
+                    {t("JobDetail.deadline", "Deadline")}{" "}
+                    {new Date(job.deadline).toLocaleDateString(locale)}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleApplyClick}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/20"
+                >
+                  <Send className="w-4 h-4" />
+                  {t("JobDetail.apply", "Apply now")}
+                </button>
+                {job.company?.website && (
+                  <a
+                    href={job.company.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10"
+                  >
+                    <Globe className="w-4 h-4" />
+                    {t("Companies.website", "Website")}
+                  </a>
+                )}
+              </div>
+
+              {/* Source attribution for aggregated jobs (RemoteOK, Jobicy, ...).
+                  RemoteOK's API ToS requires a follow link (no rel="nofollow")
+                  plus naming the source. */}
+              {job.attribution && job.externalUrl && (
+                <p className="text-xs text-slate-500 mt-3">
+                  <a
+                    href={job.externalUrl}
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex items-center gap-1 underline decoration-dotted hover:text-slate-300 transition-colors"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    {job.attribution}
+                  </a>
+                </p>
+              )}
+            </div>
+
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-cyan-400" />
+                {t("JobDetail.matchScoreTitle", "Your match score")}
+              </h2>
+
+              {matchLoading ? (
+                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("Common.loading", "Loading...")}
+                </div>
+              ) : match ? (
+                <div className="space-y-4">
+                  <div className="flex items-end gap-3">
+                    <span
+                      className={`text-4xl font-bold tabular-nums ${scoreColor(
+                        match.score,
+                      )}`}
+                    >
+                      {match.score}%
+                    </span>
+                    <span className="text-slate-400 text-sm pb-1">
+                      {t("JobDetail.overallFit", "overall fit")}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(
+                      [
+                        [t("JobDetail.skills", "Skills"), match.breakdown?.skills ?? 0],
+                        [
+                          t("JobDetail.location", "Location"),
+                          match.breakdown?.location ?? 0,
+                        ],
+                        [
+                          t("JobDetail.experience", "Experience"),
+                          match.breakdown?.experience ?? 0,
+                        ],
+                        [t("JobDetail.remote", "Remote"), match.breakdown?.remote ?? 0],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-xs text-slate-400 mb-1">
+                          <span>{label}</span>
+                          <span>{value}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${scoreBar(value)}`}
+                            style={{ width: `${value}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {Array.isArray(match.reasons) && match.reasons.length > 0 && (
+                    <ul className="mt-2 space-y-1.5">
+                      {match.reasons.map((r: string) => (
+                        <li
+                          key={r}
+                          className="text-sm text-slate-300 flex items-start gap-2"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                          {r}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-400 space-y-3">
+                  <p>
+                    {matchMessage ||
+                      t("Common.error", "Match score unavailable.")}
+                  </p>
+                  {(matchMessage || "").toLowerCase().includes("sign in") && (
+                    <Link
+                      href={`/login?callbackUrl=/jobs/${id}`}
+                      className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
+                    >
+                      {t("Common.signIn", "Sign in")}
+                    </Link>
+                  )}
+                  {(matchMessage || "").toLowerCase().includes("profile") && (
+                    <Link
+                      href="/profile"
+                      className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
+                    >
+                      {t("Nav.settings", "Settings")}
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-cyan-400" />
+                {t("JobDetail.description", "Description")}
+              </h2>
+              <div className="text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                {job.description}
+              </div>
+            </div>
+
+            {job.requirements.length > 0 && (
+              <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-purple-400" />
+                  {t("JobDetail.requirements", "Requirements")}
+                </h2>
+                <ul className="space-y-3">
+                  {job.requirements.map((req, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-slate-300 text-sm sm:text-base"
+                    >
+                      <span className="w-5 h-5 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-purple-400 text-xs font-bold">
+                          {i + 1}
+                        </span>
+                      </span>
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {job.responsibilities.length > 0 && (
+              <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                  {t("JobDetail.responsibilities", "Responsibilities")}
+                </h2>
+                <ul className="space-y-3">
+                  {job.responsibilities.map((resp, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-slate-300 text-sm sm:text-base"
+                    >
+                      <span className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-emerald-400 text-xs font-bold">
+                          {i + 1}
+                        </span>
+                      </span>
+                      {resp}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {job.benefits.length > 0 && (
+              <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                <h2 className="text-lg font-bold text-white mb-4">
+                  {t("JobDetail.benefits", "Benefits")}
+                </h2>
+                <ul className="grid sm:grid-cols-2 gap-2">
+                  {job.benefits.map((b, i) => (
+                    <li
+                      key={i}
+                      className="text-sm text-slate-300 flex items-center gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <aside className="w-full lg:w-80 shrink-0 space-y-4">
+            <div className="glass rounded-2xl p-5 border border-white/10 space-y-3">
+              <p className="text-xs text-slate-500">
+                {t("JobDetail.stats", "{views} views · {applicants} applicants")
+                  .split("{views}")
+                  .join(String(job.viewCount))
+                  .split("{applicants}")
+                  .join(String(job.applicantCount))}
+              </p>
+              <button
+                type="button"
+                onClick={handleApplyClick}
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold"
+              >
+                {t("JobDetail.apply", "Apply now")}
+              </button>
+              {/* Sidebar attribution — appears only for aggregated jobs. */}
+              {job.attribution && job.externalUrl && (
+                <p className="text-[11px] text-slate-500">
+                  <a
+                    href={job.externalUrl}
+                    target="_blank"
+                    rel="noopener"
+                    className="underline decoration-dotted hover:text-slate-300 transition-colors"
+                  >
+                    {job.attribution}
+                  </a>
+                </p>
+              )}
+              <ContactEmployer jobId={job.id} jobTitle={job.title} />
+              {shareUrl && (
+                <ShareButtons
+                  title={`${job.title} at ${companyName}`}
+                  url={shareUrl}
+                />
+              )}
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      {applyOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+          <div className="glass w-full max-w-md rounded-2xl p-6 border border-white/10 relative">
+            <button
+              type="button"
+              onClick={() => {
+                setApplyOpen(false);
+                setApplyError("");
+                setApplySuccess(false);
+                setPlanLimit(null);
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              aria-label={t("Common.close", "Close")}
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {applySuccess ? (
+              <div className="text-center py-6">
+                <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  {t("JobDetail.applied", "Application submitted")}
+                </h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  {t(
+                    "JobDetail.applySuccessBody",
+                    "Your application has been sent successfully.",
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setApplyOpen(false)}
+                  className="px-5 py-2 rounded-xl bg-cyan-500 text-white text-sm font-medium"
+                >
+                  {t("Common.close", "Close")}
+                </button>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-white mb-1 pr-8">
+                  {t("JobDetail.apply", "Apply now")} — {job.title}
+                </h3>
+                <p className="text-slate-400 text-sm mb-4">{companyName}</p>
+
+                {planLimit && (
+                  <div className="mb-4">
+                    <PlanLimitBanner
+                      message={planLimit.message}
+                      code={planLimit.code}
+                      onClose={() => setPlanLimit(null)}
+                    />
+                  </div>
+                )}
+
+                {applyError && (
+                  <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                    {applyError}
+                  </div>
+                )}
+
+                <form onSubmit={handleApply} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="apply-coverletter"
+                      className="block text-sm font-medium text-slate-300 mb-2"
+                    >
+                      {t("JobDetail.coverLetterLabel", "Cover Letter (Optional)")}
+                    </label>
+                    <textarea
+                      id="apply-coverletter"
+                      value={coverLetter}
+                      onChange={(e) => setCoverLetter(e.target.value)}
+                      placeholder={t(
+                        "JobDetail.coverLetterPlaceholder",
+                        "Tell us why you are a great fit for this role...",
+                      )}
+                      rows={5}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setApplyOpen(false)}
+                      className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm font-medium transition-all"
+                    >
+                      {t("Common.cancel", "Cancel")}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={applying}
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {applying ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {t("JobDetail.applying", "Applying...")}
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          {t("JobDetail.apply", "Apply now")}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
+  );
 }
