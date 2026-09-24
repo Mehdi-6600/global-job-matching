@@ -55,6 +55,16 @@ const siteUrl = (
   "https://global-job-matching.vercel.app"
 ).replace(/\/$/, "");
 
+/**
+ * Google Search Console — URL-prefix verification.
+ * Paste the `content` value from the HTML tag method, or set
+ * NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION in Vercel env.
+ * Example meta: <meta name="google-site-verification" content="...." />
+ */
+const GOOGLE_SITE_VERIFICATION =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() ||
+  "YOUR_CODE_HERE";
+
 /*
  * themeColor is aligned with --bg-page (#e8e5e0) so the mobile
  * browser chrome matches the soft neumorphic cream surface instead
@@ -160,6 +170,9 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
+  },
+  verification: {
+    google: GOOGLE_SITE_VERIFICATION,
   },
   alternates: {
     canonical: siteUrl,
