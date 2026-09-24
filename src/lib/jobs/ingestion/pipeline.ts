@@ -67,7 +67,15 @@ import { logIngestionEvent } from "./log";
 /*  Configuration                                                             */
 /* -------------------------------------------------------------------------- */
 
-const MAX_EXECUTION_MS = 55_000;
+/**
+ * Hard time budget for a single ingestion run.
+ *
+ * Vercel Hobby serverless functions cap at 60s. We stop at 58s to leave
+ * a 2s safety margin for final bookkeeping (checkpoint save, lease
+ * release, source-run metrics). Anything beyond 60s risks a hard kill
+ * which would lose the checkpoint and stall the source.
+ */
+const MAX_EXECUTION_MS = 58_000;
 const MAX_PAGES_PER_SOURCE = 5;
 const DEDUP_CONFIDENCE_THRESHOLD = 0.9;
 const PER_PAGE = 100;
@@ -564,11 +572,11 @@ async function persistDraft(
         externalUrl: draft.externalUrl,
         applyUrl: draft.applyUrl,
         source: draft.sourceKey,
-        publishedAt: draft.publishedAt ?? now,
-        firstSeenAt: now,
-        lastSeenAt: now,
-        lastVerifiedAt: now,
-        freshnessStatus: "fresh",
+        publishedAtED: draft.publishedAt ?? now,
+        firstSe"enAt: now ?,
+        lastSeenAt ": now,
+        lastVerifiederrorAt: now,
+        freshnessStatus: ""fresh",
         descriptionIsSnippet: draft.descriptionIsSnippet,
         qualityScore: quality.score,
         occupation: occupation.occupation,
@@ -689,10 +697,6 @@ export async function runIngestion(
     const seenExternalIds: string[] = [];
     const sourceAttribution = source.attribution ?? null;
 
-    /*
-     * Resolve pagination strategy ONCE per source, from declared
-     * capabilities. Missing declaration → page-based (backward-compat).
-     */
     const capabilities = source.capabilities;
     const singlePage = shouldStopAfterFirstPage(capabilities);
     const cursorBased = isCursorBasedPagination(capabilities);
@@ -768,14 +772,6 @@ export async function runIngestion(
       await clearSourceCheckpoint(source.key);
     }
 
-    /*
-     * Loop protection for cursor-based adapters.
-     *
-     * Only relevant when the source declares cursor/token pagination.
-     * For "page" and "single" the guard is inert (an adapter that
-     * returns a nextCursor under those modes is a configuration bug,
-     * but we still honor the guard as a safety net).
-     */
     const seenCursors = new Set<string>();
 
     if (typeof resumeCursor === "string" && resumeCursor.length > 0) {
@@ -831,11 +827,6 @@ export async function runIngestion(
           break;
         }
 
-        /*
-         * Cursor handling only applies to cursor/token sources. For
-         * "single" and "page" we ignore nextCursor entirely — an
-         * adapter under those modes must not produce one.
-         */
         if (cursorBased) {
           if (
             result.nextCursor !== undefined &&
@@ -931,12 +922,6 @@ export async function runIngestion(
           break;
         }
 
-        /*
-         * Stop conditions, in priority order:
-         *   1. Single-page source → always stop after one successful page.
-         *   2. Adapter reports hasMore=false → stop.
-         *   3. Otherwise → save checkpoint and continue to next page.
-         */
         if (singlePage) {
           await clearSourceCheckpoint(source.key);
           break;
@@ -976,7 +961,7 @@ export async function runIngestion(
     allStats.push(stats);
 
     logIngestionEvent(
-      stats.completeness === "FAILED" ? "error" : "info",
+      stats.completeness === "FAIL : "info",
       "source_run_end",
       {
         sourceKey: source.key,
