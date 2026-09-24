@@ -869,8 +869,10 @@ export async function runIngestion(
             page,
           });
           try {
+            // Same stuck-page issue as timedOut: advance when more pages exist.
+            const nextPage = result.hasMore ? page + 1 : page;
             await saveSourceCheckpoint(source.key, {
-              page,
+              page: nextPage,
               cursor: resumeCursor ?? null,
             });
           } catch {
@@ -915,8 +917,14 @@ export async function runIngestion(
         pagesThisRun += 1;
 
         if (stats.timedOut) {
+          // Advance page on timeout when more pages remain. Re-saving the
+          // same page (e.g. large Greenhouse board "stripe") caused an
+          // infinite restart on Vercel Hobby (~58s): only stripe listings
+          // ever landed in JobSourceListing. Remaining jobs on this board
+          // are refreshed on a later full cycle after checkpoint clears.
+          const nextPage = result.hasMore ? page + 1 : page;
           await saveSourceCheckpoint(source.key, {
-            page,
+            page: nextPage,
             cursor: resumeCursor ?? null,
           });
           break;
