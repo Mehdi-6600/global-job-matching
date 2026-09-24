@@ -16,6 +16,7 @@ import {
   Tag,
   AlertCircle,
   Layers,
+  ExternalLink,
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
@@ -34,6 +35,12 @@ interface Job {
   currency: string;
   tags: string[];
   createdAt: string;
+  // Ingestion provenance — present for aggregated jobs (RemoteOK, Jobicy,
+  // Arbeitnow, ...), null for employer-posted jobs.
+  source: string | null;
+  attribution: string | null;
+  externalUrl: string | null;
+  applyUrl: string | null;
   company: {
     id: string;
     name: string;
@@ -84,8 +91,6 @@ export default function JobsPage() {
   const { t, locale } = useLocale();
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  // Only the text inputs are debounced. Selects/checkboxes apply instantly,
-  // which keeps the request count low when a user interacts with filters.
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debouncedLocation, setDebouncedLocation] = useState("");
   const [debouncedTag, setDebouncedTag] = useState("");
@@ -98,9 +103,6 @@ export default function JobsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch categories once (dynamically, from the same DB the
-  // /categories index page uses). Silently degrades to an empty list
-  // if the endpoint fails — the filter simply hides.
   useEffect(() => {
     let cancelled = false;
 
@@ -120,7 +122,6 @@ export default function JobsPage() {
     };
   }, []);
 
-  // Debounce only free-text fields.
   useEffect(() => {
     const handle = setTimeout(() => {
       setDebouncedSearch(filters.search);
@@ -675,6 +676,24 @@ export default function JobsPage() {
                           {tag}
                         </span>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Source attribution for aggregated jobs (RemoteOK, Jobicy, ...).
+                      RemoteOK's API ToS requires a follow link (no rel="nofollow")
+                      and naming the source. */}
+                  {job.attribution && job.externalUrl && (
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <a
+                        href={job.externalUrl}
+                        target="_blank"
+                        rel="noopener"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {job.attribution}
+                      </a>
                     </div>
                   )}
                 </Link>
