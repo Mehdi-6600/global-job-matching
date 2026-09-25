@@ -79,6 +79,8 @@ export const authConfig = {
         "/terms",
         "/privacy",
         "/companies",
+        "/categories",
+        "/locations",
         "/blog",
         "/search",
       ];
@@ -95,6 +97,8 @@ export const authConfig = {
         PUBLIC_PAGES.includes(pathname) ||
         pathname.startsWith("/jobs/") ||
         pathname.startsWith("/companies/") ||
+        pathname.startsWith("/categories/") ||
+        pathname.startsWith("/locations/") ||
         pathname.startsWith("/blog/")
       ) {
         return true;
