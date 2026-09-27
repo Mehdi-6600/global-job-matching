@@ -5,8 +5,12 @@ import { listLocationStats } from "@/lib/seo/location-query";
 import { locales, defaultLocale } from "@/lib/i18n/config";
 import { localizePath } from "@/lib/i18n/locale-path";
 
-const JOBS_PER_SITEMAP = 2000;
-const MAX_JOB_CHUNKS = 40;
+/** Smaller chunks = faster TTFB + smaller download for crawlers */
+const JOBS_PER_SITEMAP = 500;
+const MAX_JOB_CHUNKS = 80;
+
+/** CDN / ISR-style cache for sitemap responses (seconds) */
+export const revalidate = 3600;
 
 function languageAlternates(pathname: string): Record<string, string> {
   const base = getSiteUrl().replace(/\/$/, "");
@@ -24,18 +28,21 @@ function entry(
     lastModified?: Date;
     changeFrequency?: MetadataRoute.Sitemap[0]["changeFrequency"];
     priority?: number;
+    /** hreflang only where it matters (hubs). Jobs stay lean. */
+    withAlternates?: boolean;
   } = {}
 ): MetadataRoute.Sitemap[0] {
   const base = getSiteUrl().replace(/\/$/, "");
-  return {
+  const item: MetadataRoute.Sitemap[0] = {
     url: `${base}${localizePath(pathname, defaultLocale)}`,
     lastModified: opts.lastModified || new Date(),
     changeFrequency: opts.changeFrequency || "weekly",
     priority: opts.priority ?? 0.5,
-    alternates: {
-      languages: languageAlternates(pathname),
-    },
   };
+  if (opts.withAlternates) {
+    item.alternates = { languages: languageAlternates(pathname) };
+  }
+  return item;
 }
 
 export async function generateSitemaps() {
@@ -69,7 +76,7 @@ export default async function sitemap(props: {
     return [];
   }
 
-  // id === 0 → صفحات ثابت + لوکیشن + دسته + شرکت + بلاگ
+  // ── id 0: static + hubs (with hreflang) ──────────────────────────
   if (id === 0) {
     const staticPaths = [
       "/",
@@ -92,83 +99,82 @@ export default async function sitemap(props: {
         lastModified: now,
         changeFrequency: p === "/" || p === "/jobs" ? "daily" : "weekly",
         priority: p === "/" ? 1 : p === "/jobs" ? 0.9 : 0.6,
+        withAlternates: true,
       })
     );
 
-    let blogEntries: MetadataRoute.Sitemap = [];
-    let companyEntries: MetadataRoute.Sitemap = [];
-    let locationEntries: MetadataRoute.Sitemap = [];
-    let categoryEntries: MetadataRoute.Sitemap = [];
-
-    try {
-      const posts = await db.blogPost.findMany({
-        where: { published: true },
-        select: { slug: true, updatedAt: true, createdAt: true },
-        orderBy: { updatedAt: "desc" },
-        take: 2000,
-      });
-      blogEntries = posts.map((p) =>
-        entry(`/blog/${p.slug}`, {
-          lastModified: p.updatedAt || p.createdAt,
-          changeFrequency: "weekly",
-          priority: 0.55,
+    const [posts, companies, locs, categories] = await Promise.all([
+      db.blogPost
+        .findMany({
+          where: { published: true },
+          select: { slug: true, updatedAt: true, createdAt: true },
+          orderBy: { updatedAt: "desc" },
+          take: 500,
         })
-      );
-    } catch {
-      /* ignore */
-    }
-
-    try {
-      const companies = await db.company.findMany({
-        where: { status: "active" },
-        select: { id: true, updatedAt: true },
-        orderBy: { updatedAt: "desc" },
-        take: 5000,
-      });
-      companyEntries = companies.map((c) =>
-        entry(`/companies/${c.id}`, {
-          lastModified: c.updatedAt,
-          changeFrequency: "weekly",
-          priority: 0.6,
+        .catch(() => [] as { slug: string; updatedAt: Date; createdAt: Date }[]),
+      db.company
+        .findMany({
+          where: { status: "active" },
+          select: { id: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
+          take: 2000,
         })
-      );
-    } catch {
-      /* ignore */
-    }
+        .catch(() => [] as { id: string; updatedAt: Date }[]),
+      listLocationStats(1).catch(() => [] as { slug: string }[]),
+      db.category
+        .findMany({
+          select: {
+            slug: true,
+            _count: { select: { jobs: { where: { status: "active" } } } },
+          },
+          take: 200,
+        })
+        .catch(
+          () =>
+            [] as {
+              slug: string;
+              _count: { jobs: number };
+            }[]
+        ),
+    ]);
 
-    try {
-      const locs = await listLocationStats(1);
-      locationEntries = locs.map((l) =>
-        entry(`/locations/${l.slug}`, {
+    const blogEntries = posts.map((p) =>
+      entry(`/blog/${p.slug}`, {
+        lastModified: p.updatedAt || p.createdAt,
+        changeFrequency: "weekly",
+        priority: 0.55,
+        withAlternates: true,
+      })
+    );
+
+    const companyEntries = companies.map((c) =>
+      entry(`/companies/${c.id}`, {
+        lastModified: c.updatedAt,
+        changeFrequency: "weekly",
+        priority: 0.6,
+        withAlternates: false,
+      })
+    );
+
+    const locationEntries = locs.map((l) =>
+      entry(`/locations/${l.slug}`, {
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.7,
+        withAlternates: true,
+      })
+    );
+
+    const categoryEntries = categories
+      .filter((c) => c._count.jobs > 0)
+      .map((c) =>
+        entry(`/categories/${c.slug}`, {
           lastModified: now,
           changeFrequency: "daily",
           priority: 0.7,
+          withAlternates: true,
         })
       );
-    } catch {
-      /* ignore */
-    }
-
-    try {
-      const categories = await db.category.findMany({
-        select: {
-          slug: true,
-          _count: { select: { jobs: { where: { status: "active" } } } },
-        },
-        take: 200,
-      });
-      categoryEntries = categories
-        .filter((c) => c._count.jobs > 0)
-        .map((c) =>
-          entry(`/categories/${c.slug}`, {
-            lastModified: now,
-            changeFrequency: "daily",
-            priority: 0.7,
-          })
-        );
-    } catch {
-      /* ignore */
-    }
 
     return [
       ...staticPages,
@@ -179,7 +185,7 @@ export default async function sitemap(props: {
     ];
   }
 
-  // id >= 1 → چانک جاب‌ها
+  // ── id >= 1: job chunks (no hreflang → ~5–8× smaller) ────────────
   const chunkIndex = id - 1;
   const skip = chunkIndex * JOBS_PER_SITEMAP;
 
@@ -187,7 +193,7 @@ export default async function sitemap(props: {
     const jobs = await db.job.findMany({
       where: { status: "active" },
       select: { id: true, updatedAt: true },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       skip,
       take: JOBS_PER_SITEMAP,
     });
@@ -197,6 +203,7 @@ export default async function sitemap(props: {
         lastModified: j.updatedAt,
         changeFrequency: "daily",
         priority: 0.8,
+        withAlternates: false,
       })
     );
   } catch {
