@@ -4,8 +4,8 @@ import { getSiteUrl } from "@/lib/site-url";
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
-const JOBS_PER_SITEMAP = 2000;
-const MAX_JOB_CHUNKS = 40;
+const JOBS_PER_SITEMAP = 500;
+const MAX_JOB_CHUNKS = 80;
 
 export async function GET() {
   const base = getSiteUrl().replace(/\/$/, "");
