@@ -1,20 +1,44 @@
+import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { getSiteUrl } from "@/lib/site-url";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 3600;
+import { listLocationStats } from "@/lib/seo/location-query";
+import { locales, defaultLocale } from "@/lib/i18n/config";
+import { localizePath } from "@/lib/i18n/locale-path";
 
 const JOBS_PER_SITEMAP = 2000;
 const MAX_JOB_CHUNKS = 40;
 
-/**
- * Canonical sitemap index at /sitemap.xml
- * Chunks live at /sitemap/0.xml, /sitemap/1.xml, ... (from app/sitemap.ts)
- */
-export async function GET() {
+function languageAlternates(pathname: string): Record<string, string> {
   const base = getSiteUrl().replace(/\/$/, "");
-  const now = new Date().toISOString();
+  const languages: Record<string, string> = {};
+  for (const locale of locales) {
+    languages[locale] = `${base}${localizePath(pathname, locale)}`;
+  }
+  languages["x-default"] = `${base}${localizePath(pathname, defaultLocale)}`;
+  return languages;
+}
 
+function entry(
+  pathname: string,
+  opts: {
+    lastModified?: Date;
+    changeFrequency?: MetadataRoute.Sitemap[0]["changeFrequency"];
+    priority?: number;
+  } = {}
+): MetadataRoute.Sitemap[0] {
+  const base = getSiteUrl().replace(/\/$/, "");
+  return {
+    url: `${base}${localizePath(pathname, defaultLocale)}`,
+    lastModified: opts.lastModified || new Date(),
+    changeFrequency: opts.changeFrequency || "weekly",
+    priority: opts.priority ?? 0.5,
+    alternates: {
+      languages: languageAlternates(pathname),
+    },
+  };
+}
+
+export async function generateSitemaps() {
   let jobCount = 0;
   try {
     jobCount = await db.job.count({ where: { status: "active" } });
@@ -27,31 +51,155 @@ export async function GET() {
     Math.max(1, Math.ceil(Math.max(jobCount, 1) / JOBS_PER_SITEMAP))
   );
 
-  // id=0 → static + locations + categories + companies + blog
-  // id=1..N → job chunks
-  const ids: number[] = [0];
+  const ids: { id: number }[] = [{ id: 0 }];
   for (let i = 1; i <= jobChunks; i++) {
-    ids.push(i);
+    ids.push({ id: i });
+  }
+  return ids;
+}
+
+export default async function sitemap(props: {
+  id: number | string;
+}): Promise<MetadataRoute.Sitemap> {
+  const id =
+    typeof props.id === "string" ? parseInt(props.id, 10) : Number(props.id);
+  const now = new Date();
+
+  if (!Number.isFinite(id) || id < 0) {
+    return [];
   }
 
-  const body = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${ids
-  .map(
-    (id) => `  <sitemap>
-    <loc>${base}/sitemap/${id}.xml</loc>
-    <lastmod>${now}</lastmod>
-  </sitemap>`
-  )
-  .join("\n")}
-</sitemapindex>
-`;
+  // id === 0 → صفحات ثابت + لوکیشن + دسته + شرکت + بلاگ
+  if (id === 0) {
+    const staticPaths = [
+      "/",
+      "/jobs",
+      "/companies",
+      "/locations",
+      "/categories",
+      "/pricing",
+      "/blog",
+      "/career-risk",
+      "/resume-builder",
+      "/about",
+      "/contact",
+      "/privacy",
+      "/terms",
+    ];
 
-  return new Response(body, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-    },
-  });
+    const staticPages = staticPaths.map((p) =>
+      entry(p, {
+        lastModified: now,
+        changeFrequency: p === "/" || p === "/jobs" ? "daily" : "weekly",
+        priority: p === "/" ? 1 : p === "/jobs" ? 0.9 : 0.6,
+      })
+    );
+
+    let blogEntries: MetadataRoute.Sitemap = [];
+    let companyEntries: MetadataRoute.Sitemap = [];
+    let locationEntries: MetadataRoute.Sitemap = [];
+    let categoryEntries: MetadataRoute.Sitemap = [];
+
+    try {
+      const posts = await db.blogPost.findMany({
+        where: { published: true },
+        select: { slug: true, updatedAt: true, createdAt: true },
+        orderBy: { updatedAt: "desc" },
+        take: 2000,
+      });
+      blogEntries = posts.map((p) =>
+        entry(`/blog/${p.slug}`, {
+          lastModified: p.updatedAt || p.createdAt,
+          changeFrequency: "weekly",
+          priority: 0.55,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+
+    try {
+      const companies = await db.company.findMany({
+        where: { status: "active" },
+        select: { id: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+        take: 5000,
+      });
+      companyEntries = companies.map((c) =>
+        entry(`/companies/${c.id}`, {
+          lastModified: c.updatedAt,
+          changeFrequency: "weekly",
+          priority: 0.6,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+
+    try {
+      const locs = await listLocationStats(1);
+      locationEntries = locs.map((l) =>
+        entry(`/locations/${l.slug}`, {
+          lastModified: now,
+          changeFrequency: "daily",
+          priority: 0.7,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+
+    try {
+      const categories = await db.category.findMany({
+        select: {
+          slug: true,
+          _count: { select: { jobs: { where: { status: "active" } } } },
+        },
+        take: 200,
+      });
+      categoryEntries = categories
+        .filter((c) => c._count.jobs > 0)
+        .map((c) =>
+          entry(`/categories/${c.slug}`, {
+            lastModified: now,
+            changeFrequency: "daily",
+            priority: 0.7,
+          })
+        );
+    } catch {
+      /* ignore */
+    }
+
+    return [
+      ...staticPages,
+      ...locationEntries,
+      ...categoryEntries,
+      ...companyEntries,
+      ...blogEntries,
+    ];
+  }
+
+  // id >= 1 → چانک جاب‌ها
+  const chunkIndex = id - 1;
+  const skip = chunkIndex * JOBS_PER_SITEMAP;
+
+  try {
+    const jobs = await db.job.findMany({
+      where: { status: "active" },
+      select: { id: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      skip,
+      take: JOBS_PER_SITEMAP,
+    });
+
+    return jobs.map((j) =>
+      entry(`/jobs/${j.id}`, {
+        lastModified: j.updatedAt,
+        changeFrequency: "daily",
+        priority: 0.8,
+      })
+    );
+  } catch {
+    return [];
+  }
 }
