@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -34,7 +34,7 @@ import { useLocale } from "@/components/locale-provider";
 import { JobMatchBadge } from "@/components/jobs/job-match-badge";
 import { messageFromApiError } from "@/lib/api-error-i18n";
 
-interface JobDetail {
+export interface JobDetail {
   id: string;
   title: string;
   description: string;
@@ -176,17 +176,17 @@ function scoreBar(score: number): string {
   return "bg-slate-500";
 }
 
-export default function JobDetailPage() {
+export default function JobDetailClient({
+  initialJob,
+}: {
+  initialJob: JobDetail;
+}) {
   const { t, locale } = useLocale();
-  const params = useParams();
   const router = useRouter();
-  const rawParam = params?.id;
-  const id = Array.isArray(rawParam)
-    ? String(rawParam[0] || "")
-    : String(rawParam || "");
+  const id = initialJob.id;
 
-  const [job, setJob] = useState<JobDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [job, setJob] = useState<JobDetail | null>(initialJob);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [savedInitialized, setSavedInitialized] = useState(false);
@@ -249,8 +249,7 @@ export default function JobDetailPage() {
   }, []);
 
   useEffect(() => {
-    if (!id) {
-      setError(t("JobDetail.notFound", "Invalid job ID"));
+    if (!id || initialJob) {
       setLoading(false);
       return;
     }
@@ -317,7 +316,7 @@ export default function JobDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, t]);
+  }, [id, t, initialJob]);
 
   useEffect(() => {
     if (!id) return;
