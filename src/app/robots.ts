@@ -8,9 +8,22 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: [
+          "/",
+          "/api/jobs",
+          "/api/jobs/",
+          "/api/auth/session",
+        ],
         disallow: [
           "/api/",
+          "/api/jobs/create",
+          "/api/jobs/employer",
+          "/api/jobs/fetch",
+          "/api/jobs/match",
+          "/api/jobs/sync",
+          "/api/jobs/*/applicants",
+          "/api/jobs/*/contact-employer",
+          "/api/jobs/*/match",
           "/dashboard/",
           "/settings/",
           "/messages/",
@@ -33,7 +46,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     host: base,
-    // ایندکس canonical — چانک‌ها از sitemap.ts می‌آیند
     sitemap: `${base}/sitemaps.xml`,
   };
 }
