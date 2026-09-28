@@ -62,11 +62,40 @@ function toClientJob(
       }
     : null;
 
-  return {
-    ...job,
-    createdAt: job.createdAt.toISOString(),
+    return {
+    id: job.id,
+    title: job.title,
+    description: job.description,
+    location: job.location,
+    remote: job.remote,
+    type: job.type,
+    experience: job.experience,
+    salaryMin: job.salaryMin,
+    salaryMax: job.salaryMax,
+    currency: job.currency,
+    requirements: job.requirements,
+    responsibilities: job.responsibilities,
+    benefits: job.benefits,
+    tags: job.tags,
+    status: job.status,
     deadline: job.deadline ? job.deadline.toISOString() : null,
+    viewCount: job.viewCount,
+    applicantCount: 0,
+    createdAt: job.createdAt.toISOString(),
+    postedById: job.postedById,
+    source: job.source,
+    attribution: job.attribution,
+    externalUrl: job.externalUrl,
+    applyUrl: job.applyUrl,
     company,
+    category: job.category
+      ? {
+          id: job.category.id,
+          name: job.category.name,
+          slug: job.category.slug,
+          color: job.category.color,
+        }
+      : null,
   };
 }
 
