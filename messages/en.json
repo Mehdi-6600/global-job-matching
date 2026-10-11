@@ -129,7 +129,9 @@
     "trustLanguagesLabel": "Languages",
     "trustFreshnessLabel": "Freshness verified",
     "trustSectionKicker": "BUILT ON REAL DATA",
-    "trustSectionTitle": "Trusted infrastructure, not testimonials."
+    "trustSectionTitle": "Trusted infrastructure, not testimonials.",
+    "feedTitle": "Live opportunity feed",
+    "feedEmpty": "New roles appear here as soon as they are published."
   },
   "Common": {
     "loading": "Loading...",
@@ -160,6 +162,8 @@
     "newsletterEmailPlaceholder": "Enter your email",
     "newsletterSubscribe": "Subscribe",
     "newsletterFooter": "No spam. Unsubscribe anytime.",
+    "newsletterSubmitting": "Subscribing…",
+    "newsletterRetry": "Try again",
     "newsletterErrorSubscribe": "Failed to subscribe",
     "newsletterErrorNetwork": "Network error. Please try again.",
     "timeAgo": {

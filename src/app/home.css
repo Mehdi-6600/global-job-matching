@@ -1,0 +1,1927 @@
+/* ============================================================================
+   GLOBAL JOB MATCHING — HOME EXPERIENCE
+   src/app/home.css · imported by src/app/layout.tsx after globals.css
+
+   Design direction: premium, light, AI/tech.
+     · clean near-white canvas with a soft aurora wash
+     · glass surfaces, 1px cool borders, soft layered elevation
+     · controlled neon accents (cyan → indigo → violet) used as light,
+       never as small text
+     · motion that explains state: rise-in on load, lift on hover,
+       shimmer while real data loads
+
+   Conventions
+     · mobile-first: every layout is single column, then grows at breakpoints
+     · all spacing uses logical properties so RTL Persian/Arabic mirror
+       correctly without a single direction-specific override
+     · colors are referenced through the shared tokens in globals.css, so
+       the light theme stays in one place
+     · decorative layers are aria-hidden in the markup and marked here
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. Shell + local tokens
+   ------------------------------------------------------------------------ */
+
+.gjmx-home {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  /* Home-scoped accent ramp — shared by icons, rings and glows. */
+  --gjmx-cyan: #0891b2;
+  --gjmx-indigo: #4f46e5;
+  --gjmx-violet: #7c3aed;
+  --gjmx-ring: rgba(255, 255, 255, 0.72);
+  --gjmx-panel-radius: clamp(20px, 2.4vw, 28px);
+}
+
+/* ---------------------------------------------------------------------------
+   2. Ambient light — decorative aurora field behind the hero
+   ------------------------------------------------------------------------ */
+
+.gjmx-hero {
+  position: relative;
+  padding-block: clamp(1.75rem, 5vw, 3.25rem) clamp(2.5rem, 6vw, 4.5rem);
+  overflow: clip;
+}
+
+.gjmx-hero-aura {
+  position: absolute;
+  inset-block-start: -28rem;
+  inset-inline: -12%;
+  height: 62rem;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(6px);
+}
+
+.gjmx-aura {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.gjmx-aura--one {
+  inline-size: 34rem;
+  block-size: 34rem;
+  inset-block-start: 12%;
+  inset-inline-start: 6%;
+  background: radial-gradient(circle at 35% 35%, rgba(34, 211, 238, 0.55), transparent 66%);
+  animation: gjmx-drift 26s var(--ease-in-out) infinite alternate;
+}
+
+.gjmx-aura--two {
+  inline-size: 30rem;
+  block-size: 30rem;
+  inset-block-start: 4%;
+  inset-inline-end: 4%;
+  background: radial-gradient(circle at 60% 40%, rgba(139, 92, 246, 0.48), transparent 66%);
+  animation: gjmx-drift 32s var(--ease-in-out) infinite alternate-reverse;
+}
+
+.gjmx-aura--three {
+  inline-size: 26rem;
+  block-size: 26rem;
+  inset-block-start: 34%;
+  inset-inline-start: 44%;
+  background: radial-gradient(circle at 50% 50%, rgba(217, 70, 239, 0.3), transparent 68%);
+  animation: gjmx-drift 38s var(--ease-in-out) infinite alternate;
+}
+
+/* Faint technical grid, dissolving at the edges. */
+.gjmx-hero-mesh {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(11, 18, 32, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 18, 32, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 78% 62% at 50% 34%, #000 8%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 34%, #000 8%, transparent 78%);
+  opacity: 0.7;
+}
+
+@keyframes gjmx-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(2.5rem, -1.75rem, 0) scale(1.08); }
+}
+
+/* ---------------------------------------------------------------------------
+   3. Hero layout
+   ------------------------------------------------------------------------ */
+
+.gjmx-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 3.5rem);
+  align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .gjmx-hero-inner {
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+    gap: 3.5rem;
+  }
+}
+
+.gjmx-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.gjmx-hero-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Staggered entrance — opacity only animates so text is never blurred. */
+.gjmx-hero-copy > * {
+  animation: gjmx-rise 620ms var(--ease-out) both;
+}
+.gjmx-hero-copy > *:nth-child(1) { animation-delay: 20ms; }
+.gjmx-hero-copy > *:nth-child(2) { animation-delay: 70ms; }
+.gjmx-hero-copy > *:nth-child(3) { animation-delay: 130ms; }
+.gjmx-hero-copy > *:nth-child(4) { animation-delay: 190ms; }
+.gjmx-hero-copy > *:nth-child(5) { animation-delay: 240ms; }
+.gjmx-hero-copy > *:nth-child(6) { animation-delay: 290ms; }
+
+@keyframes gjmx-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Audience segmented control -------------------------------------- */
+
+.gjmx-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--elev-1);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.gjmx-segment-btn {
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  transition:
+    color var(--duration-ui) var(--ease-out),
+    background-color var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-segment-btn:hover { color: var(--text-primary); }
+
+.gjmx-segment-btn[aria-selected="true"],
+.gjmx-segment-btn[aria-pressed="true"] {
+  color: #ffffff;
+  background-image: linear-gradient(120deg, #0e7490 0%, #155e75 55%, #4c1d95 100%);
+  box-shadow: 0 8px 18px -10px rgba(14, 116, 144, 0.9);
+}
+
+/* ---- Eyebrow pill ----------------------------------------------------- */
+
+.gjmx-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.875rem;
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--border);
+  box-shadow: var(--elev-1);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0e7490;
+}
+
+.gjmx-eyebrow-dot {
+  position: relative;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: linear-gradient(120deg, var(--neon-cyan), var(--gjmx-indigo));
+  flex-shrink: 0;
+}
+
+.gjmx-eyebrow-dot::after {
+  content: "";
+  position: absolute;
+  inset: -0.25rem;
+  border-radius: 50%;
+  border: 1px solid rgba(34, 211, 238, 0.6);
+  animation: gjmx-ping 2.6s var(--ease-out) infinite;
+}
+
+@keyframes gjmx-ping {
+  0%   { transform: scale(0.7); opacity: 0.9; }
+  70%  { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ---- Headline --------------------------------------------------------- */
+
+.gjmx-title {
+  font-size: var(--font-display);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.gjmx-title-line { display: block; }
+
+/* Gradient is applied to the *second* line only, so the first line keeps
+   full ink contrast and the accent reads as designed emphasis. */
+.gjmx-title-line--gradient {
+  background-image: linear-gradient(120deg, #0e7490 0%, #4f46e5 48%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  padding-block-end: 0.06em;
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .gjmx-title-line--gradient {
+    background-image: none;
+    color: #4f46e5;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* ---- Lede + value line ------------------------------------------------ */
+
+.gjmx-lede {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--text-body);
+  max-width: 36rem;
+}
+
+@media (min-width: 768px) {
+  .gjmx-lede { font-size: 1.125rem; }
+}
+
+.gjmx-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #155e75;
+  background: linear-gradient(120deg, rgba(34, 211, 238, 0.14), rgba(124, 58, 237, 0.12));
+  border: 1px solid rgba(8, 145, 178, 0.22);
+}
+
+.gjmx-value svg { flex-shrink: 0; color: var(--gjmx-indigo); }
+
+/* ---- CTAs ------------------------------------------------------------- */
+
+.gjmx-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block-start: 0.25rem;
+}
+
+.gjmx-cta-row .gjm-btn { padding-inline: 1.375rem; }
+
+/* Directional icons mirror in RTL so the arrow still points forward. */
+[dir="rtl"] .gjmx-mirror { transform: scaleX(-1); }
+
+/* ---- Trust chips ------------------------------------------------------ */
+
+.gjmx-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-block-start: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.gjmx-trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.gjmx-trust svg { color: var(--success); flex-shrink: 0; }
+
+/* ---------------------------------------------------------------------------
+   4. Hero panel — real opportunity feed
+   The numbers and rows here come from /api/jobs. Nothing is mocked: while
+   the request is in flight we show shimmer placeholders, and if the API has
+   no listings we say so.
+   ------------------------------------------------------------------------ */
+
+.gjmx-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: clamp(1rem, 2vw, 1.25rem);
+  border-radius: var(--gjmx-panel-radius);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--gjmx-ring);
+  box-shadow: var(--elev-5);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  animation: gjmx-rise 700ms var(--ease-out) 180ms both;
+}
+
+/* Hairline gradient ring — neon used as light, not as fill. */
+.gjmx-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg,
+    rgba(34, 211, 238, 0.7) 0%,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, 0) 62%,
+    rgba(124, 58, 237, 0.6) 100%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.gjmx-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block-end: 0.75rem;
+  border-bottom: 1px dashed var(--border);
+}
+
+.gjmx-panel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.gjmx-panel-title strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gjmx-panel-title span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.gjmx-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--success-soft);
+  color: var(--success-strong);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.gjmx-live-dot {
+  position: relative;
+  inline-size: 0.4rem;
+  block-size: 0.4rem;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.gjmx-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -0.2rem;
+  border-radius: 50%;
+  border: 1px solid rgba(5, 150, 105, 0.55);
+  animation: gjmx-ping 2.2s var(--ease-out) infinite;
+}
+
+.gjmx-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gjmx-feed-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6875rem 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--elev-1);
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out),
+    border-color var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-feed-row:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: var(--elev-2);
+}
+
+.gjmx-feed-logo {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 14px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  background-image: linear-gradient(135deg, #0e7490, #4f46e5);
+  box-shadow: 0 8px 16px -10px rgba(14, 116, 144, 0.9);
+  flex-shrink: 0;
+}
+
+.gjmx-feed-logo--violet { background-image: linear-gradient(135deg, #6d28d9, #c026d3); }
+.gjmx-feed-logo--mint   { background-image: linear-gradient(135deg, #047857, #0e7490); }
+
+.gjmx-feed-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.gjmx-feed-body strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gjmx-feed-body span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gjmx-feed-body small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--text-subtle);
+}
+
+.gjmx-feed-tag {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #155e75;
+  background: var(--brand-primary-tint);
+  border: 1px solid rgba(8, 145, 178, 0.2);
+  white-space: nowrap;
+}
+
+/* Loading placeholders — a shimmer, never a fake value. */
+.gjmx-shimmer-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6875rem 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+}
+
+.gjmx-shimmer {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--surface-3);
+}
+
+.gjmx-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  animation: gjmx-sweep 1.35s ease-in-out infinite;
+}
+
+[dir="rtl"] .gjmx-shimmer::after {
+  animation-name: gjmx-sweep-rtl;
+}
+
+@keyframes gjmx-sweep {
+  100% { transform: translateX(100%); }
+}
+@keyframes gjmx-sweep-rtl {
+  100% { transform: translateX(-100%); }
+}
+
+.gjmx-shimmer--avatar { inline-size: 2.5rem; block-size: 2.5rem; border-radius: 14px; }
+.gjmx-shimmer--line   { block-size: 0.5rem; inline-size: 62%; }
+.gjmx-shimmer--line-short { block-size: 0.5rem; inline-size: 38%; }
+
+.gjmx-feed-note {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* Panel footer — routes to the AI risk tool. */
+.gjmx-panel-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, rgba(34, 211, 238, 0.12), rgba(124, 58, 237, 0.12));
+  border: 1px solid rgba(79, 70, 229, 0.18);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #3730a3;
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-panel-foot:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-2);
+}
+
+.gjmx-panel-foot svg { flex-shrink: 0; color: var(--gjmx-indigo); }
+
+.gjmx-panel-foot span { flex: 1; min-width: 0; }
+
+.gjmx-panel-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.gjmx-panel-count strong {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Search bar — glass command bar
+   ------------------------------------------------------------------------ */
+
+.gjmx-search-wrap {
+  margin-block-start: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+.gjmx-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border-radius: var(--gjmx-panel-radius);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--gjmx-ring);
+  box-shadow: var(--elev-4);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+@media (min-width: 900px) {
+  .gjmx-search {
+    grid-template-columns: minmax(0, 1.25fr) auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}
+
+.gjmx-field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6875rem 1rem;
+  border-radius: var(--radius-xl);
+  min-width: 0;
+  transition: background-color var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-field:hover { background: var(--surface-2); }
+
+.gjmx-field > svg {
+  flex-shrink: 0;
+  color: var(--gjmx-cyan);
+}
+
+.gjmx-field-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.gjmx-field label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.gjmx-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.gjmx-field input::placeholder { color: var(--text-subtle); }
+
+.gjmx-search-split {
+  display: none;
+  inline-size: 1px;
+  block-size: 2.5rem;
+  background: linear-gradient(180deg, transparent, var(--border), transparent);
+}
+
+@media (min-width: 900px) {
+  .gjmx-search-split { display: block; }
+}
+
+.gjmx-search-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.25rem;
+  padding-inline: 1.5rem;
+  border: 0;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #ffffff;
+  background-image: linear-gradient(120deg, #0e7490 0%, #155e75 50%, #4c1d95 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 14px 30px -14px rgba(14, 116, 144, 0.9);
+  transition:
+    transform var(--duration-press) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out),
+    filter var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-search-submit:hover {
+  transform: translateY(-1px);
+  filter: saturate(115%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.26) inset,
+    0 20px 38px -16px rgba(79, 70, 229, 0.85);
+}
+
+.gjmx-search-submit:active { transform: translateY(1px); }
+
+.gjmx-search-submit svg { flex-shrink: 0; }
+
+/* ---------------------------------------------------------------------------
+   6. AI tool cards — three equal, slim shortcuts under the search bar
+   ------------------------------------------------------------------------ */
+
+.gjmx-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.625rem;
+  margin-block-start: 1rem;
+}
+
+@media (min-width: 768px) {
+  .gjmx-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.875rem; }
+}
+
+.gjmx-tool {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--border);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out),
+    border-color var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-tool::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 2px;
+  background: linear-gradient(90deg, var(--gjmx-tool-from), var(--gjmx-tool-to));
+  opacity: 0;
+  transition: opacity var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-tool:hover {
+  transform: translateY(-2px);
+  border-color: #d7e0ec;
+  box-shadow: var(--elev-3);
+}
+
+.gjmx-tool:hover::after,
+.gjmx-tool:focus-visible::after { opacity: 1; }
+
+.gjmx-tool--risk    { --gjmx-tool-from: #f59e0b; --gjmx-tool-to: #ef4444; }
+.gjmx-tool--plan    { --gjmx-tool-from: #0891b2; --gjmx-tool-to: #4f46e5; }
+.gjmx-tool--migrate { --gjmx-tool-from: #7c3aed; --gjmx-tool-to: #d946ef; }
+
+.gjmx-tool-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 14px;
+  color: #ffffff;
+  background-image: linear-gradient(135deg, var(--gjmx-tool-from), var(--gjmx-tool-to));
+  box-shadow: 0 10px 20px -12px rgba(11, 18, 32, 0.7);
+  flex-shrink: 0;
+}
+
+.gjmx-tool-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.gjmx-tool-body strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gjmx-tool-body span {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.gjmx-tool-arrow {
+  display: grid;
+  place-items: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: 50%;
+  color: var(--text-subtle);
+  background: var(--surface-2);
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    color var(--duration-ui) var(--ease-out),
+    background-color var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-tool:hover .gjmx-tool-arrow {
+  color: #ffffff;
+  background-image: linear-gradient(120deg, #0e7490, #4f46e5);
+  transform: translateX(2px);
+}
+
+[dir="rtl"] .gjmx-tool:hover .gjmx-tool-arrow { transform: translateX(-2px); }
+
+/* ---------------------------------------------------------------------------
+   7. Proof strip — real numbers only
+   ------------------------------------------------------------------------ */
+
+.gjmx-strip {
+  padding-block: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.gjmx-strip-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .gjmx-strip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .gjmx-strip-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.gjmx-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.125rem;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--elev-1);
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elev-3);
+}
+
+.gjmx-stat-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 14px;
+  color: var(--gjmx-stat-color, #0e7490);
+  background: var(--gjmx-stat-bg, var(--brand-primary-tint));
+  flex-shrink: 0;
+}
+
+.gjmx-stat strong {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.gjmx-stat span {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   8. Section shell + headings
+   ------------------------------------------------------------------------ */
+
+.gjmx-section {
+  padding-block: clamp(2.75rem, 6vw, 5rem);
+}
+
+.gjmx-section--tint {
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.72) 12%,
+    rgba(255, 255, 255, 0.72) 88%,
+    rgba(255, 255, 255, 0) 100%);
+}
+
+.gjmx-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  margin-block-end: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+@media (min-width: 900px) {
+  .gjmx-head {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 2rem;
+  }
+}
+
+.gjmx-kicker {
+  display: inline-block;
+  margin-block-end: 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0e7490;
+}
+
+.gjmx-h2 {
+  font-size: var(--font-h2);
+  font-weight: 800;
+  letter-spacing: -0.022em;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.gjmx-head-copy {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+  max-width: 44rem;
+}
+
+.gjmx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0e7490;
+  white-space: nowrap;
+  transition: gap var(--duration-ui) var(--ease-out), color var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-link:hover { gap: 0.625rem; color: #155e75; }
+
+/* ---------------------------------------------------------------------------
+   9. Feature grid
+   ------------------------------------------------------------------------ */
+
+.gjmx-features {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .gjmx-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .gjmx-features { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.gjmx-feature {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.25rem 1.375rem;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out),
+    border-color var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-feature::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 3px;
+  background: linear-gradient(90deg, var(--gjmx-feature-from), var(--gjmx-feature-to));
+  transform: scaleX(0);
+  transform-origin: inline-start;
+  transition: transform 320ms var(--ease-out);
+}
+
+.gjmx-feature:hover {
+  transform: translateY(-3px);
+  border-color: #dbe3ee;
+  box-shadow: var(--elev-4);
+}
+
+.gjmx-feature:hover::before { transform: scaleX(1); }
+
+.gjmx-feature--search  { --gjmx-feature-from: #0891b2; --gjmx-feature-to: #4f46e5; }
+.gjmx-feature--global  { --gjmx-feature-from: #4f46e5; --gjmx-feature-to: #7c3aed; }
+.gjmx-feature--alerts  { --gjmx-feature-from: #f59e0b; --gjmx-feature-to: #ef4444; }
+.gjmx-feature--apply   { --gjmx-feature-from: #047857; --gjmx-feature-to: #0e7490; }
+
+.gjmx-feature-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: 16px;
+  color: #ffffff;
+  background-image: linear-gradient(135deg, var(--gjmx-feature-from), var(--gjmx-feature-to));
+  box-shadow: 0 12px 22px -14px rgba(11, 18, 32, 0.75);
+}
+
+.gjmx-feature h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gjmx-feature p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   10. Opportunity grid — real job cards
+   ------------------------------------------------------------------------ */
+
+.gjmx-jobs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .gjmx-jobs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .gjmx-jobs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.gjmx-job {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--elev-1);
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out),
+    border-color var(--duration-ui) var(--ease-out);
+}
+
+.gjmx-job:hover {
+  transform: translateY(-3px);
+  border-color: #dbe3ee;
+  box-shadow: var(--elev-4);
+}
+
+.gjmx-job-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.gjmx-job-logo {
+  display: grid;
+  place-items: center;
+  inline-size: 3rem;
+  block-size: 3rem;
+  border-radius: 16px;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0e7490;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(124, 58, 237, 0.16));
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  flex-shrink: 0;
+}
+
+.gjmx-job-logo img { inline-size: 100%; block-size: 100%; object-fit: cover; }
+
+.gjmx-job-save {
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  color: var(--text-subtle);
+  cursor: pointer;
+  transition:
+    color var(--duration-ui) var(--ease-out),
+    border-color var(--duration-ui) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
+}
+
+.gjmx-job-save:hover { color: #be123c; border-color: rgba(190, 18, 60, 0.3); }
+.gjmx-job-save:active { transform: scale(0.94); }
+
+.gjmx-job-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.gjmx-chip {
+  align-self: flex-start;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #155e75;
+  background: var(--brand-primary-tint);
+  border: 1px solid rgba(8, 145, 178, 0.18);
+}
+
+.gjmx-job h3 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.gjmx-job-company {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gjmx-job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.875rem;
+  margin-block-start: 0.125rem;
+}
+
+.gjmx-job-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.gjmx-job-meta svg { color: var(--text-subtle); flex-shrink: 0; }
+
+.gjmx-job-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-block-start: auto;
+  padding-block-start: 0.875rem;
+  border-top: 1px dashed var(--border);
+}
+
+.gjmx-job-foot strong {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.gjmx-job-foot small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.gjmx-job-open {
+  display: grid;
+  place-items: center;
+  inline-size: 2.375rem;
+  block-size: 2.375rem;
+  border-radius: 50%;
+  color: #ffffff;
+  background-image: linear-gradient(120deg, #0e7490, #4f46e5);
+  box-shadow: 0 10px 20px -12px rgba(14, 116, 144, 0.9);
+  transition: transform var(--duration-ui) var(--ease-out), filter var(--duration-ui) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.gjmx-job-open:hover { transform: translateY(-1px) scale(1.04); filter: saturate(115%); }
+
+.gjmx-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: clamp(2rem, 5vw, 3rem) 1.5rem;
+  text-align: center;
+  border-radius: var(--gjmx-panel-radius);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+}
+
+.gjmx-empty-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+  border-radius: 18px;
+  color: #0e7490;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(124, 58, 237, 0.14));
+}
+
+.gjmx-empty h3 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gjmx-empty p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 30rem;
+}
+
+/* ---------------------------------------------------------------------------
+   11. Destination cards
+   ------------------------------------------------------------------------ */
+
+.gjmx-destinations {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .gjmx-destinations { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .gjmx-destinations { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.gjmx-destination {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1.0625rem 1.125rem;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out),
+    border-color var(--duration-ui) var(--ease-out);
+}
+
+/* Accent glow — light, not fill. */
+.gjmx-destination::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -60%;
+  inset-inline-start: -10%;
+  inline-size: 12rem;
+  block-size: 12rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gjmx-dest-glow), transparent 68%);
+  opacity: 0;
+  transition: opacity var(--duration-ui) var(--ease-out);
+  pointer-events: none;
+}
+
+.gjmx-destination:hover {
+  transform: translateY(-3px);
+  border-color: #dbe3ee;
+  box-shadow: var(--elev-3);
+}
+
+.gjmx-destination:hover::before { opacity: 1; }
+
+.gjmx-destination--blue    { --gjmx-dest-from: #0891b2; --gjmx-dest-to: #4f46e5; --gjmx-dest-glow: rgba(34, 211, 238, 0.35); }
+.gjmx-destination--cyan    { --gjmx-dest-from: #0e7490; --gjmx-dest-to: #22d3ee; --gjmx-dest-glow: rgba(34, 211, 238, 0.35); }
+.gjmx-destination--violet  { --gjmx-dest-from: #6d28d9; --gjmx-dest-to: #d946ef; --gjmx-dest-glow: rgba(168, 85, 247, 0.35); }
+.gjmx-destination--green   { --gjmx-dest-from: #047857; --gjmx-dest-to: #0e7490; --gjmx-dest-glow: rgba(16, 185, 129, 0.32); }
+.gjmx-destination--orange  { --gjmx-dest-from: #b45309; --gjmx-dest-to: #ef4444; --gjmx-dest-glow: rgba(245, 158, 11, 0.35); }
+.gjmx-destination--pink    { --gjmx-dest-from: #be185d; --gjmx-dest-to: #7c3aed; --gjmx-dest-glow: rgba(236, 72, 153, 0.32); }
+
+.gjmx-destination-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 14px;
+  color: #ffffff;
+  background-image: linear-gradient(135deg, var(--gjmx-dest-from), var(--gjmx-dest-to));
+  box-shadow: 0 10px 20px -12px rgba(11, 18, 32, 0.7);
+  flex-shrink: 0;
+}
+
+.gjmx-destination-body { min-width: 0; }
+
+.gjmx-destination-body h3 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gjmx-destination-body p {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.gjmx-destination-arrow {
+  color: var(--text-subtle);
+  transition: transform var(--duration-ui) var(--ease-out), color var(--duration-ui) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.gjmx-destination:hover .gjmx-destination-arrow {
+  color: var(--gjmx-dest-from);
+  transform: translateX(3px);
+}
+
+[dir="rtl"] .gjmx-destination:hover .gjmx-destination-arrow { transform: translateX(-3px); }
+
+/* ---------------------------------------------------------------------------
+   12. Employer band — dark, glass dashboard preview
+   ------------------------------------------------------------------------ */
+
+.gjmx-employer {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.gjmx-employer-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.75rem, 4vw, 3rem);
+  align-items: center;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: clamp(24px, 3vw, 36px);
+  background-image: linear-gradient(150deg, #0b1220 0%, #132340 58%, #241a4d 100%);
+  color: #ffffff;
+  overflow: hidden;
+  box-shadow: var(--elev-5);
+}
+
+@media (min-width: 1024px) {
+  .gjmx-employer-card {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    align-items: center;
+  }
+}
+
+.gjmx-employer-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 70% 60% at 20% 0%, #000 10%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 20% 0%, #000 10%, transparent 75%);
+  pointer-events: none;
+}
+
+.gjmx-employer-copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* cyan-300 on the ink gradient — ~11:1, comfortably AA/AAA. */
+.gjmx-kicker--light {
+  color: #67e8f9;
+}
+
+.gjmx-employer-copy h2 {
+  font-size: var(--font-h2);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.gjmx-employer-copy p {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.76);
+  max-width: 34rem;
+}
+
+.gjmx-employer-copy .gjm-btn { align-self: flex-start; margin-block-start: 0.25rem; }
+
+/* --- Mock workspace chrome (labels are real; values stay placeholders) --- */
+
+.gjmx-mock {
+  position: relative;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.gjmx-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.gjmx-mock-dots { display: inline-flex; gap: 0.3125rem; }
+
+.gjmx-mock-dots span {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.gjmx-mock-dots span:first-child { background: rgba(248, 113, 113, 0.85); }
+.gjmx-mock-dots span:nth-child(2) { background: rgba(251, 191, 36, 0.85); }
+.gjmx-mock-dots span:last-child { background: rgba(52, 211, 153, 0.85); }
+
+.gjmx-mock-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-inline-start: auto;
+  padding: 0.3125rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.gjmx-mock-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0;
+}
+
+.gjmx-mock-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem 0.75rem;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gjmx-mock-rail span {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.gjmx-mock-rail span:first-child {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.35), rgba(124, 58, 237, 0.4));
+}
+
+.gjmx-mock-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  min-width: 0;
+}
+
+.gjmx-mock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.gjmx-mock-head div { display: flex; flex-direction: column; gap: 0.125rem; }
+
+.gjmx-mock-head span { font-size: 0.6875rem; color: rgba(255, 255, 255, 0.6); }
+
+.gjmx-mock-head strong { font-size: 0.9375rem; font-weight: 700; color: #ffffff; }
+
+.gjmx-mock-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.gjmx-mock-metrics > div {
+  padding: 0.625rem 0.75rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gjmx-mock-metrics small {
+  display: block;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.gjmx-mock-metrics strong {
+  display: block;
+  margin-block-start: 0.25rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.gjmx-mock-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.375rem;
+  height: 5rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gjmx-mock-chart span {
+  flex: 1;
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, rgba(34, 211, 238, 0.85), rgba(124, 58, 237, 0.55));
+  /* Bars are pure decoration — no numeric claim is made anywhere. */
+  block-size: var(--gjmx-bar, 40%);
+}
+
+.gjmx-mock-note {
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------------------------------------------------------------------------
+   13. Closing call to action
+   The heading is explicitly white here; the previous build let a global
+   "home headings are blue" rule repaint it over the dark gradient.
+   ------------------------------------------------------------------------ */
+
+.gjmx-final-wrap {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.gjmx-final {
+  position: relative;
+  padding: clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 3rem);
+  border-radius: clamp(24px, 3vw, 36px);
+  background-image: linear-gradient(130deg, #0b1220 0%, #16304d 52%, #2b1b5e 100%);
+  color: #ffffff;
+  text-align: center;
+  overflow: hidden;
+  box-shadow: var(--elev-5);
+}
+
+.gjmx-final::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -8rem;
+  inset-inline: 0;
+  margin-inline: auto;
+  inline-size: 34rem;
+  block-size: 34rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 62%);
+  pointer-events: none;
+}
+
+.gjmx-final::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse at center, #000 26%, transparent 76%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 26%, transparent 76%);
+  pointer-events: none;
+}
+
+.gjmx-final-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+.gjmx-final h2 {
+  font-size: var(--font-h1);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-wrap: balance;
+}
+
+.gjmx-final p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.gjmx-final-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-block-start: 0.5rem;
+}
+
+.gjmx-final .gjm-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.gjmx-final .gjm-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+/* ---------------------------------------------------------------------------
+   14. Newsletter (component-scoped classes used by Newsletter.tsx)
+   ------------------------------------------------------------------------ */
+
+.gjmx-newsletter {
+  padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 6vw, 4rem);
+}
+
+.gjmx-newsletter-inner {
+  display: flex;
+  justify-content: center;
+}
+
+.gjm-newsletter-card {
+  width: 100%;
+  max-width: 46rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-radius: var(--gjmx-panel-radius);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--border);
+  box-shadow: var(--elev-3);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.gjm-newsletter-head {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.gjm-newsletter-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: 16px;
+  color: #ffffff;
+  background-image: linear-gradient(135deg, #0e7490, #7c3aed);
+  box-shadow: 0 12px 24px -14px rgba(14, 116, 144, 0.9);
+  flex-shrink: 0;
+}
+
+.gjm-newsletter-heading h3 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gjm-newsletter-heading p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.gjm-newsletter-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .gjm-newsletter-form {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr) auto;
+    align-items: center;
+  }
+}
+
+.gjm-newsletter-input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  outline: 0;
+  transition:
+    border-color var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out);
+}
+
+.gjm-newsletter-input::placeholder { color: var(--text-subtle); }
+
+.gjm-newsletter-input:focus-visible {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.18);
+}
+
+.gjm-newsletter-input-wrap { position: relative; }
+
+.gjm-newsletter-mail-icon {
+  position: absolute;
+  inset-inline-start: 0.875rem;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+
+.gjm-newsletter-input--email { padding-inline-start: 2.75rem; }
+
+.gjm-newsletter-card .gjm-dynamic-btn { justify-content: center; }
+
+.gjm-newsletter-success {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--success-soft);
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  color: var(--success-strong);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.gjm-newsletter-error {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--error-soft);
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  color: var(--error-strong);
+  font-size: 0.8125rem;
+}
+
+.gjm-newsletter-footnote {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+/* ---------------------------------------------------------------------------
+   15. Locale typography
+   Arabic-script and Devanagari faces need extra leading and no negative
+   tracking; the display size is trimmed a touch so long words still fit on
+   a 360px viewport.
+   ------------------------------------------------------------------------ */
+
+html[lang="fa"] .gjmx-title,
+html[lang="ar"] .gjmx-title,
+html[lang="hi"] .gjmx-title {
+  font-size: clamp(1.8rem, 5.6vw, 3.1rem);
+  line-height: 1.32;
+  letter-spacing: 0;
+}
+
+html[lang="fa"] .gjmx-h2,
+html[lang="ar"] .gjmx-h2,
+html[lang="hi"] .gjmx-h2,
+html[lang="fa"] .gjmx-employer-copy h2,
+html[lang="ar"] .gjmx-employer-copy h2,
+html[lang="hi"] .gjmx-employer-copy h2,
+html[lang="fa"] .gjmx-final h2,
+html[lang="ar"] .gjmx-final h2,
+html[lang="hi"] .gjmx-final h2 {
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+html[lang="hi"] .gjmx-lede,
+html[lang="fa"] .gjmx-lede,
+html[lang="ar"] .gjmx-lede {
+  line-height: 1.8;
+}
+
+/* German compounds are long — let them hyphenate instead of overflowing. */
+html[lang="de"] .gjmx-title,
+html[lang="de"] .gjmx-h2,
+html[lang="fr"] .gjmx-title,
+html[lang="fr"] .gjmx-h2 {
+  hyphens: auto;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------
+   16. Small-screen trims
+   ------------------------------------------------------------------------ */
+
+@media (max-width: 480px) {
+  .gjmx-tool,
+  .gjmx-destination {
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 0.5rem;
+  }
+
+  .gjmx-tool-arrow,
+  .gjmx-destination-arrow { display: none; }
+
+  .gjmx-cta-row .gjm-btn { width: 100%; }
+
+  .gjmx-trust { gap: 0.375rem 1rem; }
+
+  .gjmx-mock-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .gjmx-mock-metrics > div { padding: 0.5rem; }
+}
+
+/* ---------------------------------------------------------------------------
+   17. Motion preferences
+   globals.css already neutralises animation/transition durations globally
+   under prefers-reduced-motion; these rules additionally drop the decorative
+   movement that would otherwise remain as a static offset.
+   ------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .gjmx-aura { animation: none; }
+  .gjmx-hero-copy > * { opacity: 1; transform: none; }
+  .gjmx-panel { opacity: 1; transform: none; }
+  .gjmx-tool:hover,
+  .gjmx-feature:hover,
+  .gjmx-job:hover,
+  .gjmx-destination:hover,
+  .gjmx-stat:hover,
+  .gjmx-feed-row:hover { transform: none; }
+}

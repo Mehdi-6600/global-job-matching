@@ -129,7 +129,9 @@
     "trustLanguagesLabel": "Langues",
     "trustFreshnessLabel": "Fraîcheur vérifiée",
     "trustSectionKicker": "BASÉ SUR DES DONNÉES RÉELLES",
-    "trustSectionTitle": "Infrastructure fiable, pas des témoignages."
+    "trustSectionTitle": "Infrastructure fiable, pas des témoignages.",
+    "feedTitle": "Fil des opportunités en direct",
+    "feedEmpty": "Les nouveaux postes apparaissent ici dès leur publication."
   },
   "Common": {
     "loading": "Chargement...",
@@ -160,6 +162,8 @@
     "newsletterEmailPlaceholder": "Entrez votre e-mail",
     "newsletterSubscribe": "S'inscrire",
     "newsletterFooter": "Pas de spam. Désabonnement à tout moment.",
+    "newsletterSubmitting": "Inscription…",
+    "newsletterRetry": "Réessayer",
     "newsletterErrorSubscribe": "Échec de l'inscription",
     "newsletterErrorNetwork": "Erreur réseau. Veuillez réessayer.",
     "timeAgo": {

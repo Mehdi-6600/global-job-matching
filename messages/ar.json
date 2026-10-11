@@ -129,7 +129,9 @@
     "trustLanguagesLabel": "اللغات",
     "trustFreshnessLabel": "تم التحقق من الحداثة",
     "trustSectionKicker": "مبنيّ على بيانات حقيقية",
-    "trustSectionTitle": "بنية موثوقة، لا شهادات."
+    "trustSectionTitle": "بنية موثوقة، لا شهادات.",
+    "feedTitle": "تدفق مباشر للفرص",
+    "feedEmpty": "تظهر الوظائف الجديدة هنا فور نشرها."
   },
   "Common": {
     "loading": "جارٍ التحميل...",
@@ -160,6 +162,8 @@
     "newsletterEmailPlaceholder": "أدخل بريدك الإلكتروني",
     "newsletterSubscribe": "اشترك",
     "newsletterFooter": "بدون رسائل مزعجة. يمكنك إلغاء الاشتراك في أي وقت.",
+    "newsletterSubmitting": "جارٍ الاشتراك…",
+    "newsletterRetry": "حاول مرة أخرى",
     "newsletterErrorSubscribe": "تعذّر الاشتراك",
     "newsletterErrorNetwork": "خطأ في الشبكة. يرجى المحاولة مجددًا.",
     "timeAgo": {

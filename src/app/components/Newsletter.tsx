@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import { Mail, CheckCircle2, Sparkles } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
+import { DynamicButton } from "@/components/ui/dynamic-button";
+import { ProcessingStatus } from "@/components/ui/processing-status";
 
 export default function Newsletter() {
   const { t } = useLocale();
@@ -100,25 +102,25 @@ export default function Newsletter() {
               autoComplete="email"
             />
           </div>
-          <button
+          <DynamicButton
             type="submit"
-            disabled={loading}
-            className="gjm-newsletter-submit"
+            variant="primary"
+            status={loading ? "loading" : error ? "error" : "idle"}
+            loadingLabel={t("Common.newsletterSubmitting", "Subscribing…")}
+            errorLabel={t("Common.newsletterRetry", "Try again")}
+            announce={false}
+            fullWidth
           >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-            ) : (
-              t("Common.newsletterSubscribe", "Subscribe")
-            )}
-          </button>
+            {t("Common.newsletterSubscribe", "Subscribe")}
+          </DynamicButton>
         </form>
       )}
 
-      {error && (
-        <p className="gjm-newsletter-error" role="alert">
-          {error}
-        </p>
-      )}
+      <ProcessingStatus
+        state={error ? "error" : "idle"}
+        title={error || undefined}
+        className="gjm-newsletter-error"
+      />
 
       <p className="gjm-newsletter-footnote">
         {t("Common.newsletterFooter", "No spam. Unsubscribe anytime.")}

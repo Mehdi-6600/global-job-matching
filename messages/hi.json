@@ -129,7 +129,9 @@
     "trustLanguagesLabel": "भाषाएँ",
     "trustFreshnessLabel": "ताज़गी सत्यापित",
     "trustSectionKicker": "वास्तविक डेटा पर आधारित",
-    "trustSectionTitle": "विश्वसनीय अवसंरचना, प्रशंसापत्र नहीं।"
+    "trustSectionTitle": "विश्वसनीय अवसंरचना, प्रशंसापत्र नहीं।",
+    "feedTitle": "लाइव अवसर फ़ीड",
+    "feedEmpty": "नई नौकरियाँ प्रकाशित होते ही यहाँ दिखाई देती हैं।"
   },
   "Common": {
     "loading": "लोड हो रहा है...",
@@ -160,6 +162,8 @@
     "newsletterEmailPlaceholder": "अपना ईमेल दर्ज करें",
     "newsletterSubscribe": "सदस्यता लें",
     "newsletterFooter": "कोई स्पैम नहीं। कभी भी अनसब्सक्राइब करें।",
+    "newsletterSubmitting": "सदस्यता ली जा रही है…",
+    "newsletterRetry": "फिर से प्रयास करें",
     "newsletterErrorSubscribe": "सदस्यता विफल",
     "newsletterErrorNetwork": "नेटवर्क त्रुटि। कृपया पुनः प्रयास करें।",
     "timeAgo": {
