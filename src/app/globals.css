@@ -56,8 +56,25 @@
     --info: #06b6d4;
     --info-soft: #cffafe;
 
-    /* ---------- Focus ---------- */
-    --focus-ring: #6ee7b7;
+    /* ---------- Accessible action colors ----------
+       Solid fills that carry white text must meet WCAG AA (4.5:1).
+       --brand-primary (#06b6d4) only reaches ~2.4:1 with white, so
+       buttons use the deeper action token instead. */
+    --brand-action: #0e7490;          /* 5.4:1 with white */
+    --brand-action-hover: #155e75;    /* 7.3:1 with white */
+    --success-strong: #065f46;        /* 6.8:1 on --success-soft */
+    --error-strong: #991b1b;          /* 6.8:1 on --error-soft */
+
+    /* ---------- Motion ----------
+       Strong curves: the built-in CSS easings are too weak for UI. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --duration-press: 160ms;
+    --duration-ui: 220ms;
+
+    /* ---------- Focus ----------
+       Mint (#6ee7b7) was ~1.2:1 against the page; this reaches ~4.3:1. */
+    --focus-ring: #0e7490;
 
     /* ---------- Radius ---------- */
     --radius-xs: 8px;
@@ -284,7 +301,7 @@
   .gjm-btn svg { flex-shrink: 0; }
 
   .gjm-btn-primary {
-    background: var(--brand-primary);
+    background: var(--brand-action);
     color: var(--text-on-brand);
     box-shadow:
       4px 4px 10px rgba(8, 145, 178, 0.35),
@@ -292,7 +309,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
   .gjm-btn-primary:hover {
-    background: var(--brand-primary-hover);
+    background: var(--brand-action-hover);
     transform: translateY(-1px);
     box-shadow:
       6px 6px 14px rgba(8, 145, 178, 0.4),
@@ -691,7 +708,7 @@
     font-size: 0.875rem;
     font-weight: 600;
     color: #ffffff;
-    background: var(--brand-primary);
+    background: var(--brand-action);
     border-radius: var(--radius-lg);
     box-shadow:
       4px 4px 10px rgba(8, 145, 178, 0.35),
@@ -701,7 +718,7 @@
     white-space: nowrap;
   }
   .gjm-nav-cta:hover {
-    background: var(--brand-primary-hover);
+    background: var(--brand-action-hover);
     box-shadow:
       6px 6px 14px rgba(8, 145, 178, 0.4),
       -4px -4px 10px rgba(255, 255, 255, 0.85),
@@ -910,14 +927,14 @@
     transform: translateY(1px);
   }
   .gjm-mobile-cta {
-    background: var(--brand-primary);
+    background: var(--brand-action);
     color: #ffffff;
     box-shadow:
       4px 4px 10px rgba(8, 145, 178, 0.35),
       -3px -3px 8px rgba(255, 255, 255, 0.75);
   }
   .gjm-mobile-cta:hover {
-    background: var(--brand-primary-hover);
+    background: var(--brand-action-hover);
     transform: translateY(-1px);
   }
   .gjm-mobile-cta:active {
@@ -3190,7 +3207,7 @@
     margin-top: 0.75rem;
   }
 
-  .gjm-final-cta .gjm-btn-primary { background: var(--brand-primary); }
+  .gjm-final-cta .gjm-btn-primary { background: var(--brand-action); }
   .gjm-final-cta .gjm-btn-secondary {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.15);
@@ -4247,3 +4264,379 @@ code {
   .gjm-home .gjm-job-card h3 {
     color: #1e3a8a;
   }
+
+/* ============================================================
+   DYNAMIC BUTTON — stateful action button
+   src/components/ui/dynamic-button.tsx
+   Press: transform only. Width: measured px + CSS transition.
+   Label/icon swaps: short opacity + blur crossfade (mask).
+   ============================================================ */
+@layer components {
+  .gjm-dynamic-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    min-height: 2.75rem;
+    padding: 0.6875rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-align: center;
+    cursor: pointer;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform var(--duration-press) var(--ease-out),
+      width var(--duration-ui) var(--ease-out),
+      background-color var(--duration-ui) var(--ease-out),
+      color var(--duration-ui) var(--ease-out),
+      border-color var(--duration-ui) var(--ease-out),
+      box-shadow var(--duration-ui) var(--ease-out),
+      opacity var(--duration-ui) var(--ease-out);
+  }
+
+  .gjm-dynamic-btn[data-size="sm"] {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+  }
+
+  .gjm-dynamic-btn[data-size="lg"] {
+    min-height: 3rem;
+    padding: 0.8125rem 1.75rem;
+    border-radius: var(--radius-xl);
+    font-size: 1rem;
+  }
+
+  /* Primary — solid brand fill, white text (AA: 5.4:1) */
+  .gjm-dynamic-btn[data-variant="primary"] {
+    background: var(--brand-action);
+    color: var(--text-on-brand);
+    box-shadow:
+      4px 4px 10px rgba(8, 145, 178, 0.3),
+      -3px -3px 8px rgba(255, 255, 255, 0.75),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+
+  /* Secondary — raised neumorphic surface */
+  .gjm-dynamic-btn[data-variant="secondary"] {
+    background: var(--surface);
+    color: var(--text-primary);
+    border-color: var(--border-soft);
+    box-shadow: var(--elev-2);
+  }
+
+  /* Status: soft tints keep text contrast ≥ 6.8:1 */
+  .gjm-dynamic-btn[data-status="success"] {
+    background: var(--success-soft);
+    color: var(--success-strong);
+    border-color: rgba(16, 185, 129, 0.35);
+    box-shadow: var(--elev-1);
+  }
+
+  .gjm-dynamic-btn[data-status="error"] {
+    background: var(--error-soft);
+    color: var(--error-strong);
+    border-color: rgba(220, 38, 38, 0.3);
+    box-shadow: var(--elev-1);
+  }
+
+  .gjm-dynamic-btn[aria-disabled="true"] {
+    cursor: progress;
+  }
+
+  .gjm-dynamic-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* A confirmation stays readable even when the button becomes disabled after success */
+  .gjm-dynamic-btn[data-status="success"]:disabled,
+  .gjm-dynamic-btn[data-status="error"]:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+
+  /* Hover is gated so touch taps do not leave a stuck hover state */
+  @media (hover: hover) and (pointer: fine) {
+    .gjm-dynamic-btn[data-variant="primary"][data-status="idle"]:not(:disabled):hover {
+      background: var(--brand-action-hover);
+      box-shadow:
+        6px 6px 14px rgba(8, 145, 178, 0.36),
+        -4px -4px 10px rgba(255, 255, 255, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    }
+
+    .gjm-dynamic-btn[data-variant="secondary"][data-status="idle"]:not(:disabled):hover {
+      color: var(--brand-action-hover);
+      box-shadow: var(--elev-3);
+    }
+  }
+
+  /* Press feedback: subtle scale (0.97) plus inset shadow */
+  .gjm-dynamic-btn:not(:disabled):not([aria-disabled="true"]):active {
+    transform: scale(0.97);
+  }
+
+  .gjm-dynamic-btn[data-variant="primary"]:not(:disabled):not([aria-disabled="true"]):active {
+    box-shadow: inset 2px 2px 6px rgba(7, 89, 112, 0.35);
+  }
+
+  .gjm-dynamic-btn[data-variant="secondary"]:not(:disabled):not([aria-disabled="true"]):active {
+    box-shadow: var(--inset-1);
+  }
+
+  .gjm-dynamic-btn:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  .gjm-dynamic-btn__content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+    animation: gjm-dynamic-in var(--duration-ui) var(--ease-out) both;
+  }
+
+  .gjm-dynamic-btn__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .gjm-dynamic-btn svg {
+    flex-shrink: 0;
+  }
+
+  /* Directional icons (e.g. send) mirror in RTL layouts */
+  [dir="rtl"] .gjm-dynamic-btn__icon[data-mirror="true"] {
+    transform: scaleX(-1);
+  }
+
+  /* Arabic and Persian glyphs need more line height than Latin */
+  html[lang="fa"] .gjm-dynamic-btn,
+  html[lang="ar"] .gjm-dynamic-btn {
+    line-height: 1.5;
+  }
+
+  @keyframes gjm-dynamic-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+      filter: blur(2px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+
+  @keyframes gjm-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* ============================================================
+     PROCESSING STATUS — src/components/ui/processing-status.tsx
+     Shows real states only (processing / success / error). It does
+     not fake step progress the backend does not report.
+     ============================================================ */
+  .gjm-processing {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    background: var(--surface-2);
+    box-shadow: var(--inset-1);
+    color: var(--text-body);
+    text-align: start;
+  }
+
+  .gjm-processing[data-state="success"] {
+    background: var(--surface);
+    box-shadow: var(--elev-1);
+    border-color: rgba(16, 185, 129, 0.3);
+    animation: gjm-settle var(--duration-ui) var(--ease-out) both;
+  }
+
+  .gjm-processing[data-state="error"] {
+    background: var(--error-soft);
+    border-color: rgba(220, 38, 38, 0.3);
+  }
+
+  .gjm-processing__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--elev-1);
+    color: var(--brand-action-hover);
+  }
+
+  .gjm-processing[data-state="success"] .gjm-processing__icon {
+    color: var(--success-strong);
+  }
+
+  .gjm-processing[data-state="error"] .gjm-processing__icon {
+    color: var(--error-strong);
+  }
+
+  .gjm-processing[data-state="success"] .gjm-processing__icon svg {
+    animation: gjm-pop var(--duration-ui) var(--ease-out) both;
+  }
+
+  .gjm-processing__pulse {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--brand-action);
+    animation: gjm-breathe 1.6s ease-in-out infinite;
+  }
+
+  .gjm-processing__title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-primary);
+  }
+
+  .gjm-processing__desc {
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-body);
+  }
+
+  /* Indeterminate track: transform-only sweep (GPU) */
+  .gjm-processing__track {
+    position: relative;
+    height: 4px;
+    margin-top: 0.75rem;
+    border-radius: var(--radius-pill);
+    background: var(--surface-3);
+    overflow: hidden;
+  }
+
+  .gjm-processing__bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    inset-inline-start: 0;
+    width: 40%;
+    border-radius: inherit;
+    background: var(--brand-action);
+    animation: gjm-sweep 1.4s linear infinite;
+  }
+
+  [dir="rtl"] .gjm-processing__bar {
+    animation-name: gjm-sweep-rtl;
+  }
+
+  /* Result reveal: the text feeds in top-down, like paper leaving a printer.
+     Applied to text content only, so card shadows are never clipped. */
+  .gjm-feed-in {
+    animation: gjm-feed-in 420ms var(--ease-out) both;
+  }
+
+  @keyframes gjm-feed-in {
+    from {
+      clip-path: inset(0 0 100% 0);
+      opacity: 0.4;
+      transform: translateY(-6px);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes gjm-settle {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes gjm-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes gjm-breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.75); }
+  }
+
+  @keyframes gjm-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(250%); }
+  }
+
+  @keyframes gjm-sweep-rtl {
+    from { transform: translateX(100%); }
+    to { transform: translateX(-250%); }
+  }
+
+  /* Reduced motion: keep opacity and color, drop movement, sweeps and
+     clip reveals. Layered !important beats the global reduced-motion rule. */
+  @media (prefers-reduced-motion: reduce) {
+    .gjm-dynamic-btn {
+      transition:
+        background-color 150ms ease !important,
+        color 150ms ease !important,
+        border-color 150ms ease !important,
+        box-shadow 150ms ease !important,
+        opacity 150ms ease !important;
+    }
+
+    .gjm-dynamic-btn:not(:disabled):not([aria-disabled="true"]):active {
+      transform: none !important;
+    }
+
+    .gjm-dynamic-btn__content {
+      animation: gjm-fade-in 150ms ease both !important;
+    }
+
+    .gjm-feed-in,
+    .gjm-processing[data-state="success"],
+    .gjm-processing[data-state="success"] .gjm-processing__icon svg {
+      animation: gjm-fade-in 150ms ease both !important;
+    }
+
+    .gjm-processing__bar {
+      animation: none !important;
+    }
+
+    .gjm-processing__pulse {
+      animation: none !important;
+      opacity: 0.8;
+    }
+  }
+}
