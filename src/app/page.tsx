@@ -289,15 +289,10 @@ export default function HomePage() {
         <div className="gjm-container gjmx-hero-inner">
           <div className="gjmx-hero-copy">
             <div className="gjmx-hero-topline">
-              <div
-                className="gjmx-segment"
-                role="tablist"
-                aria-label={t("Home.audienceSeeker", "For Job Seekers")}
-              >
+              <div className="gjmx-segment" role="group">
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={audience === "seeker"}
+                  aria-pressed={audience === "seeker"}
                   onClick={() => setAudience("seeker")}
                   className="gjmx-segment-btn"
                 >
@@ -305,8 +300,7 @@ export default function HomePage() {
                 </button>
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={audience === "employer"}
+                  aria-pressed={audience === "employer"}
                   onClick={() => setAudience("employer")}
                   className="gjmx-segment-btn"
                 >
@@ -424,46 +418,48 @@ export default function HomePage() {
                   </div>
                 ))
               ) : feedJobs.length > 0 ? (
-                feedJobs.map((job, index) => (
-                  <article className="gjmx-feed-row" key={job.id}>
-                    <span
-                      className={`gjmx-feed-logo${
-                        FEED_LOGO_VARIANTS[index % FEED_LOGO_VARIANTS.length]
-                          ? ` gjmx-feed-logo--${
-                              FEED_LOGO_VARIANTS[
-                                index % FEED_LOGO_VARIANTS.length
-                              ]
-                            }`
-                          : ""
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {initials(job.company?.name)}
-                    </span>
+                feedJobs.map((job, index) => {
+                  const variant =
+                    FEED_LOGO_VARIANTS[index % FEED_LOGO_VARIANTS.length];
 
-                    <div className="gjmx-feed-body">
-                      <strong>{job.title}</strong>
-                      <span>
-                        {job.company?.name ||
-                          t("Home.globalCompany", "Global company")}
+                  return (
+                    <article className="gjmx-feed-row" key={job.id}>
+                      <span
+                        className={
+                          variant
+                            ? `gjmx-feed-logo gjmx-feed-logo--${variant}`
+                            : "gjmx-feed-logo"
+                        }
+                        aria-hidden="true"
+                      >
+                        {initials(job.company?.name)}
                       </span>
-                      <small>
-                        <MapPin size={11} aria-hidden="true" />
-                        {job.location || t("Home.searchLocationLabel", "Where?")}
-                      </small>
-                    </div>
 
-                    {job.remote ? (
-                      <span className="gjmx-feed-tag">
-                        {t("Home.remote", "Remote")}
-                      </span>
-                    ) : (
-                      <span className="gjmx-feed-tag">
-                        {job.type || t("Home.fullTime", "Full-time")}
-                      </span>
-                    )}
-                  </article>
-                ))
+                      <div className="gjmx-feed-body">
+                        <strong>{job.title}</strong>
+                        <span>
+                          {job.company?.name ||
+                            t("Home.globalCompany", "Global company")}
+                        </span>
+                        <small>
+                          <MapPin size={11} aria-hidden="true" />
+                          {job.location ||
+                            t("Home.searchLocationLabel", "Where?")}
+                        </small>
+                      </div>
+
+                      {job.remote ? (
+                        <span className="gjmx-feed-tag">
+                          {t("Home.remote", "Remote")}
+                        </span>
+                      ) : (
+                        <span className="gjmx-feed-tag">
+                          {job.type || t("Home.fullTime", "Full-time")}
+                        </span>
+                      )}
+                    </article>
+                  );
+                })
               ) : (
                 <p className="gjmx-feed-note">
                   {t(
