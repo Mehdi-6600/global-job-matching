@@ -11,7 +11,6 @@ import Link from "next/link";
 import { useSession, signIn } from "next-auth/react";
 import {
   ArrowLeft,
-  Loader2,
   ShieldAlert,
   Sparkles,
   Lock,
@@ -36,6 +35,8 @@ import {
 import { trackEvent } from "@/lib/track";
 import { useLocale } from "@/components/locale-provider";
 import { messageFromAiHttpError } from "@/lib/ai-client-errors";
+import { DynamicButton } from "@/components/ui/dynamic-button";
+import { ProcessingStatus } from "@/components/ui/processing-status";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                          */
@@ -792,56 +793,43 @@ export default function CareerRiskPage() {
           <p className="text-xs text-slate-500">{stepsAfterRiskHint}</p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-1">
-            <button
+            <DynamicButton
               type="submit"
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-950 bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg shadow-cyan-500/25 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition"
+              variant="primary"
+              fullWidth
+              className="sm:flex-1"
+              status={loading ? "loading" : "idle"}
+              icon={<Sparkles className="h-4 w-4" />}
+              loadingLabel={t("CareerRisk.analyzing", "Analyzing…")}
             >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              {loading
-                ? t("CareerRisk.analyzing", "Analyzing…")
-                : t("CareerRisk.analyze", "Analyze risk")}
-            </button>
+              {t("CareerRisk.analyze", "Analyze risk")}
+            </DynamicButton>
 
-            <button
-              type="button"
-              disabled={!canSecondary || roadmapLoading}
+            <DynamicButton
+              variant="secondary"
+              fullWidth
+              className="sm:flex-1"
+              disabled={!canSecondary}
               onClick={() => void generateRoadmap()}
-              className={
-                canSecondary
-                  ? "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-black bg-orange-400 shadow-lg shadow-orange-500/30 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                  : "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-500 bg-slate-700/50 border border-white/5 cursor-not-allowed"
-              }
+              status={roadmapLoading ? "loading" : "idle"}
+              icon={<Map className="h-4 w-4" />}
+              loadingLabel={t("CareerRisk.roadmapLoading", "Building your roadmap…")}
             >
-              {roadmapLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Map className="w-4 h-4" />
-              )}
               {t("CareerRisk.roadmapBtn", "90-day roadmap")}
-            </button>
+            </DynamicButton>
 
-            <button
-              type="button"
-              disabled={!canSecondary || migrationLoading}
+            <DynamicButton
+              variant="secondary"
+              fullWidth
+              className="sm:flex-1"
+              disabled={!canSecondary}
               onClick={() => void generateMigration()}
-              className={
-                canSecondary
-                  ? "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white bg-red-700 shadow-lg shadow-red-900/40 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                  : "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-500 bg-slate-700/50 border border-white/5 cursor-not-allowed"
-              }
+              status={migrationLoading ? "loading" : "idle"}
+              icon={<Plane className="h-4 w-4" />}
+              loadingLabel={t("CareerRisk.migrationLoading", "Analyzing migration paths…")}
             >
-              {migrationLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Plane className="w-4 h-4" />
-              )}
               {t("CareerRisk.migrationBtn", "Migration options")}
-            </button>
+            </DynamicButton>
           </div>
         </form>
 
@@ -1031,10 +1019,11 @@ export default function CareerRiskPage() {
               {t("CareerRisk.roadmapTitle", "90-day roadmap")}
             </h2>
             {roadmapLoading && (
-              <p className="text-sm text-slate-400 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t("CareerRisk.roadmapLoading", "Building your roadmap…")}
-              </p>
+              <ProcessingStatus
+                state="processing"
+                announce={false}
+                title={t("CareerRisk.roadmapLoading", "Building your roadmap…")}
+              />
             )}
             {roadmapError && (
               <p className="text-sm text-red-300">{roadmapError}</p>
@@ -1095,13 +1084,14 @@ export default function CareerRiskPage() {
               {t("CareerRisk.migrationTitle", "Migration options")}
             </h2>
             {migrationLoading && (
-              <p className="text-sm text-slate-400 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t(
+              <ProcessingStatus
+                state="processing"
+                announce={false}
+                title={t(
                   "CareerRisk.migrationLoading",
                   "Analyzing migration paths…",
                 )}
-              </p>
+              />
             )}
             {migrationError && (
               <p className="text-sm text-red-300">{migrationError}</p>

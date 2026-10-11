@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   Mail,
-  Loader2,
   Copy,
   CheckCircle2,
   AlertCircle,
@@ -12,6 +11,8 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { messageFromApiError } from "@/lib/api-error-i18n";
+import { DynamicButton } from "@/components/ui/dynamic-button";
+import { useTransientFeedback } from "@/hooks/use-transient-feedback";
 
 type Props = {
   jobId: string;
@@ -35,6 +36,8 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
   const [draft, setDraft] = useState("");
   const [confirmSend, setConfirmSend] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Brief send feedback on the button. The banners remain the detailed message.
+  const [sendFeedback, flashSend] = useTransientFeedback<"success" | "error">();
 
   async function run(mode: "draft" | "send") {
     setLoading(mode);
@@ -63,6 +66,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
 
       if (!res.ok) {
         setError(messageFromApiError(res.status, data, t));
+        if (mode === "send") flashSend("error");
         if (typeof data.draft === "string") {
           setDraft(data.draft);
         }
@@ -82,10 +86,12 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
         setSuccess(
           t("JobDetail.contactSent", "Message sent to the employer."),
         );
+        flashSend("success");
         setConfirmSend(false);
       }
     } catch {
       setError(t("Common.errorNetwork", "Network error"));
+      if (mode === "send") flashSend("error");
     } finally {
       setLoading(null);
     }
@@ -200,32 +206,31 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
           </label>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={!!loading}
+            <DynamicButton
+              variant="secondary"
+              size="sm"
+              disabled={loading === "send"}
               onClick={() => run("draft")}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-200 disabled:opacity-50"
+              status={loading === "draft" ? "loading" : "idle"}
+              icon={<FileText className="h-4 w-4" />}
+              loadingLabel={t("Common.loading", "Loading...")}
             >
-              {loading === "draft" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <FileText className="w-4 h-4" />
-              )}
               {t("JobDetail.contactGenerateDraft", "Generate draft")}
-            </button>
-            <button
-              type="button"
-              disabled={!!loading || !confirmSend}
+            </DynamicButton>
+            <DynamicButton
+              variant="primary"
+              size="sm"
+              disabled={!confirmSend || loading === "draft"}
               onClick={() => run("send")}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-sm text-white font-medium disabled:opacity-50"
+              status={loading === "send" ? "loading" : (sendFeedback ?? "idle")}
+              icon={<Send className="h-4 w-4" />}
+              mirrorIconInRtl
+              loadingLabel={t("Common.loading", "Loading...")}
+              successLabel={t("Common.success", "Success")}
+              errorLabel={t("Common.error", "Something went wrong")}
             >
-              {loading === "send" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
               {t("JobDetail.contactSend", "Send")}
-            </button>
+            </DynamicButton>
           </div>
         </div>
       )}

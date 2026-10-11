@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -32,6 +32,8 @@ import {
 import { CompanyLogo } from "@/components/company-logo";
 import { useLocale } from "@/components/locale-provider";
 import { JobMatchBadge } from "@/components/jobs/job-match-badge";
+import { DynamicButton } from "@/components/ui/dynamic-button";
+import { ProcessingStatus } from "@/components/ui/processing-status";
 import { messageFromApiError } from "@/lib/api-error-i18n";
 
 export interface JobDetail {
@@ -196,6 +198,7 @@ export default function JobDetailClient({
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState("");
   const [applySuccess, setApplySuccess] = useState(false);
+  const applySuccessRef = useRef<HTMLDivElement | null>(null);
   const [shareUrl, setShareUrl] = useState("");
   const [planLimit, setPlanLimit] = useState<{
     message: string;
@@ -407,6 +410,11 @@ export default function JobDetailClient({
       cancelled = true;
     };
   }, [id, t]);
+
+  // Move focus to the success panel so the result is announced.
+  useEffect(() => {
+    if (applySuccess) applySuccessRef.current?.focus();
+  }, [applySuccess]);
 
   const handleSave = useCallback(async () => {
     if (saveLoading) return;
@@ -659,14 +667,14 @@ export default function JobDetailClient({
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
+                <DynamicButton
+                  variant="primary"
                   onClick={handleApplyClick}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/20"
+                  icon={<Send className="h-4 w-4" />}
+                  mirrorIconInRtl
                 >
-                  <Send className="w-4 h-4" />
                   {t("JobDetail.apply", "Apply now")}
-                </button>
+                </DynamicButton>
                 {job.company?.website && (
                   <a
                     href={job.company.website}
@@ -881,13 +889,9 @@ export default function JobDetailClient({
                   .split("{applicants}")
                   .join(String(job.applicantCount))}
               </p>
-              <button
-                type="button"
-                onClick={handleApplyClick}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold"
-              >
+              <DynamicButton variant="primary" fullWidth onClick={handleApplyClick}>
                 {t("JobDetail.apply", "Apply now")}
-              </button>
+              </DynamicButton>
               {/* Sidebar attribution — appears only for aggregated jobs. */}
               {job.attribution && job.externalUrl && (
                 <p className="text-[11px] text-slate-500">
@@ -931,24 +935,27 @@ export default function JobDetailClient({
             </button>
 
             {applySuccess ? (
-              <div className="text-center py-6">
-                <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {t("JobDetail.applied", "Application submitted")}
-                </h3>
-                <p className="text-slate-400 text-sm mb-4">
-                  {t(
+              <div
+                ref={applySuccessRef}
+                tabIndex={-1}
+                className="space-y-5 outline-none"
+              >
+                <ProcessingStatus
+                  state="success"
+                  title={t("JobDetail.applied", "Application submitted")}
+                  description={t(
                     "JobDetail.applySuccessBody",
                     "Your application has been sent successfully.",
                   )}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setApplyOpen(false)}
-                  className="px-5 py-2 rounded-xl bg-cyan-500 text-white text-sm font-medium"
-                >
-                  {t("Common.close", "Close")}
-                </button>
+                />
+                <div className="flex justify-end">
+                  <DynamicButton
+                    variant="secondary"
+                    onClick={() => setApplyOpen(false)}
+                  >
+                    {t("Common.close", "Close")}
+                  </DynamicButton>
+                </div>
               </div>
             ) : (
               <>
@@ -995,30 +1002,24 @@ export default function JobDetailClient({
                   </div>
 
                   <div className="flex gap-3 pt-2">
-                    <button
-                      type="button"
+                    <DynamicButton
+                      variant="secondary"
+                      className="flex-1"
                       onClick={() => setApplyOpen(false)}
-                      className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm font-medium transition-all"
                     >
                       {t("Common.cancel", "Cancel")}
-                    </button>
-                    <button
+                    </DynamicButton>
+                    <DynamicButton
                       type="submit"
-                      disabled={applying}
-                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                      variant="primary"
+                      className="flex-1"
+                      status={applying ? "loading" : "idle"}
+                      icon={<Send className="h-4 w-4" />}
+                      mirrorIconInRtl
+                      loadingLabel={t("JobDetail.applying", "Applying...")}
                     >
-                      {applying ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          {t("JobDetail.applying", "Applying...")}
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          {t("JobDetail.apply", "Apply now")}
-                        </>
-                      )}
-                    </button>
+                      {t("JobDetail.apply", "Apply now")}
+                    </DynamicButton>
                   </div>
                 </form>
               </>

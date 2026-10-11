@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { messageFromAiHttpError } from "@/lib/ai-client-errors";
+import { DynamicButton } from "@/components/ui/dynamic-button";
+import { ProcessingStatus } from "@/components/ui/processing-status";
+import { useTransientFeedback } from "@/hooks/use-transient-feedback";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -155,6 +158,10 @@ export default function ResumeBuilderPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [copied, setCopied] = useState(false);
+  // Brief button feedback after generating. The banners stay as the source of truth.
+  const [buttonFeedback, flashButton] = useTransientFeedback<
+    "success" | "error"
+  >();
 
   /* -------- Prefill from /api/profile -------- */
   useEffect(() => {
@@ -248,6 +255,7 @@ export default function ResumeBuilderPage() {
               (k, fb) => t(k, fb),
             ),
           );
+          flashButton("error");
           return;
         }
 
@@ -258,13 +266,15 @@ export default function ResumeBuilderPage() {
           src === "ai" || src === "template" ? (src as ResumeSource) : "",
         );
         setSuccess(str(d.message) || t("Common.success", "Resume ready"));
+        flashButton("success");
       } catch {
         setError(t("Common.errorNetwork", "Network error"));
+        flashButton("error");
       } finally {
         setLoading(false);
       }
     },
-    [form, loading, t],
+    [form, loading, t, flashButton],
   );
 
   /* -------- Copy -------- */
@@ -509,23 +519,21 @@ export default function ResumeBuilderPage() {
               </label>
             </div>
 
-            <button
+            <DynamicButton
               type="submit"
-              disabled={!canSubmit}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed transition"
+              variant="primary"
+              size="lg"
+              fullWidth
+              // While loading, DynamicButton uses aria-disabled so focus stays put.
+              disabled={!canSubmit && !loading}
+              status={loading ? "loading" : (buttonFeedback ?? "idle")}
+              icon={<Sparkles className="h-4 w-4" />}
+              loadingLabel={t("Resume.generating", "Generating...")}
+              successLabel={t("Common.success", "Success")}
+              errorLabel={t("Common.error", "Something went wrong")}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t("Resume.generating", "Generating...")}
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  {t("Resume.generate", "Generate Resume")}
-                </>
-              )}
-            </button>
+              {t("Resume.generate", "Generate Resume")}
+            </DynamicButton>
           </form>
 
           {/* -------- Preview -------- */}
@@ -562,8 +570,20 @@ export default function ResumeBuilderPage() {
               </div>
             </div>
 
-            {resume ? (
-              <pre className="flex-1 whitespace-pre-wrap text-slate-200 text-sm leading-relaxed overflow-auto font-sans">
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <ProcessingStatus
+                  state="processing"
+                  announce={false}
+                  title={t("Resume.generating", "Generating...")}
+                  className="max-w-sm"
+                />
+              </div>
+            ) : resume ? (
+              <pre
+                key={resume}
+                className="gjm-feed-in flex-1 whitespace-pre-wrap text-slate-200 text-sm leading-relaxed overflow-auto font-sans"
+              >
                 {resume}
               </pre>
             ) : (
