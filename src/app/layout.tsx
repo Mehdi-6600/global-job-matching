@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Vazirmatn, Noto_Kufi_Arabic } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
+import "./home.css";
 import Navbar from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Providers } from "./providers";
@@ -66,9 +67,9 @@ const GOOGLE_SITE_VERIFICATION =
   "YOUR_CODE_HERE";
 
 /*
- * themeColor is aligned with --bg-page (#e8e5e0) so the mobile
- * browser chrome matches the soft neumorphic cream surface instead
- * of a jarring white bar.
+ * themeColor is aligned with --bg-page (#f6f8fc) so the mobile
+ * browser chrome matches the light canvas instead of a jarring
+ * colour band above the page.
  *
  * maximumScale: 1 prevents double-tap zoom on mobile, which is
  * what causes the page to "jump" when a user taps an input.
@@ -76,7 +77,7 @@ const GOOGLE_SITE_VERIFICATION =
  * (three-finger tap, accessibility shortcuts) still works.
  */
 export const viewport: Viewport = {
-  themeColor: "#e8e5e0",
+  themeColor: "#f6f8fc",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

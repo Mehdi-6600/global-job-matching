@@ -129,7 +129,9 @@
     "trustLanguagesLabel": "زبان‌ها",
     "trustFreshnessLabel": "تازگی تأییدشده",
     "trustSectionKicker": "بر پایه‌ی داده‌های واقعی",
-    "trustSectionTitle": "زیرساخت قابل‌اعتماد، نه شعار."
+    "trustSectionTitle": "زیرساخت قابل‌اعتماد، نه شعار.",
+    "feedTitle": "جریان زندهٔ فرصت‌های شغلی",
+    "feedEmpty": "موقعیت‌های جدید به‌محض انتشار، همین‌جا نمایش داده می‌شوند."
   },
   "Common": {
     "loading": "در حال بارگذاری...",
@@ -160,6 +162,8 @@
     "newsletterEmailPlaceholder": "ایمیل خود را وارد کنید",
     "newsletterSubscribe": "عضویت",
     "newsletterFooter": "بدون هرزنامه. هر زمان می‌توانید لغو کنید.",
+    "newsletterSubmitting": "در حال عضویت…",
+    "newsletterRetry": "دوباره تلاش کنید",
     "newsletterErrorSubscribe": "عضویت انجام نشد",
     "newsletterErrorNetwork": "خطای شبکه. لطفاً دوباره تلاش کنید.",
     "timeAgo": {

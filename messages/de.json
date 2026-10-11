@@ -129,7 +129,9 @@
     "trustLanguagesLabel": "Sprachen",
     "trustFreshnessLabel": "Aktualität verifiziert",
     "trustSectionKicker": "AUF ECHTEN DATEN AUFGEBAUT",
-    "trustSectionTitle": "Vertrauenswürdige Infrastruktur, keine Testimonials."
+    "trustSectionTitle": "Vertrauenswürdige Infrastruktur, keine Testimonials.",
+    "feedTitle": "Live-Feed für Stellenangebote",
+    "feedEmpty": "Neue Stellen erscheinen hier, sobald sie veröffentlicht werden."
   },
   "Common": {
     "loading": "Wird geladen...",
@@ -160,6 +162,8 @@
     "newsletterEmailPlaceholder": "E-Mail eingeben",
     "newsletterSubscribe": "Abonnieren",
     "newsletterFooter": "Kein Spam. Jederzeit abbestellbar.",
+    "newsletterSubmitting": "Anmeldung läuft…",
+    "newsletterRetry": "Erneut versuchen",
     "newsletterErrorSubscribe": "Abonnement fehlgeschlagen",
     "newsletterErrorNetwork": "Netzwerkfehler. Bitte erneut versuchen.",
     "timeAgo": {

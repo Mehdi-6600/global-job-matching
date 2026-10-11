@@ -129,7 +129,9 @@
     "trustLanguagesLabel": "Idiomas",
     "trustFreshnessLabel": "Frescura verificada",
     "trustSectionKicker": "BASADO EN DATOS REALES",
-    "trustSectionTitle": "Infraestructura de confianza, no testimonios."
+    "trustSectionTitle": "Infraestructura de confianza, no testimonios.",
+    "feedTitle": "Feed de oportunidades en vivo",
+    "feedEmpty": "Las nuevas vacantes aparecen aquí en cuanto se publican."
   },
   "Common": {
     "loading": "Cargando...",
@@ -160,6 +162,8 @@
     "newsletterEmailPlaceholder": "Introduce tu correo",
     "newsletterSubscribe": "Suscribirse",
     "newsletterFooter": "Sin spam. Cancela cuando quieras.",
+    "newsletterSubmitting": "Suscribiendo…",
+    "newsletterRetry": "Intentar de nuevo",
     "newsletterErrorSubscribe": "No se pudo suscribir",
     "newsletterErrorNetwork": "Error de red. Inténtalo de nuevo.",
     "timeAgo": {
