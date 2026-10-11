@@ -32,6 +32,8 @@ const HANDLERS = {
   PUT: route.PUT,
   PATCH: route.PATCH,
   DELETE: route.DELETE,
+  HEAD: route.HEAD,
+  OPTIONS: route.OPTIONS,
 } as const;
 
 describe("disabled /api/admin/backfill-categories", () => {

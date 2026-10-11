@@ -33,3 +33,11 @@ export async function PATCH() {
 export async function DELETE() {
   return notFound();
 }
+
+export async function HEAD() {
+  return notFound();
+}
+
+export async function OPTIONS() {
+  return notFound();
+}
