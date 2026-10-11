@@ -71,6 +71,15 @@ describe("home content helpers", () => {
         salaryLabel({ ...base, currency: "EUR", salaryMin: 1000, salaryMax: 2000 }),
       ).toBe("EUR 1,000–2,000");
     });
+
+    it("formats numbers and the salary ceiling in the active locale", () => {
+      expect(
+        salaryLabel({ ...base, salaryMin: 50000, salaryMax: 90000 }, "de-DE"),
+      ).toBe("USD 50.000–90.000");
+      expect(
+        salaryLabel({ ...base, salaryMax: 90000 }, "de-DE", "Bis zu"),
+      ).toBe("Bis zu USD 90.000");
+    });
   });
 
   describe("splitHeroTitle", () => {

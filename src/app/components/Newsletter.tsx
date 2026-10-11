@@ -16,6 +16,7 @@ export default function Newsletter() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
     setSuccess(false);
@@ -83,6 +84,10 @@ export default function Newsletter() {
               "Your name (optional)"
             )}
             value={name}
+            aria-label={t(
+              "Common.newsletterNamePlaceholder",
+              "Your name (optional)",
+            )}
             onChange={(e) => setName(e.target.value)}
             className="gjm-newsletter-input gjm-newsletter-input--name"
             autoComplete="name"
@@ -97,6 +102,10 @@ export default function Newsletter() {
                 "Enter your email"
               )}
               value={email}
+              aria-label={t(
+                "Common.newsletterEmailPlaceholder",
+                "Enter your email",
+              )}
               onChange={(e) => setEmail(e.target.value)}
               className="gjm-newsletter-input gjm-newsletter-input--email"
               autoComplete="email"

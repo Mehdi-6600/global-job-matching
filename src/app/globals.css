@@ -3,88 +3,85 @@
 @tailwind utilities;
 
 /* ============================================================
-   GLOBAL JOB MATCHING — PREMIUM LIGHT DESIGN SYSTEM
+   GLOBAL JOB MATCHING — SOFT NEUMORPHIC DESIGN SYSTEM
    ============================================================
-   One shared token layer (clean near-white canvas, glass surfaces,
-   soft cool elevation, controlled neon accents) plus the shared
-   chrome: navbar, footer, buttons, cards and status primitives.
-   The home page composition lives in src/app/home.css.
+   One mist-toned surface palette, paired raised/recessed shadows and a
+   restrained teal action color, shared by navigation, pages, forms,
+   dialogs, cards and stateful controls. Home composition lives in
+   src/app/home.css.
    ============================================================ */
 
 @layer base {
   :root {
     /* ============================================================
-       PREMIUM LIGHT — AI / TECH DESIGN TOKENS
-       Clean near-white canvas, glass surfaces, controlled neon
-       accents (decorative only) and soft cool-tinted elevation.
-       Every token name that existed before is preserved so no
-       component or legacy rule loses its variable.
+       SOFT NEUMORPHIC DESIGN TOKENS
+       Mist-toned surfaces, a restrained teal action color and paired
+       light/shade shadows. The same semantic names remain available to
+       every legacy page and shared component.
        ============================================================ */
 
-    /* ---------- Glass ---------- */
-    --glass-border: rgba(255, 255, 255, 0.72);
-    --glass-bg: rgba(255, 255, 255, 0.66);
-    --glass-bg-strong: rgba(255, 255, 255, 0.86);
+    /* ---------- Translucent surfaces ---------- */
+    --glass-border: rgba(255, 255, 255, 0.78);
+    --glass-bg: rgba(238, 242, 239, 0.82);
+    --glass-bg-strong: rgba(242, 245, 243, 0.96);
 
     /* ---------- Brand ---------- */
-    --brand-primary: #0891b2;          /* cyan-600 — safe as text on light */
-    --brand-primary-hover: #0e7490;    /* cyan-700 */
-    --brand-primary-soft: #dff6fb;
-    --brand-primary-tint: #f0fbff;
-    --brand-accent: #7c3aed;           /* violet-600 */
-    --brand-accent-soft: #ece9fe;
+    --brand-primary: #0f766e;
+    --brand-primary-hover: #115e59;
+    --brand-primary-soft: #d9eee7;
+    --brand-primary-tint: #eef6f2;
+    --brand-accent: #476b60;
+    --brand-accent-soft: #e4eee9;
 
-    /* ---------- Neon accents (decorative — never text) ---------- */
-    --neon-cyan: #22d3ee;
-    --neon-sky: #38bdf8;
-    --neon-violet: #8b5cf6;
-    --neon-fuchsia: #d946ef;
-    --neon-mint: #34d399;
+    /* ---------- Supporting accents (kept for legacy/status UI) ---------- */
+    --neon-cyan: #39a99b;
+    --neon-sky: #5a9f9a;
+    --neon-violet: #817c91;
+    --neon-fuchsia: #a17c8d;
+    --neon-mint: #5ba58a;
 
     /* ---------- Surfaces ---------- */
-    --bg-page: #f6f8fc;
-    --bg-page-soft: #fbfcfe;
-    --surface: #ffffff;
-    --surface-2: #f8fafc;
-    --surface-3: #f1f5f9;
-    --border: #e3e9f2;
-    --border-soft: #eef2f8;
+    --bg-page: #edf1ee;
+    --bg-page-soft: #f3f6f4;
+    --surface: #eef2ef;
+    --surface-2: #e8eeea;
+    --surface-3: #e1e8e3;
+    --border: #d7e0da;
+    --border-soft: #e2e9e4;
 
-    /* ---------- Elevation shadow colors (kept for legacy rules) ---------- */
-    --shadow-light: #ffffff;
-    --shadow-dark: #c7d2e1;
-    --shadow-dark-soft: #dbe3ee;
+    /* ---------- Neumorphic highlight and shade ---------- */
+    --shadow-light: #fbfdfb;
+    --shadow-dark: #c3cec6;
+    --shadow-dark-soft: #d1dad4;
 
     /* ---------- Text ---------- */
-    --text-primary: #0b1220;
-    --text-body: #47536b;
-    --text-muted: #64748b;
-    --text-subtle: #94a3b8;
+    --text-primary: #1d2b26;
+    --text-body: #4d5d56;
+    --text-muted: #596960;
+    --text-subtle: #5c6b63;
     --text-on-brand: #ffffff;
 
     /* ---------- Feedback ---------- */
-    --success: #059669;
-    --success-soft: #ecfdf5;
-    --warning: #d97706;
-    --warning-soft: #fffbeb;
-    --error: #dc2626;
-    --error-soft: #fef2f2;
-    --info: #0891b2;
-    --info-soft: #ecfeff;
+    --success: #087a58;
+    --success-soft: #e0f1e8;
+    --warning: #8b4d06;
+    --warning-soft: #f5ead8;
+    --error: #b42332;
+    --error-soft: #f7e6e5;
+    --info: #0f766e;
+    --info-soft: #e1f0eb;
 
     /* ---------- Accessible action colors ----------
-       Solid fills that carry white text must meet WCAG AA (4.5:1).
-       --brand-primary (#0891b2) reaches ~3.1:1 with white, so
-       buttons use the deeper action token instead. */
-    --brand-action: #0e7490;          /* 5.4:1 with white */
-    --brand-action-hover: #155e75;    /* 7.3:1 with white */
-    --success-strong: #065f46;        /* 6.8:1 on --success-soft */
-    --error-strong: #991b1b;          /* 6.8:1 on --error-soft */
+       Both action colors provide strong contrast with white text. */
+    --brand-action: #0f766e;
+    --brand-action-hover: #115e59;
+    --success-strong: #075b42;
+    --error-strong: #8c1d2a;
 
-    /* ---------- Signature gradient (controlled neon) ---------- */
-    --gradient-brand: linear-gradient(120deg, #0891b2 0%, #4f46e5 52%, #7c3aed 100%);
-    --gradient-brand-soft: linear-gradient(120deg, #22d3ee 0%, #6366f1 55%, #a855f7 100%);
-    --gradient-ink: linear-gradient(150deg, #0b1220 0%, #1e2a44 60%, #10203a 100%);
+    /* ---------- Legacy gradient aliases (kept monochromatic) ---------- */
+    --gradient-brand: linear-gradient(120deg, #0f766e 0%, #115e59 100%);
+    --gradient-brand-soft: linear-gradient(120deg, #54a99b 0%, #398c80 100%);
+    --gradient-ink: linear-gradient(150deg, #24332d 0%, #33463d 100%);
 
     /* ---------- Motion ---------- */
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -93,7 +90,7 @@
     --duration-ui: 220ms;
 
     /* ---------- Focus ---------- */
-    --focus-ring: #0e7490;
+    --focus-ring: #0f766e;
 
     /* ---------- Radius ---------- */
     --radius-xs: 8px;
@@ -101,23 +98,23 @@
     --radius-md: 16px;
     --radius-lg: 20px;
     --radius-xl: 24px;
-    --radius-2xl: 32px;
+    --radius-2xl: 28px;
     --radius-pill: 9999px;
 
-    /* ---------- Elevation (soft, cool, layered) ---------- */
-    --elev-1: 0 1px 2px rgba(11, 18, 32, 0.05), 0 1px 3px rgba(11, 18, 32, 0.04);
-    --elev-2: 0 2px 4px rgba(11, 18, 32, 0.04), 0 10px 22px -10px rgba(11, 18, 32, 0.14);
-    --elev-3: 0 4px 10px rgba(11, 18, 32, 0.05), 0 18px 34px -14px rgba(11, 18, 32, 0.18);
-    --elev-4: 0 8px 18px rgba(11, 18, 32, 0.06), 0 30px 60px -22px rgba(11, 18, 32, 0.22);
-    --elev-5: 0 14px 28px rgba(11, 18, 32, 0.07), 0 44px 84px -30px rgba(11, 18, 32, 0.26);
+    /* ---------- Paired raised elevation ---------- */
+    --elev-1: 2px 2px 5px rgba(151, 164, 155, 0.26), -2px -2px 5px rgba(255, 255, 255, 0.82);
+    --elev-2: 4px 4px 10px rgba(151, 164, 155, 0.29), -4px -4px 10px rgba(255, 255, 255, 0.84);
+    --elev-3: 7px 7px 16px rgba(151, 164, 155, 0.31), -7px -7px 16px rgba(255, 255, 255, 0.86);
+    --elev-4: 10px 10px 22px rgba(151, 164, 155, 0.33), -10px -10px 22px rgba(255, 255, 255, 0.88);
+    --elev-5: 14px 14px 28px rgba(151, 164, 155, 0.34), -12px -12px 26px rgba(255, 255, 255, 0.9);
 
-    /* ---------- Elevation (inset) ---------- */
-    --inset-1: inset 0 1px 2px rgba(11, 18, 32, 0.06);
-    --inset-2: inset 0 2px 5px rgba(11, 18, 32, 0.07);
-    --inset-3: inset 0 4px 10px rgba(11, 18, 32, 0.08);
+    /* ---------- Recessed elevation ---------- */
+    --inset-1: inset 1px 1px 3px rgba(151, 164, 155, 0.27), inset -1px -1px 3px rgba(255, 255, 255, 0.78);
+    --inset-2: inset 3px 3px 7px rgba(151, 164, 155, 0.29), inset -3px -3px 7px rgba(255, 255, 255, 0.8);
+    --inset-3: inset 5px 5px 11px rgba(151, 164, 155, 0.31), inset -5px -5px 11px rgba(255, 255, 255, 0.82);
 
     /* ---------- Typography scale ---------- */
-    --font-display: clamp(2.125rem, 5.4vw + 0.75rem, 4rem);
+    --font-display: clamp(2.125rem, 5.2vw + 0.5rem, 4rem);
     --font-h1: clamp(1.75rem, 3vw + 1rem, 2.5rem);
     --font-h2: clamp(1.5rem, 2vw + 1rem, 2rem);
     --font-h3: clamp(1.125rem, 1vw + 1rem, 1.375rem);
@@ -135,9 +132,9 @@
     --neu-light: var(--shadow-light);
     --neu-cyan: var(--brand-primary);
     --neu-cyan-deep: var(--brand-primary-hover);
-    --background: 216 40% 98%;
-    --foreground: 222 47% 11%;
-    --primary: 190 91% 36%;
+    --background: 150 12% 94%;
+    --foreground: 156 19% 15%;
+    --primary: 174 77% 26%;
     --radius: 16px;
   }
 
@@ -151,18 +148,8 @@
 
   html,
   body {
-    background-color: var(--bg-page);
+    background: var(--bg-page);
     color: var(--text-body);
-  }
-
-  /* Ambient light wash — decorative, extremely low contrast so text
-     contrast ratios stay untouched. Fixed so it never scrolls. */
-  body {
-    background-image:
-      radial-gradient(60rem 40rem at 82% -8%, rgba(56, 189, 248, 0.16), transparent 62%),
-      radial-gradient(48rem 34rem at 6% 4%, rgba(139, 92, 246, 0.12), transparent 60%);
-    background-attachment: fixed;
-    background-repeat: no-repeat;
   }
 
   body {
@@ -321,49 +308,46 @@
     line-height: 1.2;
     border: 1px solid transparent;
     cursor: pointer;
+    min-height: 2.75rem;
     transition: box-shadow 0.15s ease, transform 0.15s ease, filter 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
     text-align: center;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .gjm-btn svg { flex-shrink: 0; }
 
-  /* Primary — deep brand gradient. White text stays at 5.4:1+ because
-     both gradient stops are darker than #0891b2. */
+  /* Primary action: one AA-contrast brand fill, with a tactile edge. */
   .gjm-btn-primary {
-    background-image: linear-gradient(120deg, #0e7490 0%, #155e75 55%, #4c1d95 100%);
-    background-color: var(--brand-action);
+    background: var(--brand-action);
     color: var(--text-on-brand);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.22) inset,
-      0 10px 24px -12px rgba(14, 116, 144, 0.85);
+      0 2px 5px rgba(15, 118, 110, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   .gjm-btn-primary:hover {
-    background-image: linear-gradient(120deg, #155e75 0%, #155e75 45%, #5b21b6 100%);
+    background: var(--brand-action-hover);
     transform: translateY(-1px);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.26) inset,
-      0 16px 32px -14px rgba(14, 116, 144, 0.9);
+      0 4px 9px rgba(15, 118, 110, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
   .gjm-btn-primary:active {
+    background: var(--brand-action-hover);
     transform: translateY(1px);
-    box-shadow: var(--inset-2);
+    box-shadow: inset 0 2px 5px rgba(4, 57, 53, 0.24);
   }
 
-  /* Secondary — glass card */
+  /* Secondary action: a raised control on the shared page surface. */
   .gjm-btn-secondary {
-    background: var(--glass-bg-strong);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    background: var(--surface);
     color: var(--text-primary);
-    border-color: var(--border);
+    border-color: var(--border-soft);
     box-shadow: var(--elev-1);
   }
   .gjm-btn-secondary:hover {
-    border-color: #cbd5e1;
+    border-color: var(--border);
     box-shadow: var(--elev-2);
     transform: translateY(-1px);
   }
@@ -374,7 +358,7 @@
 
   .gjm-btn-white {
     background: var(--surface);
-    color: var(--brand-primary-hover);
+    color: var(--brand-action);
     box-shadow: var(--elev-2);
   }
   .gjm-btn-white:hover {
@@ -384,6 +368,14 @@
   .gjm-btn-white:active {
     box-shadow: var(--inset-1);
     transform: translateY(1px);
+  }
+
+  .gjm-btn:disabled,
+  .gjm-btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+    box-shadow: none;
   }
 
   .btn-primary { @apply gjm-btn gjm-btn-primary; }
@@ -2351,4 +2343,322 @@ code {
       opacity: 0.8;
     }
   }
+}
+
+/* ============================================================
+   SHARED SURFACE FINISH — navigation, internal pages and forms
+   ============================================================ */
+.gjm-header {
+  background: rgba(237, 241, 238, 0.96);
+  border-bottom-color: var(--border-soft);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72), 0 4px 12px rgba(54, 69, 60, 0.055);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.gjm-nav-cta,
+.gjm-mobile-cta {
+  background: var(--brand-action);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.gjm-nav-cta:hover,
+.gjm-mobile-cta:hover {
+  background: var(--brand-action-hover);
+  box-shadow: 0 4px 9px rgba(15, 118, 110, 0.21), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.gjm-nav-cta:active,
+.gjm-mobile-cta:active {
+  box-shadow: inset 0 2px 5px rgba(4, 57, 53, 0.24);
+}
+
+.gjm-footer {
+  margin-top: 0;
+  background: var(--surface-2);
+  border-top-color: var(--border-soft);
+  box-shadow: var(--inset-1);
+}
+
+.gjm-footer::before {
+  height: 1px;
+  background: var(--border);
+}
+
+.glass,
+.glass-strong {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--elev-2) !important;
+}
+
+.glass-input,
+input.bg-white\/5,
+textarea.bg-white\/5,
+select.bg-white\/5 {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  background-color: var(--surface-2) !important;
+  box-shadow: var(--inset-1) !important;
+  color: var(--text-primary) !important;
+}
+
+.glass-input::placeholder,
+input.bg-white\/5::placeholder,
+textarea.bg-white\/5::placeholder {
+  color: var(--text-subtle) !important;
+  opacity: 1;
+}
+
+.glass-input:focus-visible,
+input.bg-white\/5:focus-visible,
+textarea.bg-white\/5:focus-visible,
+select.bg-white\/5:focus-visible {
+  border-color: rgba(15, 118, 110, 0.48) !important;
+  box-shadow: var(--inset-1), 0 0 0 3px rgba(15, 118, 110, 0.11) !important;
+}
+
+.gjm-card-accent {
+  --card-accent: rgba(15, 118, 110, 0.2);
+  box-shadow: var(--elev-2), inset 0 0 0 1px var(--card-accent);
+}
+
+.gjm-card-accent--cyan { --card-accent: rgba(15, 118, 110, 0.2); }
+.gjm-card-accent--emerald { --card-accent: rgba(8, 122, 88, 0.2); }
+.gjm-card-accent--amber { --card-accent: rgba(166, 94, 18, 0.2); }
+.gjm-card-accent--red { --card-accent: rgba(180, 35, 50, 0.2); }
+.gjm-card-accent--violet { --card-accent: rgba(71, 107, 96, 0.2); }
+
+.bg-indigo-600,
+.bg-indigo-500 {
+  background-color: var(--brand-action) !important;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+.bg-indigo-600:hover,
+.bg-indigo-500:hover {
+  background-color: var(--brand-action-hover) !important;
+}
+
+.shadow-indigo-500\/10 {
+  --tw-shadow-color: rgba(15, 118, 110, 0.12) !important;
+  --tw-shadow: 3px 3px 8px var(--tw-shadow-color) !important;
+  box-shadow: var(--tw-shadow) !important;
+}
+
+.bg-cyan-500\/10,
+.bg-cyan-500\/15,
+.bg-cyan-500\/20,
+.bg-cyan-500\/25 {
+  background-color: var(--brand-primary-soft) !important;
+  border-color: rgba(15, 118, 110, 0.18) !important;
+}
+
+.bg-indigo-500\/10,
+.bg-indigo-500\/15,
+.bg-violet-500\/10,
+.bg-violet-500\/15,
+.bg-purple-500\/10,
+.bg-purple-500\/15 {
+  background-color: var(--brand-accent-soft) !important;
+  border-color: rgba(71, 107, 96, 0.18) !important;
+}
+
+.border-cyan-500\/20,
+.border-cyan-500\/30,
+.border-cyan-500\/40 {
+  border-color: rgba(15, 118, 110, 0.22) !important;
+}
+
+.border-indigo-500\/20,
+.border-indigo-500\/30,
+.border-indigo-500\/40 {
+  border-color: rgba(71, 107, 96, 0.2) !important;
+}
+
+.gjm-dynamic-btn[data-variant="primary"] {
+  background: var(--brand-action);
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.gjm-dynamic-btn[data-variant="primary"][data-status="idle"]:not(:disabled):hover {
+  background: var(--brand-action-hover);
+  box-shadow: 0 4px 9px rgba(15, 118, 110, 0.21), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.gjm-dynamic-btn[data-variant="primary"]:not(:disabled):not([aria-disabled="true"]):active {
+  background: var(--brand-action-hover);
+  box-shadow: inset 0 2px 5px rgba(4, 57, 53, 0.24);
+}
+
+.gjm-dynamic-btn[data-variant="secondary"] {
+  background: var(--surface);
+  box-shadow: var(--elev-2);
+}
+
+.gjm-dynamic-btn[data-variant="secondary"][data-status="idle"]:not(:disabled):hover {
+  color: var(--brand-action-hover);
+  box-shadow: var(--elev-3);
+}
+
+.gjm-dynamic-btn:disabled,
+.gjm-dynamic-btn[aria-disabled="true"] {
+  filter: none;
+}
+
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 1239px) {
+  .gjm-desktop-nav { display: none; }
+  .gjm-mobile-actions { display: flex; }
+}
+
+@media (min-width: 1240px) {
+  .gjm-desktop-nav { display: flex; }
+  .gjm-mobile-actions { display: none; }
+}
+
+/* Keep heading rhythm legible when utility classes are used on RTL pages. */
+html[lang="fa"] h1,
+html[lang="ar"] h1 {
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+html[lang="fa"] h2,
+html[lang="ar"] h2,
+html[lang="fa"] h3,
+html[lang="ar"] h3 {
+  letter-spacing: 0;
+  line-height: 1.45;
+}
+
+html[lang="de"] h1,
+html[lang="fr"] h1 {
+  hyphens: auto;
+  overflow-wrap: anywhere;
+}
+
+/* Bring legacy utility accents onto the shared semantic palette. */
+.text-cyan-100,
+.text-cyan-200,
+.text-cyan-300,
+.text-cyan-400,
+.text-cyan-500,
+.text-sky-100,
+.text-sky-200,
+.text-sky-300,
+.text-sky-400,
+.text-sky-500,
+.text-blue-100,
+.text-blue-200,
+.text-blue-300,
+.text-blue-400,
+.text-blue-500,
+.text-indigo-100,
+.text-indigo-200,
+.text-indigo-300,
+.text-indigo-400,
+.text-indigo-500 {
+  color: var(--brand-action) !important;
+}
+
+.text-violet-100,
+.text-violet-200,
+.text-violet-300,
+.text-violet-400,
+.text-violet-500,
+.text-purple-100,
+.text-purple-200,
+.text-purple-300,
+.text-purple-400,
+.text-purple-500 {
+  color: var(--brand-accent) !important;
+}
+
+.text-emerald-100,
+.text-emerald-200,
+.text-emerald-300,
+.text-emerald-400,
+.text-emerald-500 {
+  color: var(--success-strong) !important;
+}
+
+.text-amber-100,
+.text-amber-200,
+.text-amber-300,
+.text-amber-400,
+.text-amber-500 {
+  color: var(--warning) !important;
+}
+
+.bg-cyan-400,
+.bg-cyan-500,
+.bg-cyan-600,
+.bg-sky-400,
+.bg-sky-500,
+.bg-sky-600,
+.bg-blue-400,
+.bg-blue-500,
+.bg-blue-600,
+.bg-indigo-400,
+.bg-indigo-500,
+.bg-indigo-600 {
+  background-color: var(--brand-action) !important;
+  box-shadow:
+    0 2px 6px rgba(15, 118, 110, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+}
+
+.bg-cyan-400 *,
+.bg-cyan-500 *,
+.bg-cyan-600 *,
+.bg-sky-400 *,
+.bg-sky-500 *,
+.bg-sky-600 *,
+.bg-blue-400 *,
+.bg-blue-500 *,
+.bg-blue-600 *,
+.bg-indigo-400 *,
+.bg-indigo-500 *,
+.bg-indigo-600 * {
+  color: #fff !important;
+}
+
+.bg-cyan-400:hover,
+.bg-cyan-500:hover,
+.bg-cyan-600:hover,
+.bg-sky-400:hover,
+.bg-sky-500:hover,
+.bg-sky-600:hover,
+.bg-blue-400:hover,
+.bg-blue-500:hover,
+.bg-blue-600:hover,
+.bg-indigo-400:hover,
+.bg-indigo-500:hover,
+.bg-indigo-600:hover {
+  background-color: var(--brand-action-hover) !important;
+}
+
+.bg-gradient-to-r.from-cyan-500.to-blue-500,
+.bg-gradient-to-r.from-cyan-400.to-cyan-600,
+.bg-gradient-to-br.from-cyan-500.to-blue-500 {
+  background-image: linear-gradient(120deg, var(--brand-action), var(--brand-action-hover)) !important;
+  box-shadow:
+    0 2px 6px rgba(15, 118, 110, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+}
+
+.bg-gradient-to-r.from-cyan-500.to-blue-500 *,
+.bg-gradient-to-r.from-cyan-400.to-cyan-600 *,
+.bg-gradient-to-br.from-cyan-500.to-blue-500 * {
+  color: #fff !important;
 }

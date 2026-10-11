@@ -81,21 +81,26 @@ export function relativeTime(date?: string, now: number = Date.now()): string {
  * then a floor, then a ceiling. Returns null when nothing is published, so
  * the caller can render an honest "not listed" state instead of a guess.
  */
-export function salaryLabel(job: HomeJob): string | null {
+export function salaryLabel(
+  job: HomeJob,
+  locale?: string,
+  upToLabel = "Up to",
+): string | null {
   if (job.salary) return job.salary;
 
   const currency = job.currency || "USD";
+  const format = (amount: number) => amount.toLocaleString(locale);
 
   if (job.salaryMin != null && job.salaryMax != null) {
-    return `${currency} ${job.salaryMin.toLocaleString()}–${job.salaryMax.toLocaleString()}`;
+    return `${currency} ${format(job.salaryMin)}–${format(job.salaryMax)}`;
   }
 
   if (job.salaryMin != null) {
-    return `${currency} ${job.salaryMin.toLocaleString()}+`;
+    return `${currency} ${format(job.salaryMin)}+`;
   }
 
   if (job.salaryMax != null) {
-    return `Up to ${currency} ${job.salaryMax.toLocaleString()}`;
+    return `${upToLabel} ${currency} ${format(job.salaryMax)}`;
   }
 
   return null;
@@ -104,7 +109,7 @@ export function salaryLabel(job: HomeJob): string | null {
 export type HeroTitle = {
   /** First sentence — rendered in full ink for maximum contrast. */
   line1: string;
-  /** Remainder — rendered with the brand gradient. Empty when one sentence. */
+  /** Remainder — rendered with a restrained brand accent. Empty when one sentence. */
   line2: string;
 };
 

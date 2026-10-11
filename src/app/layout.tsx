@@ -66,21 +66,13 @@ const GOOGLE_SITE_VERIFICATION =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() ||
   "YOUR_CODE_HERE";
 
-/*
- * themeColor is aligned with --bg-page (#f6f8fc) so the mobile
- * browser chrome matches the light canvas instead of a jarring
- * colour band above the page.
- *
- * maximumScale: 1 prevents double-tap zoom on mobile, which is
- * what causes the page to "jump" when a user taps an input.
- * Accessibility is preserved — iOS/Android system-level zoom
- * (three-finger tap, accessibility shortcuts) still works.
- */
+/* The browser chrome follows the shared mist canvas. Keep native pinch
+ * zoom available; all text fields also use a 16px minimum on small screens
+ * to avoid iOS focus-zoom without disabling user scaling. */
 export const viewport: Viewport = {
-  themeColor: "#f6f8fc",
+  themeColor: "#edf1ee",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 /*

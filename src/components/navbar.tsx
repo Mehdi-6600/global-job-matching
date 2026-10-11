@@ -417,7 +417,7 @@ export default function Navbar() {
           </div>
 
           <div className="gjm-mobile-actions">
-            <LanguageSwitcher />
+            <LanguageSwitcher compact />
 
             <button
               type="button"

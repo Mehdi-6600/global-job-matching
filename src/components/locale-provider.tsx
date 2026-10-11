@@ -13,7 +13,6 @@ import {
   defaultLocale,
   isLocale,
   isRtlLocale,
-  LOCALE_COOKIE,
   LOCALE_STORAGE_KEY,
   type Locale,
 } from "@/lib/i18n/config";
@@ -43,11 +42,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fromPath = parseLocalePath(pathname).localeFromPath;
+    const serverLocale = document.documentElement.lang;
     try {
       const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
-      setLocaleState(resolveLocale(fromPath || saved));
+      setLocaleState(resolveLocale(fromPath || saved || serverLocale));
     } catch {
-      setLocaleState(resolveLocale(fromPath));
+      setLocaleState(resolveLocale(fromPath || serverLocale));
     }
     setReady(true);
   }, [pathname]);
