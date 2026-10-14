@@ -1,6 +1,7 @@
 import type { Job } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isAdminRole, normalizeRole } from "@/lib/roles";
+import { canManageJob } from "@/lib/ownership";
 import { normalizeLocation } from "@/lib/location";
 import { jobUpdateSchema } from "@/lib/validation/job";
 import {
@@ -59,17 +60,11 @@ export async function updateJobForUser(
     return { ok: false, status: 404, error: "Not found" };
   }
 
-  const isAdmin = isAdminRole(actor.role);
-  // Management requires company ownership (see canManageJob). postedById is
-  // not an authorization grant. Unknown roles fail closed.
-  const isOwner =
-    normalizeRole(actor.role) !== null &&
-    Boolean(existing.company?.ownerId) &&
-    existing.company?.ownerId === actor.id;
-
-  if (!isOwner && !isAdmin) {
+  // Same rule as every other job-management route (see canManageJob).
+  if (!canManageJob(actor.id, actor.role, existing)) {
     return { ok: false, status: 403, error: "Forbidden" };
   }
+  const isAdmin = isAdminRole(actor.role);
 
   // A non-admin cannot detach a job from its company: after detaching they
   // would no longer own the job and could not re-attach it.
