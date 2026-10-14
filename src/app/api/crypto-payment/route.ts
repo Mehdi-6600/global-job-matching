@@ -17,6 +17,11 @@ import { getEffectivePlan } from "@/lib/subscription";
 import { rateLimitedResponse, readJsonBody } from "@/lib/http";
 import { loadValidIntentForUser } from "@/lib/payment/intent";
 import { canTransitionIntent } from "@/lib/payment/state-machine";
+import {
+  canonicalTxHash,
+  hexDigestOf,
+  legacyHashWhere,
+} from "@/lib/payment/tx-hash";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -132,7 +137,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const txHash = normalizeTxHash(parsed.data.txHash);
+    const rawTxHash = normalizeTxHash(parsed.data.txHash);
 
     // -----------------------------------------------------------------------
     // 5) Load and validate payment intent for this user
@@ -153,6 +158,9 @@ export async function POST(req: NextRequest) {
 
     const intent = intentLoad.intent;
     const cryptoType = intent.cryptoType;
+    // One spelling per transaction: case and 0x prefix are canonicalised per asset
+    // so the duplicate check and the unique index see the same value.
+    const txHash = canonicalTxHash(cryptoType, rawTxHash);
 
     // -----------------------------------------------------------------------
     // 6) State machine: only "pending" → "submitted" allowed
@@ -220,10 +228,18 @@ export async function POST(req: NextRequest) {
     // -----------------------------------------------------------------------
     // 10) Duplicate txHash guard
     // -----------------------------------------------------------------------
+    // Exact canonical value first, then rows stored before canonicalisation in
+    // any spelling (letter case, with or without 0x). Only the digest is compared
+    // for hex ids; TON ids stay case-sensitive.
     const existingTx = await db.transaction.findUnique({
       where: { txHash },
     });
-    if (existingTx) {
+    const legacyWhere = legacyHashWhere(hexDigestOf(cryptoType, txHash));
+    const legacyTx =
+      !existingTx && legacyWhere
+        ? await db.transaction.findFirst({ where: legacyWhere })
+        : null;
+    if (existingTx || legacyTx) {
       return NextResponse.json(
         {
           error: "Transaction hash already used",
