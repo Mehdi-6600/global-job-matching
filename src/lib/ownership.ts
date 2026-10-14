@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
-import { isAdminRole } from "@/lib/roles";
+import { isAdminRole, normalizeRole } from "@/lib/roles";
 
 type Tx = Prisma.TransactionClient | PrismaClient;
 
@@ -14,6 +14,9 @@ export function canManageJob(
     company?: { ownerId?: string | null } | null;
   }
 ): boolean {
+  // Fail closed: an unrecognised or missing role grants no access, even to
+  // the poster. Roles come from the database (normalized by normalizeRole).
+  if (!normalizeRole(role)) return false;
   if (isAdminRole(role)) return true;
   if (job.postedById && job.postedById === userId) return true;
   if (job.company?.ownerId && job.company.ownerId === userId) return true;

@@ -78,6 +78,20 @@ describe("canManageJob (ownership / IDOR primitives)", () => {
   it("Unknown role is treated as non-privileged", () => {
     expect(canManageJob("employer-a", "unknown-role", jobA)).toBe(false);
   });
+
+  // Fail-closed: an unrecognised role grants nothing, even to the poster.
+  it("unknown or missing role denies even the original poster", () => {
+    expect(canManageJob("employer-a", "unknown-role", jobA)).toBe(false);
+    expect(canManageJob("employer-a", "", jobA)).toBe(false);
+    expect(canManageJob("employer-a", null, jobA)).toBe(false);
+    expect(canManageJob("employer-a", undefined, jobA)).toBe(false);
+  });
+
+  it("a signed-in user who is neither poster nor company owner is denied", () => {
+    const stranger = { postedById: "employer-b", company: { ownerId: "employer-b" } };
+    expect(canManageJob("job-seeker-x", ROLES.JOB_SEEKER, stranger)).toBe(false);
+    expect(canManageJob("", ROLES.EMPLOYER, stranger)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -142,9 +156,17 @@ describe("role primitives", () => {
     expect(normalizeRole(undefined)).toBeNull();
   });
 
-  it("isAdminRole accepts legacy admin variants", () => {
+  // Policy (src/lib/roles.ts): the admin panel is open to ADMIN and OWNER.
+  // OWNER is the highest role and is admin-level by design; this assertion
+  // previously expected false and contradicted roles.ts, the middleware admin
+  // check and the "Admin and Owner can manage any job" test above.
+  it("isAdminRole accepts legacy admin variants and OWNER (admin panel policy)", () => {
     expect(isAdminRole(ROLES.ADMIN)).toBe(true);
     expect(isAdminRole("admin")).toBe(true);
-    expect(isAdminRole(ROLES.OWNER)).toBe(false);
+    expect(isAdminRole(ROLES.OWNER)).toBe(true);
+    expect(isAdminRole(ROLES.EMPLOYER)).toBe(false);
+    expect(isAdminRole(ROLES.JOB_SEEKER)).toBe(false);
+    expect(isAdminRole("")).toBe(false);
+    expect(isAdminRole(null)).toBe(false);
   });
 });
