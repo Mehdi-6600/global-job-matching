@@ -153,6 +153,14 @@ describe("canManageCompany", () => {
       canManageCompany("employer-a", ROLES.EMPLOYER, { ownerId: null })
     ).toBe(false);
   });
+
+  it("denies an unknown or missing role even for the company owner", () => {
+    const company = { ownerId: "employer-a" };
+    expect(canManageCompany("employer-a", "unknown-role", company)).toBe(false);
+    expect(canManageCompany("employer-a", "", company)).toBe(false);
+    expect(canManageCompany("employer-a", null, company)).toBe(false);
+    expect(canManageCompany("employer-a", undefined, company)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

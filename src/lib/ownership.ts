@@ -6,7 +6,8 @@ type Tx = Prisma.TransactionClient | PrismaClient;
 /**
  * True if the user can manage this job.
  *
- * Policy (owner decision, 2026-10):
+ * Policy (derived from the ownership tests in this repo; the owner has not yet
+ * confirmed it, see docs/BUYER_READINESS_REVIEW.md section H.1):
  * - Admin / OWNER: may manage any job.
  * - Everyone else: must own the job's company (`company.ownerId`).
  * - A job with no company (`company` null) is manageable by admins only.
@@ -43,6 +44,8 @@ export function canManageCompany(
   role: string | null | undefined,
   company: { ownerId?: string | null }
 ): boolean {
+  // Fail closed for unknown or missing roles, as canManageJob does.
+  if (!normalizeRole(role)) return false;
   if (isAdminRole(role)) return true;
   return !!company.ownerId && company.ownerId === userId;
 }
