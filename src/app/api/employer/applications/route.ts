@@ -32,10 +32,7 @@ export async function GET(req: NextRequest) {
         ? {}
         : {
             job: {
-              OR: [
-                { company: { ownerId: authz.user.id } },
-                { postedById: authz.user.id },
-              ],
+              company: { ownerId: authz.user.id },
             },
           },
       orderBy: { createdAt: "desc" },

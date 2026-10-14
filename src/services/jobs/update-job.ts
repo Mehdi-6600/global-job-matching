@@ -1,6 +1,6 @@
 import type { Job } from "@prisma/client";
 import { db } from "@/lib/db";
-import { isAdminRole } from "@/lib/roles";
+import { isAdminRole, normalizeRole } from "@/lib/roles";
 import { normalizeLocation } from "@/lib/location";
 import { jobUpdateSchema } from "@/lib/validation/job";
 import {
@@ -22,6 +22,16 @@ export type UpdateJobResult =
       limit?: number;
       used?: number;
     };
+
+/** True when the raw update body explicitly sets companyId to null. */
+function parsedBodyDetachesCompany(rawBody: unknown): boolean {
+  return (
+    typeof rawBody === "object" &&
+    rawBody !== null &&
+    "companyId" in rawBody &&
+    (rawBody as { companyId?: unknown }).companyId === null
+  );
+}
 
 type Actor = {
   id: string;
@@ -50,11 +60,25 @@ export async function updateJobForUser(
   }
 
   const isAdmin = isAdminRole(actor.role);
-  const isOwner = existing.company?.ownerId === actor.id;
-  const isPoster = existing.postedById === actor.id;
+  // Management requires company ownership (see canManageJob). postedById is
+  // not an authorization grant. Unknown roles fail closed.
+  const isOwner =
+    normalizeRole(actor.role) !== null &&
+    Boolean(existing.company?.ownerId) &&
+    existing.company?.ownerId === actor.id;
 
-  if (!isOwner && !isPoster && !isAdmin) {
+  if (!isOwner && !isAdmin) {
     return { ok: false, status: 403, error: "Forbidden" };
+  }
+
+  // A non-admin cannot detach a job from its company: after detaching they
+  // would no longer own the job and could not re-attach it.
+  if (parsedBodyDetachesCompany(rawBody) && !isAdmin) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Only an admin can remove a job from its company",
+    };
   }
 
   const parsed = jobUpdateSchema.safeParse(rawBody);
@@ -209,10 +233,12 @@ export async function deleteJobForUser(
   }
 
   const isAdmin = isAdminRole(actor.role);
-  const isOwner = job.company?.ownerId === actor.id;
-  const isPoster = job.postedById === actor.id;
+  const isOwner =
+    normalizeRole(actor.role) !== null &&
+    Boolean(job.company?.ownerId) &&
+    job.company?.ownerId === actor.id;
 
-  if (!isOwner && !isPoster && !isAdmin) {
+  if (!isOwner && !isAdmin) {
     return { ok: false, status: 403, error: "Forbidden" };
   }
 

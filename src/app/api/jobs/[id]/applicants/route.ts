@@ -57,16 +57,16 @@ export async function GET(
     const isAdmin =
       isAdminRole(role);
 
-    const isJobPoster =
-      job.postedById === session.user.id;
-
+    // Company ownership is required (same policy as canManageJob). The
+    // posting's postedById is not an authorization grant: applicant PII
+    // must not be exposed to a poster who no longer owns the company.
     const isCompanyOwner =
       !!job.company &&
+      !!job.company.ownerId &&
       job.company.ownerId === session.user.id;
 
     const hasPermission =
       isAdmin ||
-      isJobPoster ||
       (isEmployerRole(role) &&
         isCompanyOwner);
 

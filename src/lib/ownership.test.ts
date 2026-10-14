@@ -87,6 +87,36 @@ describe("canManageJob (ownership / IDOR primitives)", () => {
     expect(canManageJob("employer-a", undefined, jobA)).toBe(false);
   });
 
+  // -------------------------------------------------------------------------
+  // Poster-without-company policy (owner decision): company ownership is the
+  // only non-admin management grant. postedById alone grants nothing.
+  // -------------------------------------------------------------------------
+
+  it("poster who no longer owns the job's company is denied", () => {
+    const transferred = {
+      postedById: "employer-a",
+      company: { ownerId: "employer-b" },
+    };
+    expect(canManageJob("employer-a", ROLES.EMPLOYER, transferred)).toBe(false);
+  });
+
+  it("company-less job is manageable by admin, not by its poster", () => {
+    const orphanJob = { postedById: "employer-a", company: null };
+    expect(canManageJob("admin-1", ROLES.ADMIN, orphanJob)).toBe(true);
+    expect(canManageJob("owner-1", ROLES.OWNER, orphanJob)).toBe(true);
+    expect(canManageJob("employer-a", ROLES.EMPLOYER, orphanJob)).toBe(false);
+  });
+
+  it("missing company relation is denied even when postedById matches", () => {
+    const noRelation = { postedById: "employer-a" };
+    expect(canManageJob("employer-a", ROLES.EMPLOYER, noRelation)).toBe(false);
+  });
+
+  it("empty user id never matches a company with a null owner", () => {
+    const job = { postedById: null, company: { ownerId: null } };
+    expect(canManageJob("", ROLES.EMPLOYER, job)).toBe(false);
+  });
+
   it("a signed-in user who is neither poster nor company owner is denied", () => {
     const stranger = { postedById: "employer-b", company: { ownerId: "employer-b" } };
     expect(canManageJob("job-seeker-x", ROLES.JOB_SEEKER, stranger)).toBe(false);

@@ -4,7 +4,21 @@ import { isAdminRole, normalizeRole } from "@/lib/roles";
 type Tx = Prisma.TransactionClient | PrismaClient;
 
 /**
- * True if the user can manage this job (poster, company owner, or admin).
+ * True if the user can manage this job.
+ *
+ * Policy (owner decision, 2026-10):
+ * - Admin / OWNER: may manage any job.
+ * - Everyone else: must own the job's company (`company.ownerId`).
+ * - A job with no company (`company` null) is manageable by admins only.
+ *   The original poster does NOT gain access through `postedById` alone:
+ *   a poster who no longer owns the company, or whose job was detached from
+ *   a company, loses management rights.
+ *
+ * `postedById` is intentionally not consulted here. It is still recorded for
+ * attribution and for read-only listings, but it is not an authorization
+ * grant.
+ *
+ * Fail closed: an unrecognised or missing role grants no access.
  */
 export function canManageJob(
   userId: string,
@@ -14,13 +28,11 @@ export function canManageJob(
     company?: { ownerId?: string | null } | null;
   }
 ): boolean {
-  // Fail closed: an unrecognised or missing role grants no access, even to
-  // the poster. Roles come from the database (normalized by normalizeRole).
   if (!normalizeRole(role)) return false;
   if (isAdminRole(role)) return true;
-  if (job.postedById && job.postedById === userId) return true;
-  if (job.company?.ownerId && job.company.ownerId === userId) return true;
-  return false;
+  if (!userId) return false;
+  if (!job.company) return false;
+  return Boolean(job.company.ownerId) && job.company.ownerId === userId;
 }
 
 /**
