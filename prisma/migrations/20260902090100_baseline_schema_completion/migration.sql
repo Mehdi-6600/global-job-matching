@@ -11,9 +11,13 @@
 --     databases by a schema push.
 --
 -- Safety:
---   * Additive only. No DROP, no data rewrite, no unique index on an existing
---     table (a unique constraint over existing rows could fail on a populated
---     database and is intentionally NOT added here; see docs/MIGRATION_STRATEGY.md).
+--   * No DROP and no data rewrite.
+--   * Two UNIQUE indexes are created on tables that may already hold rows in an
+--     older database: Transaction("paymentIntentId") and
+--     PaymentIntent("transactionId"). Both match @unique in prisma/schema.prisma.
+--     On a populated database the index creation FAILS if two non-NULL rows share
+--     a value. Run the read-only duplicate check in docs/MIGRATION_STRATEGY.md
+--     before deploying. The Interview(userId, jobId) unique index is NOT added here.
 --   * Every statement is idempotent (IF [NOT] EXISTS or a pg_constraint guard).
 --     On a database where these objects already exist, this migration is a no-op.
 
