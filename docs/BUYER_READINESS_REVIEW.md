@@ -7,8 +7,8 @@ It does not claim the app is bug-free or fully secure.
 ## A. Repository summary
 - Next.js 15.5.27 (upgraded from 15.1.11), React 19, Prisma 6.19 (client), NextAuth 5.0.0-beta.32 (from beta.25), Node ≥ 20.9.
 - Auth gate is in `src/middleware.ts` + `src/lib/auth.config.ts`; route classes in `src/lib/route-access.ts`.
-- 21 migrations (19 original + 2 added in this branch). Schema: `prisma/schema.prisma`.
-- Test suite: 93 files, 850 tests (7 skipped). Lockfile `package-lock.json` (npm) updated in place, not regenerated.
+- 21 migration folders: 20 on `main` + 1 added in this branch (`20260902090100_baseline_schema_completion`). Two `main` migrations were also edited in this branch (see E). Schema: `prisma/schema.prisma`.
+- Test suite (vitest, head `4ef179c`): 97 files; 95 pass, 1 skipped, 1 fails locally (DB integration file, needs the real Prisma engine). 881 tests passed, 7 skipped. Lockfile `package-lock.json` (npm) updated in place, not regenerated.
 
 ## B. Defects
 | ID | Defect | Status |
@@ -26,17 +26,21 @@ It does not claim the app is bug-free or fully secure.
 | D11 | Stale doc claimed the build runs `prisma migrate deploy`. It does not. | Corrected in `docs/MIGRATION_STRATEGY.md` |
 
 **Open (low/medium):**
-- `updateJobForUser` lets the poster detach `companyId` (`null`) without a company-ownership check. Low; needs a policy decision (see H).
-- Duplicate `txHash` race in `crypto-payment` returns generic 500 (the DB unique constraint prevents double credit). Low; response code only, not changed without approval.
+- Resolved in round 2 (`181a55a`): `updateJobForUser` no longer grants access through `postedById`, and non-admins cannot detach `companyId`.
+- Resolved in round 2 (`292394d`): a concurrent duplicate `txHash` returns 409 `DUPLICATE_TX` (the DB unique constraint still prevents double credit).
 - Rate limiting: Redis is disabled in code (`createClient()` returns `null`), so limits are per serverless instance.
 - CSP `script-src` includes `'unsafe-inline' 'unsafe-eval'` (documented in `next.config.js`).
 - Stray root `migration.sql` (diverged copy, not used by Prisma). Remove in a separate change.
 - `prisma migrate deploy` is not part of `npm run build`; the production schema depends on a separate, explicit step.
+- **Edited applied-candidate migrations:** `20260220120000_add_company_isActive_verified` and `20260318120000_job_ingestion_network` are on `main` but were modified in this branch (guarded with `DO $$ … IF to_regclass … $$`). If Production already applied the originals, their checksums differ. `prisma migrate status` will show them as modified. Owner decision before release (see E).
+- **Header/content mismatch in `20260902090100_baseline_schema_completion`:** the header says it adds no unique index on an existing table, but it creates `Transaction_paymentIntentId_key` (on the existing `Transaction` table) and `PaymentIntent_transactionId_key`. A duplicate non-null value in Production would make the index creation fail. Needs a read-only duplicate check before any deploy.
 
 ## C. Tests
 - Before: 19 failing of 704; 12 TypeScript errors (all in tests); 20 failing suites.
 - Now: `npx tsc --noEmit` passes (0 errors). `npm run lint`: 0 errors. `npm run i18n:check`: passes.
-- Local Vitest: 842 passed, 7 skipped, **1 failed** (policy decision, below). The concurrency integration test needs a real Prisma engine and DB; it runs in CI.
+- Local Vitest (`4ef179c`): 881 passed, 7 skipped; the DB integration file fails locally only because the sandbox cannot download the real Prisma engine.
+- CI on `4ef179c` (run `38540660327`, PR #6 check `Typecheck · Lint · Test · Production Build`): **success**. Steps: Prisma generate, migrate deploy, typecheck, lint, unit tests, production build all succeeded. The ownership test passes.
+- Earlier CI: run `38532110380` on `88ce04a` failed only at `ownership.test.ts` ("Employer cannot manage a job without a company"); that test is now passing with its expectation unchanged.
 - CI run `38532110380` on commit `88ce04a` (dependency upgrade): Typecheck ✓, Lint ✓, `prisma migrate deploy` ✓, Unit tests ✗ (only `ownership.test.ts` › "Employer cannot manage a job without a company"). The production build step is skipped by CI after the test failure.
 - Local `next build` (Next 15.5.27) succeeds with a local-only font mock (`NEXT_FONT_GOOGLE_MOCKED_RESPONSES`) because the sandbox cannot reach Google Fonts. The mock is not committed.
 
@@ -49,6 +53,7 @@ It does not claim the app is bug-free or fully secure.
 
 ## E. Migration
 - Local catalog check (disposable PostgreSQL 16): all 21 migrations apply to an empty database; re-running is a no-op; catalog matches `schema.prisma` except the deliberately omitted `Interview(userId, jobId)` unique index.
+- Production migration state: **unverified.** The sandbox has no Production `DATABASE_URL` and no read-only access; no connection was attempted.
 - CI: `prisma migrate deploy` on fresh `postgres:16` succeeded.
 - **Production: not verified.** Need read-only `prisma migrate status`, a backup, duplicate checks, and a staging run before any deploy. See `docs/MIGRATION_STRATEGY.md`.
 
@@ -81,7 +86,7 @@ Blocked in this environment:
 - Branch name is fixed by the session (`arena/041d4c02-global-job-matching`); the suggested `fix/buyer-readiness-stabilization` was not created.
 
 ## I. Release recommendation
-**Not ready for buyer release.** The branch is ready for review after the remaining owner decisions in section H (AI limiter policy, Interview index, underpayment tolerance) are recorded, the Vercel Preview/Production `OWNER_EMAIL` setting is confirmed, and one green CI run is on the head commit. Merging, Production migrations, Production deploys, environment changes, and payment-behavior changes need separate explicit approval. Do not treat this review as proof the app is bug-free or fully secure.
+**Not ready for buyer release.** The branch is ready for review after the remaining owner decisions in section H (poster policy confirmation, AI limiter policy, Interview index, underpayment tolerance) are recorded, the Vercel Production `OWNER_EMAIL` setting and the failing Production deployment of `ab40290` are checked, and the edited-migration question in section B is resolved. CI is green on `4ef179c`. Merging, Production migrations, Production deploys, environment changes, and payment-behavior changes need separate explicit approval. Do not treat this review as proof the app is bug-free or fully secure.
 
 ## J. Round 2 repair (PR #6)
 Scope: items 1–6 of the repair request. No merge, no Production deploy, no Production migration, no Vercel or environment change.
@@ -135,5 +140,5 @@ HAVING count(*) FILTER (WHERE status = 'scheduled') > 1;
 - i18n: `npm run i18n:check` passes.
 - Unit tests (`vitest run`, CI environment variables): **881 passed, 7 skipped, 0 failed**. One file fails: `src/services/jobs/active-job-limit.concurrency.test.ts` (integration). It needs the real Prisma query engine, which this sandbox cannot download (`binaries.prisma.sh` unreachable). It runs in CI against a Postgres service.
 - Production build (`next build`, CI environment with `SKIP_ENV_VALIDATION=1`, local-only Google Fonts mock): passes.
-- CI on the PR head commit: see PR #6 checks for the run after this push.
+- CI on the PR head commit `4ef179c`: success (run `38540660327`). Vercel Preview for `4ef179c`: success (deployment `7061430457`, environment Preview).
 
