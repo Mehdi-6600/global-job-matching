@@ -30,7 +30,10 @@ It does not claim the app is bug-free or fully secure.
 - Resolved in round 2 (`292394d`): a concurrent duplicate `txHash` returns 409 `DUPLICATE_TX` (the DB unique constraint still prevents double credit).
 - Rate limiting: Redis is disabled in code (`createClient()` returns `null`), so limits are per serverless instance.
 - CSP `script-src` includes `'unsafe-inline' 'unsafe-eval'` (documented in `next.config.js`).
-- Stray root `migration.sql` (diverged copy, not used by Prisma). Remove in a separate change.
+- Stray root `migration.sql` (diverged copy, not used by Prisma): removed in `240b7c4`.
+- Checksum tool `scripts/print-migration-checksums.mjs` did not parse (comment closed early): fixed in `938f133`.
+- Migration `20260902090100` header said no unique index is created on an existing table; it does (two). Header corrected in `c7fe4ff`.
+- Ownership helpers: `canManageCompany` now fails closed for unknown roles (`4b8c17a`); `updateJobForUser` uses `canManageJob` for its gate (`8a22908`, same behaviour).
 - `prisma migrate deploy` is not part of `npm run build`; the production schema depends on a separate, explicit step.
 - **Edited applied-candidate migrations:** `20260220120000_add_company_isActive_verified` and `20260318120000_job_ingestion_network` are on `main` but were modified in this branch (guarded with `DO $$ … IF to_regclass … $$`). If Production already applied the originals, their checksums differ. `prisma migrate status` will show them as modified. Owner decision before release (see E).
 - **Header/content mismatch in `20260902090100_baseline_schema_completion`:** the header says it adds no unique index on an existing table, but it creates `Transaction_paymentIntentId_key` (on the existing `Transaction` table) and `PaymentIntent_transactionId_key`. A duplicate non-null value in Production would make the index creation fail. Needs a read-only duplicate check before any deploy.
@@ -54,7 +57,7 @@ It does not claim the app is bug-free or fully secure.
 - Ownership: fail-closed for unknown roles. `OWNER` remains admin-level by policy (`src/lib/roles.ts`).
 - Bearer-secret endpoints (cron, sync, seed) fail closed. Verified over HTTP without credentials: admin/profile/payment → 401, seed → 403, cron → 503 (no secret configured).
 - Security headers present on `/` (HSTS, X-Frame-Options DENY, nosniff, CSP).
-- Dependencies (`npm audit`): before 26 (5 critical, 16 high, 5 moderate). After: 23 (2 critical, 15 high, 6 moderate). Remaining criticals are Vitest 3.x and tinypool (dev/test only); the fix needs a Vitest major upgrade. Remaining highs are mostly build/dev tooling (Prisma CLI, eslint, tailwind) and `sharp` via `next` (image optimisation). These need a planned upgrade, not this PR.
+- Dependencies (`npm audit`): before 26 (5 critical, 16 high, 5 moderate). After: 23 (2 critical, 15 high, 6 moderate). Remaining criticals are Vitest 3.x and tinypool (dev/test only); the fix needs a Vitest major upgrade. Remaining highs are mostly build/dev tooling (Prisma CLI, eslint, tailwind). These need a planned upgrade, not this PR. Details are in section K.
 
 ## E. Migration
 - Local catalog check (disposable PostgreSQL 16): all 21 migrations apply to an empty database; re-running is a no-op; catalog matches `schema.prisma` except the deliberately omitted `Interview(userId, jobId)` unique index.
@@ -65,7 +68,7 @@ It does not claim the app is bug-free or fully secure.
 ## F. Payment / crypto review (code review only; no live transactions)
 Checked in `src/app/api/crypto-payment/route.ts` and `src/lib/payment/*`:
 - Intent must belong to the caller, be `pending`, and not be expired. State transitions are enforced.
-- Recipient wallet must match the quote. Duplicate `txHash` is rejected and enforced by a unique constraint.
+- Recipient wallet must match the quote. Duplicate `txHash` is rejected for an exact string match and enforced by a unique constraint. **Open finding (round 3):** hashes are only trimmed, not lower-cased, so `0xABC…` and `0xabc…` are not treated as duplicates. Section K describes the risk. The fix changes payment verification behaviour, so it needs owner approval first.
 - On-chain check requires recipient match and amount within tolerance. Verification is fail-closed when explorers/RPC are unavailable. TON verification is disabled (fail-closed).
 - The claim is atomic (`updateMany` from `pending` to `submitted`) inside a transaction.
 - `/api/payment` refuses paid plans and points to crypto checkout. Card payments are not integrated.
@@ -82,6 +85,9 @@ Round 2 status (see section J for details):
 2. **AI rate limit when Redis is down**: no behaviour change. Analysis in section J. Owner decision remains. The test that asserted a block was rewritten to assert the fallback (section C); if the owner chooses a block, the code and the original test must both be restored.
 3. **Interview unique index**: not added. Plan in section J. Owner decision remains.
 4. **Crypto underpayment tolerance** (2%): unchanged, owner decision. The 409-vs-500 duplicate question is resolved as 409 (`292394d`).
+5. **Case-variant transaction hashes** (section F and K): proposed fix is to normalise EVM-style hex hashes to lower case and make the duplicate check case-insensitive. This changes payment behaviour, so it needs your approval. Not changed.
+6. **Dependency majors** (section K): `vitest` 5.x, `next` 16.x, `@vercel/blob` 2.x and the `eslint-config-next` path each change the API or build. Each needs its own planned change and approval.
+7. **Ownership policy confirmation**: the policy in section J.2 is taken from the repo's own tests (see K). It is still an owner decision for release.
 
 Blocked in this environment:
 - Production HTTP: the sandbox cannot reach `vercel.app` (curl status 000). Only read-only GETs via the page-fetch tool were used: `/fa/jobs`, `/this-page-does-not-exist`, `/jobs`.
@@ -146,4 +152,66 @@ HAVING count(*) FILTER (WHERE status = 'scheduled') > 1;
 - Unit tests (`vitest run`, CI environment variables): **881 passed, 7 skipped, 0 failed**. One file fails: `src/services/jobs/active-job-limit.concurrency.test.ts` (integration). It needs the real Prisma query engine, which this sandbox cannot download (`binaries.prisma.sh` unreachable). It runs in CI against a Postgres service.
 - Production build (`next build`, CI environment with `SKIP_ENV_VALIDATION=1`, local-only Google Fonts mock): passes.
 - CI on the PR head commit `4ef179c`: success (run `38540660327`). Vercel Preview for `4ef179c`: success (deployment `7061430457`, environment Preview).
+
+## K. Round 3 verification (PR #6, this pass)
+
+Verified on `32ef2e9` (CI run `38544011867`): every step of `Typecheck · Lint · Test · Production Build` is `success`, including `Prisma migrate deploy (CI database)`. The `Vercel` commit status is `success` and the Preview deployment `7061965128` is `success` with environment `Preview`. The PR is still a Draft.
+
+### K.1 Ownership policy: what the repo's own tests already say
+`git show ab40290:src/lib/ownership.test.ts` (merged 2026-10-12, before this branch) contains these tests:
+- `Employer cannot manage a job without a company` expects `false` for `{postedById: "employer-a", company: null}`. On `main` the code returned `true`, so this test was failing on `main`.
+- `Unknown role is treated as non-privileged` expects `false` for `"unknown-role"`. `main` returned `true` here too.
+- `Employer A can manage job owned via company.ownerId` expects `true`. `Admin and Owner can manage any job` expects `true`.
+
+So the repo's own tests answer the three questions:
+1. Can a poster without a company manage their own job? **No** (repo test; now enforced).
+2. Does the company owner have access to the company's jobs? **Yes** (repo test).
+3. Are unknown or missing roles always denied? **Yes** (repo test; now enforced in `canManageJob`, `canManageCompany`, and `updateJobForUser`).
+
+The owner still has to confirm this for release, mainly because of legacy data (K.4).
+
+### K.2 AI rate limiting (`src/lib/safe-ratelimit.ts`, `src/lib/ratelimit.ts`, `src/lib/redis.ts`)
+- `src/lib/redis.ts` `createClient()` returns `null` unconditionally. Environment variables cannot re-enable Redis without a code change. In production therefore `aiRatelimit` is `memoryAi`, the in-process limiter with 3 requests per 60 s.
+- Scope: the limit is **per key per instance**. The key is `` `career_risk_${userId}_${ip}` `` (and the same pattern in the other AI routes), so it is per user **and** IP. A user who changes IP, or who has several accounts, gets a fresh window. Each serverless instance keeps its own `Map`, so N instances allow about 3·N per minute.
+- Real cost cap: `src/lib/quota.ts` `assertAndReserveAiUsage` reserves a monthly AI quota under a `FOR UPDATE` row lock: 2 (free), 30, 50, or 200 generations per plan per month (`src/lib/plan-limits.ts`). This is per user and does not depend on Redis.
+- Behaviour when Redis fails: `strictAiLimit` falls back to the memory limiter (`degraded: true`). It returns `infraFailed` only if the fallback also fails.
+- Comparison of the options (no change made):
+  - **Keep the current fallback (A):** AI stays available. Burst protection is weak across instances. Money is capped by the monthly quota. Recommended for now.
+  - **Block AI with 503 while Redis is disabled (B):** closes the burst gap but turns off AI for every user while Redis is off. Only worth it for a short period.
+  - **Re-enable Upstash (C):** the only shared limit across instances. Requires provisioning credentials and a code change in `redis.ts`. Recommended before a real launch.
+- Memory note: the memory limiter `Map` is never pruned. Entries are reset only when the same key is used again. Growth is bounded by the number of distinct user/IP keys seen per instance. Low risk, but it should be pruned in a later change.
+- The test rewrite noted in section C changes an assertion that protects against an outage. It needs your decision (H.2).
+
+### K.3 Migrations (read-only, no Production access)
+- Checksums (`node scripts/print-migration-checksums.mjs`, fixed in `938f133`): 21 migrations. `20260220120000_add_company_isActive_verified` is `6fa2e595…` on the branch and `b53c1e7d…` on `main`. `20260318120000_job_ingestion_network` is `41e5de2b…` on the branch and `63216cee…` on `main`. Both files were added in `ab40290` and modified in `03a566d`.
+- Consequence: any database that applied the `main` versions has checksums that no longer match. Whether Prisma rejects or only reports a changed applied migration could not be verified locally. The Prisma schema engine is a native binary and is not available here (stub engines). Owner decision: restore the originals and add a new corrective migration, or accept the modified files after a read-only check. Not changed.
+- `20260902090100_baseline_schema_completion`: `ADD COLUMN IF NOT EXISTS` and `CREATE … IF NOT EXISTS` are idempotent. Two `CREATE UNIQUE INDEX IF NOT EXISTS` statements are not data-safe on a populated database (duplicates would fail the index). The header is now corrected (`c7fe4ff`).
+- Interview: `schema.prisma` declares `@@unique([userId, jobId])`, but no migration creates it. The app's `POST` in `src/app/api/employer/interviews/route.ts` checks for an existing `scheduled` row with `findFirst` and then calls `create`, which is not atomic. The planned partial unique index on `status = 'scheduled'` would turn a race into `P2002`. The route would then need to map `P2002` to 409. No migration added.
+- Read-only duplicate checks are now in `docs/MIGRATION_STRATEGY.md` ("Read-only checks before any Production deploy"). I ran them against the disposable PostgreSQL 16 scratch database: zero rows on the real (empty) tables. Against seeded temporary tables they flag duplicates, ignore NULLs, allow cancelled or completed rounds, and catch case-variant hashes. The scratch cluster is stopped.
+- Production migration state: **unknown.** There is no Production `DATABASE_URL` or read-only access in this sandbox. The owner needs to run the queries in MIGRATION_STRATEGY and attach the output.
+- Root `migration.sql`: removed in `240b7c4`. No code referenced it.
+
+### K.4 Crypto payment
+- Ownership: `loadValidIntentForUser` returns `INTENT_FORBIDDEN` when the intent belongs to another user, and `INTENT_EXPIRED` after `expiresAt`. The claim is `updateMany` from `pending` to `submitted`, inside the same transaction as the transaction insert. A failed insert rolls the claim back.
+- Amount: `verifyTxOnChain` checks recipient and amount. Tolerance is under 2% and over 4% (`src/lib/payment/verify-crypto.ts`, constants `AMOUNT_TOLERANCE_UNDER` and `AMOUNT_TOLERANCE_OVER`). Meaning of 2%: a payment of 98% of the quote is accepted, so the operator can lose up to 2% per payment. Overpayment is accepted and is not refunded.
+- Duplicate: `POST` checks `findUnique({txHash})` and returns 409 `DUPLICATE_TX`. A concurrent `P2002` on `txHash` or `paymentIntentId` is also 409 (`292394d`). Other errors still return 500.
+- **Open finding:** `normalizeTxHash` only trims. The duplicate check is case-sensitive. For hex-format hashes (EVM chains, Tron) `0xABC…` and `0xabc…` are the same transaction. A second intent can therefore present the same on-chain payment. The verifier only checks amount and recipient, and the admin confirm path checks neither uniqueness nor case. This is reasoned from code and was not reproduced end to end. A case-insensitive query finds such pairs in existing data (check 4 in `docs/MIGRATION_STRATEGY.md`). Not changed, because it alters payment verification behaviour. Your approval is needed.
+- Expected-value handling: a stored transaction with a missing recipient or expected amount fails closed in the admin path (`MISSING_CHAIN_DATA`, `292394d`).
+
+### K.5 Dependencies (`npm audit`, registry read-only)
+23 findings: 2 critical, 15 high, 6 moderate. Installed versions and what each finding needs:
+- **Vitest and tinypool (critical, dev/test only):** `vitest` 3.2.7 is affected (range `0.0.95 – 4.1.10`). `tinypool` `<=2.1.1` is affected (prototype pollution, RCE gadget in worker options). Only the test runner depends on them. The fix is `vitest` 5.0.4 (major). Not changed.
+- **Production-direct:** `next` 15.5.27 has a moderate advisory (range up to `16.3.0-preview.10`). The fix is `next` 16.4.0 (major). `@vercel/blob` 0.27.3 (direct; used only in `src/lib/storage/resume.ts`) has a moderate advisory (range `0.0.3 – 2.0.0`). Its high-severity advisories come through `undici` and `@fastify/busboy`. The fix is `@vercel/blob` 2.8.2 (major). Whether these reach the runtime depends on upload handling, which I have not verified. `tailwindcss-animate` has a moderate advisory with no fix.
+- **Dev-direct:** `prisma` (high, range `6.13.0-dev.1 – 8.1.0-dev.4`, fix available), `eslint-config-next` (high; the suggested fix is 14.2.35, a downgrade), `postcss` (high, fix only via `next` 16), `tailwindcss` (high, no fix).
+- Transitive: `brace-expansion`, `deepmerge-ts`, `source-map-js` have non-major fixes. `npm audit fix` (non-forced) would add 101 packages and change 5. That is too broad for this PR, so I did not run it.
+- Registry: `next` latest 16.4.0, `vitest` latest 5.0.4, `@vercel/blob` latest 2.8.2. `next-auth` latest stable is 4.24.15. The 5.x line is still a beta, and `5.0.0-beta.32` is the newest v5 release.
+- Decision needed: the majors above, each as a separate change with a test plan.
+
+### K.6 Validation (this pass; branch HEAD at the time of the run, see `git log`)
+- Typecheck (`npm run typecheck`): exit 0.
+- Lint (`npm run lint`): exit 0, 22 warning lines, 0 errors.
+- Unit tests (`npx vitest run`, CI env from `.github/workflows/ci.yml`): 882 passed, 7 skipped, 97 files: 95 pass, 1 skipped, 1 fails. The failing file is `src/services/jobs/active-job-limit.concurrency.test.ts`, which needs a real Prisma engine and a database and is run only in CI.
+- i18n check (`npm run i18n:check`): passed, 53 English-identical warnings (not strict).
+- Build (`next build` with `NODE_OPTIONS=--require /tmp/font-mock.js`): exit 0. Google Fonts is unreachable from the sandbox, so the build used a local mock.
+- Without the CI env variables, `src/lib/api-auth.test.ts` fails to load because `env.ts` validation throws. This is not a code regression.
 
