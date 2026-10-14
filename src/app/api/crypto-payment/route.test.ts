@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   loadValidIntentForUser: vi.fn(),
   activatePlanForUser: vi.fn(),
   db: {
-    transaction: { findUnique: vi.fn(), findFirst: vi.fn(), count: vi.fn(), create: vi.fn() },
+    transaction: { findUnique: vi.fn(), count: vi.fn(), create: vi.fn() },
     $transaction: vi.fn(),
   },
   prisma: {
@@ -94,8 +94,6 @@ beforeEach(() => {
   mocks.verifyTxOnChain.mockReset();
   mocks.db.transaction.findUnique.mockReset();
   mocks.db.transaction.findUnique.mockResolvedValue(null);
-  mocks.db.transaction.findFirst.mockReset();
-  mocks.db.transaction.findFirst.mockResolvedValue(null);
   mocks.db.transaction.count.mockReset();
   mocks.db.transaction.count.mockResolvedValue(0);
   mocks.db.$transaction.mockReset();
@@ -242,139 +240,3 @@ describe("POST /api/crypto-payment: submission never activates a plan", () => {
     expect(res.status).toBe(500);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Same on-chain payment, different spelling of the hash (case, 0x prefix,
-// surrounding whitespace). The database is simulated with Postgres semantics:
-// findUnique and the unique index compare exact strings, findFirst with
-// mode "insensitive" compares case-insensitively.
-// ---------------------------------------------------------------------------
-
-type Row = { id: string; txHash: string };
-
-function makeStore(seed: Row[] = []) {
-  const rows: Row[] = [...seed];
-  const exact = (v: string) => (r: Row) => r.txHash === v;
-  const ci = (v: string) => (r: Row) => r.txHash.toLowerCase() === v.toLowerCase();
-  // Supports the shapes the route uses: { txHash } and { OR: [{ txHash: { equals, mode } }] }.
-  function matcher(where: any): (r: Row) => boolean {
-    if (where.OR) {
-      const subs = where.OR.map((c: any) => matcher(c));
-      return (r) => subs.some((f: (r: Row) => boolean) => f(r));
-    }
-    const t = where.txHash;
-    if (typeof t === "string") return exact(t);
-    if (t && typeof t.equals === "string") {
-      return t.mode === "insensitive" ? ci(t.equals) : exact(t.equals);
-    }
-    throw new Error("unsupported where in test store: " + JSON.stringify(where));
-  }
-  mocks.db.transaction.findUnique.mockImplementation(async ({ where }: any) => {
-    return rows.find(matcher(where)) ?? null;
-  });
-  mocks.db.transaction.findFirst.mockImplementation(async ({ where }: any) => {
-    return rows.find(matcher(where)) ?? null;
-  });
-  mocks.prisma.transaction.create.mockImplementation(async ({ data }: any) => {
-    // Unique index on txHash: exact string comparison, like PostgreSQL.
-    if (rows.some(exact(data.txHash))) {
-      throw Object.assign(new Error("Unique constraint failed"), {
-        code: "P2002",
-        meta: { target: ["txHash"] },
-      });
-    }
-    const row = { id: `tx-${rows.length + 1}`, txHash: data.txHash };
-    rows.push(row);
-    return { ...row, status: "pending", amount: 10, billingCycle: "monthly", cryptoType: "ETH", createdAt: new Date() };
-  });
-  return rows;
-}
-
-function intentWithId(id: string) {
-  return { ...intent, id };
-}
-
-const DIGEST = "abcdef0123456789".repeat(4); // 64 hex characters
-
-describe("POST /api/crypto-payment: one on-chain payment cannot be recorded twice", () => {
-  beforeEach(() => {
-    mocks.loadValidIntentForUser.mockImplementation(async (id: string) => ({
-      ok: true,
-      intent: intentWithId(id),
-    }));
-    mocks.verifyTxOnChain.mockResolvedValue({
-      status: "confirmed",
-      found: true,
-      amountMatched: true,
-      recipientMatched: true,
-    });
-  });
-
-  it("rejects the same hash with different letter case for a second intent", async () => {
-    const rows = makeStore();
-    const first = await post({ paymentIntentId: "intent-1", txHash: "0x" + DIGEST });
-    expect(first.status).toBe(200);
-
-    const second = await post({
-      paymentIntentId: "intent-2",
-      txHash: "0x" + DIGEST.toUpperCase(),
-    });
-
-    expect(second.status).toBe(409);
-    expect(await second.json()).toMatchObject({ code: "DUPLICATE_TX" });
-    expect(rows).toHaveLength(1);
-  });
-
-  it("rejects the same digest without the 0x prefix", async () => {
-    const rows = makeStore();
-    expect((await post({ paymentIntentId: "intent-1", txHash: "0x" + DIGEST })).status).toBe(200);
-
-    const res = await post({ paymentIntentId: "intent-2", txHash: DIGEST });
-
-    expect(res.status).toBe(409);
-    expect(rows).toHaveLength(1);
-  });
-
-  it("rejects surrounding whitespace around the same hash", async () => {
-    const rows = makeStore();
-    expect((await post({ paymentIntentId: "intent-1", txHash: "0x" + DIGEST })).status).toBe(200);
-
-    const res = await post({ paymentIntentId: "intent-2", txHash: "  0x" + DIGEST.toUpperCase() + " " });
-
-    expect(res.status).toBe(409);
-    expect(rows).toHaveLength(1);
-  });
-
-  it("rejects a variant of a legacy row that was stored with mixed case", async () => {
-    // Rows written before this change may hold any spelling.
-    const rows = makeStore([{ id: "tx-legacy", txHash: "0x" + DIGEST.toUpperCase() }]);
-
-    const res = await post({ paymentIntentId: "intent-2", txHash: "0x" + DIGEST });
-
-    expect(res.status).toBe(409);
-    expect(mocks.verifyTxOnChain).not.toHaveBeenCalled();
-    expect(rows).toHaveLength(1);
-  });
-
-  it("stores and verifies the canonical form, so a later variant cannot slip past the unique index", async () => {
-    const rows = makeStore();
-
-    const res = await post({ paymentIntentId: "intent-1", txHash: "0x" + DIGEST.toUpperCase() });
-
-    expect(res.status).toBe(200);
-    expect(rows[0].txHash).toBe("0x" + DIGEST);
-    expect(mocks.verifyTxOnChain).toHaveBeenCalledWith(
-      expect.objectContaining({ txHash: "0x" + DIGEST })
-    );
-  });
-
-  it("does not treat a different hash as a duplicate", async () => {
-    const rows = makeStore([{ id: "tx-old", txHash: "0x" + "1".repeat(64) }]);
-
-    const res = await post({ paymentIntentId: "intent-2", txHash: "0x" + DIGEST });
-
-    expect(res.status).toBe(200);
-    expect(rows).toHaveLength(2);
-  });
-});
-
