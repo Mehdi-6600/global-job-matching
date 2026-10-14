@@ -129,9 +129,14 @@ const mockJobSource = {
 /* Mock the @/lib/db module                                            */
 /* ------------------------------------------------------------------ */
 
+// Getter: the mock object is read when source-lease calls db.jobSource (at test
+// time). A plain property would be read during import, before the const above
+// is initialised, and throw a TDZ ReferenceError.
 vi.mock("@/lib/db", () => ({
-  db: {
-    jobSource: mockJobSource,
+  get db() {
+    return {
+      jobSource: mockJobSource,
+    };
   },
 }));
 

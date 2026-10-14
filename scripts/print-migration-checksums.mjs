@@ -3,7 +3,7 @@
  * Deterministic checksums for Prisma migration folders.
  * Usage: node scripts/print-migration-checksums.mjs
  *
- * Walks prisma/migrations/*/migration.sql and prints
+ * Walks every folder under prisma/migrations and prints
  * SHA-256 of each file contents (UTF-8) + path, sorted by folder name.
  */
 import { createHash } from "node:crypto";

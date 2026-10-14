@@ -143,16 +143,10 @@ export async function PATCH(req: NextRequest) {
       > | null = null;
 
       if (tx.type === "crypto") {
-        if (!tx.txHash || !tx.cryptoType) {
-          return NextResponse.json(
-            {
-              error: "Crypto payment is missing txHash or cryptoType",
-              code: "MISSING_CHAIN_DATA",
-            },
-            { status: 400 }
-          );
-        }
-
+        // Fail closed: without the stored recipient and expected amount the
+        // verifier cannot check either one (its checks are skipped when the
+        // expected value is absent), so a confirmation could activate a plan
+        // for an underpaid or wrong-recipient transfer.
         const expectedRecipient =
           typeof (tx as { recipientAddress?: string | null }).recipientAddress ===
           "string"
@@ -163,6 +157,23 @@ export async function PATCH(req: NextRequest) {
         const expectedCryptoAmount = decimalToNumber(
           (tx as { expectedCryptoAmount?: unknown }).expectedCryptoAmount
         );
+
+        if (
+          !tx.txHash ||
+          !tx.cryptoType ||
+          !expectedRecipient ||
+          expectedCryptoAmount === undefined ||
+          !(expectedCryptoAmount > 0)
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Crypto payment is missing txHash, cryptoType, recipient or expected amount; cannot verify. Reject or fix the record.",
+              code: "MISSING_CHAIN_DATA",
+            },
+            { status: 400 }
+          );
+        }
 
         chainVerification = await verifyTxOnChain({
           asset: tx.cryptoType,

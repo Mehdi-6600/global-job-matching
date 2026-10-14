@@ -45,6 +45,10 @@ const ENGINEER_SENIOR = {
   location: "Berlin",
   country: "Germany",
   locale: "en",
+  industry: "Software",
+  education: "BSc Computer Science",
+  targetRole: "Staff Engineer",
+  languages: "English, German",
   responsibilities:
     "Led the migration to Next.js\nMentored 4 engineers\nDesigned the design system",
 };
@@ -56,6 +60,10 @@ const NURSE_SENIOR = {
   location: "Munich",
   country: "Germany",
   locale: "en",
+  industry: "Healthcare",
+  education: "BSc Nursing",
+  targetRole: "Nurse Manager",
+  languages: "English, German",
   responsibilities: "Provided ICU care\nCoordinated with physicians",
 };
 

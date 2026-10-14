@@ -122,6 +122,7 @@ const INTENT_KEYWORDS: Record<CareerIntent, RegExp[]> = {
   ],
   migration: [
     /migrat/i,
+    /migrar\b/i,
     /immigrat/i,
     /visa/i,
     /relocat/i,

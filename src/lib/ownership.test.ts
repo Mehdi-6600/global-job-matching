@@ -78,6 +78,50 @@ describe("canManageJob (ownership / IDOR primitives)", () => {
   it("Unknown role is treated as non-privileged", () => {
     expect(canManageJob("employer-a", "unknown-role", jobA)).toBe(false);
   });
+
+  // Fail-closed: an unrecognised role grants nothing, even to the poster.
+  it("unknown or missing role denies even the original poster", () => {
+    expect(canManageJob("employer-a", "unknown-role", jobA)).toBe(false);
+    expect(canManageJob("employer-a", "", jobA)).toBe(false);
+    expect(canManageJob("employer-a", null, jobA)).toBe(false);
+    expect(canManageJob("employer-a", undefined, jobA)).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // Poster-without-company policy (owner decision): company ownership is the
+  // only non-admin management grant. postedById alone grants nothing.
+  // -------------------------------------------------------------------------
+
+  it("poster who no longer owns the job's company is denied", () => {
+    const transferred = {
+      postedById: "employer-a",
+      company: { ownerId: "employer-b" },
+    };
+    expect(canManageJob("employer-a", ROLES.EMPLOYER, transferred)).toBe(false);
+  });
+
+  it("company-less job is manageable by admin, not by its poster", () => {
+    const orphanJob = { postedById: "employer-a", company: null };
+    expect(canManageJob("admin-1", ROLES.ADMIN, orphanJob)).toBe(true);
+    expect(canManageJob("owner-1", ROLES.OWNER, orphanJob)).toBe(true);
+    expect(canManageJob("employer-a", ROLES.EMPLOYER, orphanJob)).toBe(false);
+  });
+
+  it("missing company relation is denied even when postedById matches", () => {
+    const noRelation = { postedById: "employer-a" };
+    expect(canManageJob("employer-a", ROLES.EMPLOYER, noRelation)).toBe(false);
+  });
+
+  it("empty user id never matches a company with a null owner", () => {
+    const job = { postedById: null, company: { ownerId: null } };
+    expect(canManageJob("", ROLES.EMPLOYER, job)).toBe(false);
+  });
+
+  it("a signed-in user who is neither poster nor company owner is denied", () => {
+    const stranger = { postedById: "employer-b", company: { ownerId: "employer-b" } };
+    expect(canManageJob("job-seeker-x", ROLES.JOB_SEEKER, stranger)).toBe(false);
+    expect(canManageJob("", ROLES.EMPLOYER, stranger)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -108,6 +152,14 @@ describe("canManageCompany", () => {
     expect(
       canManageCompany("employer-a", ROLES.EMPLOYER, { ownerId: null })
     ).toBe(false);
+  });
+
+  it("denies an unknown or missing role even for the company owner", () => {
+    const company = { ownerId: "employer-a" };
+    expect(canManageCompany("employer-a", "unknown-role", company)).toBe(false);
+    expect(canManageCompany("employer-a", "", company)).toBe(false);
+    expect(canManageCompany("employer-a", null, company)).toBe(false);
+    expect(canManageCompany("employer-a", undefined, company)).toBe(false);
   });
 });
 
@@ -142,9 +194,17 @@ describe("role primitives", () => {
     expect(normalizeRole(undefined)).toBeNull();
   });
 
-  it("isAdminRole accepts legacy admin variants", () => {
+  // Policy (src/lib/roles.ts): the admin panel is open to ADMIN and OWNER.
+  // OWNER is the highest role and is admin-level by design; this assertion
+  // previously expected false and contradicted roles.ts, the middleware admin
+  // check and the "Admin and Owner can manage any job" test above.
+  it("isAdminRole accepts legacy admin variants and OWNER (admin panel policy)", () => {
     expect(isAdminRole(ROLES.ADMIN)).toBe(true);
     expect(isAdminRole("admin")).toBe(true);
-    expect(isAdminRole(ROLES.OWNER)).toBe(false);
+    expect(isAdminRole(ROLES.OWNER)).toBe(true);
+    expect(isAdminRole(ROLES.EMPLOYER)).toBe(false);
+    expect(isAdminRole(ROLES.JOB_SEEKER)).toBe(false);
+    expect(isAdminRole("")).toBe(false);
+    expect(isAdminRole(null)).toBe(false);
   });
 });

@@ -41,6 +41,8 @@ describe("getRedisEnvStatus", () => {
     const { getRedisEnvStatus } = await import("./redis");
     const status = getRedisEnvStatus();
     expect(status.configured).toBe(true);
-    expect(status.source).toBe("upstash");
+    expect(status.source).toBe(
+      "UPSTASH_REDIS_REST_URL+UPSTASH_REDIS_REST_TOKEN",
+    );
   });
 });

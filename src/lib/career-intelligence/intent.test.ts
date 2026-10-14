@@ -50,9 +50,7 @@ describe("intent classification", () => {
     const r = classifyIntent({
       question: "",
       profile: {
-        ...({
-          currentRole: "Engineer",
-        } as never),
+        currentRole: "Engineer",
         transition: {
           fromFamily: "software_engineering",
           toFamily: "management",

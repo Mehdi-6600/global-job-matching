@@ -21,11 +21,12 @@ describe("locale-path helpers", () => {
 
   it("parseLocalePath extracts locale and rest", () => {
     const fa = parseLocalePath("/fa/career-risk");
-    expect(fa.locale).toBe("fa");
+    expect(fa.localeFromPath).toBe("fa");
     expect(fa.pathname).toBe("/career-risk");
 
+    // Unprefixed paths carry no locale; the default (en) applies elsewhere.
     const bare = parseLocalePath("/career-risk");
-    expect(bare.locale).toBe("en");
+    expect(bare.localeFromPath).toBeNull();
     expect(bare.pathname).toBe("/career-risk");
   });
 

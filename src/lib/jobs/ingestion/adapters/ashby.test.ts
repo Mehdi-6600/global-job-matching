@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Hoisted so the vi.mock factories below can reference them (vi.mock is
+// hoisted above imports and would otherwise read them before initialisation).
+const { eligibleBoards, recordBoardCheckMock } = vi.hoisted(() => ({
+  eligibleBoards: vi.fn(),
+  recordBoardCheckMock: vi.fn(),
+}));
+
 vi.mock("../http", () => ({
   fetchWithRetry: vi.fn(),
 }));
@@ -8,8 +15,6 @@ vi.mock("../rate-limit", () => ({
   tryAcquireSourceQuota: vi.fn(() => true),
 }));
 
-const eligibleBoards = vi.fn();
-const recordBoardCheckMock = vi.fn();
 
 vi.mock("../ats-discovery", () => ({
   getEligibleBoards: eligibleBoards,
@@ -89,7 +94,7 @@ describe("ashbyAdapter contract", () => {
       response([
         job({ id: "listed", isListed: true }),
         job({ id: "unlisted", isListed: false }),
-        job({ id: "missing" }), // isListed undefined
+        job({ id: "missing", isListed: undefined }), // isListed absent (JSON drops undefined)
       ]),
     );
     const r = await ashbyAdapter.fetchPage({ page: 1, perPage: 10 });

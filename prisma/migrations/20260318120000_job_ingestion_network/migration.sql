@@ -39,20 +39,28 @@ CREATE UNIQUE INDEX IF NOT EXISTS "JobSource_key_key" ON "JobSource"("key");
 CREATE INDEX IF NOT EXISTS "JobSource_enabled_idx" ON "JobSource"("enabled");
 CREATE INDEX IF NOT EXISTS "JobSource_licenseStatus_idx" ON "JobSource"("licenseStatus");
 
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "applyUrl" TEXT;
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "publishedAt" TIMESTAMP(3);
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "firstSeenAt" TIMESTAMP(3);
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP(3);
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "lastVerifiedAt" TIMESTAMP(3);
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "freshnessStatus" TEXT DEFAULT 'fresh';
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "occupation" TEXT;
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "occupationFamily" TEXT;
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "seniority" TEXT;
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "descriptionIsSnippet" BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "qualityScore" DOUBLE PRECISION;
-ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "attribution" TEXT;
-
-CREATE INDEX IF NOT EXISTS "Job_source_idx" ON "Job"("source");
-CREATE INDEX IF NOT EXISTS "Job_freshnessStatus_idx" ON "Job"("freshnessStatus");
-CREATE INDEX IF NOT EXISTS "Job_externalId_source_idx" ON "Job"("externalId", "source");
+-- Legacy incremental migration (pre-baseline). The JobSource table is standalone
+-- and always created. The Job statements only run when Job exists; on a fresh
+-- database the same columns and indexes are provided by
+-- 20260902090100_baseline_schema_completion.
+DO $$
+BEGIN
+  IF to_regclass('public."Job"') IS NOT NULL THEN
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "applyUrl" TEXT;
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "publishedAt" TIMESTAMP(3);
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "firstSeenAt" TIMESTAMP(3);
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP(3);
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "lastVerifiedAt" TIMESTAMP(3);
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "freshnessStatus" TEXT DEFAULT 'fresh';
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "occupation" TEXT;
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "occupationFamily" TEXT;
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "seniority" TEXT;
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "descriptionIsSnippet" BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "qualityScore" DOUBLE PRECISION;
+    ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "attribution" TEXT;
+    CREATE INDEX IF NOT EXISTS "Job_source_idx" ON "Job"("source");
+    CREATE INDEX IF NOT EXISTS "Job_freshnessStatus_idx" ON "Job"("freshnessStatus");
+    CREATE INDEX IF NOT EXISTS "Job_externalId_source_idx" ON "Job"("externalId", "source");
+  END IF;
+END $$;
