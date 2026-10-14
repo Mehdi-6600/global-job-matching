@@ -62,5 +62,39 @@ so the Production schema depends on a separate, explicit `prisma migrate deploy`
 that run in the release runbook.
 
 ### Stray file
-The repository root contains `migration.sql`, a diverged copy of the `20260318` migration that
-Prisma never reads. It should be removed in a separate change.
+The repository root `migration.sql` (a diverged copy of the `20260318` migration that Prisma never
+read) was removed in `240b7c4`.
+
+## Read-only checks before any Production deploy (owner-run, SELECT only)
+
+Nothing below changes data. Run them only in an environment the owner has approved, and record the output.
+
+1. Applied migrations and checksums. Compare with the repo tool
+   `node scripts/print-migration-checksums.mjs`:
+   ```sql
+   SELECT migration_name, checksum, finished_at, rolled_back_at
+   FROM _prisma_migrations ORDER BY started_at;
+   ```
+   Pay attention to `20260220120000_add_company_isActive_verified` and
+   `20260318120000_job_ingestion_network`. Their checksums differ between `main` and the branch.
+   A failed or rolled-back row blocks `prisma migrate deploy` until it is resolved.
+2. Duplicates that would block the unique index in `20260902090100` (expected: zero rows each):
+   ```sql
+   SELECT "paymentIntentId", count(*) FROM "Transaction"
+   WHERE "paymentIntentId" IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
+
+   SELECT "transactionId", count(*) FROM "PaymentIntent"
+   WHERE "transactionId" IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
+   ```
+3. Interview duplicates that would block the planned partial unique index (expected: zero rows):
+   ```sql
+   SELECT "userId", "jobId", count(*) FILTER (WHERE status = 'scheduled') AS active_rows
+   FROM "Interview" GROUP BY "userId", "jobId"
+   HAVING count(*) FILTER (WHERE status = 'scheduled') > 1;
+   ```
+4. Case-insensitive duplicate transaction hashes. The app's duplicate check is case-sensitive, so this
+   query shows whether one on-chain payment was recorded more than once (expected: zero rows):
+   ```sql
+   SELECT lower("txHash") AS hash, count(*) FROM "Transaction"
+   WHERE "txHash" IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
+   ```
