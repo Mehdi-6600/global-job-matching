@@ -69,8 +69,10 @@ describe("parseRiskJson", () => {
       riskLevel: "low",
       summary:
         "Meaningful summary about automation pressure in this role over time.",
-      reasons: ["r1"],
-      skillsToBuild: ["s1"],
+      reasons: [
+        "Automation tools are increasingly handling routine component work.",
+      ],
+      skillsToBuild: ["System design", "Accessibility engineering"],
       alternatives: ["a1"],
       subScores: {
         taskAutomation: 70,

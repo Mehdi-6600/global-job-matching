@@ -156,8 +156,8 @@ vi.mock("@/lib/db", () => ({
           for (const [k, v] of Object.entries(data)) {
             if (v && typeof v === "object" && "increment" in (v as object)) {
               const n = (v as { increment: number }).increment;
-              (row as Record<string, number>)[k] =
-                ((row as Record<string, number>)[k] ?? 0) + n;
+              const counters = row as unknown as Record<string, number>;
+              counters[k] = (counters[k] ?? 0) + n;
             } else {
               (row as Record<string, unknown>)[k] = v;
             }
@@ -273,6 +273,7 @@ function ref(partial: Record<string, unknown> = {}) {
 function emptyStats(sourceKey: string, over: Partial<IngestStats> = {}): IngestStats {
   return {
     sourceKey,
+    runId: `run-${sourceKey}`,
     startedAt: new Date().toISOString(),
     fetched: 0,
     validated: 0,
