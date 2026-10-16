@@ -3,7 +3,7 @@ import { locales, defaultLocale } from "@/lib/i18n/config";
 import { buildHreflangLanguages } from "@/lib/seo/hreflang";
 import { localizePath } from "@/lib/i18n/locale-path";
 
-describe("hreflang — all 7 languages", () => {
+describe("hreflang — all 12 languages", () => {
   it("emits every product locale plus x-default for /jobs", () => {
     const languages = buildHreflangLanguages("/jobs");
     for (const locale of locales) {
