@@ -1,23 +1,18 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { LocaleProvider } from "@/components/locale-provider";
 import { SessionGuard } from "@/components/session-guard";
-
-const AnalyticsTracker = dynamic(
-  () =>
-    import("@/components/analytics-tracker").then((m) => m.AnalyticsTracker),
-  { ssr: false }
-);
+import { AnalyticsTracker } from "@/components/analytics-tracker";
+import type { Locale } from "@/lib/i18n/config";
 
 export function Providers({
   children,
   initialLocale,
 }: {
   children: React.ReactNode;
-  initialLocale?: any;
+  initialLocale?: Locale;
 }) {
   return (
     <SessionProvider
