@@ -31,7 +31,10 @@ export function normalizeTone(raw: unknown): ResumeTone {
   return "professional";
 }
 
-function toneInstruction(tone: ResumeTone, locale: CareerRiskLocale): string {
+export function toneInstruction(
+  tone: ResumeTone,
+  locale: CareerRiskLocale = "en"
+): string {
   switch (tone) {
     case "confident":
       return "Tone: confident and achievement-oriented, still truthful and professional.";
