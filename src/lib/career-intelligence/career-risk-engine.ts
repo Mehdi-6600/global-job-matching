@@ -178,7 +178,7 @@ function yearsSentence(
   years: string,
   seniority: string,
 ): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `With ${years}, your profile sits at ${seniority} level — the balance between automation and judgment reflects that.`,
     fa: `با ${years}، پروفایل شما در سطح ${seniority} قرار دارد — تعادل بین اتوماسیون و قضاوت همین را نشان می‌دهد.`,
     ar: `مع ${years}، يقع ملفك في مستوى ${seniority} — وتوازن الأتمتة والحكم يعكس ذلك.`,
@@ -186,12 +186,17 @@ function yearsSentence(
     fr: `Avec ${years}, votre profil se situe au niveau ${seniority} ; l'équilibre automatisation/jugement le reflète.`,
     de: `Mit ${years} liegt Ihr Profil auf Niveau ${seniority} — die Balance zwischen Automatisierung und Urteil spiegelt das wider.`,
     hi: `${years} के साथ, आपकी प्रोफ़ाइल ${seniority} स्तर पर है — स्वचालन और निर्णय का संतुलन इसे दर्शाता है।`,
+    pt: `Com ${years}, seu perfil está no nível ${seniority} — o equilíbrio entre automação e julgamento reflete isso.`,
+    tr: `${years} ile profiliniz ${seniority} seviyesindedir — otomasyon ve muhakeme arasındaki denge bunu yansıtmaktadır.`,
+    zh: `凭借 ${years}，您的资历处于 ${seniority} 水平 — 自动化与人类判断之间的权衡正体现了这一点。`,
+    ja: `${years}の実務経験により、あなたのプロフィールは${seniority}レベルに位置しています — 自動化と判断力のバランスがそれを反映しています。`,
+    id: `Dengan ${years}, profil Anda berada di level ${seniority} — keseimbangan antara otomatisasi dan pertimbangan mencerminkan hal tersebut.`,
   };
   return t[locale] || t.en;
 }
 
 function evidenceSentence(locale: CareerRiskLocale, count: number): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `You supplied ${count} concrete evidence point${count === 1 ? "" : "s"} that we used to weight judgment-heavy tasks more favorably.`,
     fa: `شما ${count} شاهد مشخص ارائه کرده‌اید که در وزن‌دهی مثبت‌تر به وظایف قضاوت‌محور استفاده شد.`,
     ar: `قدّمت ${count} دليل ملموس استُخدم لترجيح المهام المعتمدة على الحكم.`,
@@ -210,7 +215,7 @@ function transitionSentence(
   const sep = locale === "fa" || locale === "ar" ? "، " : ", ";
   const bridges = p.bridges.join(sep) || "—";
   const gaps = p.gaps.join(sep) || "—";
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Moving from «${p.from}» to «${p.to}»: your transferable skills (${bridges}) are usable, but the gaps (${gaps}) should drive a 90-day plan.`,
     fa: `انتقال از «${p.from}» به «${p.to}»: مهارت‌های قابل انتقال (${bridges}) قابل استفاده‌اند، اما شکاف‌ها (${gaps}) باید اولویت نقشه ۹۰روزه باشند.`,
     ar: `الانتقال من «${p.from}» إلى «${p.to}»: المهارات القابلة للنقل (${bridges}) قابلة للاستخدام، لكن الفجوات (${gaps}) يجب أن تقود خطة الـ90 يومًا.`,
@@ -223,7 +228,7 @@ function transitionSentence(
 }
 
 function uncertaintySentence(locale: CareerRiskLocale, count: number): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `${count} field${count === 1 ? "" : "s"} are missing — the analysis stays conservative and flags this rather than inventing values.`,
     fa: `${count} مورد اطلاعاتی ناقص است — تحلیل محافظه‌کارانه می‌ماند و به‌جای ساختن مقادیر، این را علامت می‌زند.`,
     ar: `${count} حقل مفقود — يبقى التحليل متحفظًا ويشير إلى ذلك بدلاً من اختلاق قيم.`,
@@ -236,7 +241,7 @@ function uncertaintySentence(locale: CareerRiskLocale, count: number): string {
 }
 
 function fallbackSentence(locale: CareerRiskLocale, role: string): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Add skills, experience, and responsibilities to your «${role}» profile to sharpen this offline estimate.`,
     fa: `برای دقیق‌تر شدن این تخمین آفلاین، مهارت، تجربه و مسئولیت‌ها را به پروفایل «${role}» اضافه کنید.`,
     ar: `أضف المهارات والخبرة والمسؤوليات إلى ملف «${role}» لتحسين هذا التقدير.`,
@@ -314,7 +319,7 @@ function summaryPlaceSentence(
   locale: CareerRiskLocale,
   place: string,
 ): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Based in ${place},`,
     fa: `مستقر در ${place}،`,
     ar: `مقيم في ${place}،`,
@@ -330,7 +335,7 @@ function summaryTransitionSentence(
   locale: CareerRiskLocale,
   p: { to: string; bridgeCount: number; gapCount: number },
 ): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `your move toward «${p.to}» has ${p.bridgeCount} bridge skill${p.bridgeCount === 1 ? "" : "s"} already in place and ${p.gapCount} gap${p.gapCount === 1 ? "" : "s"} worth closing.`,
     fa: `مسیر شما به سمت «${p.to}» ${p.bridgeCount} مهارت پل و ${p.gapCount} شکاف برای پر کردن دارد.`,
     ar: `مسارك نحو «${p.to}» يضم ${p.bridgeCount} مهارة جسرية و${p.gapCount} فجوة ينبغي سدّها.`,
@@ -347,7 +352,7 @@ function summaryExposureSentence(
   label: string,
   pct: number,
 ): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `automation pressure concentrates on «${label}» (~${pct}%).`,
     fa: `فشار اتوماسیون بیشتر روی «${label}» متمرکز است (حدود ${pct}٪).`,
     ar: `يتركز ضغط الأتمتة على «${label}» (~${pct}%).`,
@@ -363,7 +368,7 @@ function summaryResilienceSentence(
   locale: CareerRiskLocale,
   label: string,
 ): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Resilience holds in «${label}».`,
     fa: `مقاومت در «${label}» حفظ می‌شود.`,
     ar: `تستمر المرونة في «${label}».`,
@@ -379,7 +384,7 @@ function summaryEvidenceSentence(
   locale: CareerRiskLocale,
   count: number,
 ): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Your ${count} evidence points raise confidence in the judgment-heavy findings.`,
     fa: `${count} شاهد ارائه‌شده شما اعتماد به یافته‌های قضاوت‌محور را بالا می‌برد.`,
     ar: `${count} من الأدلة التي قدّمتها ترفع ثقة النتائج المعتمدة على الحكم.`,
@@ -395,7 +400,7 @@ function summaryScoreSentence(
   locale: CareerRiskLocale,
   score: number,
 ): string {
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Composite score ${score}/100 comes from a task/tool/judgment model — not a fixed template.`,
     fa: `امتیاز ترکیبی ${score}/100 از مدل وظیفه/ابزار/قضاوت می‌آید — نه یک الگوی ثابت.`,
     ar: `الدرجة المركبة ${score}/100 ناتجة عن نموذج المهام/الأدوات/الحكم — لا قالب ثابت.`,
@@ -418,7 +423,7 @@ function buildAlternatives(
   const title = profile.currentRole;
   const family = profile.roleFamily;
 
-  const tables: Record<string, Record<CareerRiskLocale, string[]>> = {
+  const tables: Record<string, Partial<Record<CareerRiskLocale, string[]>> & Record<"en", string[]>> = {
     software_engineering: {
       en: [
         `Senior ${title} with system ownership`,
@@ -822,7 +827,7 @@ function buildSkillsToBuild(
     return profile.missingSkills.slice(0, 8);
   }
 
-  const tables: Record<string, Record<CareerRiskLocale, string[]>> = {
+  const tables: Record<string, Partial<Record<CareerRiskLocale, string[]>> & Record<"en", string[]>> = {
     software_engineering: {
       en: ["System design", "AI-assisted workflows", "Observability", "Domain modeling", "Technical writing"],
       fa: ["طراحی سیستم", "جریان‌های کاری با کمک AI", "قابلیت مشاهده‌پذیری", "مدل‌سازی دامنه", "نوشتن فنی"],
@@ -945,7 +950,7 @@ function industryLine(
 
   // When industry + place are present, we can produce a focused line.
   if (ind && loc) {
-    const t: Record<CareerRiskLocale, string> = {
+    const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
       en: `Within ${ind}, ${familyHuman} roles near ${loc} typically see ${riskLevel === "high" ? "elevated" : riskLevel === "low" ? "muted" : "moderate"} automation pressure; monitor tooling and skill-shift signals quarterly.`,
       fa: `در حوزه ${ind}، نقش‌های ${familyHuman} در نزدیکی ${loc} معمولاً فشار اتوماسیون ${riskLevel === "high" ? "بالا" : riskLevel === "low" ? "پایین" : "متوسط"} را تجربه می‌کنند؛ سیگنال‌های ابزار و تغییر مهارت را فصلی رصد کنید.`,
       ar: `في قطاع ${ind}، غالبًا ما تواجه أدوار ${familyHuman} قرب ${loc} ضغط أتمتة ${riskLevel === "high" ? "مرتفعًا" : riskLevel === "low" ? "منخفضًا" : "متوسطًا"}؛ تابع إشارات الأدوات وتحوّل المهارات فصليًا.`,
@@ -958,7 +963,7 @@ function industryLine(
   }
 
   if (ind) {
-    const t: Record<CareerRiskLocale, string> = {
+    const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
       en: `Within ${ind}, ${familyHuman} roles typically see ${riskLevel === "high" ? "elevated" : riskLevel === "low" ? "muted" : "moderate"} automation pressure; add location for sharper guidance.`,
       fa: `در حوزه ${ind}، نقش‌های ${familyHuman} معمولاً فشار اتوماسیون ${riskLevel === "high" ? "بالا" : riskLevel === "low" ? "پایین" : "متوسط"} دارند؛ برای دقت بیشتر، مکان را هم وارد کنید.`,
       ar: `في قطاع ${ind}، غالبًا ما تواجه أدوار ${familyHuman} ضغط أتمتة ${riskLevel === "high" ? "مرتفعًا" : riskLevel === "low" ? "منخفضًا" : "متوسطًا"}؛ أضف الموقع للحصول على توجيه أدق.`,
@@ -971,7 +976,7 @@ function industryLine(
   }
 
   if (loc) {
-    const t: Record<CareerRiskLocale, string> = {
+    const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
       en: `Near ${loc}, ${familyHuman} roles typically see ${riskLevel === "high" ? "elevated" : riskLevel === "low" ? "muted" : "moderate"} automation pressure; add industry for sharper guidance.`,
       fa: `نزدیک ${loc}، نقش‌های ${familyHuman} معمولاً فشار اتوماسیون ${riskLevel === "high" ? "بالا" : riskLevel === "low" ? "پایین" : "متوسط"} دارند؛ برای دقت بیشتر، صنعت را وارد کنید.`,
       ar: `قرب ${loc}، غالبًا ما تواجه أدوار ${familyHuman} ضغط أتمتة ${riskLevel === "high" ? "مرتفعًا" : riskLevel === "low" ? "منخفضًا" : "متوسطًا"}؛ أضف القطاع لتوجيه أدق.`,
@@ -983,7 +988,7 @@ function industryLine(
     return t[locale] || t.en;
   }
 
-  const t: Record<CareerRiskLocale, string> = {
+  const t: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Broad ${familyHuman} labor-market outlook; add industry and location for a sharper picture.`,
     fa: `نمای کلی بازار کار ${familyHuman}؛ برای دقت بیشتر، صنعت و مکان را وارد کنید.`,
     ar: `نظرة عامة على سوق العمل لـ ${familyHuman}؛ أضف القطاع والموقع لصورة أدق.`,
