@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Hoisted so the vi.mock factories below can reference them (vi.mock is
+// hoisted above imports and would otherwise read them before initialisation).
+const { eligibleBoards, recordBoardCheckMock } = vi.hoisted(() => ({
+  eligibleBoards: vi.fn(),
+  recordBoardCheckMock: vi.fn(),
+}));
+
 vi.mock("../http", () => ({
   fetchWithRetry: vi.fn(),
 }));
@@ -8,8 +15,6 @@ vi.mock("../rate-limit", () => ({
   tryAcquireSourceQuota: vi.fn(() => true),
 }));
 
-const eligibleBoards = vi.fn();
-const recordBoardCheckMock = vi.fn();
 
 vi.mock("../ats-discovery", () => ({
   getEligibleBoards: eligibleBoards,
@@ -114,18 +119,26 @@ describe("greenhouseAdapter contract", () => {
     );
   });
 
-  it("handles multiple boards in one page", async () => {
-    eligibleBoards.mockResolvedValueOnce([
+  // Policy (greenhouse.ts MAX_BOARDS_PER_PAGE = 1): one board per fetchPage so a
+  // run stays inside the Vercel time limit. Asking for 10 boards per page is
+  // clamped to one, and the pipeline advances through boards via pagination.
+  it("processes one board per page and advances to the next board", async () => {
+    eligibleBoards.mockResolvedValue([
       { provider: "greenhouse", boardIdentifier: "acme", companyName: "Acme" },
       { provider: "greenhouse", boardIdentifier: "beta", companyName: "Beta" },
     ]);
     fetchMock
       .mockResolvedValueOnce(response([job({ id: 1 })]))
       .mockResolvedValueOnce(response([job({ id: 2 })]));
-    const r = await greenhouseAdapter.fetchPage({ page: 1, perPage: 10 });
-    expect(r.jobs).toHaveLength(2);
-    const ids = r.jobs.map((j) => j.sourceJobId).sort();
-    expect(ids).toEqual(["acme:1", "beta:2"]);
+
+    const first = await greenhouseAdapter.fetchPage({ page: 1, perPage: 10 });
+    expect(first.jobs.map((j) => j.sourceJobId)).toEqual(["acme:1"]);
+    expect(first.hasMore).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const second = await greenhouseAdapter.fetchPage({ page: 2, perPage: 10 });
+    expect(second.jobs.map((j) => j.sourceJobId)).toEqual(["beta:2"]);
+    expect(second.hasMore).toBe(false);
   });
 
   it("reports malformed_json per board", async () => {
