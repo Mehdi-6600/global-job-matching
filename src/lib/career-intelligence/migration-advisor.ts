@@ -296,7 +296,7 @@ function demandLine(
   const roleFamily = profile.roleFamily;
   const hasMatch = country.strongFamilies.includes(roleFamily);
 
-  const tables: Record<CareerRiskLocale, string> = {
+  const tables: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: hasMatch
       ? `${roleFamily.replace(/_/g, " ")} roles typically show steady demand.`
       : `Your field is less directly aligned; consider transferable skills.`,
@@ -327,7 +327,7 @@ function pathwayLine(
   country: CountryProfile,
 ): string {
   const cats = country.pathwayCategories.join(", ");
-  const tables: Record<CareerRiskLocale, string> = {
+  const tables: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `General pathway categories publicly discussed: ${cats}. Verify current rules with official sources.`,
     fa: `دسته‌های عمومی مسیر که به‌طور عمومی مطرح می‌شوند: ${cats}. قوانین روز را از منابع رسمی بررسی کنید.`,
     ar: `فئات المسارات العامة المطروحة علناً: ${cats}. تحقق من القواعد الحالية في المصادر الرسمية.`,
@@ -352,7 +352,7 @@ function notesLine(
     profile.languages.some((l) => l.toLowerCase().includes(c)),
   );
 
-  const tables: Record<CareerRiskLocale, string> = {
+  const tables: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: hasLang
       ? `Your language profile (${profile.languages.join(", ") || "—"}) aligns with common expectations${place ? ` from ${place}` : ""}.`
       : `Language expectations in ${country.name} often include ${country.languages.join(" or ")}; plan accordingly${place ? ` from ${place}` : ""}.`,
@@ -390,7 +390,7 @@ function buildSummary(
   const role = profile.currentRole;
   const countryList = topCountries.join(", ");
 
-  const tables: Record<CareerRiskLocale, string> = {
+  const tables: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Based on your profile as ${role}, the following destinations are relatively closer on career-fit grounds: ${countryList}. This is occupational guidance, not legal advice.`,
     fa: `بر اساس پروفایل شما به‌عنوان ${role}، این مقاصد از نظر تناسب شغلی منطقی‌ترند: ${countryList}. این ارزیابی تناسب شغلی است، نه مشاوره حقوقی.`,
     ar: `بناءً على ملفك كـ${role}، هذه الوجهات أقرب نسبياً من حيث الملاءمة المهنية: ${countryList}. هذا توجيه مهني وليس استشارة قانونية.`,
@@ -403,7 +403,7 @@ function buildSummary(
 }
 
 function buildCaveats(locale: CareerRiskLocale): string[] {
-  const tables: Record<CareerRiskLocale, string[]> = {
+  const tables: Partial<Record<CareerRiskLocale, string[]>> & Record<"en", string[]> = {
     en: [
       "This is an offline occupational-fit assessment, not immigration legal advice.",
       "Verify pathways visa rules, shortage lists, and language requirements only with official sources for that country.",
@@ -444,7 +444,7 @@ function buildCaveats(locale: CareerRiskLocale): string[] {
 }
 
 function buildTitle(locale: CareerRiskLocale, role: string): string {
-  const tables: Record<CareerRiskLocale, string> = {
+  const tables: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
     en: `Migration-oriented for «${role}»`,
     fa: `مسیرهای مهاجرتی مرتبط با «${role}»`,
     ar: `مسارات موجهة نحو الهجرة لـ «${role}»`,
