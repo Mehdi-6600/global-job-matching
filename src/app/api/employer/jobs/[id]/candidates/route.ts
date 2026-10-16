@@ -46,16 +46,13 @@ export async function GET(
 
     const isAdmin = isAdminRole(role);
 
-    // Owner OR poster (same as canManageJob); admin sees all.
+    // Company owner only (same as canManageJob); admin sees all.
     const job = await db.job.findFirst({
       where: isAdmin
         ? { id: jobId }
         : {
             id: jobId,
-            OR: [
-              { postedById: userId },
-              { company: { ownerId: userId } },
-            ],
+            company: { ownerId: userId },
           },
       select: {
         id: true,
