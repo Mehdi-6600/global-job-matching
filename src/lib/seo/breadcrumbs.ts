@@ -1,5 +1,5 @@
 import type { BreadcrumbItem } from "@/lib/seo/json-ld";
-import type { CareerRiskLocale } from "@/types/career-risk";
+import type { Locale } from "@/lib/i18n/config";
 
 /**
  * Breadcrumb label translations for all supported locales.
@@ -7,10 +7,7 @@ import type { CareerRiskLocale } from "@/types/career-risk";
  *
  * Callers that omit `locale` receive the English label (backward compatible).
  */
-const BREADCRUMB_LABELS: Record<
-  string,
-  Record<CareerRiskLocale, string>
-> = {
+const BREADCRUMB_LABELS: Record<string, Partial<Record<Locale, string>>> = {
   Home: {
     en: "Home",
     fa: "خانه",
@@ -19,6 +16,11 @@ const BREADCRUMB_LABELS: Record<
     fr: "Accueil",
     hi: "होम",
     de: "Startseite",
+    pt: "Início",
+    tr: "Ana Sayfa",
+    zh: "首页",
+    ja: "ホーム",
+    id: "Beranda",
   },
   Jobs: {
     en: "Jobs",
@@ -28,6 +30,11 @@ const BREADCRUMB_LABELS: Record<
     fr: "Emplois",
     hi: "नौकरियाँ",
     de: "Jobs",
+    pt: "Vagas",
+    tr: "İş İlanları",
+    zh: "职位",
+    ja: "求人情報",
+    id: "Lowongan Kerja",
   },
   Companies: {
     en: "Companies",
@@ -37,6 +44,11 @@ const BREADCRUMB_LABELS: Record<
     fr: "Entreprises",
     hi: "कंपनियाँ",
     de: "Unternehmen",
+    pt: "Empresas",
+    tr: "Şirketler",
+    zh: "企业",
+    ja: "企業情報",
+    id: "Perusahaan",
   },
   Blog: {
     en: "Blog",
@@ -46,6 +58,11 @@ const BREADCRUMB_LABELS: Record<
     fr: "Blog",
     hi: "ब्लॉग",
     de: "Blog",
+    pt: "Blog",
+    tr: "Blog",
+    zh: "博客",
+    ja: "ブログ",
+    id: "Blog",
   },
   Locations: {
     en: "Locations",
@@ -55,6 +72,11 @@ const BREADCRUMB_LABELS: Record<
     fr: "Lieux",
     hi: "स्थान",
     de: "Standorte",
+    pt: "Localizações",
+    tr: "Konumlar",
+    zh: "地区",
+    ja: "勤務地",
+    id: "Lokasi",
   },
   Categories: {
     en: "Categories",
@@ -64,12 +86,17 @@ const BREADCRUMB_LABELS: Record<
     fr: "Catégories",
     hi: "श्रेणियाँ",
     de: "Kategorien",
+    pt: "Categorias",
+    tr: "Kategoriler",
+    zh: "分类",
+    ja: "職種カテゴリ",
+    id: "Kategori",
   },
 };
 
-function label(key: string, locale?: CareerRiskLocale): string {
+function label(key: string, locale?: string): string {
   if (!locale) return key;
-  return BREADCRUMB_LABELS[key]?.[locale] || key;
+  return BREADCRUMB_LABELS[key]?.[locale as Locale] || key;
 }
 
 export function jobBreadcrumbs(params: {
@@ -77,7 +104,7 @@ export function jobBreadcrumbs(params: {
   jobId: string;
   companyName?: string | null;
   companyId?: string | null;
-  locale?: CareerRiskLocale;
+  locale?: string;
 }): BreadcrumbItem[] {
   const loc = params.locale;
   const items: BreadcrumbItem[] = [
@@ -100,7 +127,7 @@ export function jobBreadcrumbs(params: {
 export function companyBreadcrumbs(params: {
   companyName: string;
   companyId: string;
-  locale?: CareerRiskLocale;
+  locale?: string;
 }): BreadcrumbItem[] {
   const loc = params.locale;
   return [
@@ -113,7 +140,7 @@ export function companyBreadcrumbs(params: {
 export function blogBreadcrumbs(params: {
   title: string;
   slug: string;
-  locale?: CareerRiskLocale;
+  locale?: string;
 }): BreadcrumbItem[] {
   const loc = params.locale;
   return [
@@ -126,7 +153,7 @@ export function blogBreadcrumbs(params: {
 export function locationBreadcrumbs(params: {
   name: string;
   slug: string;
-  locale?: CareerRiskLocale;
+  locale?: string;
 }): BreadcrumbItem[] {
   const loc = params.locale;
   return [
@@ -139,7 +166,7 @@ export function locationBreadcrumbs(params: {
 export function categoryBreadcrumbs(params: {
   name: string;
   slug: string;
-  locale?: CareerRiskLocale;
+  locale?: string;
 }): BreadcrumbItem[] {
   const loc = params.locale;
   return [

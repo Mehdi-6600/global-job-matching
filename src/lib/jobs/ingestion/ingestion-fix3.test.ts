@@ -131,8 +131,8 @@ describe("lease ownership CAS semantics", () => {
   });
 
   it("renew requires matching owner", () => {
-    const whereOwner = "abc";
-    const attemptOwner = "xyz";
+    const whereOwner: string = "abc";
+    const attemptOwner: string = "xyz";
     expect(whereOwner === attemptOwner).toBe(false);
   });
 });

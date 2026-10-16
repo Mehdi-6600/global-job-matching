@@ -51,10 +51,10 @@ export type OfflineMigration = {
 export type OfflineMigrationResult = OfflineMigration;
 
 /** نگاشت لوکال به یک رشته‌ی متنی. */
-type LocaleCopy = Record<CareerRiskLocale, string>;
+type LocaleCopy = Partial<Record<CareerRiskLocale, string>> & Record<"en", string>;
 
 /** نگاشت لوکال به یک آرایه‌ی متنی. */
-type LocaleList = Record<CareerRiskLocale, string[]>;
+type LocaleList = Partial<Record<CareerRiskLocale, string[]>> & Record<"en", string[]>;
 
 /** راهنمای مقصد به‌ازای هر خانواده شغلی، با angle چندزبانه. */
 type DestinationHint = {

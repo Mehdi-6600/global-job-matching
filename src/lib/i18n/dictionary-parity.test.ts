@@ -6,6 +6,11 @@ import fa from "../../../messages/fa.json";
 import hi from "../../../messages/hi.json";
 import fr from "../../../messages/fr.json";
 import de from "../../../messages/de.json";
+import pt from "../../../messages/pt.json";
+import tr from "../../../messages/tr.json";
+import zh from "../../../messages/zh.json";
+import ja from "../../../messages/ja.json";
+import id from "../../../messages/id.json";
 
 type Dict = Record<string, unknown>;
 
@@ -33,12 +38,29 @@ const locales: Record<string, Dict> = {
   hi: hi as Dict,
   fr: fr as Dict,
   de: de as Dict,
+  pt: pt as Dict,
+  tr: tr as Dict,
+  zh: zh as Dict,
+  ja: ja as Dict,
+  id: id as Dict,
 };
 
 describe("i18n dictionary key parity vs en", () => {
   const enKeys = new Set(collectKeys(locales.en).sort());
 
-  for (const locale of ["es", "ar", "fa", "hi", "fr", "de"] as const) {
+  for (const locale of [
+    "es",
+    "ar",
+    "fa",
+    "hi",
+    "fr",
+    "de",
+    "pt",
+    "tr",
+    "zh",
+    "ja",
+    "id",
+  ] as const) {
     it(`${locale} has no extra top-level gaps vs en (missing keys reported)`, () => {
       const keys = new Set(collectKeys(locales[locale]));
       const missing = [...enKeys].filter((k) => !keys.has(k));
@@ -52,8 +74,10 @@ describe("i18n dictionary key parity vs en", () => {
     });
   }
 
-  it("de is registered and non-empty", () => {
-    expect(Object.keys(locales.de).length).toBeGreaterThan(5);
-    expect(locales.de.Nav).toBeTruthy();
+  it("all 12 locales are registered and non-empty", () => {
+    for (const [code, dict] of Object.entries(locales)) {
+      expect(Object.keys(dict).length).toBeGreaterThan(5);
+      expect(dict.Nav).toBeTruthy();
+    }
   });
 });

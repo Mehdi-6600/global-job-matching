@@ -188,7 +188,7 @@ export function yearsIn(s: string): number | null {
 
   // Ranges with unit: "2-4 years", "2 to 4 years", "۲ تا ۴ سال"
   const range = t.match(
-    /(\d+(?:\.\d+)?)\s*(?:to|تا|[-–—])\s*(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال)/i,
+    /(\d+(?:\.\d+)?)\s*(?:to|تا|[-–—])\s*(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال|سنوات|سنة|سنه)/i,
   );
   if (range) {
     const a = Number(range[1]);
@@ -199,7 +199,7 @@ export function yearsIn(s: string): number | null {
 
   // "at least / more than / minimum / حداقل / بیش از N years"
   const floor = t.match(
-    /(?:at\s+least|more\s+than|minimum|min\.?|حداقل|بیش\s+از)\s*(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال)/i,
+    /(?:at\s+least|more\s+than|minimum|min\.?|حداقل|بیش\s+از)\s*(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال|سنوات|سنة|سنه)/i,
   );
   if (floor) {
     const n = Number(floor[1]);
@@ -208,7 +208,7 @@ export function yearsIn(s: string): number | null {
 
   // "N+ years" / "N years of experience" / "N سال سابقه"
   const plain = t.match(
-    /(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال)(?:\s*(?:of\s+experience|سابقه(?:\s*کار)?))?/i,
+    /(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|سال|سنوات|سنة|سنه)(?:\s*(?:of\s+experience|سابقه(?:\s*کار)?))?/i,
   );
   if (plain) {
     const n = Number(plain[1]);

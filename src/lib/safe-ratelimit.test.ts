@@ -67,12 +67,22 @@ describe("strictAiLimit (fail-closed)", () => {
     expect(result.infraFailed).toBe(false);
   });
 
-  it("blocks AI when infrastructure throws (fail-closed)", async () => {
+  // Policy (safe-ratelimit.ts, "رفتار جدید"): when the primary limiter fails,
+  // requests fall back to a per-instance memory limiter (3/min). The AI cap is
+  // still enforced, the result is marked degraded, and infraFailed stays false.
+  // This test previously expected an immediate block, which contradicted that
+  // documented design. Owner decision: see the rate-limit note in the PR.
+  it("falls back to the memory cap when the primary throws (degraded, still enforced)", async () => {
     const limiter = {
       limit: vi.fn().mockRejectedValue(new Error("upstash timeout")),
     };
-    const result = await strictAiLimit(limiter, "ai3");
-    expect(result.success).toBe(false);
-    expect(result.infraFailed).toBe(true);
+    const key = "ai-degraded-cap";
+    const results = [];
+    for (let i = 0; i < 4; i++) {
+      results.push(await strictAiLimit(limiter, key));
+    }
+    expect(results.slice(0, 3).every((r) => r.success && r.degraded)).toBe(true);
+    expect(results[3].success).toBe(false);
+    expect(results.every((r) => r.infraFailed === false)).toBe(true);
   });
 });

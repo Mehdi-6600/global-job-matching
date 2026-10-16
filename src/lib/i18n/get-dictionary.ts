@@ -8,6 +8,11 @@ import fa from "../../../messages/fa.json";
 import hi from "../../../messages/hi.json";
 import fr from "../../../messages/fr.json";
 import de from "../../../messages/de.json";
+import pt from "../../../messages/pt.json";
+import tr from "../../../messages/tr.json";
+import zh from "../../../messages/zh.json";
+import ja from "../../../messages/ja.json";
+import id from "../../../messages/id.json";
 
 export type Dictionary = Record<string, unknown>;
 
@@ -42,6 +47,11 @@ const raw: Record<Locale, Dictionary> = {
   hi: hi as Dictionary,
   fr: fr as Dictionary,
   de: de as Dictionary,
+  pt: pt as Dictionary,
+  tr: tr as Dictionary,
+  zh: zh as Dictionary,
+  ja: ja as Dictionary,
+  id: id as Dictionary,
 };
 
 export function getDictionary(locale: Locale): Dictionary {

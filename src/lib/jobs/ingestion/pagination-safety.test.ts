@@ -67,6 +67,8 @@ vi.mock("./registry", async () => {
         type: "test",
         baseUrl: "https://example.test",
         licenseStatus: "APPROVED" as const,
+        robotsStatus: "allowed" as const,
+        termsStatus: "allowed" as const,
         commercialAllowed: true,
         redistributionAllowed: true,
         attributionRequired: false,

@@ -92,18 +92,80 @@ export type SectionLabels = Record<SectionId, string>;
  * localized headings — no more English-only section names for
  * non-English users.
  */
+const SECTION_LABELS_EN: SectionLabels = {
+  summary: "PROFESSIONAL SUMMARY",
+  competencies: "CORE COMPETENCIES",
+  experience: "PROFESSIONAL EXPERIENCE",
+  achievements: "SELECTED ACHIEVEMENTS",
+  projects: "PROJECTS",
+  education: "EDUCATION",
+  certifications: "CERTIFICATIONS",
+  skills: "SKILLS",
+  languages: "LANGUAGES",
+  additional: "ADDITIONAL INFORMATION",
+};
+
 export const SECTION_LABELS: Record<CareerRiskLocale, SectionLabels> = {
-  en: {
-    summary: "PROFESSIONAL SUMMARY",
-    competencies: "CORE COMPETENCIES",
-    experience: "PROFESSIONAL EXPERIENCE",
-    achievements: "SELECTED ACHIEVEMENTS",
-    projects: "PROJECTS",
-    education: "EDUCATION",
-    certifications: "CERTIFICATIONS",
-    skills: "SKILLS",
-    languages: "LANGUAGES",
-    additional: "ADDITIONAL INFORMATION",
+  en: SECTION_LABELS_EN,
+  pt: {
+    summary: "RESUMO PROFISSIONAL",
+    competencies: "COMPETÊNCIAS PRINCIPAIS",
+    experience: "EXPERIÊNCIA PROFISSIONAL",
+    achievements: "PRINCIPAIS CONQUISTAS",
+    projects: "PROJETOS",
+    education: "FORMAÇÃO ACADÊMICA",
+    certifications: "CERTIFICAÇÕES",
+    skills: "HABILIDADES",
+    languages: "IDIOMAS",
+    additional: "INFORMAÇÕES ADICIONAIS",
+  },
+  tr: {
+    summary: "PROFESYONEL ÖZET",
+    competencies: "TEMEL YETKİNLİKLER",
+    experience: "İŞ DENEYİMİ",
+    achievements: "ÖNE ÇIKAN BAŞARILAR",
+    projects: "PROJELER",
+    education: "EĞİTİM",
+    certifications: "SERTİFİKALAR",
+    skills: "BECERİLER",
+    languages: "DİLLER",
+    additional: "EK BİLGİLER",
+  },
+  zh: {
+    summary: "个人总结",
+    competencies: "核心竞争力",
+    experience: "工作经历",
+    achievements: "主要业绩",
+    projects: "项目经验",
+    education: "教育背景",
+    certifications: "资格证书",
+    skills: "技能专长",
+    languages: "语言能力",
+    additional: "附加信息",
+  },
+  ja: {
+    summary: "職務要約",
+    competencies: "コアコンピタンス",
+    experience: "職務経歴",
+    achievements: "主な実績",
+    projects: "プロジェクト",
+    education: "学歴",
+    certifications: "資格",
+    skills: "スキル",
+    languages: "語学力",
+    additional: "補足情報",
+  },
+  id: {
+    summary: "RINGKASAN PROFESIONAL",
+    competencies: "KOMPETENSI UTAMA",
+    experience: "PENGALAMAN KERJA",
+    achievements: "PENCAPAIAN UTAMA",
+    projects: "PROYEK",
+    education: "PENDIDIKAN",
+    certifications: "SERTIFIKASI",
+    skills: "KEAHLIAN",
+    languages: "BAHASA",
+    additional: "INFORMASI TAMBAHAN",
   },
   fa: {
     summary: "خلاصه حرفه‌ای",
@@ -202,6 +264,26 @@ function fallbackSummary(
     en: {
       withYears: `Professional with ${years} year${years === 1 ? "" : "s"} of experience seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`,
       noYears: `Professional seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`,
+    },
+    pt: {
+      withYears: `Profissional com ${years} ano${years === 1 ? "" : "s"} de experiência em busca de oportunidade como ${role}. Foco em resultados consistentes e aprimoramento contínuo.`,
+      noYears: `Profissional em busca de oportunidade como ${role}. Foco em resultados consistentes e aprimoramento contínuo.`,
+    },
+    tr: {
+      withYears: `${years} yıllık deneyime sahip, ${role} pozisyonu arayan profesyonel. Güvenilir sonuçlar sunmaya ve uzmanlığı geliştirmeye odaklı.`,
+      noYears: `${role} pozisyonu arayan profesyonel. Güvenilir sonuçlar sunmaya ve uzmanlığı geliştirmeye odaklı.`,
+    },
+    zh: {
+      withYears: `具备 ${years} 年相关工作经验的专业人士，期望担任 ${role} 职位。专注于交付高质量业务成果与深耕专业领域。`,
+      noYears: `期望担任 ${role} 职位的专业人士。专注于交付高质量业务成果与深耕专业领域。`,
+    },
+    ja: {
+      withYears: `${years}年の実務経験を有し、${role}としてのポジションを目指すプロフェッショナル。確実な成果創出と専門性の向上に注力。`,
+      noYears: `${role}としてのポジションを目指すプロフェッショナル。確実な成果創出と専門性の向上に注力。`,
+    },
+    id: {
+      withYears: `Profesional dengan pengalaman ${years} tahun mencari peran sebagai ${role}. Berfokus pada pencapaian hasil andal dan pengembangan keahlian bidang.`,
+      noYears: `Profesional yang mencari peran sebagai ${role}. Berfokus pada pencapaian hasil andal dan pengembangan keahlian bidang.`,
     },
     fa: {
       withYears: `حرفه‌ای با ${years} سال تجربه، در جستجوی نقش ${role}. متمرکز بر ارائه نتایج قابل اتکا و توسعه تخصص حوزه.`,

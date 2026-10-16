@@ -133,7 +133,7 @@ export function formatSeniority(
   locale: NarrativeLanguage,
   seniority: SeniorityLabel,
 ): string {
-  const tables: Record<SeniorityLabel, Partial<Record<NarrativeLanguage, string>>> = {
+  const tables: Record<SeniorityLabel, Partial<Partial<Record<NarrativeLanguage, string>> & Record<"en", string>>> = {
     junior: {
       en: "junior",
       fa: "جوان / مبتدی",
@@ -261,7 +261,7 @@ export function openingClause(
     ],
   } as const;
 
-  const pool = variants[locale] || variants.en;
+  const pool = (variants as Record<string, readonly [string, string, string]>)[locale] || variants.en;
   return pickVariant(seed, pool);
 }
 
@@ -278,7 +278,7 @@ export function reasonAutomation(
   params: { label: string; pct: number },
 ): string {
   const { label, pct } = params;
-  const tables: Record<NarrativeLanguage, string[]> = {
+  const tables: Partial<Record<NarrativeLanguage, string[]>> & Record<"en", string[]> = {
     en: [
       `The task "${label}" carries roughly ${pct}% automation exposure.`,
       `"${label}" shows about ${pct}% automation pressure.`,
@@ -324,7 +324,7 @@ export function reasonResilience(
   params: { label: string; judgment: number },
 ): string {
   const { label, judgment } = params;
-  const tables: Record<NarrativeLanguage, string[]> = {
+  const tables: Partial<Record<NarrativeLanguage, string[]>> & Record<"en", string[]> = {
     en: [
       `"${label}" still depends on judgment (~${judgment}%) and is harder to automate.`,
       `Resilience shows up in "${label}" where judgment dominates (~${judgment}%).`,
@@ -370,7 +370,7 @@ export function reasonResilience(
 /* ------------------------------------------------------------------ */
 
 export function disclaimerLine(locale: NarrativeLanguage): string {
-  const tables: Record<NarrativeLanguage, string> = {
+  const tables: Partial<Record<NarrativeLanguage, string>> & Record<"en", string> = {
     en: "This is an offline estimate, not specialist advice.",
     fa: "این یک تخمین آفلاین است، نه مشاوره تخصصی.",
     ar: "هذا تقدير دون اتصال، وليس استشارة متخصصة.",

@@ -9,14 +9,19 @@ import {
 } from "@/lib/i18n/config";
 
 describe("i18n config", () => {
-  it("exposes 7 locales with English default", () => {
-    expect(locales).toHaveLength(7);
+  it("exposes 12 locales with English default", () => {
+    expect(locales).toHaveLength(12);
     expect(defaultLocale).toBe("en");
     expect(LOCALE_COOKIE).toBe("NEXT_LOCALE");
   });
 
   it("isLocale guards values", () => {
     expect(isLocale("fa")).toBe(true);
+    expect(isLocale("pt")).toBe(true);
+    expect(isLocale("tr")).toBe(true);
+    expect(isLocale("zh")).toBe(true);
+    expect(isLocale("ja")).toBe(true);
+    expect(isLocale("id")).toBe(true);
     expect(isLocale("xx")).toBe(false);
     expect(isLocale(null)).toBe(false);
   });
@@ -31,5 +36,10 @@ describe("i18n config", () => {
     expect(isRtlLocale("ar")).toBe(true);
     expect(isRtlLocale("fa")).toBe(true);
     expect(isRtlLocale("en")).toBe(false);
+    expect(isRtlLocale("pt")).toBe(false);
+    expect(isRtlLocale("tr")).toBe(false);
+    expect(isRtlLocale("zh")).toBe(false);
+    expect(isRtlLocale("ja")).toBe(false);
+    expect(isRtlLocale("id")).toBe(false);
   });
 });

@@ -26,8 +26,8 @@ export type OfflineRoadmap = {
   source: "heuristic";
 };
 
-type L7 = Record<CareerRiskLocale, string>;
-type L7List = Record<CareerRiskLocale, string[]>;
+type L7 = Partial<Record<CareerRiskLocale, string>> & Record<"en", string>;
+type L7List = Partial<Record<CareerRiskLocale, string[]>> & Record<"en", string[]>;
 
 function t(locale: CareerRiskLocale, table: L7, vars: Record<string, string> = {}): string {
   let s = table[locale] || table.en;

@@ -9,6 +9,13 @@ export default defineConfig({
     passWithNoTests: false,
     clearMocks: true,
     restoreMocks: true,
+    server: {
+      deps: {
+        // next-auth's ESM build imports "next/server" without a file extension,
+        // which Node's native ESM loader cannot resolve. Let Vite resolve it.
+        inline: ["next-auth"],
+      },
+    },
   },
   resolve: {
     alias: {

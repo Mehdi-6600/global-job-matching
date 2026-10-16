@@ -1,18 +1,19 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { LocaleProvider } from "@/components/locale-provider";
 import { SessionGuard } from "@/components/session-guard";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
+import type { Locale } from "@/lib/i18n/config";
 
-const AnalyticsTracker = dynamic(
-  () =>
-    import("@/components/analytics-tracker").then((m) => m.AnalyticsTracker),
-  { ssr: false }
-);
-
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
   return (
     <SessionProvider
       // Fewer session refetches = less network on navigation
@@ -28,7 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem={false}
         disableTransitionOnChange
       >
-        <LocaleProvider>
+        <LocaleProvider initialLocale={initialLocale}>
           <AnalyticsTracker />
           {children}
         </LocaleProvider>
