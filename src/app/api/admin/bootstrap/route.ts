@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
       return rateLimitedResponse(limit);
     }
 
+    if (!env.OWNER_EMAIL) {
+      return NextResponse.json(
+        { error: "OWNER_EMAIL environment variable is not configured" },
+        { status: 503 }
+      );
+    }
+
     const email = session.user.email.toLowerCase().trim();
     const ownerEmail = env.OWNER_EMAIL.toLowerCase().trim();
 

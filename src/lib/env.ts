@@ -34,7 +34,7 @@ export const env = createEnv({
     KV_REST_API_TOKEN: z.string().optional(),
     KV_REST_API_READ_ONLY_TOKEN: z.string().optional(),
 
-    OWNER_EMAIL: z.string().email(),
+    OWNER_EMAIL: z.string().email().optional(),
     SYNC_SECRET: z.string().min(32),
 
     OPENAI_API_KEY: z.string().min(1).optional(),
