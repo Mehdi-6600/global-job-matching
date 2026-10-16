@@ -65,7 +65,7 @@ describe("skill coverage blend", () => {
       location: "Remote",
       tags: ["python", "docker"],
       requirements: ["Python", "Docker"],
-    } as const;
+    };
 
     const full = computeMatchScore({ skills: "Python, Docker" }, job);
     const partial = computeMatchScore({ skills: "Python" }, job);

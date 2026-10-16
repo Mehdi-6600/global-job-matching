@@ -265,6 +265,26 @@ function fallbackSummary(
       withYears: `Professional with ${years} year${years === 1 ? "" : "s"} of experience seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`,
       noYears: `Professional seeking a role as ${role}. Focused on delivering reliable outcomes and growing domain expertise.`,
     },
+    pt: {
+      withYears: `Profissional com ${years} ano${years === 1 ? "" : "s"} de experiência em busca de oportunidade como ${role}. Foco em resultados consistentes e aprimoramento contínuo.`,
+      noYears: `Profissional em busca de oportunidade como ${role}. Foco em resultados consistentes e aprimoramento contínuo.`,
+    },
+    tr: {
+      withYears: `${years} yıllık deneyime sahip, ${role} pozisyonu arayan profesyonel. Güvenilir sonuçlar sunmaya ve uzmanlığı geliştirmeye odaklı.`,
+      noYears: `${role} pozisyonu arayan profesyonel. Güvenilir sonuçlar sunmaya ve uzmanlığı geliştirmeye odaklı.`,
+    },
+    zh: {
+      withYears: `具备 ${years} 年相关工作经验的专业人士，期望担任 ${role} 职位。专注于交付高质量业务成果与深耕专业领域。`,
+      noYears: `期望担任 ${role} 职位的专业人士。专注于交付高质量业务成果与深耕专业领域。`,
+    },
+    ja: {
+      withYears: `${years}年の実務経験を有し、${role}としてのポジションを目指すプロフェッショナル。確実な成果創出と専門性の向上に注力。`,
+      noYears: `${role}としてのポジションを目指すプロフェッショナル。確実な成果創出と専門性の向上に注力。`,
+    },
+    id: {
+      withYears: `Profesional dengan pengalaman ${years} tahun mencari peran sebagai ${role}. Berfokus pada pencapaian hasil andal dan pengembangan keahlian bidang.`,
+      noYears: `Profesional yang mencari peran sebagai ${role}. Berfokus pada pencapaian hasil andal dan pengembangan keahlian bidang.`,
+    },
     fa: {
       withYears: `حرفه‌ای با ${years} سال تجربه، در جستجوی نقش ${role}. متمرکز بر ارائه نتایج قابل اتکا و توسعه تخصص حوزه.`,
       noYears: `حرفه‌ای در جستجوی نقش ${role}. متمرکز بر ارائه نتایج قابل اتکا و توسعه تخصص حوزه.`,
