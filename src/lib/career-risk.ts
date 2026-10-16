@@ -77,7 +77,12 @@ export function normalizeCareerLocale(
     p === "es" ||
     p === "fr" ||
     p === "hi" ||
-    p === "de"
+    p === "de" ||
+    p === "pt" ||
+    p === "tr" ||
+    p === "zh" ||
+    p === "ja" ||
+    p === "id"
   ) {
     return p;
   }
@@ -111,7 +116,7 @@ export function languageNameForPrompt(locale: CareerRiskLocale): string {
 /* ------------------------------------------------------------------ */
 
 /** نگاشت لوکال به یک رشته‌ی متنی. */
-type LocaleCopy = Record<CareerRiskLocale, string>;
+type LocaleCopy = Partial<Record<CareerRiskLocale, string>> & Record<"en", string>;
 
 /**
  * انتخاب مقدار مناسب از جدول بر اساس لوکال، با fallback به انگلیسی.

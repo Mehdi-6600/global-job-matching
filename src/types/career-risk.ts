@@ -177,7 +177,7 @@ export const CAREER_RISK_DISCLAIMER_FA =
 /*  Optional: disclaimer map for all supported locales                 */
 /* ------------------------------------------------------------------ */
 
-export const CAREER_RISK_DISCLAIMERS: Record<CareerRiskLocale, string> = {
+export const CAREER_RISK_DISCLAIMERS: Partial<Record<CareerRiskLocale, string>> & Record<"en", string> = {
   en: CAREER_RISK_DISCLAIMER_EN,
   fa: CAREER_RISK_DISCLAIMER_FA,
   ar: "هذا تقدير مدعوم بالذكاء الاصطناعي بناءً على المعلومات التي قدمتها، وليس تنبؤًا نهائيًا بمستقبلك المهني.",

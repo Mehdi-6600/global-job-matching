@@ -22,6 +22,11 @@ const ALL_LOCALES: CareerRiskLocale[] = [
   "fr",
   "de",
   "hi",
+  "pt",
+  "tr",
+  "zh",
+  "ja",
+  "id",
 ];
 
 const BASE_INPUT: ResumeWriterInput = {
@@ -76,6 +81,11 @@ describe("resume writer — seven languages", () => {
       fr: ["RÉSUMÉ PROFESSIONNEL", "COMPÉTENCES"],
       de: ["PROFIL", "FÄHIGKEITEN"],
       hi: ["पेशेवर सारांश", "कौशल"],
+      pt: ["RESUMO PROFISSIONAL", "HABILIDADES"],
+      tr: ["PROFESYONEL ÖZET", "BECERİLER"],
+      zh: ["个人总结", "技能专长"],
+      ja: ["職務要約", "スキル"],
+      id: ["RINGKASAN PROFESIONAL", "KEAHLIAN"],
     };
 
     for (const locale of ALL_LOCALES) {
