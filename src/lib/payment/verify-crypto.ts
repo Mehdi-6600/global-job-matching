@@ -738,17 +738,6 @@ async function verifyTronUsdt(
 // Public entry point
 // ---------------------------------------------------------------------------
 
-/** Assets with a verifier. Anything else is unavailable, never "found". */
-const SUPPORTED_ASSETS: ReadonlySet<string> = new Set([
-  "BTC",
-  "ETH",
-  "USDT",
-  "USDC",
-  "BNB",
-  "DOGE",
-  "TON",
-]);
-
 export async function verifyTxOnChain(params: {
   asset: CryptoAsset | string;
   txHash: string;
@@ -763,16 +752,6 @@ export async function verifyTxOnChain(params: {
     Number.isFinite(Number(params.expectedCryptoAmount))
       ? Number(params.expectedCryptoAmount)
       : undefined;
-
-  // Check the asset first: an unsupported coin is "verification unavailable",
-  // not a malformed hash. Both paths fail closed (found: false).
-  if (!SUPPORTED_ASSETS.has(asset)) {
-    return {
-      status: "verification_unavailable",
-      found: false,
-      note: `No verifier for asset ${asset || "(empty)"}`,
-    };
-  }
 
   if (!isPlausibleTxHash(asset, txHash)) {
     return {
