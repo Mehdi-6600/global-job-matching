@@ -363,12 +363,32 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const err = error as { code?: string };
+    const err = error as { code?: string; meta?: { target?: unknown } };
     if (err.code === "INTENT_ALREADY_USED") {
       return NextResponse.json(
         { error: "This payment intent was already used", code: err.code },
         { status: 409 }
       );
+    }
+
+    // Concurrent duplicate submission: the pre-check above can race with a
+    // second request carrying the same hash. The DB unique constraint rejects
+    // the second insert; report it the same way as the sequential case (409),
+    // and the rolled-back transaction leaves the intent pending.
+    if (err.code === "P2002") {
+      const target = JSON.stringify(err.meta?.target ?? "");
+      if (target.includes("txHash")) {
+        return NextResponse.json(
+          { error: "Transaction hash already used", code: "DUPLICATE_TX" },
+          { status: 409 }
+        );
+      }
+      if (target.includes("paymentIntentId")) {
+        return NextResponse.json(
+          { error: "This payment intent was already used", code: "INTENT_ALREADY_USED" },
+          { status: 409 }
+        );
+      }
     }
 
     console.error("[crypto-payment] POST error:", error);
