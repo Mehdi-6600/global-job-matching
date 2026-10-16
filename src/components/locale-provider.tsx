@@ -34,10 +34,16 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
+export function LocaleProvider({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
   const router = useRouter();
   const pathname = usePathname() || "/";
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+  const [locale, setLocaleState] = useState<Locale>(initialLocale || defaultLocale);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -45,12 +51,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     const serverLocale = document.documentElement.lang;
     try {
       const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
-      setLocaleState(resolveLocale(fromPath || saved || serverLocale));
+      setLocaleState(resolveLocale(fromPath || saved || serverLocale || initialLocale));
     } catch {
-      setLocaleState(resolveLocale(fromPath || serverLocale));
+      setLocaleState(resolveLocale(fromPath || serverLocale || initialLocale));
     }
     setReady(true);
-  }, [pathname]);
+  }, [pathname, initialLocale]);
 
   useEffect(() => {
     if (!ready) return;

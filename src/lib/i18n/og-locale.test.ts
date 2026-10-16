@@ -14,11 +14,16 @@ describe("og-locale", () => {
     }
   });
 
-  it("covers all 7 locales in allOgLocales", () => {
+  it("covers all 12 locales in allOgLocales", () => {
     const all = allOgLocales();
-    expect(all).toHaveLength(7);
+    expect(all).toHaveLength(12);
     expect(all).toContain("en_US");
     expect(all).toContain("fa_IR");
     expect(all).toContain("de_DE");
+    expect(all).toContain("pt_BR");
+    expect(all).toContain("tr_TR");
+    expect(all).toContain("zh_CN");
+    expect(all).toContain("ja_JP");
+    expect(all).toContain("id_ID");
   });
 });

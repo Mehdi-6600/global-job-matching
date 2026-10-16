@@ -18,6 +18,11 @@ export const CAREER_RISK_LOCALES = [
   "fr",
   "hi",
   "de",
+  "pt",
+  "tr",
+  "zh",
+  "ja",
+  "id",
 ] as const;
 export type CareerRiskLocale = (typeof CAREER_RISK_LOCALES)[number];
 

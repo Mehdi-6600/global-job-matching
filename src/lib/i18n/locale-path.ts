@@ -1,32 +1,44 @@
-import { defaultLocale, isLocale, locales, type Locale } from "@/lib/i18n/config";
+import {
+  defaultLocale,
+  isLocale,
+  locales,
+  type Locale,
+} from "@/lib/i18n/config";
 
-const LOCALE_PREFIX_RE = new RegExp(
-  `^/(${locales.join("|")})(?=/|$)`,
-  "i"
-);
+const LOCALE_PREFIX_RE = new RegExp(`^/(${locales.join("|")})(?=/|$)`, "i");
 
 export type ParsedLocalePath = {
   /** Locale from prefix, or null if bare path */
   localeFromPath: Locale | null;
+  /**
+   * Effective locale resolved from path (defaultLocale when unprefixed).
+   * Provided for compatibility with callers expecting `.locale`.
+   */
+  locale: Locale;
   /** Path without locale prefix (always starts with /) */
   pathname: string;
 };
 
 /**
- * /fa/jobs → { localeFromPath: "fa", pathname: "/jobs" }
- * /jobs → { localeFromPath: null, pathname: "/jobs" }
+ * /fa/jobs → { localeFromPath: "fa", locale: "fa", pathname: "/jobs" }
+ * /jobs → { localeFromPath: null, locale: "en", pathname: "/jobs" }
  */
 export function parseLocalePath(pathname: string): ParsedLocalePath {
   const raw = pathname.startsWith("/") ? pathname : `/${pathname}`;
   const match = raw.match(LOCALE_PREFIX_RE);
   if (!match) {
-    return { localeFromPath: null, pathname: raw || "/" };
+    return {
+      localeFromPath: null,
+      locale: defaultLocale,
+      pathname: raw || "/",
+    };
   }
   const code = match[1].toLowerCase();
   const locale = isLocale(code) ? code : null;
   const rest = raw.slice(match[0].length) || "/";
   return {
     localeFromPath: locale,
+    locale: locale ?? defaultLocale,
     pathname: rest.startsWith("/") ? rest : `/${rest}`,
   };
 }

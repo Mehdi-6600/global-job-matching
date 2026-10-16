@@ -106,6 +106,11 @@ function fontStackForLocale(
     case "es":
     case "fr":
     case "de":
+    case "pt":
+    case "tr":
+    case "zh":
+    case "ja":
+    case "id":
     default:
       return `${variables.inter} ${variables.vazirmatn} ${variables.notoKufi}`;
   }
@@ -241,7 +246,7 @@ export default async function RootLayout({
           color: "var(--text-body)",
         }}
       >
-        <Providers>
+        <Providers initialLocale={locale}>
           <Navbar />
 
           <main className="flex-1">

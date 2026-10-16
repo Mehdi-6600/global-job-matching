@@ -12,7 +12,13 @@ const AnalyticsTracker = dynamic(
   { ssr: false }
 );
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  initialLocale?: any;
+}) {
   return (
     <SessionProvider
       // Fewer session refetches = less network on navigation
@@ -28,7 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem={false}
         disableTransitionOnChange
       >
-        <LocaleProvider>
+        <LocaleProvider initialLocale={initialLocale}>
           <AnalyticsTracker />
           {children}
         </LocaleProvider>

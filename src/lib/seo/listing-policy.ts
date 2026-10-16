@@ -19,6 +19,25 @@ export function pathShouldNoindexWhenQueried(pathname: string): boolean {
   return (LISTING_PATHS_NOINDEX_QUERY as readonly string[]).includes(path);
 }
 
+/** True when a listing URL should be noindexed: a listing path with an indexable query. */
+export function shouldNoindexListingUrl(
+  pathname: string,
+  search: string | URLSearchParams
+): boolean {
+  const params =
+    typeof search === "string"
+      ? new URLSearchParams(search.replace(/^\?/, ""))
+      : search;
+  return (
+    pathShouldNoindexWhenQueried(pathname) && urlHasIndexableQueryNoise(params)
+  );
+}
+
+/** True for paths that are public listing pages (the set that gets query-noise rules). */
+export function isPublicListingPath(pathname: string): boolean {
+  return pathShouldNoindexWhenQueried(pathname);
+}
+
 /** True if URL has any non-empty query value */
 export function urlHasIndexableQueryNoise(
   searchParams: URLSearchParams

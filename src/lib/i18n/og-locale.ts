@@ -13,6 +13,11 @@ export const ogLocaleByAppLocale: Record<Locale, string> = {
   hi: "hi_IN",
   fr: "fr_FR",
   de: "de_DE",
+  pt: "pt_BR",
+  tr: "tr_TR",
+  zh: "zh_CN",
+  ja: "ja_JP",
+  id: "id_ID",
 };
 
 export function toOgLocale(locale: Locale): string {

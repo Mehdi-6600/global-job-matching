@@ -6,6 +6,11 @@ import es from "../../../messages/es.json";
 import fr from "../../../messages/fr.json";
 import hi from "../../../messages/hi.json";
 import de from "../../../messages/de.json";
+import pt from "../../../messages/pt.json";
+import tr from "../../../messages/tr.json";
+import zh from "../../../messages/zh.json";
+import ja from "../../../messages/ja.json";
+import id from "../../../messages/id.json";
 
 type Dict = Record<string, unknown>;
 
@@ -25,11 +30,17 @@ export const dictionaries: Record<AssertLocale, Dict> = {
   fr: fr as Dict,
   hi: hi as Dict,
   de: de as Dict,
+  pt: pt as Dict,
+  tr: tr as Dict,
+  zh: zh as Dict,
+  ja: ja as Dict,
+  id: id as Dict,
 };
 
 /** Flatten nested JSON keys to dot paths */
 export function flattenKeys(obj: Dict, prefix = ""): string[] {
   const keys: string[] = [];
+  if (!obj || typeof obj !== "object") return keys;
   for (const [k, v] of Object.entries(obj)) {
     const path = prefix ? `${prefix}.${k}` : k;
     if (v !== null && typeof v === "object" && !Array.isArray(v)) {
@@ -49,6 +60,7 @@ export function findMissingKeys(base: Dict, other: Dict): string[] {
 
 export function findEmptyKeys(obj: Dict, prefix = ""): string[] {
   const empty: string[] = [];
+  if (!obj || typeof obj !== "object") return empty;
   for (const [k, v] of Object.entries(obj)) {
     const path = prefix ? `${prefix}.${k}` : k;
     if (v !== null && typeof v === "object" && !Array.isArray(v)) {

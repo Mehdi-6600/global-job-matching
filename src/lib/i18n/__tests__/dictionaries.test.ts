@@ -8,11 +8,24 @@ import {
 } from "../assert-dictionaries";
 
 describe("i18n dictionaries", () => {
-  it("includes all 7 product locales", () => {
+  it("includes all 12 product locales", () => {
     expect(LOCALES).toEqual(
-      expect.arrayContaining(["en", "es", "ar", "fa", "hi", "fr", "de"])
+      expect.arrayContaining([
+        "en",
+        "es",
+        "ar",
+        "fa",
+        "hi",
+        "fr",
+        "de",
+        "pt",
+        "tr",
+        "zh",
+        "ja",
+        "id",
+      ])
     );
-    expect(LOCALES).toHaveLength(7);
+    expect(LOCALES).toHaveLength(12);
   });
 
   it("English has a non-empty key set", () => {

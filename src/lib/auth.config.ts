@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import { ROLES } from "@/lib/roles";
+import { classifyRoute, normalizeRoutePath } from "@/lib/route-access";
 
 /**
  * Edge-compatible auth config for middleware only.
@@ -47,7 +48,11 @@ export const authConfig = {
       return session;
     },
     authorized({ auth, request }) {
-      const { pathname } = request.nextUrl;
+      // Classify the locale-stripped path. Previously the raw pathname was
+      // checked, so /fa/jobs or /de/pricing were treated as private and
+      // guests were redirected to /login. See src/lib/route-access.ts.
+      const rawPathname = request.nextUrl.pathname;
+      const pathname = normalizeRoutePath(rawPathname);
       const isLoggedIn = !!auth?.user?.id;
       const userRole = (auth?.user as { role?: string } | undefined)?.role;
       const sessionError = (auth as { error?: string } | null)?.error;
@@ -61,59 +66,38 @@ export const authConfig = {
           return true;
         }
         const loginUrl = new URL("/login", request.nextUrl);
-        loginUrl.searchParams.set("callbackUrl", pathname);
+        loginUrl.searchParams.set("callbackUrl", rawPathname);
         loginUrl.searchParams.set("error", "SessionExpired");
         return Response.redirect(loginUrl);
       }
 
-      if (pathname.startsWith("/api/")) {
+      if (rawPathname.startsWith("/api/")) {
         return true;
       }
 
-      const PUBLIC_PAGES = [
-        "/",
-        "/jobs",
-        "/pricing",
-        "/about",
-        "/contact",
-        "/terms",
-        "/privacy",
-        "/companies",
-        "/categories",
-        "/locations",
-        "/blog",
-        "/search",
-      ];
+      const access = classifyRoute(rawPathname);
 
-      const AUTH_PAGES = [
-        "/login",
-        "/register",
-        "/forgot-password",
-        "/reset-password",
-        "/verify-email",
-      ];
-
-      if (
-        PUBLIC_PAGES.includes(pathname) ||
-        pathname.startsWith("/jobs/") ||
-        pathname.startsWith("/companies/") ||
-        pathname.startsWith("/categories/") ||
-        pathname.startsWith("/locations/") ||
-        pathname.startsWith("/blog/")
-      ) {
+      if (access === "public") {
         return true;
       }
 
-      if (AUTH_PAGES.includes(pathname)) {
+      if (access === "auth") {
         if (isLoggedIn) {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
         }
         return true;
       }
 
+      if (access === "none") {
+        // Unknown URL: let Next.js render app/not-found (HTTP 404). Redirecting
+        // guests to /login here hid missing pages behind a login screen.
+        return true;
+      }
+
+      // access === "private"
       if (!isLoggedIn) {
         const loginUrl = new URL("/login", request.nextUrl);
-        loginUrl.searchParams.set("callbackUrl", pathname);
+        loginUrl.searchParams.set("callbackUrl", rawPathname);
         return Response.redirect(loginUrl);
       }
 
