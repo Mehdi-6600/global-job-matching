@@ -226,7 +226,7 @@ export default function HomePage() {
               {audience === "seeker"
                 ? t(
                     "Home.valueSeekers",
-                    "AI career intelligence, global jobs, 7 languages.",
+                    "AI career intelligence, global jobs, 12 languages.",
                   )
                 : t(
                     "Home.valueEmployers",
