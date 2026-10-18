@@ -257,7 +257,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       const [jobs, total] = await Promise.all([
         db.job.findMany({
           where,
-          orderBy: { createdAt: "desc" },
+          orderBy: [{ featured: "desc" }, { featuredUntil: "desc" }, { createdAt: "desc" }],
           skip,
           take: limit,
           include: includeClause,
@@ -282,7 +282,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       const [jobs, total] = await Promise.all([
         db.job.findMany({
           where,
-          orderBy: { createdAt: "desc" },
+          orderBy: [{ featured: "desc" }, { featuredUntil: "desc" }, { createdAt: "desc" }],
           skip,
           take: limit,
           include: includeClause,
@@ -305,7 +305,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const candidates = await db.job.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ featured: "desc" }, { featuredUntil: "desc" }, { createdAt: "desc" }],
       take: RANK_CANDIDATES,
       include: includeClause,
     });

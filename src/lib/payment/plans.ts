@@ -21,14 +21,34 @@ export const FEATURED_JOB_PRICES = {
 } as const;
 export type FeaturedDuration = keyof typeof FEATURED_JOB_PRICES;
 
+export const ALL_PLAN_IDS = [...PLAN_IDS, "featured_weekly", "featured_monthly"] as const;
+export type AllPlanId = PlanId | "featured_weekly" | "featured_monthly";
+
+export function isFeaturedPlan(planId: string): boolean {
+  return planId === "featured_weekly" || planId === "featured_monthly";
+}
+
+export function getFeaturedDuration(planId: string): FeaturedDuration | null {
+  if (planId === "featured_weekly") return "weekly";
+  if (planId === "featured_monthly") return "monthly";
+  return null;
+}
+
 /** Monthly price, or yearly = 10× monthly (~2 months free) */
 export function getPlanAmount(
-  planId: PlanId,
+  planId: string,
   billing: "monthly" | "yearly" = "monthly"
 ): number {
-  const monthly = PLAN_PRICES[planId];
+  if (planId === "featured_weekly") return FEATURED_JOB_PRICES.weekly;
+  if (planId === "featured_monthly") return FEATURED_JOB_PRICES.monthly;
+  const monthly = PLAN_PRICES[planId as PlanId];
+  if (monthly === undefined) return 0;
   if (billing === "yearly") return monthly * 10;
   return monthly;
+}
+
+export function getFeaturedAmount(duration: FeaturedDuration): number {
+  return FEATURED_JOB_PRICES[duration];
 }
 
 export const PLANS = [

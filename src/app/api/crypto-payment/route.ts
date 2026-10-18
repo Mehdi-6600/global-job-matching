@@ -318,6 +318,8 @@ export async function POST(req: NextRequest) {
           recipientAddress: intent.recipientAddress,
           expectedCryptoAmount: expectedCrypto,
           rateUsd,
+          jobId: (intent as any).jobId || null,
+          featuredDuration: (intent as any).featuredDuration || null,
         },
       });
 

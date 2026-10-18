@@ -25,6 +25,7 @@
     "db:validate": "prisma validate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:blogs": "tsx prisma/seed-blogs.ts",
     "db:checksums": "node scripts/print-migration-checksums.mjs",
     "postinstall": "prisma generate"
   },
