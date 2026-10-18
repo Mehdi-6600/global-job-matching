@@ -457,11 +457,11 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
     attribution: "Jobs via USAJOBS (U.S. Office of Personnel Management)",
     robotsStatus: "allowed",
     termsStatus: "allowed",
-    enabled: true,
+    enabled: false,
     refreshIntervalMinutes: 360,
     rateLimitPerMinute: 10,
     notes:
-      "Reviewed 2026-10-18. Public Data under open license per 44 U.S.C. §§ 3502/3506(b)(6): may be copied, stored, reformatted, adapted, analyzed, published, redistributed for lawful commercial/noncommercial without prior OPM approval. Requires Authorization-Key + User-Agent. Attribution + link to official announcement required; do not misrepresent affiliation. Needs USAJOBS_API_KEY + USAJOBS_USER_AGENT (email) env.",
+      "Reviewed 2026-10-18. APPROVED but DISABLED until real USAJOBS_API_KEY is provisioned. Public Data open license (44 U.S.C. §§ 3502/3506(b)(6)) — requires Authorization-Key + User-Agent env. Auto-fetch disabled to avoid placeholder 401 noise; enable (enabled:true) after adding real key in Vercel and redeploy. See docs/NEW_SOURCES_USAJOBS_THEMUSE.md.",
     language: "en",
     httpConfig: {
       timeoutMs: 15_000,
