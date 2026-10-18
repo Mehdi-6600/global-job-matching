@@ -209,6 +209,8 @@ export async function PATCH(req: NextRequest) {
 
       const billing = resolveBillingCycle(tx.billingCycle);
 
+      const isFeatured = tx.planId === "featured_weekly" || tx.planId === "featured_monthly";
+
       try {
         await db.$transaction(async (prisma) => {
           const claimed = await prisma.transaction.updateMany({
@@ -222,24 +224,50 @@ export async function PATCH(req: NextRequest) {
             });
           }
 
-          await activatePlanForUser(
-            {
-              userId: tx.userId,
-              planId: tx.planId,
-              billingCycle: billing,
-            },
-            prisma
-          );
+          if (isFeatured) {
+            const jobId = (tx as any).jobId as string | null;
+            const duration = (tx as any).featuredDuration as string | null;
+            if (jobId) {
+              const days = duration === "weekly" || tx.planId === "featured_weekly" ? 7 : 30;
+              const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+              await prisma.job.update({
+                where: { id: jobId },
+                data: {
+                  featured: true,
+                  featuredUntil: until,
+                  featuredTxId: id,
+                },
+              });
+              await prisma.notification.create({
+                data: {
+                  userId: tx.userId,
+                  type: "alert",
+                  title: "Job featured!",
+                  message: `Your job is now featured for ${days} days. It appears on homepage and top of search.`,
+                  actionUrl: `/jobs/${jobId}`,
+                },
+              });
+            }
+          } else {
+            await activatePlanForUser(
+              {
+                userId: tx.userId,
+                planId: tx.planId,
+                billingCycle: billing,
+              },
+              prisma
+            );
 
-          await prisma.notification.create({
-            data: {
-              userId: tx.userId,
-              type: "alert",
-              title: "Payment confirmed",
-              message: `Your ${tx.planId} plan (${billing}) is now active.`,
-              actionUrl: "/pricing",
-            },
-          });
+            await prisma.notification.create({
+              data: {
+                userId: tx.userId,
+                type: "alert",
+                title: "Payment confirmed",
+                message: `Your ${tx.planId} plan (${billing}) is now active.`,
+                actionUrl: "/pricing",
+              },
+            });
+          }
         });
 
         securityLog("admin.payment_confirm", {

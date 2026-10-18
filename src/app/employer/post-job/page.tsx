@@ -179,34 +179,67 @@ export default function PostJobPage() {
   if (success) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+        <div className="w-full max-w-lg space-y-4">
+          <div className="text-center glass rounded-2xl p-8 border border-white/10">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">
+              {t("Common.success", "Job Posted!")}
+            </h2>
+            <p className="text-slate-400 text-sm mb-6">
+              Your job is now live. Boost it to get 10× more views?
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setSuccess(false)}
+                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
+              >
+                Post another
+              </button>
+              <Link
+                href="/employer/dashboard"
+                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
+              >
+                Dashboard
+              </Link>
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">
-            {t("Common.success", "Job Posted!")}
-          </h2>
-          <p className="text-slate-400 text-sm mb-6">
-            {t(
-              "Employer.postJob",
-              "Your job is pending review and will be published after approval."
-            )}
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              type="button"
-              onClick={() => setSuccess(false)}
-              className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
-            >
-              {t("Employer.postJob", "Post another")}
-            </button>
+
+          {/* UPSELL: Featured Boost — key monetization */}
+          <div className="glass rounded-2xl p-6 border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/10">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-2 py-1 rounded-full bg-amber-500 text-white text-xs font-bold">🚀 BOOST</span>
+              <span className="text-amber-300 text-xs font-medium">Get 10× more applicants</span>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Feature this job?</h3>
+            <p className="text-sm text-slate-300 mb-4">Featured jobs appear on <strong>homepage</strong> + <strong>top of search</strong> with gold badge. One-time crypto payment, no subscription.</p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+                <p className="text-xs text-slate-400">7 Days</p>
+                <p className="text-xl font-bold text-white">$19</p>
+                <p className="text-[11px] text-slate-500">in USDT, BTC, ETH</p>
+              </div>
+              <div className="rounded-xl bg-amber-500 border border-amber-400 p-3 text-center relative">
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-white text-amber-600 text-[10px] font-bold">BEST</span>
+                <p className="text-xs text-amber-900">30 Days</p>
+                <p className="text-xl font-bold text-white">$39</p>
+                <p className="text-[11px] text-amber-100">save 50%</p>
+              </div>
+            </div>
             <Link
-              href="/employer/dashboard"
-              className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm"
+              href="/pricing"
+              className="block w-full text-center py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm"
             >
-              {t("Employer.title", "Dashboard")}
+              Feature My Job — Pay with Crypto →
             </Link>
+            <p className="text-xs text-slate-400 text-center mt-2">✓ Pay in USDT (~$1 fee) • ✓ Verified on-chain in ~5 min</p>
           </div>
+
+          <Link href="/pricing" className="block text-center text-sm text-slate-400 hover:text-white">
+            See all pricing →
+          </Link>
         </div>
       </main>
     );

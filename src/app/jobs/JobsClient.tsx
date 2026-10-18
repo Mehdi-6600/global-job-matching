@@ -35,6 +35,9 @@ interface Job {
   currency: string;
   tags: string[];
   createdAt: string;
+  // Featured boost (crypto one-time payment)
+  featured?: boolean;
+  featuredUntil?: string | null;
   // Ingestion provenance — present for aggregated jobs (RemoteOK, Jobicy,
   // Arbeitnow, ...), null for employer-posted jobs.
   source: string | null;
@@ -623,8 +626,17 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
                 <Link
                   key={job.id}
                   href={`/jobs/${job.id}`}
-                  className="glass rounded-2xl p-5 border border-white/10 hover:border-indigo-500/30 transition-all block"
+                  className={`glass rounded-2xl p-5 border transition-all block ${
+                    job.featured
+                      ? "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-orange-500/5 hover:border-amber-500/50"
+                      : "border-white/10 hover:border-indigo-500/30"
+                  }`}
                 >
+                  {job.featured && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold mb-2">
+                      ⭐ FEATURED
+                    </div>
+                  )}
                   <div className="flex items-start gap-3 mb-3">
                     <CompanyLogo
                       name={
