@@ -154,6 +154,10 @@ model Job {
   descriptionIsSnippet Boolean   @default(false)
   qualityScore         Float?
   attribution          String?
+  // Featured job boost (one-time crypto payment)
+  featured             Boolean   @default(false)
+  featuredUntil        DateTime?
+  featuredTxId         String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @default(now()) @updatedAt
 
