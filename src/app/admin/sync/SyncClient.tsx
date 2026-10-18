@@ -36,6 +36,11 @@ const COLOR_BY_KEY: Record<string, string> = {
   greenhouse: "bg-blue-600",
   lever: "bg-orange-600",
   ashby: "bg-pink-600",
+  usajobs: "bg-[#003366]",
+  themuse: "bg-[#53b6ac]",
+  recruitee: "bg-[#ff6b35]",
+  smartrecruiters: "bg-[#0f172a]",
+  workable: "bg-[#00a99d]",
 };
 
 function colorFor(key: string): string {
