@@ -174,8 +174,16 @@ function mapItem(item: unknown, attribution: string): IngestJobDraft | null {
   const jobCats = asArray(descWrap.JobCategory).map((c) => str(asRecord(c)?.Name, 60).trim()).filter(Boolean);
   const tags = Array.from(new Set([...jobCats, orgName].filter(Boolean))).slice(0, 20);
 
-  // Employment type
-  const offering = str(asRecord(descWrap.PositionOfferingType)?.[0] ? asRecord(asArray(descWrap.PositionOfferingType)[0])?.Name : descWrap.PositionOfferType, 40).trim();
+  // Employment type — PositionOfferingType can be string or array of {Name}
+  let offering = "";
+  const rawOffering = descWrap.PositionOfferingType as unknown;
+  if (Array.isArray(rawOffering)) {
+    const first = asRecord(rawOffering[0]);
+    offering = str(first?.Name ?? rawOffering[0], 40).trim();
+  } else {
+    offering = str(rawOffering, 40).trim();
+  }
+  if (!offering) offering = str(descWrap.PositionOfferType, 40).trim();
   const employmentType = offering || "full-time";
 
   // Remote detection — federal remote indicator

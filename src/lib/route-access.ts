@@ -30,6 +30,7 @@ export const PUBLIC_PAGES: readonly string[] = [
   "/locations",
   "/blog",
   "/search",
+  "/crypto-jobs",
 ];
 
 /** Public dynamic routes, e.g. /jobs/[id], /blog/[slug] */

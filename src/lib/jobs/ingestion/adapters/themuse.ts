@@ -141,7 +141,13 @@ function mapItem(item: unknown, attribution: string): IngestJobDraft | null {
   const tgs = asArray(j.tags).map((t) => str(t, 60).trim()).filter(Boolean);
   const tags = Array.from(new Set([...cats, ...lvls, ...tgs])).slice(0, 20);
 
-  const employmentType = lvls[0] ? lvls[0]!.toLowerCase() : "full-time";
+  // Employment type — The Muse levels are seniority (Entry/Mid/Senior), not contract type
+  // Use tags/categories to infer, otherwise default to full-time (pipeline's mapJobType will normalize)
+  const rawType = str(j.type, 40).trim().toLowerCase();
+  let employmentType = "full-time";
+  if (rawType.includes("part")) employmentType = "part-time";
+  else if (rawType.includes("contract")) employmentType = "contract";
+  else if (rawType.includes("intern")) employmentType = "internship";
 
   const remote = /remote|anywhere|flexible/i.test(`${location} ${tags.join(" ")}`);
 
