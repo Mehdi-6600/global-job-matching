@@ -22,6 +22,8 @@ import { ashbyAdapter } from "./adapters/ashby";
 import { smartrecruitersAdapter } from "./adapters/smartrecruiters";
 import { workableAdapter } from "./adapters/workable";
 import { recruiteeAdapter } from "./adapters/recruitee";
+import { usajobsAdapter } from "./adapters/usajobs";
+import { themuseAdapter } from "./adapters/themuse";
 
 export type SourceRegistryEntry = {
   key: string;
@@ -427,6 +429,86 @@ export const SOURCE_REGISTRY: SourceRegistryEntry[] = [
       maxResponseBytes: 8_000_000,
     },
     adapter: recruiteeAdapter,
+    capabilities: {
+      pagination: "page",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: true,
+      providesDescription: true,
+    },
+  },
+  {
+    key: "usajobs",
+    name: "USAJOBS",
+    type: "job_board",
+    baseUrl: "https://www.usajobs.gov",
+    apiUrl: "https://data.usajobs.gov/api/search",
+    licenseStatus: "APPROVED",
+    commercialAllowed: true,
+    redistributionAllowed: true,
+    attributionRequired: true,
+    attribution: "Jobs via USAJOBS (U.S. Office of Personnel Management)",
+    robotsStatus: "allowed",
+    termsStatus: "allowed",
+    enabled: true,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 10,
+    notes:
+      "Reviewed 2026-10-18. Public Data under open license per 44 U.S.C. §§ 3502/3506(b)(6): may be copied, stored, reformatted, adapted, analyzed, published, redistributed for lawful commercial/noncommercial without prior OPM approval. Requires Authorization-Key + User-Agent. Attribution + link to official announcement required; do not misrepresent affiliation. Needs USAJOBS_API_KEY + USAJOBS_USER_AGENT (email) env.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 15_000_000,
+    },
+    adapter: usajobsAdapter,
+    capabilities: {
+      pagination: "page",
+      providesExternalId: true,
+      providesExternalUrl: true,
+      providesApplyUrl: true,
+      providesSalary: false,
+      providesRemote: true,
+      providesPublishedAt: true,
+      providesSourceUpdatedAt: false,
+      providesCompany: true,
+      providesLocation: true,
+      providesEmploymentType: true,
+      providesDescription: true,
+    },
+  },
+  {
+    key: "themuse",
+    name: "The Muse",
+    type: "job_board",
+    baseUrl: "https://www.themuse.com",
+    apiUrl: "https://www.themuse.com/api/public/jobs",
+    licenseStatus: "APPROVED",
+    commercialAllowed: true,
+    redistributionAllowed: true,
+    attributionRequired: true,
+    attribution: "Jobs via The Muse",
+    robotsStatus: "allowed",
+    termsStatus: "allowed",
+    enabled: true,
+    refreshIntervalMinutes: 360,
+    rateLimitPerMinute: 20,
+    notes:
+      "Reviewed 2026-10-18. Public API offered to other companies per https://www.themuse.com/developers/api/v2 — Terms 3.1 grants limited license to obtain, use, distribute and transmit Muse Content via Apps. Attribution + landing_page link required. Optional THEMUSE_API_KEY raises limit 500→3600/hr. 20 jobs/page, ~415k total. Filters stale >30d in adapter; dedup via muse:id.",
+    language: "en",
+    httpConfig: {
+      timeoutMs: 15_000,
+      maxAttempts: 3,
+      maxResponseBytes: 10_000_000,
+    },
+    adapter: themuseAdapter,
     capabilities: {
       pagination: "page",
       providesExternalId: true,
