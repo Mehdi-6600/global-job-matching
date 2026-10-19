@@ -88,7 +88,14 @@ jobs:
       # Validates the same production compile path as Vercel (prisma generate is
       # already done; migrate already applied against CI Postgres). next build only.
       - name: Production build (next build)
-        run: npx next build
+        run: npx next build 2>&1 | tee build.log
         env:
           # next build must not re-run migrate against missing host if script wraps it
           SKIP_ENV_VALIDATION: "1"
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
