@@ -63,48 +63,18 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Typecheck
-        run: |
-          set -o pipefail
-          npm run typecheck 2>&1 | tee typecheck.log
+        run: npm run typecheck
 
       - name: Lint
         run: npm run lint
 
       - name: Unit tests
-        run: |
-          set -o pipefail
-          npm test 2>&1 | tee test.log
-
-      - name: Show logs on failure
-        if: failure()
-        run: |
-          echo "=== TYPECHECK LOG ==="
-          cat typecheck.log || true
-          echo "=== TEST LOG ==="
-          cat test.log || true
-
-      - name: Comment PR with logs
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            let log = '';
-            try { log = fs.readFileSync('test.log', 'utf8'); } catch(e){ try{ log = fs.readFileSync('typecheck.log','utf8'); }catch(_){ log='no log'; }}
-            const body = '```\n' + log.slice(-60000) + '\n```';
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: 'CI failed:\n' + body
-            });
+        run: npm test
 
       # Validates the same production compile path as Vercel (prisma generate is
       # already done; migrate already applied against CI Postgres). next build only.
       - name: Production build (next build)
-        run: |
-          set -o pipefail
-          npx next build 2>&1 | tee build.log
+        run: npx next build
         env:
           # next build must not re-run migrate against missing host if script wraps it
           SKIP_ENV_VALIDATION: "1"
