@@ -63,18 +63,31 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Typecheck
-        run: npm run typecheck
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee typecheck.log
 
       - name: Lint
         run: npm run lint
 
       - name: Unit tests
-        run: npm test
+        run: npm test 2>&1 | tee test.log
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-${{ github.run_id }}
+          path: |
+            typecheck.log
+            test.log
 
       # Validates the same production compile path as Vercel (prisma generate is
       # already done; migrate already applied against CI Postgres). next build only.
       - name: Production build (next build)
-        run: npx next build
+        run: |
+          set -o pipefail
+          npx next build 2>&1 | tee build.log
         env:
           # next build must not re-run migrate against missing host if script wraps it
           SKIP_ENV_VALIDATION: "1"
