@@ -1,16 +1,14 @@
 /**
- * Featured urgency engine — proven strike strategy.
- * Based on RemoteOK ($600 guarantee) + MoAIJobs (99% margin) research.
- * Psychology: scarcity + social proof + urgency = instant conversion.
+ * Featured urgency — honest scarcity only.
+ * All numbers come from real DB counts. No synthetic social proof.
+ * Only show promo if a real campaign with fixed end date exists.
  */
 
 export const FEATURED_CONFIG = {
-  maxSlots: 5, // Only 5 homepage spots — scarcity
+  maxSlots: 5,
   priceWeekly: 19,
   priceMonthly: 39,
-  competitorPrice: 499, // CryptoJobsList comparison
-  urgencyMinutes: 30, // Payment intent lock
-  socialProofBase: 12, // "12 companies featured this week"
+  competitorPrice: 499,
 } as const;
 
 export type UrgencyState = {
@@ -18,24 +16,19 @@ export type UrgencyState = {
   slotsTaken: number;
   slotsLeft: number;
   isAlmostFull: boolean;
-  discountEndsAt: string; // ISO
-  socialProofText: string;
-  valueProp: string;
+  // Only set when a real campaign exists with fixed end date via env or DB
+  campaignEndsAt?: string | null;
 };
 
 export function getUrgencyState(featuredCount: number): UrgencyState {
   const slotsTaken = Math.min(featuredCount, FEATURED_CONFIG.maxSlots);
   const slotsLeft = Math.max(0, FEATURED_CONFIG.maxSlots - slotsTaken);
-  const discountEndsAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h FOMO
-
   return {
     slotsTotal: FEATURED_CONFIG.maxSlots,
     slotsTaken,
     slotsLeft,
-    isAlmostFull: slotsLeft <= 2,
-    discountEndsAt,
-    socialProofText: `${FEATURED_CONFIG.socialProofBase + featuredCount} companies featured this week • ${200 + featuredCount * 23} views avg`,
-    valueProp: `Save $${FEATURED_CONFIG.competitorPrice - FEATURED_CONFIG.priceMonthly} vs CryptoJobsList`,
+    isAlmostFull: slotsLeft <= 2 && slotsLeft > 0,
+    campaignEndsAt: process.env.FEATURED_CAMPAIGN_ENDS_AT || null,
   };
 }
 

@@ -108,6 +108,7 @@ model Company {
   owner      User?       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   jobs       Job[]
   interviews Interview[]
+  outreach   OutreachAttempt[]
 
   @@index([ownerId])
   @@index([status])
@@ -563,4 +564,28 @@ model UsageEvent {
 
   @@index([userId, kind, createdAt])
   @@index([userId, kind, periodKey])
+}
+
+model OutreachAttempt {
+  id                String    @id @default(cuid())
+  companyId         String?
+  companyKey        String // normalized website|name lowercased for dedup
+  companyName       String
+  email             String?
+  status            String    @default("pending") // pending|sent|failed
+  windowKey         String // companyKey:windowStart for 7-day dedup (unique)
+  providerMessageId String?
+  error             String?   @db.Text
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([windowKey])
+  @@index([companyKey])
+  @@index([companyId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([windowKey])
 }
