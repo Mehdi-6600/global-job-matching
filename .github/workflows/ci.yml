@@ -63,7 +63,14 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run typecheck 2>&1 | tee typecheck.log
+
+      - name: Upload typecheck log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typecheck-log
+          path: typecheck.log
 
       - name: Lint
         run: npm run lint
