@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { securityLog } from "@/lib/security-log";
 
-import type { Prisma } from "@prisma/client";
 import { normalizeCompanyKey, getCooldownCutoff } from "@/lib/outreach";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://global-job-matching.vercel.app";
@@ -122,6 +121,8 @@ export async function GET(req: NextRequest) {
       let attemptId: string | null = null;
       try {
         const created = await db.$transaction(async (tx) => {
+          // Advisory lock per companyKey to serialize concurrent outreach for same company
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${t.companyKey}))`;
           const recentTx = await tx.outreachAttempt.findFirst({
             where: {
               companyKey: t.companyKey,
@@ -139,7 +140,7 @@ export async function GET(req: NextRequest) {
               windowKey: `${t.companyKey}:${Date.now()}`,
             },
           });
-        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        });
         attemptId = created.id;
       } catch (e: unknown) {
         const err = e as { code?: string; message?: string };
