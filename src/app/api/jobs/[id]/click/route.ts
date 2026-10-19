@@ -28,7 +28,7 @@ export async function POST(
       id: true,
       title: true,
       viewCount: true,
-      listings: { select: { applyUrl: true, sourceUrl: true }, take: 1 },
+      sourceListings: { select: { applyUrl: true, sourceUrl: true }, take: 1 },
     },
   });
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
@@ -36,7 +36,7 @@ export async function POST(
   // increment view as click-signal (no separate Click table yet)
   await db.job.update({ where: { id: job.id }, data: { viewCount: { increment: 1 } } });
 
-  const target = job.listings[0]?.applyUrl || job.listings[0]?.sourceUrl || null;
+  const target = job.sourceListings[0]?.applyUrl || job.sourceListings[0]?.sourceUrl || null;
 
   return NextResponse.json({
     success: true,
@@ -58,9 +58,9 @@ export async function GET(
 
   const job = await db.job.findUnique({
     where: { id: parsed.data },
-    select: { id: true, listings: { select: { applyUrl: true, sourceUrl: true }, take: 1 } },
+    select: { id: true, sourceListings: { select: { applyUrl: true, sourceUrl: true }, take: 1 } },
   });
-  const target = job?.listings[0]?.applyUrl || job?.listings[0]?.sourceUrl;
+  const target = job?.sourceListings[0]?.applyUrl || job?.sourceListings[0]?.sourceUrl;
   if (!target) return NextResponse.json({ error: "No apply URL" }, { status: 404 });
 
   await db.job.update({ where: { id: job!.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
