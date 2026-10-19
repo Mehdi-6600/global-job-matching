@@ -73,14 +73,13 @@ jobs:
       - name: Unit tests
         run: npm test 2>&1 | tee test.log
 
-      - name: Upload logs on failure
+      - name: Show logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-logs-${{ github.run_id }}
-          path: |
-            typecheck.log
-            test.log
+        run: |
+          echo "=== TYPECHECK LOG ==="
+          cat typecheck.log || true
+          echo "=== TEST LOG ==="
+          cat test.log || true
 
       # Validates the same production compile path as Vercel (prisma generate is
       # already done; migrate already applied against CI Postgres). next build only.
