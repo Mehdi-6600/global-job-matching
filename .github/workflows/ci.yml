@@ -76,7 +76,14 @@ jobs:
         run: npm run lint
 
       - name: Unit tests
-        run: npm test
+        run: npm test 2>&1 | tee test.log
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: test.log
 
       # Validates the same production compile path as Vercel (prisma generate is
       # already done; migrate already applied against CI Postgres). next build only.
