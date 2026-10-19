@@ -66,7 +66,7 @@ export async function getEligibleBoards(
       orderBy: [{ lastSuccessAt: "asc" }, { updatedAt: "asc" }],
       take: Math.max(1, Math.min(limit, 2000)),
     });
-    return rows.map((r) => ({
+    return rows.map((r: typeof rows[number]) => ({
       provider: r.provider as AtsProvider,
       boardIdentifier: r.boardIdentifier,
       companyName: r.companyName,

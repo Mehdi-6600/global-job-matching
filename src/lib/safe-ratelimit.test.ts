@@ -77,7 +77,7 @@ describe("strictAiLimit (fail-closed)", () => {
       limit: vi.fn().mockRejectedValue(new Error("upstash timeout")),
     };
     const key = "ai-degraded-cap";
-    const results = [];
+    const results: Awaited<ReturnType<typeof strictAiLimit>>[] = [];
     for (let i = 0; i < 4; i++) {
       results.push(await strictAiLimit(limiter, key));
     }

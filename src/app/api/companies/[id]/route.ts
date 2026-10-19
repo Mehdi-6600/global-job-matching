@@ -124,7 +124,7 @@ export async function GET(
 
         activeJobs: company._count.jobs,
 
-        jobs: company.jobs.map((job) => ({
+        jobs: company.jobs.map((job: typeof company.jobs[number]) => ({
           ...job,
 
           location:

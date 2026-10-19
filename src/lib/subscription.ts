@@ -171,7 +171,7 @@ export async function expireOverduePlans(
     return { expiredCount: 0, userIds: [] };
   }
 
-  const ids = overdue.map((u) => u.id);
+  const ids = overdue.map((u: { id: string }) => u.id);
 
   await client.user.updateMany({
     where: { id: { in: ids } },

@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({
-      companies: companies.map((c) => ({
+      companies: companies.map((c: typeof companies[number]) => ({
         id: c.id,
         name: c.name,
         slug: c.slug,

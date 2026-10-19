@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authRatelimit } from "@/lib/ratelimit";
@@ -68,7 +69,7 @@ export async function PUT(req: NextRequest) {
 
     const hashed = await hashPassword(passwordCheck.password);
 
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.update({
         where: { id: session.user.id },
         data: { password: hashed },

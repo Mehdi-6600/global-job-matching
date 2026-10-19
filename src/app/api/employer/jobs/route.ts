@@ -53,10 +53,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const activeCount = jobs.filter((j) => j.status === "active").length;
+    const activeCount = jobs.filter((j: typeof jobs[number]) => j.status === "active").length;
 
     return NextResponse.json({
-      jobs: jobs.map((j) => ({
+      jobs: jobs.map((j: typeof jobs[number]) => ({
         ...j,
         location: normalizeLocation(j.location) || j.location,
         applicationCount: j._count.applications,

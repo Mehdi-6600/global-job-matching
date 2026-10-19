@@ -57,7 +57,7 @@ export async function getPublicJobsPage(limit = DEFAULT_LIMIT): Promise<{
       db.job.count({ where }),
     ]);
 
-    const jobs: PublicJobCard[] = rows.map((job) => ({
+    const jobs: PublicJobCard[] = rows.map((job: typeof rows[number]) => ({
       id: job.id,
       title: job.title,
       description: job.description,

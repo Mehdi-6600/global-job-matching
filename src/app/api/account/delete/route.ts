@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
@@ -56,7 +57,7 @@ export async function DELETE(req: NextRequest) {
     const userId = session.user.id;
     let resumeUrl: string | null = null;
 
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
         select: { id: true, role: true },

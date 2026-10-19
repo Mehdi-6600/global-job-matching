@@ -68,18 +68,26 @@ export default async function CategoriesIndexPage() {
     });
 
     rows = categories
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        slug: c.slug,
-        count: c._count.jobs,
-        displayName: categoryDisplayName(dict, c.slug, c.name),
-      }))
-      .filter((c) => c.count > 0)
-      .sort((a, b) =>
-        a.displayName.localeCompare(b.displayName, undefined, {
-          sensitivity: "base",
-        })
+      .map(
+        (
+          c: typeof categories[number],
+        ) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          count: c._count.jobs,
+          displayName: categoryDisplayName(dict, c.slug, c.name),
+        }),
+      )
+      .filter((c: { count: number }) => c.count > 0)
+      .sort(
+        (
+          a: { displayName: string },
+          b: { displayName: string },
+        ) =>
+          a.displayName.localeCompare(b.displayName, undefined, {
+            sensitivity: "base",
+          }),
       );
   } catch (e) {
     console.error("Categories index error:", e);
@@ -116,7 +124,7 @@ export default async function CategoriesIndexPage() {
     name: title,
     description: subtitle,
     path: "/categories",
-    items: rows.map((c) => ({
+    items: rows.map((c: typeof rows[number]) => ({
       name: c.displayName,
       path: `/categories/${c.slug}`,
     })),

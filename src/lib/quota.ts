@@ -242,7 +242,7 @@ export async function reserveAiUsageInTransaction(
 ): Promise<QuotaOk | QuotaDenied> {
   const run = async () =>
     db.$transaction(
-      async (tx) => {
+      async (tx: Prisma.TransactionClient) => {
         const t0 = Date.now();
         await lockUserRow(tx, params.userId);
         const lockMs = Date.now() - t0;
@@ -296,7 +296,7 @@ export async function releaseUsageInTransaction(
 ): Promise<void> {
   try {
     await db.$transaction(
-      async (tx) => {
+      async (tx: Prisma.TransactionClient) => {
         await releaseUsageEventById(tx, params);
       },
       {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -287,7 +288,7 @@ export async function POST(req: NextRequest) {
     const amountUsd = Number(intent.amountUsd);
     const rateUsd = Number(intent.rateUsd);
 
-    const transaction = await db.$transaction(async (prisma) => {
+    const transaction = await db.$transaction(async (prisma: Prisma.TransactionClient) => {
       // claim فقط اگر intent هنوز pending و متعلق به همین کاربر باشد
       const claimed = await prisma.paymentIntent.updateMany({
         where: {

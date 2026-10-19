@@ -97,10 +97,10 @@ export async function seedAtsBoards(): Promise<SeedResult[]> {
   }
   logIngestionEvent("info", "ats_seed_complete", {
     total: results.length,
-    created: results.filter((r) => r.action === "created").length,
-    updated: results.filter((r) => r.action === "updated").length,
-    unchanged: results.filter((r) => r.action === "unchanged").length,
-    errors: results.filter((r) => Boolean(r.error)).length,
+    created: results.filter((r: typeof results[number]) => r.action === "created").length,
+    updated: results.filter((r: typeof results[number]) => r.action === "updated").length,
+    unchanged: results.filter((r: typeof results[number]) => r.action === "unchanged").length,
+    errors: results.filter((r: typeof results[number]) => Boolean(r.error)).length,
   });
   return results;
 }
@@ -177,7 +177,7 @@ export async function listAtsBoardsForAdmin(): Promise<{
     take: 2000,
   });
 
-  const rows: AdminBoardRow[] = records.map((r) => ({
+  const rows: AdminBoardRow[] = records.map((r: typeof records[number]) => ({
     id: r.id,
     provider: r.provider,
     boardIdentifier: r.boardIdentifier,

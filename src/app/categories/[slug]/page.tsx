@@ -134,7 +134,7 @@ export default async function CategoryJobsPage({ params }: Props) {
   const jobList = itemListJsonLd({
     name: `${category.name} jobs`,
     path: `/categories/${category.slug}`,
-    items: jobs.map((job) => ({
+    items: jobs.map((job: typeof jobs[number]) => ({
       name: job.title,
       path: `/jobs/${job.id}`,
     })),
@@ -191,7 +191,7 @@ export default async function CategoryJobsPage({ params }: Props) {
         </header>
 
         <ul className="grid gap-4 sm:grid-cols-2">
-          {jobs.map((job) => (
+          {jobs.map((job: typeof jobs[number]) => (
             <li key={job.id}>
               <Link
                 href={`/jobs/${job.id}`}
@@ -229,7 +229,7 @@ export default async function CategoryJobsPage({ params }: Props) {
               {otherLabel}
             </h2>
             <ul className="flex flex-wrap gap-2">
-              {otherCategories.map((c) => (
+              {otherCategories.map((c: typeof otherCategories[number]) => (
                 <li key={c.slug}>
                   <Link
                     href={`/categories/${c.slug}`}

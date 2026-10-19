@@ -72,7 +72,7 @@ async function loadCompanies(): Promise<CompanyCard[]> {
       },
     });
 
-    return rows.map((c) => ({
+    return rows.map((c: typeof rows[number]) => ({
       id: c.id,
       name: c.name,
       location: normalizeLocation(c.location) || c.location,
@@ -115,7 +115,7 @@ export default async function CompaniesPage() {
 
         {companies.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {companies.map((company) => (
+            {companies.map((company: typeof companies[number]) => (
               <div
                 key={company.id}
                 className="glass rounded-2xl p-5 border border-white/10 hover:border-cyan-500/20 transition-all"
