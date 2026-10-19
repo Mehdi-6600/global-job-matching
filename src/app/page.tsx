@@ -26,6 +26,7 @@ import {
   type JobsResponse,
 } from "@/lib/home/content";
 import Newsletter from "./components/Newsletter";
+import FeaturedUrgencyBanner from "@/components/featured-urgency-banner";
 
 type Audience = "seeker" | "employer";
 
@@ -334,6 +335,10 @@ export default function HomePage() {
           </form>
         </div>
       </section>
+
+      <div className="gjm-container" style={{ marginTop: "12px" }}>
+        <FeaturedUrgencyBanner />
+      </div>
 
       <section className="gjmx-jobs-section" aria-labelledby="gjmx-jobs-title">
         <div className="gjm-container">
