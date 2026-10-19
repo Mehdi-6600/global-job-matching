@@ -3,8 +3,9 @@ import { db } from "@/lib/db";
 import { FEATURED_CONFIG, getUrgencyState } from "@/lib/monetization/featured-urgency";
 
 /**
- * Public urgency endpoint — powers homepage banner + pricing scarcity.
- * Caches cheap: count featured jobs + applicant stats.
+ * Public urgency endpoint — honest data only.
+ * Featured count + total jobs are real DB counts.
+ * No synthetic social proof. Campaign timer only if FEATURED_CAMPAIGN_ENDS_AT is set.
  */
 export async function GET() {
   try {
@@ -13,18 +14,18 @@ export async function GET() {
     }).catch(() => 0);
 
     const totalJobs = await db.job.count({ where: { status: "active" } }).catch(() => 0);
-    const totalApps = await db.application.count({}).catch(() => 0);
 
     const urgency = getUrgencyState(featuredCount);
 
     return NextResponse.json({
       success: true,
       featured: urgency,
-      stats: { totalJobs, totalApps, featuredCount },
+      stats: { totalJobs, featuredCount },
       prices: { weekly: FEATURED_CONFIG.priceWeekly, monthly: FEATURED_CONFIG.priceMonthly },
-      competitor: { name: "CryptoJobsList", price: FEATURED_CONFIG.competitorPrice },
+      // No synthetic discount — value prop is static and honest
+      note: urgency.campaignEndsAt ? `Campaign ends ${urgency.campaignEndsAt}` : null,
     });
-  } catch (e) {
-    return NextResponse.json({ error: "Failed", featured: getUrgencyState(0) }, { status: 200 });
+  } catch {
+    return NextResponse.json({ success: false, featured: getUrgencyState(0) }, { status: 200 });
   }
 }
