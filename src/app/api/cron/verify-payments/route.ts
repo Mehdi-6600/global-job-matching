@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { isAuthorizedBearerSecret } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { verifyTxOnChain } from "@/lib/payment/verify-crypto";
@@ -71,8 +72,8 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        const expectedRecipient = (tx as any).recipientAddress as string | undefined;
-        const expectedCryptoAmount = decimalToNumber((tx as any).expectedCryptoAmount);
+        const expectedRecipient = tx.recipientAddress as string | undefined;
+        const expectedCryptoAmount = decimalToNumber(tx.expectedCryptoAmount);
         if (!expectedRecipient || expectedCryptoAmount === undefined || !(expectedCryptoAmount > 0)) {
           results.push({ id: tx.id, status: "skipped", note: "Missing recipient or expected amount — cannot verify, needs manual fix" });
           continue;
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
           const isFeatured = tx.planId === "featured_weekly" || tx.planId === "featured_monthly";
           const billing = resolveBillingCycle(tx.billingCycle);
 
-          await db.$transaction(async (prisma) => {
+          await db.$transaction(async (prisma: Prisma.TransactionClient) => {
             const claimed = await prisma.transaction.updateMany({
               where: { id: tx.id, status: "pending" },
               data: { status: "confirmed" },
@@ -98,8 +99,8 @@ export async function GET(req: NextRequest) {
             if (claimed.count !== 1) throw new Error("ALREADY_PROCESSED");
 
             if (isFeatured) {
-              const jobId = (tx as any).jobId as string | null;
-              const duration = (tx as any).featuredDuration as string | null;
+              const jobId = tx.jobId as string | null;
+              const duration = tx.featuredDuration as string | null;
               if (jobId) {
                 const days = duration === "weekly" || tx.planId === "featured_weekly" ? 7 : 30;
                 const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -131,7 +132,7 @@ export async function GET(req: NextRequest) {
             }
           });
 
-          securityLog("auto.payment_confirm", {
+          securityLog("admin.payment_confirm", {
             actorId: "cron:verify-payments",
             targetId: tx.userId,
             meta: { transactionId: tx.id, planId: tx.planId, cryptoType: tx.cryptoType, chainNote: verification.note },

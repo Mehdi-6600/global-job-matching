@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         },
         select: { id: true, email: true, name: true, role: true },
       });
-    } catch (createErr) {
+    } catch (createErr: unknown) {
       if (
         createErr instanceof Prisma.PrismaClientKnownRequestError &&
         createErr.code === "P2002"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { authRatelimit } from "@/lib/ratelimit";
 import { safeLimit } from "@/lib/safe-ratelimit";
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
     const tokenHash = peeked.tokenHash;
 
     try {
-      await db.$transaction(async (tx) => {
+      await db.$transaction(async (tx: Prisma.TransactionClient) => {
         // Re-check token still exists (single-use / race protection)
         const stillThere = await tx.verificationToken.findFirst({
           where: {

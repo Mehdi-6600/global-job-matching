@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireEmployer } from "@/lib/authz";
 import { getManagedApplication } from "@/lib/ownership";
@@ -81,7 +82,7 @@ export async function PATCH(
     const companyName = application.job.company?.name;
     const where = companyName ? ` at ${companyName}` : "";
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const updated = await tx.application.update({
         where: { id },
         data: { status },

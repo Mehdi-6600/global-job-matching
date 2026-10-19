@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
-    const unreadCount = notifications.filter((n) => !n.read).length;
+    const unreadCount = notifications.filter((n: typeof notifications[number]) => !n.read).length;
 
     return NextResponse.json({
       notifications,

@@ -116,7 +116,7 @@ export async function GET(
     };
 
     const candidates = applications
-      .map((app) => {
+      .map((app: typeof applications[number]) => {
         const profile: MatchProfileInput = app.user.profile ?? {
           skills: null,
           bio: null,
@@ -143,12 +143,17 @@ export async function GET(
         };
       })
       // Stable tiebreaker: score desc, then applicationId asc.
-      .sort((a, b) => {
-        if (b.match.score !== a.match.score) {
-          return b.match.score - a.match.score;
-        }
-        return a.applicationId.localeCompare(b.applicationId);
-      });
+      .sort(
+        (
+          a: { match: { score: number }; applicationId: string },
+          b: { match: { score: number }; applicationId: string },
+        ) => {
+          if (b.match.score !== a.match.score) {
+            return b.match.score - a.match.score;
+          }
+          return a.applicationId.localeCompare(b.applicationId);
+        },
+      );
 
     return NextResponse.json({
       jobId: job.id,

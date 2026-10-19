@@ -616,23 +616,23 @@ export async function getRunnableSources(
   const rows = await db.jobSource.findMany({
     where: sourceKeys?.length ? { key: { in: sourceKeys } } : undefined,
   });
-  const byKey = new Map(rows.map((r) => [r.key, r]));
+  const byKey = new Map(rows.map((r: typeof rows[number]) => [r.key, r]));
 
   const out: SourceRegistryEntry[] = [];
   for (const meta of SOURCE_REGISTRY) {
     if (sourceKeys?.length && !sourceKeys.includes(meta.key)) continue;
-    const row = byKey.get(meta.key);
-    const enabled = row ? row.enabled : meta.enabled;
-    const licenseStatus = (row?.licenseStatus ??
+    const row: any = byKey.get(meta.key);
+    const enabled = row ? (row.enabled as boolean) : meta.enabled;
+    const licenseStatus = ((row?.licenseStatus as string | undefined) ??
       meta.licenseStatus) as LicenseStatus;
     const entry: SourceRegistryEntry = {
       ...meta,
       enabled,
       licenseStatus,
       rateLimitPerMinute:
-        row?.rateLimitPerMinute ?? meta.rateLimitPerMinute ?? null,
+        (row?.rateLimitPerMinute as number | null | undefined) ?? meta.rateLimitPerMinute ?? null,
       refreshIntervalMinutes:
-        row?.refreshIntervalMinutes ?? meta.refreshIntervalMinutes,
+        (row?.refreshIntervalMinutes as number | undefined) ?? meta.refreshIntervalMinutes,
       consecutiveFailures:
         typeof (row as { consecutiveFailures?: number } | undefined)
           ?.consecutiveFailures === "number"

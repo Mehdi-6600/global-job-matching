@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
@@ -212,7 +213,7 @@ export async function PATCH(req: NextRequest) {
       const isFeatured = tx.planId === "featured_weekly" || tx.planId === "featured_monthly";
 
       try {
-        await db.$transaction(async (prisma) => {
+        await db.$transaction(async (prisma: Prisma.TransactionClient) => {
           const claimed = await prisma.transaction.updateMany({
             where: { id, status: "pending" },
             data: { status: "confirmed" },

@@ -94,7 +94,7 @@ export default async function sitemap(props: {
       "/terms",
     ];
 
-    const staticPages = staticPaths.map((p) =>
+    const staticPages = staticPaths.map((p: typeof staticPaths[number]) =>
       entry(p, {
         lastModified: now,
         changeFrequency: p === "/" || p === "/jobs" ? "daily" : "weekly",
@@ -138,7 +138,7 @@ export default async function sitemap(props: {
         ),
     ]);
 
-    const blogEntries = posts.map((p) =>
+    const blogEntries = posts.map((p: typeof posts[number]) =>
       entry(`/blog/${p.slug}`, {
         lastModified: p.updatedAt || p.createdAt,
         changeFrequency: "weekly",
@@ -147,7 +147,7 @@ export default async function sitemap(props: {
       })
     );
 
-    const companyEntries = companies.map((c) =>
+    const companyEntries = companies.map((c: typeof companies[number]) =>
       entry(`/companies/${c.id}`, {
         lastModified: c.updatedAt,
         changeFrequency: "weekly",
@@ -156,7 +156,7 @@ export default async function sitemap(props: {
       })
     );
 
-    const locationEntries = locs.map((l) =>
+    const locationEntries = locs.map((l: typeof locs[number]) =>
       entry(`/locations/${l.slug}`, {
         lastModified: now,
         changeFrequency: "daily",
@@ -166,8 +166,8 @@ export default async function sitemap(props: {
     );
 
     const categoryEntries = categories
-      .filter((c) => c._count.jobs > 0)
-      .map((c) =>
+      .filter((c: typeof categories[number]) => c._count.jobs > 0)
+      .map((c: typeof categories[number]) =>
         entry(`/categories/${c.slug}`, {
           lastModified: now,
           changeFrequency: "daily",
@@ -198,7 +198,7 @@ export default async function sitemap(props: {
       take: JOBS_PER_SITEMAP,
     });
 
-    return jobs.map((j) =>
+    return jobs.map((j: typeof jobs[number]) =>
       entry(`/jobs/${j.id}`, {
         lastModified: j.updatedAt,
         changeFrequency: "daily",

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -89,8 +90,8 @@ export async function GET(req: NextRequest) {
     });
 
     const jobs = savedJobs
-      .filter((item) => item.job !== null)
-      .map((item) => ({
+      .filter((item: typeof savedJobs[number]) => item.job !== null)
+      .map((item: typeof savedJobs[number]) => ({
         savedJobId: item.id,
         savedAt: item.createdAt,
         ...item.job,
@@ -187,7 +188,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await db.$transaction(async (tx) => {
+      await db.$transaction(async (tx: Prisma.TransactionClient) => {
         await lockUserRow(tx, session.user.id);
 
         const existing = await tx.savedJob.findUnique({

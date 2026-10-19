@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
@@ -141,7 +142,7 @@ export async function PATCH(req: NextRequest) {
 
     let updated;
     try {
-      updated = await db.$transaction(async (tx) => {
+      updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         // Serialize OWNER mutations so concurrent demotions cannot remove the last owner.
         await tx.$executeRaw`SELECT id FROM "User" WHERE role = ${ROLES.OWNER} FOR UPDATE`;
 

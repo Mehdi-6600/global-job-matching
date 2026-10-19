@@ -43,7 +43,7 @@ export async function GET() {
     });
 
     const categories = rows
-      .map((c) => {
+      .map((c: { id: string; name: string; slug: string; _count: { jobs: number } }) => {
         const labels = {} as Record<Locale, string>;
         for (const loc of locales) {
           labels[loc] = categoryLabel(c.slug, c.name, loc);
@@ -56,7 +56,7 @@ export async function GET() {
           labels,
         };
       })
-      .filter((c) => c.count > 0);
+      .filter((c: { count: number }) => c.count > 0);
 
     return NextResponse.json(
       { categories },

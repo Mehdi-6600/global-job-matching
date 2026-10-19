@@ -186,7 +186,7 @@ export async function GET(req: NextRequest) {
       });
 
       return NextResponse.json({
-        assessments: items.map((a) => ({
+        assessments: items.map((a: typeof items[number]) => ({
           ...a,
           sharePath: a.shareToken
             ? `/career-risk/share/${a.shareToken}`

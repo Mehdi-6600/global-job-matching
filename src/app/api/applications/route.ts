@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ratelimit } from "@/lib/ratelimit";
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const result = applications.map((application) => ({
+    const result = applications.map((application: typeof applications[number]) => ({
       id: application.id,
       status: application.status,
       coverLetter: application.coverLetter,
@@ -216,7 +217,7 @@ export async function POST(req: NextRequest) {
     const applicantName = user.name || user.email || "A candidate";
 
     try {
-      const result = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         await lockUserRow(tx, session.user.id);
 
         const quota = await assertApplicationQuota(tx, {

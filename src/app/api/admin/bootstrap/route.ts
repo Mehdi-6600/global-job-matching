@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await db.$transaction(async (tx) => {
+    const user = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const updated = await tx.user.update({
         where: { id: session.user.id },
         data: { role: ROLES.OWNER },

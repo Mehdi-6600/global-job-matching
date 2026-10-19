@@ -177,7 +177,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Already linked to Google → allow.
       const alreadyGoogle = existing.accounts.some(
-        (a) => a.provider === "google",
+        (a: { provider: string }) => a.provider === "google",
       );
       if (alreadyGoogle) {
         return true;

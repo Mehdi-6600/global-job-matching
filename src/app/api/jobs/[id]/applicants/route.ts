@@ -107,7 +107,7 @@ export async function GET(
       });
 
     const serialized =
-      applications.map((app) => {
+      applications.map((app: typeof applications[number]) => {
         const skills =
           app.user.profile?.skills;
 

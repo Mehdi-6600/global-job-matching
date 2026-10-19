@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
     });
 
     const ranked = jobs
-      .map((job) => {
+      .map((job: typeof jobs[number]) => {
         const match = computeMatchScore(
           {
             skills: profile!.skills,
@@ -155,13 +155,18 @@ export async function GET(req: NextRequest) {
           match,
         };
       })
-      .filter((j) => j.match.score >= minScore)
-      .sort((a, b) => {
-        if (b.match.score !== a.match.score) {
-          return b.match.score - a.match.score;
-        }
-        return a.id.localeCompare(b.id);
-      })
+      .filter((j: { match: { score: number } }) => j.match.score >= minScore)
+      .sort(
+        (
+          a: { match: { score: number }; id: string },
+          b: { match: { score: number }; id: string },
+        ) => {
+          if (b.match.score !== a.match.score) {
+            return b.match.score - a.match.score;
+          }
+          return a.id.localeCompare(b.id);
+        },
+      )
       .slice(0, limit);
 
     return NextResponse.json({

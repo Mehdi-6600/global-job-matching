@@ -1,4 +1,5 @@
 // employer-interviews-id-route.ts
+import type { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
@@ -171,7 +172,7 @@ export async function PATCH(
     // -------------------------------------------------------------------------
     // 9. Atomic update + notification
     // -------------------------------------------------------------------------
-    const updated = await db.$transaction(async (tx) => {
+    const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const updatedInterview = await tx.interview.update({
         where: { id },
         data: {

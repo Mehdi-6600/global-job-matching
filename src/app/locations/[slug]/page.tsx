@@ -93,7 +93,7 @@ export default async function LocationJobsPage({ params }: Props) {
 
   if (count < 1) notFound();
 
-  const related = allStats.filter((s) => s.slug !== def.slug).slice(0, 6);
+  const related = allStats.filter((s: typeof allStats[number]) => s.slug !== def.slug).slice(0, 6);
 
   const breadcrumbs = breadcrumbJsonLd(
     locationBreadcrumbs({ name: def.name, slug: def.slug })
@@ -102,7 +102,7 @@ export default async function LocationJobsPage({ params }: Props) {
   const jobList = itemListJsonLd({
     name: `Jobs in ${def.name}`,
     path: `/locations/${def.slug}`,
-    items: jobs.map((job) => ({
+    items: jobs.map((job: typeof jobs[number]) => ({
       name: job.title,
       path: `/jobs/${job.id}`,
     })),
@@ -159,7 +159,7 @@ export default async function LocationJobsPage({ params }: Props) {
         </header>
 
         <ul className="grid gap-4 sm:grid-cols-2">
-          {jobs.map((job) => {
+          {jobs.map((job: typeof jobs[number]) => {
             const loc =
               normalizeLocation(job.location) || job.location || def.name;
             return (
@@ -199,7 +199,7 @@ export default async function LocationJobsPage({ params }: Props) {
           <section className="mt-12">
             <h2 className="text-lg font-semibold text-white mb-4">{moreLoc}</h2>
             <ul className="flex flex-wrap gap-2">
-              {related.map((loc) => (
+              {related.map((loc: typeof related[number]) => (
                 <li key={loc.slug}>
                   <Link
                     href={`/locations/${loc.slug}`}

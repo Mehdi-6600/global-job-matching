@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -243,7 +244,7 @@ export async function consumeEmailVerificationToken(
   }
 
   // RC21: use updateMany to fail closed if the email was reassigned.
-  const result = await db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const updated = await tx.user.updateMany({
       where: { email: normalized },
       data: { emailVerified: now },

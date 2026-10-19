@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdminRole } from "@/lib/roles";
@@ -138,7 +139,7 @@ export async function PUT(
     const companyName = application.job.company?.name;
     const where = companyName ? ` at ${companyName}` : "";
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const updated = await tx.application.update({
         where: { id },
         data: { status: normalizedStatus },

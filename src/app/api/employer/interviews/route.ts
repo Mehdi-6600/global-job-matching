@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isEmployerRole } from "@/lib/roles";
@@ -271,7 +272,7 @@ export async function POST(req: NextRequest) {
 
     /* --------------------------- Transaction ---------------------------- */
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const interview = await tx.interview.create({
         data: {
           userId: candidate.id,

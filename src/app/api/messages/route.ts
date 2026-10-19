@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { strictRatelimit } from "@/lib/ratelimit";
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         partner: serializeUser(otherUser),
-        messages: messages.map((message) => ({
+        messages: messages.map((message: typeof messages[number]) => ({
           ...message,
           sender: serializeUser(message.sender),
           receiver: serializeUser(message.receiver),
@@ -262,7 +263,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Receiver not found" }, { status: 404 });
     }
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const message = await tx.message.create({
         data: {
           senderId: session.user.id,
