@@ -1,0 +1,53 @@
+name: Live verification
+
+# Black-box verification of a deployed instance. Runs outside the platform's
+# build pipeline; manual by default, and on demand from a branch by pushing a
+# change to this file. The report is committed back as a commit comment so it can
+# be reviewed (and fetched) without opening the Actions UI.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL to probe
+        required: false
+        default: https://global-job-matching.vercel.app
+  push:
+    branches: [arena/c6b2b1ca-global-job-matching]
+    paths: [.github/workflows/live-verify.yml, scripts/live-probe.py]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    name: HTTP matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe
+        env:
+          BASE: ${{ inputs.base_url || 'https://global-job-matching.vercel.app' }}
+        run: |
+          set -o pipefail
+          python3 scripts/live-probe.py "$BASE" | tee /tmp/report.txt
+
+      - name: Publish report as a commit comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [ -f /tmp/report.txt ] || exit 0
+          {
+            echo 'Live verification report'
+            echo ''
+            echo '```'
+            head -c 55000 /tmp/report.txt
+            echo '```'
+          } > /tmp/comment.md
+          gh api -X POST "repos/$GITHUB_REPOSITORY/commits/$SHA/comments" \
+            -f body="$(cat /tmp/comment.md)" >/dev/null && echo "comment posted on $SHA"
