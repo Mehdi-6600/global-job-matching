@@ -30,6 +30,7 @@ jobs:
         env:
           BASE: ${{ inputs.base_url || 'https://global-job-matching.vercel.app' }}
         run: |
+          set -o pipefail
           python3 scripts/live-probe.py "$BASE" | tee /tmp/report.txt
 
       - name: Publish report as a commit comment

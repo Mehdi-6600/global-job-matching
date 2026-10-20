@@ -14,6 +14,13 @@ import urllib.request
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "https://global-job-matching.vercel.app").rstrip("/")
 UA = "Mozilla/5.0 (compatible; gjm-live-probe/1.0)"
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+OPENER = urllib.request.build_opener(NoRedirect)
+
 results = []  # (kind, message)
 failures = []
 
@@ -32,7 +39,7 @@ def record(kind, msg):
 def fetch(path, method="GET", timeout=45):
     req = urllib.request.Request(BASE + path, method=method, headers={"User-Agent": UA})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with OPENER.open(req, timeout=timeout) as r:
             return r.status, dict(r.headers), r.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
         return e.code, dict(e.headers), e.read().decode("utf-8", "replace")
@@ -79,7 +86,7 @@ for p in [
     "/", "/jobs", "/pricing", "/login", "/register", "/forgot-password",
     "/reset-password", "/verify-email", "/companies", "/locations",
     "/categories", "/crypto-jobs", "/blog", "/terms", "/privacy", "/about",
-    "/contact", "/employers", "/bootstrap-owner",
+    "/contact", "/bootstrap-owner", "/jobs?page=2",
 ]:
     check_status(f"GET {p}", p, 200)
 
@@ -165,6 +172,27 @@ for path, want in [
 for path in ["/api/analytics", "/admin/newsletter"]:
     code, _, body = fetch(path)
     record("WARN", "%s → %s | %s" % (path, code, one_line(body, 160)))
+
+section("job detail + previous production build")
+code, _, body = fetch("/api/jobs/cmvgbfdfo00hjl707gfqxuc9m")
+detail = one_line(body, 240)
+record("PASS" if code == 200 else "FAIL", "GET /api/jobs/<known id> → %s | %s" % (code, detail))
+if '"featured"' in body:
+    record("PASS", "job payload exposes the post-PR#10 'featured' field")
+code, _, body = fetch("/jobs/cmvgbfdfo00hjl707gfqxuc9m")
+record("PASS" if code == 200 else "FAIL", "GET /jobs/<known id> (SSR page) → %s" % code)
+
+PREV = "https://global-job-matching-f5b1huz3t-ai-image-app.vercel.app"
+for path in ["/", "/api/jobs"]:
+    req = urllib.request.Request(PREV + path, headers={"User-Agent": UA})
+    try:
+        with OPENER.open(req, timeout=45) as r:
+            pcode, _, pbody = r.status, None, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        pcode, pbody = e.code, e.read().decode("utf-8", "replace")
+    except Exception as e:
+        pcode, pbody = 0, str(e)
+    record("INFO", "previous prod (6da5851) %s → %s | %s" % (path, pcode, one_line(pbody, 160)))
 
 section("SEO routes")
 for path in ["/robots.txt", "/sitemaps.xml", "/sitemap/0.xml"]:
