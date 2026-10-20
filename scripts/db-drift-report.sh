@@ -1,20 +1,16 @@
 #!/usr/bin/env bash
 # Read-only diagnostic: summarize how far the live database is from the Prisma
-# schema. Prints counts only — never connection strings or row data.
+# schema. Prints counts and object names only — never connection strings.
 set -uo pipefail
 
 SQL="$(npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script 2>/dev/null || true)"
 
-echo "DIFF_ADD_COLUMNS=$(printf '%s\n' "$SQL" | grep -c 'ADD COLUMN')"
-echo "DIFF_CREATE_TABLES=$(printf '%s\n' "$SQL" | grep -c 'CREATE TABLE')"
-echo "DIFF_CREATE_INDEXES=$(printf '%s\n' "$SQL" | grep -c 'CREATE.*INDEX')"
-echo "DIFF_DROP_COLUMNS=$(printf '%s\n' "$SQL" | grep -c 'DROP COLUMN')"
-echo "DIFF_DROP_TABLES=$(printf '%s\n' "$SQL" | grep -c 'DROP TABLE')"
-echo "DIFF_DROP_CONSTRAINTS=$(printf '%s\n' "$SQL" | grep -c 'DROP CONSTRAINT')"
-echo "DIFF_DROP_INDEXES=$(printf '%s\n' "$SQL" | grep -c 'DROP INDEX')"
+ADD_COLS="$(printf '%s\n' "$SQL" | grep 'ADD COLUMN' | sed -E 's/ALTER TABLE "([^"]+)" ADD COLUMN "([^"]+)".*/\1.\2/' | tr '\n' ' ')"
+NEW_TABLES="$(printf '%s\n' "$SQL" | grep 'CREATE TABLE' | sed -E 's/CREATE TABLE "([^"]+)".*/\1/' | tr '\n' ' ')"
+DROP_COLS="$(printf '%s\n' "$SQL" | grep 'DROP COLUMN' | sed -E 's/ALTER TABLE "([^"]+)" DROP COLUMN "([^"]+)".*/\1.\2/' | tr '\n' ' ')"
+DROP_TABLES="$(printf '%s\n' "$SQL" | grep 'DROP TABLE' | sed -E 's/DROP TABLE "([^"]+)".*/\1/' | tr '\n' ' ')"
 
-echo "--- ADDITIVE ---"
-printf '%s\n' "$SQL" | grep -E '^ALTER TABLE .*ADD COLUMN|^CREATE TABLE' | head -20
-
-echo "--- DESTRUCTIVE ---"
-printf '%s\n' "$SQL" | grep -E '^ALTER TABLE .*DROP COLUMN|^DROP TABLE' | head -20
+echo "DRIFT_ADD_COLS_12=$ADD_COLS"
+echo "DRIFT_NEW_TABLES=$NEW_TABLES"
+echo "DRIFT_DROP_COLS=$DROP_COLS"
+echo "DRIFT_DROP_TABLES=$DROP_TABLES"
