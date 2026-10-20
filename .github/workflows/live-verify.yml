@@ -1,7 +1,7 @@
 name: Live site verification
 
 # Temporary probe used to verify a production deployment from outside the
-# sandbox (the sandbox itself cannot reach *.vercel.app). Manual or push-run.
+# sandbox (the sandbox itself cannot reach *.vercel.app). Push- or manually-run.
 on:
   workflow_dispatch:
     inputs:
@@ -20,135 +20,17 @@ jobs:
   probe:
     name: HTTP matrix
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Probe
         env:
           BASE: ${{ inputs.base_url || 'https://global-job-matching.vercel.app' }}
         run: |
-          set -uo pipefail
-          REPORT=/tmp/report.txt
-          : > "$REPORT"
-          pass=0; fail=0; warn=0
-          FAILURES=""
-
-          say()  { printf '%s\n' "$1" | tee -a "$REPORT"; }
-          ok()   { pass=$((pass+1)); printf 'PASS  %s\n' "$1" | tee -a "$REPORT"; }
-          bad()  { fail=$((fail+1)); FAILURES="$FAILURES
-          - $1"; printf 'FAIL  %s\n' "$1" | tee -a "$REPORT"; }
-          note() { warn=$((warn+1)); printf 'WARN  %s\n' "$1" | tee -a "$REPORT"; }
-
-          check_status() {
-            local label="$1" path="$2" want="$3" got
-            got=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE$path")
-            if [ "$got" = "$want" ]; then ok "$label → $got"; else bad "$label → got $got, want $want"; fi
-          }
-
-          check_body() {
-            local label="$1" path="$2" pattern="$3"
-            if curl -s --max-time 45 "$BASE$path" | grep -qiE "$pattern"; then ok "$label"; else bad "$label (/$pattern/ not found in $path)"; fi
-          }
-
-          say "== base: $BASE =="
-          say ""
-          say "-- pages --"
-          for p in "/" "/jobs" "/pricing" "/login" "/register" "/forgot-password" "/reset-password" "/verify-email" \
-                   "/companies" "/locations" "/categories" "/crypto-jobs" "/blog" "/career-risk" "/job-alerts" \
-                   "/resume-builder" "/terms" "/privacy" "/about" "/contact"; do
-            check_status "GET $p" "$p" 200
-          done
-
-          say ""
-          say "-- locales / dir --"
-          check_body "/fa is RTL" "/fa" '<html[^>]+dir="rtl"'
-          check_body "/ar is RTL" "/ar" '<html[^>]+dir="rtl"'
-          check_body "/he is RTL" "/he" '<html[^>]+dir="rtl"'
-          check_body "/en is LTR" "/en" '<html[^>]+dir="ltr"'
-          check_body "/de is LTR" "/de" '<html[^>]+dir="ltr"'
-          check_body "/fa has Persian copy" "/fa" '[ا-ی]'
-          check_body "/ar has Arabic copy" "/ar" '[ا-ي]'
-
-          say ""
-          say "-- auth-protected routes --"
-          for p in "/dashboard" "/settings" "/saved-jobs" "/applications" "/admin"; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE$p")
-            loc=$(curl -s -o /dev/null -w '%{redirect_url}' --max-time 45 "$BASE$p")
-            case "$code" in
-              301|302|303|307|308)
-                if echo "$loc" | grep -qE '/login|/signin|/auth'; then ok "GET $p → $code → $loc"; else note "GET $p → $code → $loc (unexpected target)"; fi ;;
-              200) bad "GET $p returned 200 without a session" ;;
-              *) note "GET $p → $code" ;;
-            esac
-          done
-
-          say ""
-          say "-- API surface --"
-          check_status "GET /api/jobs" "/api/jobs?limit=1" 200
-          if curl -s --max-time 45 "$BASE/api/jobs?limit=1" | grep -q '"jobs"'; then ok "GET /api/jobs returns jobs payload"; else bad "GET /api/jobs payload missing \"jobs\""; fi
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE/api/cron/verify-payments")
-          case "$code" in 401|503) ok "GET /api/cron/verify-payments unauth → $code" ;; *) bad "GET /api/cron/verify-payments unauth → $code (want 401/503)" ;; esac
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE/api/admin/stats")
-          case "$code" in 401|403) ok "GET /api/admin/stats unauth → $code" ;; *) bad "GET /api/admin/stats unauth → $code (want 401/403)" ;; esac
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE/api/analytics")
-          note "GET /api/analytics → $code (known gap)"
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE/admin/newsletter")
-          note "GET /admin/newsletter → $code (known gap)"
-
-          say ""
-          say "-- design system markers --"
-          html=$(curl -s --max-time 45 "$BASE/")
-          css_url=$(printf '%s' "$html" | grep -oE '/_next/static/css/[a-zA-Z0-9._-]+\.css' | head -1)
-          if [ -n "$css_url" ]; then
-            css=$(curl -s --max-time 45 "$BASE$css_url")
-            printf '%s' "$css" | grep -q -- '--card-accent' && ok "design tokens present in $css_url" || bad "design tokens (--card-accent) missing from $css_url"
-            printf '%s' "$css" | grep -q '\.dark' && ok "dark-theme selectors present" || bad "no .dark selectors in $css_url"
-            printf '%s' "$css" | grep -q 'prefers-reduced-motion' && ok "reduced-motion rules present" || note "no prefers-reduced-motion rule in main css"
-          else
-            bad "no stylesheet link found on /"
-          fi
-          font_url=$(printf '%s' "$html" | grep -oE '/_next/static/media/[a-zA-Z0-9._-]+\.woff2' | head -1)
-          if [ -n "$font_url" ]; then
-            fcode=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE$font_url")
-            ftype=$(curl -s -o /dev/null -w '%{content_type}' --max-time 45 "$BASE$font_url")
-            [ "$fcode" = "200" ] && ok "font asset → 200 ($ftype)" || bad "font asset $font_url → $fcode"
-          else
-            note "no woff2 reference in initial HTML"
-          fi
-          printf '%s' "$html" | grep -q 'id="main-content"' && ok "main landmark present" || bad "main landmark missing"
-          printf '%s' "$html" | grep -qE 'class="[^"]*\bdark\b' && ok "dark class hook present in markup" || note "no dark class in initial markup (theme applied client-side)"
-
-          say ""
-          say "-- security headers on / --"
-          hdr=$(curl -sI --max-time 45 "$BASE/")
-          for h in "content-security-policy" "x-content-type-options" "referrer-policy" "x-frame-options" "strict-transport-security" "permissions-policy"; do
-            if printf '%s' "$hdr" | grep -qi "^$h:"; then ok "header $h present"; else note "header $h missing"; fi
-          done
-          printf '%s' "$hdr" | grep -qi "content-security-policy:.*frame-ancestors" && ok "CSP frame-ancestors set" || note "CSP frame-ancestors not set"
-          printf '%s' "$hdr" | grep -qi "^x-powered-by:" && note "x-powered-by exposed" || ok "x-powered-by not exposed"
-
-          say ""
-          say "-- secret leakage --"
-          body="$(curl -s --max-time 60 "$BASE/")$(curl -s --max-time 60 "$BASE/pricing")"
-          leaked=0
-          for pat in 'postgres://' 'postgresql://' 'AUTH_SECRET' 'DATABASE_URL' 'sk_live' 'sk-proj' 'BEGIN PRIVATE KEY' 'NEXTAUTH_SECRET'; do
-            if printf '%s' "$body" | grep -qE "$pat"; then bad "possible secret leak: /$pat/"; leaked=1; fi
-          done
-          [ "$leaked" = "0" ] && ok "no secret patterns in homepage/pricing HTML"
-
-          say ""
-          say "-- misc --"
-          check_status "GET /robots.txt" "/robots.txt" 200
-          check_status "GET /sitemap.xml" "/sitemap.xml" 200
-          check_status "GET /nonexistent-page (404)" "/this-page-does-not-exist-9f3a" 404
-
-          say ""
-          say "==================== SUMMARY ===================="
-          say "pass=$pass fail=$fail warn=$warn"
-          if [ "$fail" -ne 0 ]; then
-            say "failures:$FAILURES"
-            exit 1
-          fi
+          python3 scripts/live-probe.py "$BASE" | tee /tmp/report.txt
 
       - name: Publish report as a commit comment
         if: always()
@@ -157,15 +39,12 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [ ! -f /tmp/report.txt ]; then
-            echo "no report file"
-            exit 0
-          fi
+          [ -f /tmp/report.txt ] || exit 0
           {
             echo 'Live verification report'
             echo ''
             echo '```'
-            head -c 50000 /tmp/report.txt
+            head -c 55000 /tmp/report.txt
             echo '```'
           } > /tmp/comment.md
           gh api -X POST "repos/$GITHUB_REPOSITORY/commits/$SHA/comments" \
