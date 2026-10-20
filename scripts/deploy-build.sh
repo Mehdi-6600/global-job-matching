@@ -37,6 +37,10 @@ else
   echo "$status"
 
   if printf '%s' "$status" | grep -qiE 'last common migration|are different|drift detected'; then
+    # Print the machine-readable state last: Vercel keeps only the tail of the
+    # build log, so the reason must come after the long Prisma message.
+    echo "→ migration history report"
+    node scripts/migration-status-report.mjs || true
     echo "::error::Database history diverges from prisma/migrations. Nothing was applied. Repair it with scripts/apply-additive-drift.sh (see docs/DB-MIGRATION-RUNBOOK.md), then redeploy."
     exit 1
   fi
@@ -72,6 +76,8 @@ else
   elif [ "${ALLOW_SCHEMA_DRIFT:-0}" = "1" ]; then
     echo "::warning::prisma migrate deploy failed — continuing because ALLOW_SCHEMA_DRIFT=1"
   else
+    echo "→ migration history report"
+    node scripts/migration-status-report.mjs || true
     echo "::error::prisma migrate deploy failed. Fix the database (docs/DB-MIGRATION-RUNBOOK.md) or set ALLOW_SCHEMA_DRIFT=1 to deploy anyway."
     exit 1
   fi
@@ -79,3 +85,7 @@ fi
 
 echo "→ next build"
 npx next build
+
+# Last words in the log: the migration state this build leaves behind. Read-only.
+echo "→ migration history after build"
+node scripts/migration-status-report.mjs || true
