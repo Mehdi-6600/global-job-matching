@@ -9,6 +9,9 @@ on:
         description: Base URL to probe
         required: false
         default: https://global-job-matching.vercel.app
+  push:
+    branches: [arena/a17bbb2a-global-job-matching]
+    paths: [.github/workflows/live-verify.yml]
 
 permissions:
   contents: read
@@ -22,7 +25,7 @@ jobs:
     steps:
       - name: Probe
         env:
-          BASE: ${{ inputs.base_url }}
+          BASE: ${{ inputs.base_url || 'https://global-job-matching.vercel.app' }}
         run: |
           set -uo pipefail
           pass=0; fail=0; warn=0
