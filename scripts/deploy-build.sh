@@ -42,7 +42,32 @@ else
   fi
 
   echo "→ prisma migrate deploy"
-  if npx prisma migrate deploy; then
+  # Prisma takes a Postgres advisory lock (pg_advisory_lock(72707369)) for the
+  # duration of a migration run, with a 10s acquisition timeout. Two builds can
+  # overlap (a preview and a production deploy, or a cancelled build that has
+  # not released its connection yet), and then the deploy fails with
+  # "Timed out trying to acquire a postgres advisory lock" even though the
+  # database is healthy. That happened once on 2026-10-20 and blocked a release.
+  # Lock/connection problems are retried with backoff; a real SQL error is not.
+  deploy_log="$(mktemp)"
+  attempt=1
+  max_attempts=4
+  deployed=0
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if npx prisma migrate deploy 2>&1 | tee "$deploy_log"; then
+      deployed=1
+      break
+    fi
+    if grep -qiE 'advisory lock|timed out|P1001|P1002|P1017|ECONNRESET|connection reset' "$deploy_log"; then
+      echo "::warning::prisma migrate deploy attempt $attempt/$max_attempts hit lock/connection contention — retrying"
+      sleep $((attempt * 15))
+      attempt=$((attempt + 1))
+      continue
+    fi
+    break
+  done
+
+  if [ "$deployed" = "1" ]; then
     echo "✓ database migrations are applied"
   elif [ "${ALLOW_SCHEMA_DRIFT:-0}" = "1" ]; then
     echo "::warning::prisma migrate deploy failed — continuing because ALLOW_SCHEMA_DRIFT=1"

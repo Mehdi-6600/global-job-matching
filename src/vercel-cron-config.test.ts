@@ -78,6 +78,16 @@ describe("vercel.json build command", () => {
     expect(readConfig().buildCommand).toBe("bash scripts/deploy-build.sh");
   });
 
+  it("retries migration lock contention instead of failing the release", () => {
+    // Two overlapping builds made `prisma migrate deploy` hit the Postgres
+    // advisory lock timeout and fail a release on 2026-10-20. Lock/connection
+    // errors are retried; real SQL errors still fail the build.
+    const script = readFileSync(join(ROOT, "scripts/deploy-build.sh"), "utf8");
+    expect(script).toContain("advisory lock");
+    expect(script).toMatch(/while \[ "\$attempt" -le "\$max_attempts" \]/);
+    expect(script).toContain("max_attempts=4");
+  });
+
   it("ships the build script it references", () => {
     const script = readFileSync(join(ROOT, "scripts/deploy-build.sh"), "utf8");
     expect(script).toContain("prisma migrate deploy");
