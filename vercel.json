@@ -17,5 +17,5 @@
       "schedule": "0 9 * * *"
     }
   ],
-  "buildCommand": "npx prisma migrate status 2>&1 | grep -Ei \"not yet been applied|up to date|migration\" | head -4; npx prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel prisma/schema.prisma --script 2>&1 | head -30; npm run build"
+  "buildCommand": "S=$(npx prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel prisma/schema.prisma --script 2>/dev/null); echo \"DIFF_ADD_COLUMNS=$(printf '%s' \"$S\" | grep -c 'ADD COLUMN')\"; echo \"DIFF_CREATE_TABLES=$(printf '%s' \"$S\" | grep -c 'CREATE TABLE')\"; echo \"DIFF_DROP_COLUMNS=$(printf '%s' \"$S\" | grep -c 'DROP COLUMN')\"; echo \"DIFF_DROP_TABLES=$(printf '%s' \"$S\" | grep -c 'DROP TABLE')\"; echo \"DIFF_DROP_CONSTRAINTS=$(printf '%s' \"$S\" | grep -c 'DROP CONSTRAINT')\"; printf '%s' \"$S\" | grep -E '^ALTER TABLE .* (ADD|DROP) COLUMN|^CREATE TABLE' | head -12; npm run build"
 }
