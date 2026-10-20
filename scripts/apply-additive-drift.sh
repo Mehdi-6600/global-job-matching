@@ -70,11 +70,22 @@ npx prisma migrate diff \
   --to-schema-datamodel prisma/schema.prisma \
   --script > "$DIFF"
 
-# Everything that removes data or structure stays out of the applied file.
-grep -vE '^-- Drop|^ALTER TABLE .*DROP |^DROP (TABLE|INDEX|TYPE|CONSTRAINT|VIEW)|^ALTER TABLE .*ALTER COLUMN' \
-  "$DIFF" > "$ADDITIVE" || true
-grep -E '^-- Drop|^ALTER TABLE .*DROP |^DROP (TABLE|INDEX|TYPE|CONSTRAINT|VIEW)|^ALTER TABLE .*ALTER COLUMN' \
-  "$DIFF" > "$SKIPPED" || true
+# Statements are separated by blank lines. A statement is applied only if it is
+# purely additive; anything that drops or rewrites existing structure is routed
+# to the review file. This is done per STATEMENT, not per line: a line-by-line
+# filter would strip the first line of a multi-column DROP and leave the rest
+# behind, which is how you lose data.
+awk -v add="$ADDITIVE" -v skip="$SKIPPED" '
+  BEGIN { RS = ""; ORS = "\n\n" }
+  {
+    stmt = $0
+    destructive = (stmt ~ /(^|\n)[[:space:]]*DROP[[:space:]]/) ||
+                  (stmt ~ /[[:space:]]DROP[[:space:]]+(COLUMN|TABLE|INDEX|CONSTRAINT|TYPE|VIEW|FOREIGN)/) ||
+                  (stmt ~ /ALTER[[:space:]]+COLUMN/) ||
+                  (stmt ~ /[[:space:]]RENAME[[:space:]]/)
+    print stmt > (destructive ? skip : add)
+  }
+' "$DIFF"
 
 KEPT="$(grep -c ';' "$ADDITIVE" || true)"
 SKIP="$(grep -c ';' "$SKIPPED" || true)"

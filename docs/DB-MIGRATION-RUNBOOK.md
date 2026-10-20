@@ -103,14 +103,23 @@ pg_dump "$DATABASE_URL" --no-owner --format=custom -f gjm-$(date +%F).dump
 `vercel.json` now uses `bash scripts/deploy-build.sh`:
 
 1. `prisma generate`
-2. `prisma migrate deploy` — **fails the build** if the schema cannot be applied
+2. read-only `prisma migrate status` pre-flight — if the database history
+   diverges from `prisma/migrations`, the build **stops without touching the
+   database** and prints the runbook path
+3. `prisma migrate deploy` — fails the build if a migration cannot be applied
    (`ALLOW_SCHEMA_DRIFT=1` is the explicit escape hatch)
-3. `next build`
+4. `next build`
+
+Migrations run **only when `VERCEL_ENV=production`**. Preview deployments share
+the same `DATABASE_URL`, so they never write schema. A failed build also never
+replaces the live deployment: Vercel keeps serving the previous one.
+
+Merge this PR **after** step 3 above. If it is merged earlier, production keeps
+running the current deployment and the next deploy stops at the pre-flight with
+`Database history diverges…` — no downtime, no data loss, just no new release.
 
 Because the build fails closed, code can no longer ship against an older
-database. Merge this PR **after** step 3 above, otherwise the next deployment
-will stop at `migrate deploy` (production keeps serving the current deployment,
-it does not go down).
+database, which is how the 500s reached production in the first place.
 
 ## Rollback
 

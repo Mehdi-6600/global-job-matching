@@ -1,4 +1,5 @@
 {
+  "buildCommand": "bash scripts/deploy-build.sh",
   "crons": [
     {
       "path": "/api/jobs/sync",

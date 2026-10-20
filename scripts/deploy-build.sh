@@ -2,26 +2,45 @@
 #
 # Vercel build command.
 #
-# Deploys used to run `prisma generate && next build`, so schema migrations were
-# never applied and code could ship against an older database. That is exactly
-# what broke production on 2026-10-20 (see docs/DB-MIGRATION-RUNBOOK.md).
+# Deploys used to run `prisma generate && next build`, so migrations were never
+# applied and code could ship against an older database. That gap caused the
+# 2026-10-20 incident: `/api/jobs` returned 500 because `Job.featured` did not
+# exist yet (see docs/DB-MIGRATION-RUNBOOK.md).
 #
-# Order matters:
-#   1. generate the client from schema.prisma
-#   2. apply pending migrations to the database
-#   3. build Next.js
+# Order: generate the client → apply pending migrations → build Next.js.
 #
-# If DATABASE_URL is absent (e.g. a fork without secrets) the migration step is
-# skipped. If it is present and `prisma migrate deploy` fails, the build FAILS
-# instead of shipping code the database cannot serve. Escape hatch for a
-# deliberate hotfix: ALLOW_SCHEMA_DRIFT=1.
+# Safety rules:
+#   * Migrations run only when VERCEL_ENV=production. Preview builds share the
+#     same DATABASE_URL, and a preview must never write schema to production.
+#   * Before writing anything, `prisma migrate status` is inspected. If the
+#     database history diverges from prisma/migrations (drift), the build fails
+#     immediately and touches nothing. The repair is a reviewed, additive-only
+#     script that a human runs: docs/DB-MIGRATION-RUNBOOK.md.
+#   * If `migrate deploy` fails, the build fails. Vercel then keeps the current
+#     production deployment live, so a bad migration cannot produce a broken
+#     release. Escape hatch for a deliberate hotfix: ALLOW_SCHEMA_DRIFT=1.
 #
 set -uo pipefail
 
 echo "→ prisma generate"
 npx prisma generate || exit 1
 
-if [ -n "${DATABASE_URL:-}" ]; then
+should_migrate="${VERCEL_ENV:-}"
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "::warning::DATABASE_URL is not set — skipping migrations"
+elif [ "$should_migrate" != "production" ]; then
+  echo "→ migrations skipped (VERCEL_ENV=${should_migrate:-unset}; only production applies them)"
+else
+  echo "→ prisma migrate status (read-only pre-flight)"
+  status="$(npx prisma migrate status 2>&1)"
+  echo "$status"
+
+  if printf '%s' "$status" | grep -qiE 'last common migration|are different|drift detected'; then
+    echo "::error::Database history diverges from prisma/migrations. Nothing was applied. Repair it with scripts/apply-additive-drift.sh (see docs/DB-MIGRATION-RUNBOOK.md), then redeploy."
+    exit 1
+  fi
+
   echo "→ prisma migrate deploy"
   if npx prisma migrate deploy; then
     echo "✓ database migrations are applied"
@@ -31,8 +50,6 @@ if [ -n "${DATABASE_URL:-}" ]; then
     echo "::error::prisma migrate deploy failed. Fix the database (docs/DB-MIGRATION-RUNBOOK.md) or set ALLOW_SCHEMA_DRIFT=1 to deploy anyway."
     exit 1
   fi
-else
-  echo "::warning::DATABASE_URL is not set — skipping migrations"
 fi
 
 echo "→ next build"
