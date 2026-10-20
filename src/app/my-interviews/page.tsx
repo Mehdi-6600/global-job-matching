@@ -43,15 +43,15 @@ export default function MyInterviewsPage() {
   const statusConfig: Record<string, { label: string; color: string }> = {
     scheduled: {
       label: t("Common.loading", "Upcoming"),
-      color: "text-amber-400 bg-amber-500/10",
+      color: "text-[var(--warning)] bg-[var(--warning-soft)]",
     },
     completed: {
       label: t("Common.success", "Completed"),
-      color: "text-emerald-400 bg-emerald-500/10",
+      color: "text-[var(--success)] bg-[var(--success-soft)]",
     },
     cancelled: {
       label: t("Common.cancel", "Cancelled"),
-      color: "text-red-400 bg-red-500/10",
+      color: "text-[var(--error)] bg-[var(--error-soft)]",
     },
   };
 
@@ -67,23 +67,23 @@ export default function MyInterviewsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+      <div className="gjm-page">
+        <Loader2 className="w-8 h-8 text-[var(--brand-accent)] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+    <div className="gjm-page">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        <div className="glass rounded-2xl p-6 mb-6 border border-white/10">
+        <div className="glass rounded-2xl p-6 mb-6 border border-[var(--border)]">
           <div className="flex items-center gap-3">
-            <Calendar className="w-7 h-7 text-indigo-400" />
+            <Calendar className="w-7 h-7 text-[var(--brand-accent)]" />
             <div>
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="text-2xl font-bold text-[var(--text-primary)]">
                 {t("Nav.dashboard", "My Interviews")}
               </h1>
-              <p className="text-slate-400 text-sm">
+              <p className="text-[var(--text-muted)] text-sm">
                 {t("Dashboard.welcomeSub", "Your scheduled interviews")}
               </p>
             </div>
@@ -92,12 +92,12 @@ export default function MyInterviewsPage() {
 
         <div className="space-y-4">
           {interviews.length === 0 ? (
-            <div className="glass rounded-2xl p-12 text-center border border-white/10">
-              <Calendar className="w-14 h-14 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">
+            <div className="glass rounded-2xl p-12 text-center border border-[var(--border)]">
+              <Calendar className="w-14 h-14 text-[var(--text-subtle)] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
                 {t("Common.noResults", "No interviews yet")}
               </h3>
-              <p className="text-slate-400 text-sm mb-4">
+              <p className="text-[var(--text-muted)] text-sm mb-4">
                 {t(
                   "Jobs.subtitle",
                   "Apply to jobs and employers will schedule interviews"
@@ -105,7 +105,7 @@ export default function MyInterviewsPage() {
               </p>
               <Link
                 href="/jobs"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-accent)] text-[var(--text-on-brand)] text-sm"
               >
                 {t("Home.ctaJobs", "Browse Jobs")}
               </Link>
@@ -121,12 +121,12 @@ export default function MyInterviewsPage() {
               return (
                 <div
                   key={iv.id}
-                  className="glass rounded-2xl p-5 border border-white/10"
+                  className="glass rounded-2xl p-5 border border-[var(--border)]"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-white font-medium">
+                        <h3 className="text-[var(--text-primary)] font-medium">
                           {iv.job.title}
                         </h3>
                         <span
@@ -135,10 +135,10 @@ export default function MyInterviewsPage() {
                           {st.label}
                         </span>
                       </div>
-                      <p className="text-slate-400 text-sm mb-3">
+                      <p className="text-[var(--text-muted)] text-sm mb-3">
                         {iv.job.company.name}
                       </p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />{" "}
                           {date.toLocaleDateString(locale)}
@@ -158,7 +158,7 @@ export default function MyInterviewsPage() {
                         </span>
                       </div>
                       {iv.notes && (
-                        <p className="text-slate-500 text-xs mt-3 p-3 rounded-lg bg-white/5">
+                        <p className="text-[var(--text-muted)] text-xs mt-3 p-3 rounded-lg bg-[var(--surface-2)]">
                           {iv.notes}
                         </p>
                       )}
@@ -169,7 +169,7 @@ export default function MyInterviewsPage() {
                           href={iv.meetLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--brand-accent)] text-[var(--text-on-brand)] text-xs font-medium hover:bg-[var(--brand-accent)] transition-all"
                         >
                           <ExternalLink className="w-3 h-3" />{" "}
                           {t("Common.view", "Join")}
@@ -186,7 +186,7 @@ export default function MyInterviewsPage() {
         <div className="mt-6">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
+            className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />{" "}
             {t("Common.back", "Back to Dashboard")}

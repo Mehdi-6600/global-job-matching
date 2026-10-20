@@ -127,6 +127,7 @@ const config: Config = {
       fontFamily: {
         sans: [
           "var(--font-inter)",
+          "var(--font-geist-sans)",
           "var(--font-vazirmatn)",
           "var(--font-noto-kufi)",
           "system-ui",
@@ -135,6 +136,7 @@ const config: Config = {
           "sans-serif",
         ],
         display: [
+          "var(--font-geist-sans)",
           "var(--font-inter)",
           "var(--font-vazirmatn)",
           "var(--font-noto-kufi)",

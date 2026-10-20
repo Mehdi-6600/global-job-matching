@@ -31,7 +31,7 @@ export function UserAvatar({
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-full bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center ${className}`}
+      className={`relative shrink-0 overflow-hidden rounded-full bg-[var(--brand-accent-soft)] border border-[var(--brand-accent)] flex items-center justify-center ${className}`}
       style={{ width: size, height: size }}
     >
       {showImage ? (
@@ -46,7 +46,7 @@ export function UserAvatar({
         />
       ) : (
         <span
-          className="font-semibold text-indigo-400"
+          className="font-semibold text-[var(--brand-accent)]"
           style={{ fontSize: Math.max(11, size * 0.32) }}
         >
           {initials(name)}

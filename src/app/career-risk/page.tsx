@@ -45,9 +45,9 @@ import { ProcessingStatus } from "@/components/ui/processing-status";
 const HISTORY_DISPLAY_LIMIT = 8;
 
 const levelColor: Record<string, string> = {
-  low: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
-  medium: "text-amber-400 border-amber-500/30 bg-amber-500/10",
-  high: "text-red-400 border-red-500/30 bg-red-500/10",
+  low: "text-[var(--success)] border-[var(--success)] bg-[var(--success-soft)]",
+  medium: "text-[var(--warning)] border-[var(--warning)] bg-[var(--warning-soft)]",
+  high: "text-[var(--error)] border-[var(--error)] bg-[var(--error-soft)]",
 };
 
 /* ------------------------------------------------------------------ */
@@ -250,13 +250,13 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   const v = Math.max(0, Math.min(100, value));
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-slate-400">
+      <div className="flex justify-between text-xs text-[var(--text-muted)]">
         <span>{label}</span>
-        <span className="text-slate-300 tabular-nums">{v}</span>
+        <span className="text-[var(--text-body)] tabular-nums">{v}</span>
       </div>
-      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+      <div className="h-2 rounded-full bg-[var(--surface-3)] overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all"
+          className="h-full rounded-full bg-[image:var(--gradient-brand)] transition-all"
           style={{ width: `${v}%` }}
         />
       </div>
@@ -649,25 +649,25 @@ export default function CareerRiskPage() {
 
   /* -------- Render -------- */
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
+    <div className="gjm-page px-4">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("Common.back", "Back")}
         </Link>
 
         <div className="flex items-start gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center shrink-0">
-            <ShieldAlert className="w-6 h-6 text-cyan-300" />
+          <div className="w-12 h-12 rounded-2xl bg-[var(--brand-primary-soft)] border border-[var(--brand-primary)] flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-6 h-6 text-[var(--brand-primary)]" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
               {t("CareerRisk.title", "AI Career Risk")}
             </h1>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-[var(--text-muted)] text-sm mt-1">
               {t(
                 "CareerRisk.subtitle",
                 "See how exposed your role is to AI and automation — then unlock a 90-day roadmap and migration paths.",
@@ -678,16 +678,16 @@ export default function CareerRiskPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-5 sm:p-6 space-y-4"
+          className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] backdrop-blur-sm p-5 sm:p-6 space-y-4"
         >
           <div>
-            <label className="block text-sm text-slate-300 mb-1.5">
+            <label className="block text-sm text-[var(--text-body)] mb-1.5">
               {t("CareerRisk.jobTitle", "Job title")} *
             </label>
             <input
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
-              className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+              className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
               placeholder={t(
                 "CareerRisk.jobTitlePlaceholder",
                 "e.g. Frontend Developer",
@@ -699,13 +699,13 @@ export default function CareerRiskPage() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
+              <label className="block text-sm text-[var(--text-body)] mb-1.5">
                 {t("CareerRisk.skills", "Skills")}
               </label>
               <input
                 value={skills}
                 onChange={(e) => setSkills(e.target.value)}
-                className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                 placeholder={t(
                   "CareerRisk.skillsPlaceholder",
                   "React, TypeScript, ...",
@@ -713,13 +713,13 @@ export default function CareerRiskPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
+              <label className="block text-sm text-[var(--text-body)] mb-1.5">
                 {t("CareerRisk.industry", "Industry")}
               </label>
               <input
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                 placeholder={t(
                   "CareerRisk.industryPlaceholder",
                   "SaaS, Healthcare, ...",
@@ -730,7 +730,7 @@ export default function CareerRiskPage() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
+              <label className="block text-sm text-[var(--text-body)] mb-1.5">
                 {t("CareerRisk.experienceYears", "Years of experience")}
               </label>
               <input
@@ -739,17 +739,17 @@ export default function CareerRiskPage() {
                 max={50}
                 value={experienceYears}
                 onChange={(e) => setExperienceYears(e.target.value)}
-                className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
+              <label className="block text-sm text-[var(--text-body)] mb-1.5">
                 {t("CareerRisk.education", "Education")}
               </label>
               <input
                 value={education}
                 onChange={(e) => setEducation(e.target.value)}
-                className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                 placeholder={t(
                   "CareerRisk.educationPlaceholder",
                   "BSc Computer Science",
@@ -760,37 +760,37 @@ export default function CareerRiskPage() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
+              <label className="block text-sm text-[var(--text-body)] mb-1.5">
                 {t("CareerRisk.country", "Country")}
               </label>
               <input
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                 placeholder={t("CareerRisk.countryPlaceholder", "Germany")}
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 mb-1.5">
+              <label className="block text-sm text-[var(--text-body)] mb-1.5">
                 {t("CareerRisk.location", "City / region")}
               </label>
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full rounded-xl bg-slate-900/60 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                 placeholder={t("CareerRisk.locationPlaceholder", "Berlin")}
               />
             </div>
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-300">
+            <div className="flex items-start gap-2 rounded-xl border border-[var(--error)] bg-[var(--error-soft)] px-3 py-2.5 text-sm text-[var(--error)]">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          <p className="text-xs text-slate-500">{stepsAfterRiskHint}</p>
+          <p className="text-xs text-[var(--text-muted)]">{stepsAfterRiskHint}</p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-1">
             <DynamicButton
@@ -841,21 +841,21 @@ export default function CareerRiskPage() {
             aria-modal="true"
             aria-label={t("CareerRisk.authTitle", "Sign in to continue")}
           >
-            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-xl">
+            <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                   {t("CareerRisk.authTitle", "Sign in to continue")}
                 </h2>
                 <button
                   type="button"
                   onClick={() => setShowAuthGate(false)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   aria-label={t("Common.close", "Close")}
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-sm text-slate-400 mb-5">
+              <p className="text-sm text-[var(--text-muted)] mb-5">
                 {t(
                   "CareerRisk.authBody",
                   "Create a free account or sign in so we can save your analysis and unlock roadmap tools.",
@@ -865,14 +865,14 @@ export default function CareerRiskPage() {
                 <button
                   type="button"
                   onClick={continueWithGoogle}
-                  className="w-full rounded-xl bg-white text-slate-900 font-medium py-2.5 text-sm hover:bg-slate-100"
+                  className="w-full rounded-xl bg-[var(--surface)] text-[var(--text-primary)] font-medium py-2.5 text-sm hover:bg-[var(--surface-2)]"
                 >
                   {t("Auth.continueGoogle", "Continue with Google")}
                 </button>
                 <button
                   type="button"
                   onClick={continueWithEmail}
-                  className="w-full rounded-xl border border-white/15 text-white font-medium py-2.5 text-sm hover:bg-white/5"
+                  className="w-full rounded-xl border border-[var(--border)] text-[var(--text-primary)] font-medium py-2.5 text-sm hover:bg-[var(--surface-2)]"
                 >
                   {t("Auth.continueEmail", "Continue with email")}
                 </button>
@@ -883,10 +883,10 @@ export default function CareerRiskPage() {
 
         {/* Analysis section */}
         {analysis && (
-          <section className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6 space-y-5">
+          <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5 sm:p-6 space-y-5">
             <div className="flex flex-wrap items-center gap-3 justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
                   {analysis.jobTitle}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
@@ -897,14 +897,14 @@ export default function CareerRiskPage() {
                   >
                     {levelLabel(analysis.riskLevel)} · {analysis.riskScore}/100
                   </span>
-                  <span className="text-xs text-slate-500">{sourceLabel}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{sourceLabel}</span>
                 </div>
               </div>
               {sharePath && (
                 <button
                   type="button"
                   onClick={() => void copyShare()}
-                  className="inline-flex items-center gap-1.5 text-xs text-cyan-300 hover:text-cyan-200"
+                  className="inline-flex items-center gap-1.5 text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   {copied
@@ -915,7 +915,7 @@ export default function CareerRiskPage() {
             </div>
 
             {analysis.summary && (
-              <p className="text-slate-200 text-sm leading-relaxed">
+              <p className="text-[var(--text-primary)] text-sm leading-relaxed">
                 {analysis.summary}
               </p>
             )}
@@ -943,13 +943,13 @@ export default function CareerRiskPage() {
 
             {analysis.reasons.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-white mb-2">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                   {t("CareerRisk.whyScore", "Why this score")}
                 </h3>
                 <ul className="space-y-1.5">
                   {analysis.reasons.map((r, i) => (
-                    <li key={i} className="text-sm text-slate-300 flex gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <li key={i} className="text-sm text-[var(--text-body)] flex gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[var(--brand-primary)] shrink-0 mt-0.5" />
                       <span>{r}</span>
                     </li>
                   ))}
@@ -959,14 +959,14 @@ export default function CareerRiskPage() {
 
             {analysis.skillsToBuild.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-white mb-2">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                   {t("CareerRisk.skillsToBuild", "Skills to build")}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {analysis.skillsToBuild.map((s, i) => (
                     <span
                       key={i}
-                      className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-200"
+                      className="rounded-full border border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs text-[var(--brand-primary-hover)]"
                     >
                       {s}
                     </span>
@@ -976,20 +976,20 @@ export default function CareerRiskPage() {
             )}
 
             <div>
-              <h3 className="text-sm font-semibold text-white mb-2">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                 {t("CareerRisk.alternatives", "Alternative paths")}
               </h3>
               {paid && analysis.alternatives.length > 0 ? (
                 <ul className="space-y-1.5">
                   {analysis.alternatives.map((a, i) => (
-                    <li key={i} className="text-sm text-slate-300">
+                    <li key={i} className="text-sm text-[var(--text-body)]">
                       • {a}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-sm text-slate-300 flex gap-2">
-                  <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="rounded-xl border border-[var(--warning)] bg-[var(--warning-soft)] px-3 py-3 text-sm text-[var(--text-body)] flex gap-2">
+                  <Lock className="w-4 h-4 text-[var(--warning)] shrink-0 mt-0.5" />
                   <div>
                     <p>
                       {upgradeMessage ||
@@ -1000,7 +1000,7 @@ export default function CareerRiskPage() {
                     </p>
                     <Link
                       href="/pricing"
-                      className="text-cyan-300 hover:underline text-xs mt-1 inline-block"
+                      className="text-[var(--brand-primary)] hover:underline text-xs mt-1 inline-block"
                     >
                       {t("CareerRisk.viewPricing", "View pricing")}
                     </Link>
@@ -1013,9 +1013,9 @@ export default function CareerRiskPage() {
 
         {/* Roadmap section */}
         {(roadmapLoading || roadmapError || roadmap) && (
-          <section className="mt-6 rounded-2xl border border-orange-500/20 bg-orange-500/5 p-5 sm:p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Map className="w-4 h-4 text-orange-300" />
+          <section className="mt-6 rounded-2xl border border-[var(--warning)] bg-[var(--warning-soft)] p-5 sm:p-6 space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+              <Map className="w-4 h-4 text-[var(--warning)]" />
               {t("CareerRisk.roadmapTitle", "90-day roadmap")}
             </h2>
             {roadmapLoading && (
@@ -1026,12 +1026,12 @@ export default function CareerRiskPage() {
               />
             )}
             {roadmapError && (
-              <p className="text-sm text-red-300">{roadmapError}</p>
+              <p className="text-sm text-[var(--error)]">{roadmapError}</p>
             )}
             {roadmap && (
               <>
                 {roadmap.title && (
-                  <p className="text-sm text-slate-200 font-medium">
+                  <p className="text-sm text-[var(--text-primary)] font-medium">
                     {roadmap.title}
                   </p>
                 )}
@@ -1039,16 +1039,16 @@ export default function CareerRiskPage() {
                   {roadmap.weeks.map((w, i) => (
                     <li
                       key={i}
-                      className="rounded-xl border border-white/10 bg-slate-900/40 p-3"
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3"
                     >
-                      <p className="text-xs text-orange-300 font-semibold">
+                      <p className="text-xs text-[var(--warning)] font-semibold">
                         {w.week}
                       </p>
-                      <p className="text-sm text-white mt-0.5">{w.focus}</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-0.5">{w.focus}</p>
                       {w.actions.length > 0 && (
                         <ul className="mt-2 space-y-1">
                           {w.actions.map((a, j) => (
-                            <li key={j} className="text-xs text-slate-300">
+                            <li key={j} className="text-xs text-[var(--text-body)]">
                               • {a}
                             </li>
                           ))}
@@ -1059,12 +1059,12 @@ export default function CareerRiskPage() {
                 </ul>
                 {roadmap.resources.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-400 mb-1">
+                    <p className="text-xs text-[var(--text-muted)] mb-1">
                       {t("CareerRisk.resources", "Resources")}
                     </p>
                     <ul className="space-y-1">
                       {roadmap.resources.map((r, i) => (
-                        <li key={i} className="text-xs text-slate-300">
+                        <li key={i} className="text-xs text-[var(--text-body)]">
                           • {r}
                         </li>
                       ))}
@@ -1078,9 +1078,9 @@ export default function CareerRiskPage() {
 
         {/* Migration section */}
         {(migrationLoading || migrationError || migration) && (
-          <section className="mt-6 rounded-2xl border border-red-500/25 bg-red-500/5 p-5 sm:p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Plane className="w-4 h-4 text-red-300" />
+          <section className="mt-6 rounded-2xl border border-[var(--error)] bg-[var(--error-soft)] p-5 sm:p-6 space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+              <Plane className="w-4 h-4 text-[var(--error)]" />
               {t("CareerRisk.migrationTitle", "Migration options")}
             </h2>
             {migrationLoading && (
@@ -1094,12 +1094,12 @@ export default function CareerRiskPage() {
               />
             )}
             {migrationError && (
-              <p className="text-sm text-red-300">{migrationError}</p>
+              <p className="text-sm text-[var(--error)]">{migrationError}</p>
             )}
             {migration && (
               <>
                 {migration.summary && (
-                  <p className="text-sm text-slate-200 leading-relaxed">
+                  <p className="text-sm text-[var(--text-primary)] leading-relaxed">
                     {migration.summary}
                   </p>
                 )}
@@ -1107,35 +1107,35 @@ export default function CareerRiskPage() {
                   {migration.countries.map((c, i) => (
                     <li
                       key={i}
-                      className="rounded-xl border border-white/10 bg-slate-900/40 p-3"
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3"
                     >
-                      <p className="text-sm font-semibold text-white">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
                         {c.country}
                       </p>
                       {c.demand && (
-                        <p className="text-sm text-slate-300 mt-1">
-                          <span className="text-red-300 font-medium">
+                        <p className="text-sm text-[var(--text-body)] mt-1">
+                          <span className="text-[var(--error)] font-medium">
                             {t("CareerRisk.demand", "Demand")}:{" "}
                           </span>
                           {c.demand}
                         </p>
                       )}
                       {c.pathway && (
-                        <p className="text-sm text-slate-300">
-                          <span className="text-red-300 font-medium">
+                        <p className="text-sm text-[var(--text-body)]">
+                          <span className="text-[var(--error)] font-medium">
                             {t("CareerRisk.pathway", "Pathway")}:{" "}
                           </span>
                           {c.pathway}
                         </p>
                       )}
                       {c.notes && (
-                        <p className="text-sm text-slate-400 mt-1">{c.notes}</p>
+                        <p className="text-sm text-[var(--text-muted)] mt-1">{c.notes}</p>
                       )}
                     </li>
                   ))}
                 </ul>
                 {migration.caveats.length > 0 && (
-                  <div className="text-xs text-slate-400 space-y-1">
+                  <div className="text-xs text-[var(--text-muted)] space-y-1">
                     {migration.caveats.map((c, i) => (
                       <p key={i}>• {c}</p>
                     ))}
@@ -1149,21 +1149,21 @@ export default function CareerRiskPage() {
         {/* History section */}
         {history.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-              <History className="w-4 h-4 text-slate-400" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+              <History className="w-4 h-4 text-[var(--text-muted)]" />
               {t("CareerRisk.history", "Recent analyses")}
             </h2>
             <ul className="space-y-2">
               {history.slice(0, HISTORY_DISPLAY_LIMIT).map((h) => (
                 <li
                   key={h.id}
-                  className="text-sm text-slate-300 border border-white/10 rounded-xl px-3 py-2 flex justify-between gap-2"
+                  className="text-sm text-[var(--text-body)] border border-[var(--border)] rounded-xl px-3 py-2 flex justify-between gap-2"
                 >
                   <span className="truncate">
                     {h.jobTitle}{" "}
-                    <span className="text-slate-500">({h.riskScore}/100)</span>
+                    <span className="text-[var(--text-muted)]">({h.riskScore}/100)</span>
                   </span>
-                  <span className="text-xs text-slate-500 shrink-0">
+                  <span className="text-xs text-[var(--text-muted)] shrink-0">
                     {h.createdAt
                       ? new Date(h.createdAt).toLocaleDateString(locale)
                       : ""}
@@ -1174,6 +1174,6 @@ export default function CareerRiskPage() {
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

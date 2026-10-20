@@ -26,7 +26,11 @@
     "jobAlerts": "Job Alerts",
     "help": "Help",
     "profile": "Profile",
-    "search": "Search"
+    "search": "Search",
+    "language": "Language",
+    "postJob": "Post a job",
+    "account": "Account",
+    "searchJobs": "Search jobs"
   },
   "Home": {
     "eyebrow": "GLOBAL CAREER PLATFORM",
@@ -132,7 +136,14 @@
     "trustSectionKicker": "BUILT ON REAL DATA",
     "trustSectionTitle": "Trusted infrastructure, not testimonials.",
     "feedTitle": "Live opportunity feed",
-    "feedEmpty": "New roles appear here as soon as they are published."
+    "feedEmpty": "New roles appear here as soon as they are published.",
+    "popularSearches": "Popular",
+    "featuredFull": "Featured slots are full — waitlist open",
+    "featuredSpotsLeft": "Only {left}/{total} featured spots left",
+    "featuredStats": "{featured} featured · {jobs} active jobs",
+    "campaignEnds": "Ends {date}",
+    "featureCta": "Feature · ${price} / 7d",
+    "postJobCta": "Post a job"
   },
   "Common": {
     "loading": "Loading...",
@@ -183,7 +194,19 @@
     "forbidden": "Access denied",
     "status": "Status",
     "print": "Print",
-    "copied": "Copied"
+    "copied": "Copied",
+    "toggleTheme": "Toggle theme",
+    "skipToContent": "Skip to content",
+    "pageNotFound": "Page not found",
+    "pageNotFoundDesc": "This page does not exist or was moved. Try one of these popular sections:",
+    "copy": "Copy",
+    "errorUnexpected": "An unexpected error occurred. You can try again or return home.",
+    "planRequired": "This feature requires a higher plan.",
+    "rateLimited": "Too many requests. Please wait and try again.",
+    "serviceUnavailable": "Service temporarily unavailable. Please try again shortly.",
+    "mainNavigation": "Main navigation",
+    "relatedSections": "Related sections",
+    "exploreMore": "Explore more"
   },
   "ApiErrors": {
     "badRequest": "The request was invalid. Please check your input.",
@@ -240,8 +263,28 @@
       "emailExists": "Email already registered",
       "generic": "Something went wrong",
       "network": "Network error. Please try again.",
-      "rateLimited": "Too many requests. Please try again later."
-    }
+      "rateLimited": "Too many requests. Please try again later.",
+      "unauthorized": "Please sign in to continue."
+    },
+    "sideTitle": "Your next role starts with a better search.",
+    "sidePoint1": "Global roles from vetted employers, updated daily.",
+    "sidePoint2": "AI match scores, resume help and career-risk insights.",
+    "sidePoint3": "Transparent salaries and one profile for every application.",
+    "sideFooter": "Free to join. No credit card required.",
+    "hidePassword": "Hide password",
+    "registeredSuccess": "Account created. Please sign in to continue.",
+    "sessionExpired": "Your session has expired. Please sign in again to continue.",
+    "showPassword": "Show password",
+    "verifyEmailErrorBody": "The link is invalid or has expired.",
+    "verifyEmailErrorTitle": "Verification failed",
+    "verifyEmailMissingBody": "This verification link is missing required parameters.",
+    "verifyEmailMissingTitle": "Invalid link",
+    "verifyEmailResend": "Resend verification email",
+    "verifyEmailResendFailed": "Could not send the email. Please try again later.",
+    "verifyEmailResending": "Sending…",
+    "verifyEmailResent": "Verification email sent. Check your inbox.",
+    "verifyEmailSuccessBody": "Your email has been successfully verified.",
+    "verifyEmailSuccessTitle": "Email verified!"
   },
   "Contact": {
     "title": "Contact Us",
@@ -368,7 +411,12 @@
     "errIntentExpired": "This payment quote expired or was already used. Please create a new one.",
     "errRecipient": "Wallet address changed. Please create a new quote.",
     "errSubmit": "Submission failed. Please try again.",
-    "errWallet": "That crypto is not configured for payments."
+    "errWallet": "That crypto is not configured for payments.",
+    "cta": "Continue with crypto on Pricing",
+    "free": "Free plan",
+    "perMonth": "/month",
+    "perYear": "/year",
+    "qrAlt": "QR code of the payment address"
   },
   "Dashboard": {
     "navDashboard": "Dashboard",
@@ -406,7 +454,12 @@
     "remote": "Remote",
     "noJobs": "No jobs to display yet.",
     "recent": "Recent",
-    "stats": "Stats"
+    "stats": "Stats",
+    "completeProfile": "Complete profile →",
+    "matchNeedProfile": "Add skills or a bio in your profile to unlock personalized match scores.",
+    "matchScore": "Match score",
+    "matchedJobs": "Best matches for you",
+    "noMatches": "No strong matches yet. Update your skills or browse all jobs."
   },
   "Settings": {
     "title": "Settings",
@@ -569,7 +622,15 @@
     "pending": "Pending",
     "salaryNA": "Salary not specified",
     "loadErrorTitle": "Could not load jobs",
-    "loadErrorBody": "Something went wrong. Please try again."
+    "loadErrorBody": "Something went wrong. Please try again.",
+    "kicker": "GLOBAL CAREERS",
+    "resultsCount": "{count} jobs",
+    "pagination": "Pagination",
+    "showResults": "Show results",
+    "featured": "Featured",
+    "allCategories": "All categories",
+    "rateLimitBody": "Please wait a moment before trying again.",
+    "rateLimitTitle": "Too many requests"
   },
   "Applications": {
     "title": "My Applications",
@@ -609,7 +670,8 @@
     "youPrefix": "You: ",
     "messagePlaceholder": "Write a message...",
     "startConversation": "Start conversation",
-    "selectConversation": "Select a conversation"
+    "selectConversation": "Select a conversation",
+    "send": "Send message"
   },
   "Notifications": {
     "title": "Notifications",
@@ -802,7 +864,12 @@
     "contactDraft": "Draft",
     "contactGenerateDraft": "Generate draft",
     "contactCopy": "Copy",
-    "contactSend": "Send"
+    "contactSend": "Send",
+    "loginForMatch": "Log in to see your match score",
+    "matchLabel": "match",
+    "matchLoading": "Checking match…",
+    "matchNeedProfile": "Complete profile for match score",
+    "matchScore": "Your match score for this job"
   },
   "Companies": {
     "title": "Companies",
@@ -813,7 +880,9 @@
     "viewProfile": "View Profile",
     "location": "Location",
     "website": "Website",
-    "pending": "Pending companies"
+    "pending": "Pending companies",
+    "unknown": "Unknown company",
+    "emptyBody": "Companies will appear here once employers create profiles."
   },
   "AuthExtra": {
     "forgotTitle": "Forgot Password",
@@ -839,7 +908,8 @@
     "browseJobs": "Browse all jobs",
     "activeJobs": "active jobs",
     "viewAllJobs": "View all jobs →",
-    "browseLocations": "Browse locations →"
+    "browseLocations": "Browse locations →",
+    "alphabet": "Alphabet"
   },
   "CategoryNames": {
     "accounting": "Accounting",

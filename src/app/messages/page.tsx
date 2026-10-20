@@ -204,32 +204,33 @@ function MessagesInner() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+      <div className="gjm-page">
+        <Loader2 className="w-8 h-8 text-[var(--brand-accent)] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-16">
+    <div className="gjm-page">
       <div className="max-w-6xl mx-auto h-[calc(100vh-4rem)] flex flex-col">
-        <div className="glass border-b border-white/10 px-4 py-3 flex items-center justify-between shrink-0">
+        <div className="glass border-b border-[var(--border)] px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             {mobileView === "chat" && (
               <button
                 type="button"
                 onClick={backToList}
-                className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+                aria-label={t("Common.back", "Back")}
+                className="lg:hidden p-2 rounded-lg hover:bg-[var(--surface-3)] transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-slate-300" />
+                <ArrowLeft className="w-5 h-5 text-[var(--text-body)]" />
               </button>
             )}
-            <MessageCircle className="w-6 h-6 text-indigo-400" />
-            <h1 className="text-xl font-bold text-white">{t("Messages.title", "Messages")}</h1>
+            <MessageCircle className="w-6 h-6 text-[var(--brand-accent)]" />
+            <h1 className="text-xl font-bold text-[var(--text-primary)]">{t("Messages.title", "Messages")}</h1>
           </div>
           <Link
             href="/dashboard"
-            className="text-sm text-slate-400 hover:text-white transition-colors"
+            className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
           >
             {t("Dashboard.navDashboard", "Dashboard")}
           </Link>
@@ -241,8 +242,8 @@ function MessagesInner() {
               mobileView === "chat" ? "hidden" : "flex"
             } lg:flex w-full lg:w-80 flex-col border-r border-white/10 glass`}
           >
-            <div className="p-4 border-b border-white/10">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="p-4 border-b border-[var(--border)]">
+              <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider">
                 {t("Messages.conversations", "Conversations")}
               </h2>
             </div>
@@ -250,9 +251,9 @@ function MessagesInner() {
             <div className="flex-1 overflow-y-auto">
               {conversations.length === 0 ? (
                 <div className="p-8 text-center">
-                  <MessageCircle className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">{t("Messages.noMessages", "No messages yet")}</p>
-                  <p className="text-slate-500 text-xs mt-1">
+                  <MessageCircle className="w-12 h-12 text-[var(--text-subtle)] mx-auto mb-3" />
+                  <p className="text-[var(--text-muted)] text-sm">{t("Messages.noMessages", "No messages yet")}</p>
+                  <p className="text-[var(--text-muted)] text-xs mt-1">
                     {t("Messages.noMessagesDesc", "Open a chat from applicants or wait for a message")}
                   </p>
                 </div>
@@ -268,7 +269,7 @@ function MessagesInner() {
                         : ""
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-[var(--brand-accent-soft)] flex items-center justify-center shrink-0">
                       {conv.partner.avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -277,26 +278,26 @@ function MessagesInner() {
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <User className="w-5 h-5 text-indigo-400" />
+                        <User className="w-5 h-5 text-[var(--brand-accent)]" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-white truncate">
+                        <h3 className="font-medium text-[var(--text-primary)] truncate">
                           {conv.partner.name || t("Messages.defaultUser", "User")}
                         </h3>
-                        <span className="text-xs text-slate-500 shrink-0 ml-2">
+                        <span className="text-xs text-[var(--text-muted)] shrink-0 ms-2">
                           {formatTime(conv.lastMessage.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-400 truncate mt-0.5">
+                      <p className="text-sm text-[var(--text-muted)] truncate mt-0.5">
                         {conv.lastMessage.senderId === currentUserId
                           ? `${t("Messages.youPrefix", "You: ")}`
                           : ""}
                         {conv.lastMessage.content}
                       </p>
                       {conv.unreadCount > 0 && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-medium mt-1">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--brand-accent)] text-[var(--text-on-brand)] text-xs font-medium mt-1">
                           {conv.unreadCount}
                         </span>
                       )}
@@ -314,8 +315,8 @@ function MessagesInner() {
           >
             {selectedUserId && selectedPartner ? (
               <>
-                <div className="glass border-b border-white/10 px-4 py-3 flex items-center gap-3 shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                <div className="glass border-b border-[var(--border)] px-4 py-3 flex items-center gap-3 shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[var(--brand-accent-soft)] flex items-center justify-center">
                     {selectedPartner.avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -324,10 +325,10 @@ function MessagesInner() {
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
-                      <User className="w-4 h-4 text-indigo-400" />
+                      <User className="w-4 h-4 text-[var(--brand-accent)]" />
                     )}
                   </div>
-                  <h3 className="font-medium text-white">
+                  <h3 className="font-medium text-[var(--text-primary)]">
                     {selectedPartner.name || t("Messages.defaultUser", "User")}
                   </h3>
                 </div>
@@ -335,12 +336,12 @@ function MessagesInner() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {loadingMsg && messages.length === 0 ? (
                     <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                      <Loader2 className="w-6 h-6 text-[var(--brand-accent)] animate-spin" />
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="text-center py-12">
-                      <Clock className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-                      <p className="text-slate-400 text-sm">
+                      <Clock className="w-10 h-10 text-[var(--text-subtle)] mx-auto mb-2" />
+                      <p className="text-[var(--text-muted)] text-sm">
                         {t("Messages.startConversation", "Start the conversation")}
                       </p>
                     </div>
@@ -357,8 +358,8 @@ function MessagesInner() {
                           <div
                             className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
                               isMe
-                                ? "bg-indigo-600 text-white rounded-br-md"
-                                : "glass border border-white/10 text-slate-200 rounded-bl-md"
+                                ? "bg-[var(--brand-accent)] text-[var(--text-on-brand)] rounded-br-md"
+                                : "glass border border-[var(--border)] text-[var(--text-muted)] rounded-bl-md"
                             }`}
                           >
                             <p className="text-sm leading-relaxed">
@@ -366,7 +367,7 @@ function MessagesInner() {
                             </p>
                             <span
                               className={`text-[10px] mt-1 block ${
-                                isMe ? "text-indigo-200" : "text-slate-500"
+                                isMe ? "text-[var(--brand-accent)]" : "text-[var(--text-muted)]"
                               }`}
                             >
                               {formatTime(msg.createdAt)}
@@ -381,19 +382,20 @@ function MessagesInner() {
 
                 <form
                   onSubmit={sendMessage}
-                  className="p-4 border-t border-white/10 glass flex gap-2 shrink-0"
+                  className="p-4 border-t border-[var(--border)] glass flex gap-2 shrink-0"
                 >
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder={t("Messages.messagePlaceholder", "Type a message...")}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500/50"
+                    className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-accent)]"
                   />
                   <button
                     type="submit"
                     disabled={sending || !newMessage.trim()}
-                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
+                    aria-label={t("Messages.send", "Send message")}
+                    className="px-4 py-2.5 rounded-xl bg-[var(--brand-accent)] hover:bg-[var(--brand-accent-hover)] text-[var(--text-on-brand)] disabled:opacity-50"
                   >
                     {sending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -404,7 +406,7 @@ function MessagesInner() {
                 </form>
               </>
             ) : (
-              <div className="flex-1 hidden lg:flex items-center justify-center text-slate-500 text-sm">
+              <div className="flex-1 hidden lg:flex items-center justify-center text-[var(--text-muted)] text-sm">
                 {t("Messages.selectConversation", "Select a conversation")}
               </div>
             )}
@@ -419,8 +421,8 @@ export default function MessagesPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+        <div className="gjm-page">
+          <Loader2 className="w-8 h-8 text-[var(--brand-accent)] animate-spin" />
         </div>
       }
     >

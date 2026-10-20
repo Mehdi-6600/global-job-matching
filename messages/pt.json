@@ -26,7 +26,11 @@
     "jobAlerts": "Alertas de Vagas",
     "help": "Ajuda",
     "profile": "Perfil",
-    "search": "Buscar"
+    "search": "Buscar",
+    "language": "Idioma",
+    "postJob": "Publicar vaga",
+    "account": "Conta",
+    "searchJobs": "Pesquisar vagas"
   },
   "Common": {
     "loading": "Carregando...",
@@ -77,7 +81,19 @@
     "forbidden": "Acesso negado",
     "status": "Status",
     "print": "Imprimir",
-    "copied": "Copiado"
+    "copied": "Copiado",
+    "toggleTheme": "Alternar tema",
+    "skipToContent": "Ir para o conteúdo",
+    "pageNotFound": "Página não encontrada",
+    "pageNotFoundDesc": "Esta página não existe ou foi movida. Experimente uma destas secções populares:",
+    "copy": "Copiar",
+    "errorUnexpected": "Ocorreu um erro inesperado. Tente novamente ou volte ao início.",
+    "planRequired": "Este recurso exige um plano superior.",
+    "rateLimited": "Muitas solicitações. Aguarde e tente novamente.",
+    "serviceUnavailable": "Serviço temporariamente indisponível. Tente novamente em instantes.",
+    "mainNavigation": "Navegação principal",
+    "relatedSections": "Secções relacionadas",
+    "exploreMore": "Explorar mais"
   },
   "Footer": {
     "tagline": "Conectando talentos a oportunidades pelo mundo com segurança e inteligência.",
@@ -137,7 +153,8 @@
     "browseJobs": "Ver Vagas",
     "activeJobs": "vagas ativas",
     "viewAllJobs": "Ver Todas as Vagas",
-    "browseLocations": "Explorar por Localização"
+    "browseLocations": "Explorar por Localização",
+    "alphabet": "Alfabeto"
   },
   "Locations": {
     "title": "Localizações",
@@ -268,7 +285,9 @@
     "viewProfile": "Ver Perfil",
     "location": "Localização",
     "website": "Site Oficial",
-    "pending": "Pendente"
+    "pending": "Pendente",
+    "unknown": "Empresa desconhecida",
+    "emptyBody": "As empresas aparecerão aqui quando os empregadores criarem perfis."
   },
   "Auth": {
     "loginTitle": "Entrar na sua conta",
@@ -297,8 +316,28 @@
       "emailExists": "Este endereço de e-mail já está cadastrado.",
       "generic": "Ocorreu um erro inesperado.",
       "network": "Erro de rede. Verifique sua conexão e tente novamente.",
-      "rateLimited": "Muitas tentativas. Tente novamente mais tarde."
-    }
+      "rateLimited": "Muitas tentativas. Tente novamente mais tarde.",
+      "unauthorized": "Faça login para continuar."
+    },
+    "sideTitle": "O seu próximo cargo começa com uma melhor pesquisa.",
+    "sidePoint1": "Vagas globais de empregadores verificados, atualizadas diariamente.",
+    "sidePoint2": "Pontuações de afinidade com IA, ajuda no currículo e análise de risco de carreira.",
+    "sidePoint3": "Salários transparentes e um único perfil para todas as candidaturas.",
+    "sideFooter": "Registo gratuito. Sem cartão de crédito.",
+    "hidePassword": "Ocultar senha",
+    "registeredSuccess": "Conta criada. Faça login para continuar.",
+    "sessionExpired": "Sua sessão expirou. Faça login novamente.",
+    "showPassword": "Mostrar senha",
+    "verifyEmailErrorBody": "O link é inválido ou expirou.",
+    "verifyEmailErrorTitle": "Falha na verificação",
+    "verifyEmailMissingBody": "Este link de verificação não tem os parâmetros necessários.",
+    "verifyEmailMissingTitle": "Link inválido",
+    "verifyEmailResend": "Reenviar e-mail de verificação",
+    "verifyEmailResendFailed": "Não foi possível enviar o e-mail. Tente novamente mais tarde.",
+    "verifyEmailResending": "Enviando…",
+    "verifyEmailResent": "E-mail de verificação enviado. Verifique sua caixa de entrada.",
+    "verifyEmailSuccessBody": "Seu e-mail foi verificado com sucesso.",
+    "verifyEmailSuccessTitle": "E-mail verificado!"
   },
   "AuthExtra": {
     "forgotTitle": "Recuperar Senha",
@@ -381,7 +420,12 @@
     "remote": "Remoto",
     "noJobs": "Nenhuma vaga encontrada no momento.",
     "recent": "Recentes",
-    "stats": "Estatísticas"
+    "stats": "Estatísticas",
+    "completeProfile": "Completar perfil →",
+    "matchNeedProfile": "Adicione habilidades ou uma bio no perfil para desbloquear as pontuações de correspondência.",
+    "matchScore": "Pontuação de correspondência",
+    "matchedJobs": "Melhores correspondências para você",
+    "noMatches": "Ainda não há correspondências fortes. Atualize suas habilidades ou veja todas as vagas."
   },
   "Settings": {
     "title": "Configurações da Conta",
@@ -457,7 +501,8 @@
     "youPrefix": "Você: ",
     "messagePlaceholder": "Digite sua mensagem...",
     "startConversation": "Iniciar conversa",
-    "selectConversation": "Selecione uma conversa para visualizar o histórico."
+    "selectConversation": "Selecione uma conversa para visualizar o histórico.",
+    "send": "Enviar mensagem"
   },
   "Notifications": {
     "title": "Notificações",
@@ -603,7 +648,15 @@
     "pending": "Pendente",
     "salaryNA": "A combinar",
     "loadErrorTitle": "Falha ao carregar vagas",
-    "loadErrorBody": "Não foi possível carregar as vagas no momento. Tente novamente mais tarde."
+    "loadErrorBody": "Não foi possível carregar as vagas no momento. Tente novamente mais tarde.",
+    "kicker": "CARREIRAS GLOBAIS",
+    "resultsCount": "{count} vagas",
+    "pagination": "Paginação",
+    "showResults": "Ver resultados",
+    "featured": "Destaque",
+    "allCategories": "Todas as categorias",
+    "rateLimitBody": "Aguarde um momento antes de tentar novamente.",
+    "rateLimitTitle": "Muitas solicitações"
   },
   "JobDetail": {
     "apply": "Candidatar-se",
@@ -646,7 +699,12 @@
     "contactDraft": "Gerar rascunho com IA",
     "contactGenerateDraft": "Criar Rascunho",
     "contactCopy": "Copiar texto",
-    "contactSend": "Enviar ao Empregador"
+    "contactSend": "Enviar ao Empregador",
+    "loginForMatch": "Faça login para ver sua pontuação",
+    "matchLabel": "correspondência",
+    "matchLoading": "Verificando correspondência…",
+    "matchNeedProfile": "Complete o perfil para a pontuação",
+    "matchScore": "Sua pontuação para esta vaga"
   },
   "Pricing": {
     "title": "Planos Transparentes para Impulsionar sua Carreira",
@@ -722,7 +780,12 @@
     "errIntentExpired": "A intenção de pagamento expirou. Gere uma nova cotação.",
     "errRecipient": "Endereço de destino inválido.",
     "errSubmit": "Erro ao registrar o pagamento.",
-    "errWallet": "Carteira temporariamente indisponível."
+    "errWallet": "Carteira temporariamente indisponível.",
+    "cta": "Continuar com cripto em Preços",
+    "free": "Plano gratuito",
+    "perMonth": "/mês",
+    "perYear": "/ano",
+    "qrAlt": "Código QR do endereço de pagamento"
   },
   "CareerRisk": {
     "title": "Avaliação de Risco de Carreira por IA",
@@ -912,6 +975,13 @@
     "trustSectionKicker": "Confiança e Segurança",
     "trustSectionTitle": "Transparência e alcance internacional comprovado",
     "feedTitle": "Feed de Oportunidades",
-    "feedEmpty": "Nenhuma oportunidade listada no momento."
+    "feedEmpty": "Nenhuma oportunidade listada no momento.",
+    "popularSearches": "Popular",
+    "featuredFull": "As vagas em destaque estão esgotadas — lista de espera aberta",
+    "featuredSpotsLeft": "Restam apenas {left}/{total} destaques",
+    "featuredStats": "{featured} em destaque · {jobs} vagas ativas",
+    "campaignEnds": "Termina em {date}",
+    "featureCta": "Destacar · ${price} / 7 dias",
+    "postJobCta": "Publicar vaga"
   }
 }

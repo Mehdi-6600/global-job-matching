@@ -90,18 +90,18 @@ export default async function BlogPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+    <div className="gjm-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(listLd) }}
       />
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
-          <BookOpen className="w-10 h-10 text-indigo-400 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-white mb-3">
+          <BookOpen className="w-10 h-10 text-[var(--brand-accent)] mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-3">
             {t(dict, "Blog.title", "Career Blog")}
           </h1>
-          <p className="text-slate-400">
+          <p className="text-[var(--text-muted)]">
             {t(
               dict,
               "Blog.subtitle",
@@ -111,8 +111,8 @@ export default async function BlogPage() {
         </div>
 
         {posts.length === 0 ? (
-          <div className="glass rounded-2xl p-16 text-center border border-white/10">
-            <p className="text-slate-400">
+          <div className="glass rounded-2xl p-16 text-center border border-[var(--border)]">
+            <p className="text-[var(--text-muted)]">
               {t(
                 dict,
                 "Blog.noArticles",
@@ -126,7 +126,7 @@ export default async function BlogPage() {
               <Link
                 key={post.id}
                 href={`/blog/${post.slug}`}
-                className="glass rounded-2xl overflow-hidden border border-white/10 hover:border-indigo-500/30 transition-all group"
+                className="glass rounded-2xl overflow-hidden border border-[var(--border)] hover:border-[var(--brand-accent)] transition-all group"
               >
                 {post.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -136,12 +136,12 @@ export default async function BlogPage() {
                     className="w-full h-40 object-cover"
                   />
                 ) : (
-                  <div className="w-full h-40 bg-gradient-to-br from-indigo-500/20 to-slate-800 flex items-center justify-center">
-                    <BookOpen className="w-10 h-10 text-indigo-400/50" />
+                  <div className="w-full h-40 bg-[var(--brand-accent-soft)] flex items-center justify-center">
+                    <BookOpen className="w-10 h-10 text-[var(--brand-accent)]" />
                   </div>
                 )}
                 <div className="p-5">
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                  <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-2">
                     <Calendar className="w-3.5 h-3.5" />
                     <time dateTime={post.createdAt.toISOString()}>
                       {new Intl.DateTimeFormat(
@@ -150,15 +150,15 @@ export default async function BlogPage() {
                       ).format(post.createdAt)}
                     </time>
                   </div>
-                  <h2 className="text-lg font-semibold text-white mb-2 group-hover:text-indigo-300 transition-colors line-clamp-2">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2 group-hover:text-[var(--brand-accent)] transition-colors line-clamp-2">
                     {post.title}
                   </h2>
                   {post.excerpt && (
-                    <p className="text-slate-400 text-sm line-clamp-3">
+                    <p className="text-[var(--text-muted)] text-sm line-clamp-3">
                       {post.excerpt}
                     </p>
                   )}
-                  <span className="inline-flex items-center gap-1 text-indigo-400 text-sm mt-4 group-hover:gap-2 transition-all">
+                  <span className="inline-flex items-center gap-1 text-[var(--brand-accent)] text-sm mt-4 group-hover:gap-2 transition-all">
                     {t(dict, "Blog.readMore", "Read more")}{" "}
                     <ArrowRight className="w-3 h-3" />
                   </span>

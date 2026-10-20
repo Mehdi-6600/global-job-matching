@@ -1,12 +1,12 @@
 /**
- * Unified Card — neumorphic design system.
+ * Card — Ink & Signal design system.
  *
  * Variants:
- *   raised (default) — soft neumorphic elevation, used for content blocks
- *   flat             — no shadow, subtle border, used for lists inside cards
- *   inset            — inset neumorphic, used for inputs/inner panels
+ *   raised (default) — white panel, hairline border, ambient shadow
+ *   flat             — panel without shadow, for dense lists
+ *   inset            — recessed well on the page surface
  *
- * Composition helpers:
+ * Composition helpers keep the same exported names:
  *   <Card>
  *     <CardHeader>
  *       <CardKicker>...</CardKicker>
@@ -24,9 +24,10 @@ import { cn } from "@/lib/utils";
 type CardVariant = "raised" | "flat" | "inset";
 
 const variantClass: Record<CardVariant, string> = {
-  raised: "gjm-raised border border-[var(--border-soft)]",
+  raised:
+    "bg-[var(--surface)] border border-[var(--border-soft)] shadow-[var(--shadow-1)]",
   flat: "bg-[var(--surface)] border border-[var(--border-soft)]",
-  inset: "gjm-inset border border-[var(--border)]",
+  inset: "bg-[var(--surface-2)] border border-[var(--border-soft)]",
 };
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -38,7 +39,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     <div
       ref={ref}
       className={cn(
-        "rounded-[var(--radius-2xl)]",
+        "rounded-[var(--radius-xl)] transition-colors duration-200",
         variantClass[variant],
         className,
       )}
@@ -54,7 +55,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col gap-1 p-5 sm:p-6", className)}
+    className={cn("flex flex-col gap-1.5 p-5 sm:p-6", className)}
     {...props}
   />
 ));
@@ -67,7 +68,7 @@ const CardKicker = React.forwardRef<
   <span
     ref={ref}
     className={cn(
-      "text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-hover)]",
+      "text-[0.6875rem] font-bold uppercase tracking-[0.13em] text-[var(--brand-primary-hover)]",
       className,
     )}
     {...props}
@@ -82,7 +83,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-lg font-bold text-[var(--text-primary)] leading-tight",
+      "text-lg font-semibold leading-tight tracking-[-0.02em] text-[var(--text-primary)]",
       className,
     )}
     {...props}
@@ -97,7 +98,7 @@ const CardDescription = React.forwardRef<
   <p
     ref={ref}
     className={cn(
-      "text-sm text-[var(--text-muted)] leading-relaxed",
+      "text-sm leading-relaxed text-[var(--text-muted)]",
       className,
     )}
     {...props}
@@ -109,7 +110,11 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("px-5 sm:px-6 pb-5 sm:pb-6", className)} {...props} />
+  <div
+    ref={ref}
+    className={cn("px-5 pb-5 sm:px-6 sm:pb-6", className)}
+    {...props}
+  />
 ));
 CardContent.displayName = "CardContent";
 
@@ -120,7 +125,7 @@ const CardFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "flex items-center gap-3 px-5 sm:px-6 py-4 border-t border-[var(--border-soft)]",
+      "flex items-center gap-3 border-t border-[var(--border-soft)] px-5 py-4 sm:px-6",
       className,
     )}
     {...props}

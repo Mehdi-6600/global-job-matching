@@ -76,26 +76,26 @@ export default function NewCompanyPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+    <div className="gjm-page px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <Link
           href="/employer/dashboard"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("Common.back", "Back to Dashboard")}
         </Link>
 
-        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-cyan-400" />
+            <div className="w-10 h-10 rounded-xl bg-[var(--brand-primary-soft)] border border-[var(--border)] flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-[var(--brand-primary)]" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">
+              <h1 className="text-xl font-bold text-[var(--text-primary)]">
                 {t("Employer.company", "Create Company")}
               </h1>
-              <p className="text-slate-400 text-sm">
+              <p className="text-[var(--text-muted)] text-sm">
                 {t(
                   "Employer.title",
                   "Add your company profile before posting jobs"
@@ -105,7 +105,7 @@ export default function NewCompanyPage() {
           </div>
 
           {error && (
-            <div className="mb-4 flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <div className="mb-4 flex items-start gap-2 p-3 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               {error}
             </div>
@@ -113,8 +113,8 @@ export default function NewCompanyPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <Building2 className="w-3.5 h-3.5 inline mr-1" />
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                <Building2 className="w-3.5 h-3.5 inline me-1" />
                 {t("Employer.company", "Company name")} *
               </label>
               <input
@@ -124,13 +124,13 @@ export default function NewCompanyPage() {
                 value={form.name}
                 onChange={handleChange}
                 placeholder="Acme Inc."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] transition-all placeholder:text-[var(--text-subtle)]"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <FileText className="w-3.5 h-3.5 inline mr-1" />
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                <FileText className="w-3.5 h-3.5 inline me-1" />
                 {t("JobDetail.description", "Description")}
               </label>
               <textarea
@@ -142,13 +142,13 @@ export default function NewCompanyPage() {
                   "What does your company do?"
                 )}
                 rows={4}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600 resize-none"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] transition-all placeholder:text-[var(--text-subtle)] resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <MapPin className="w-3.5 h-3.5 inline mr-1" />
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                <MapPin className="w-3.5 h-3.5 inline me-1" />
                 {t("Jobs.location", "Location")}
               </label>
               <input
@@ -160,13 +160,13 @@ export default function NewCompanyPage() {
                   "Jobs.locationPlaceholder",
                   "e.g. Berlin, Germany"
                 )}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] transition-all placeholder:text-[var(--text-subtle)]"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <Globe className="w-3.5 h-3.5 inline mr-1" />
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                <Globe className="w-3.5 h-3.5 inline me-1" />
                 {t("Companies.website", "Website")}
               </label>
               <input
@@ -175,14 +175,14 @@ export default function NewCompanyPage() {
                 value={form.website}
                 onChange={handleChange}
                 placeholder="https://example.com"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] transition-all placeholder:text-[var(--text-subtle)]"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl text-sm font-semibold shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-60 active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] py-3 rounded-xl text-sm font-semibold shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-60 active:scale-[0.98]"
             >
               {submitting ? (
                 <>
@@ -199,6 +199,6 @@ export default function NewCompanyPage() {
           </form>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

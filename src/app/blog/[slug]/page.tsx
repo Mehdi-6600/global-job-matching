@@ -115,7 +115,7 @@ export default async function BlogPostPage({ params }: Props) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+    <div className="gjm-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
@@ -127,13 +127,13 @@ export default async function BlogPostPage({ params }: Props) {
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <Link
           href="/blog"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />{" "}
           {t(dict, "Blog.back", "Back to Blog")}
         </Link>
 
-        <article className="glass rounded-2xl p-8 sm:p-10 border border-white/10">
+        <article className="glass rounded-2xl p-8 sm:p-10 border border-[var(--border)]">
           {post.coverImage && /^https:\/\//i.test(post.coverImage) && (
             <div
               className="h-64 rounded-xl bg-cover bg-center mb-8"
@@ -141,37 +141,37 @@ export default async function BlogPostPage({ params }: Props) {
             />
           )}
 
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+          <div className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-4">
             <Calendar className="w-4 h-4" />
             {new Date(post.createdAt).toLocaleDateString(locale)}
           </div>
 
-          <h1 className="text-3xl font-bold text-white mb-6">{post.title}</h1>
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-6">{post.title}</h1>
 
           {post.excerpt && (
-            <p className="text-lg text-slate-300 mb-8 leading-relaxed border-l-4 border-indigo-500/30 pl-4">
+            <p className="text-lg text-[var(--text-body)] mb-8 leading-relaxed border-l-4 border-[var(--brand-accent)] ps-4">
               {post.excerpt}
             </p>
           )}
 
           <div
-            className="prose prose-invert prose-lg max-w-none text-slate-300 leading-relaxed"
+            className="prose prose-invert prose-lg max-w-none text-[var(--text-body)] leading-relaxed"
             dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
 
-          <div className="mt-10 pt-6 border-t border-white/10 flex flex-wrap gap-4 text-sm">
-            <Link href="/jobs" className="text-indigo-400 hover:underline">
+          <div className="mt-10 pt-6 border-t border-[var(--border)] flex flex-wrap gap-4 text-sm">
+            <Link href="/jobs" className="text-[var(--brand-accent)] hover:underline">
               Browse jobs
             </Link>
             <Link
               href="/career-risk"
-              className="text-indigo-400 hover:underline"
+              className="text-[var(--brand-accent)] hover:underline"
             >
               AI Career Risk
             </Link>
             <Link
               href="/locations"
-              className="text-indigo-400 hover:underline"
+              className="text-[var(--brand-accent)] hover:underline"
             >
               Jobs by location
             </Link>

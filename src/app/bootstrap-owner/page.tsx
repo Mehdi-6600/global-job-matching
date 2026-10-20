@@ -33,12 +33,12 @@ export default function BootstrapOwnerPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6">
-      <div className="max-w-md w-full rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--text-primary)] flex items-center justify-center p-6">
+      <div className="max-w-md w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-6 space-y-4">
         <h1 className="text-xl font-bold">
           {t("Nav.admin", "Bootstrap Owner")}
         </h1>
-        <p className="text-slate-300 text-sm leading-relaxed">
+        <p className="text-[var(--text-body)] text-sm leading-relaxed">
           {t(
             "Dashboard.welcomeSub",
             "One-time setup. You must be signed in with OWNER_EMAIL."
@@ -48,22 +48,22 @@ export default function BootstrapOwnerPage() {
           type="button"
           onClick={runBootstrap}
           disabled={loading}
-          className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 font-semibold"
+          className="w-full py-3 rounded-xl bg-[var(--brand-accent)] hover:bg-[var(--brand-accent-hover)] disabled:opacity-50 font-semibold"
         >
           {loading
             ? t("Common.loading", "Please wait...")
             : t("Nav.admin", "Make me Owner")}
         </button>
         {msg && (
-          <p className="text-sm text-cyan-300 whitespace-pre-wrap">{msg}</p>
+          <p className="text-sm text-[var(--brand-primary)] whitespace-pre-wrap">{msg}</p>
         )}
         <Link
           href="/dashboard"
-          className="block text-center text-slate-400 text-sm"
+          className="block text-center text-[var(--text-muted)] text-sm"
         >
           {t("Common.back", "Back to dashboard")}
         </Link>
       </div>
-    </main>
+    </div>
   );
 }

@@ -86,12 +86,12 @@ export default function SourceCompaniesClient({
 
   function statusBadge(row: Row): { text: string; cls: string } {
     if (row.status === "active" && row.legalStatus === "APPROVED") {
-      return { text: "✅ تأییدشده و فعال", cls: "bg-green-100 text-green-900" };
+      return { text: "✅ تأییدشده و فعال", cls: "bg-[var(--success-soft)] text-[var(--success-strong)]" };
     }
     if (row.status === "blocked" || row.legalStatus === "DISABLED") {
-      return { text: "🚫 غیرفعال", cls: "bg-red-100 text-red-900" };
+      return { text: "🚫 غیرفعال", cls: "bg-[var(--error-soft)] text-[var(--error-strong)]" };
     }
-    return { text: "⏳ در انتظار بررسی حقوقی", cls: "bg-yellow-100 text-yellow-900" };
+    return { text: "⏳ در انتظار بررسی حقوقی", cls: "bg-[var(--warning-soft)] text-[var(--warning)]" };
   }
 
   return (
@@ -99,7 +99,7 @@ export default function SourceCompaniesClient({
       <h1 className="mb-2 text-2xl font-bold">
         مدیریت منابع ATS
       </h1>
-      <p className="mb-6 text-sm text-gray-600">
+      <p className="mb-6 text-sm text-[var(--text-subtle)]">
         این صفحه فقط برای ادمین است. تصمیم حقوقی با شماست — من به‌جای
         شما تأیید نمی‌کنم.
       </p>
@@ -108,7 +108,7 @@ export default function SourceCompaniesClient({
       <button
         onClick={() => post({ action: "seed" }, "seed")}
         disabled={busy !== null}
-        className="mb-6 w-full rounded-2xl bg-green-600 px-6 py-4 text-lg font-bold text-white shadow-lg active:scale-95 disabled:opacity-50"
+        className="mb-6 w-full rounded-2xl bg-[var(--success)] px-6 py-4 text-lg font-bold text-[var(--text-on-brand)] shadow-lg active:scale-95 disabled:opacity-50"
       >
         {busy === "seed"
           ? "در حال افزودن..."
@@ -116,13 +116,13 @@ export default function SourceCompaniesClient({
       </button>
 
       {message && (
-        <div className="mb-6 rounded-lg bg-gray-100 px-4 py-3 text-center text-sm">
+        <div className="mb-6 rounded-lg bg-[var(--surface-2)] px-4 py-3 text-center text-sm">
           {message}
         </div>
       )}
 
       {/* --- خلاصه --- */}
-      <div className="mb-6 rounded-lg bg-blue-50 px-4 py-3 text-sm">
+      <div className="mb-6 rounded-lg bg-[var(--info-soft)] px-4 py-3 text-sm">
         <div>کل: {summary.total}</div>
         <div>
           به ازای provider:{" "}
@@ -140,7 +140,7 @@ export default function SourceCompaniesClient({
 
       {/* --- لیست --- */}
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 px-4 py-12 text-center text-gray-500">
+        <div className="rounded-lg border border-dashed border-[var(--border)] px-4 py-12 text-center text-[var(--text-muted)]">
           هنوز هیچ شرکتی اضافه نشده. دکمه سبز بالا را بزن.
         </div>
       ) : (
@@ -152,12 +152,12 @@ export default function SourceCompaniesClient({
             return (
               <li
                 key={row.id}
-                className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+                className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] p-4 shadow-sm"
               >
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <div>
                     <div className="text-lg font-bold">{row.companyName}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-[var(--text-muted)]">
                       {row.provider} • {row.boardIdentifier}
                     </div>
                   </div>
@@ -169,7 +169,7 @@ export default function SourceCompaniesClient({
                 </div>
 
                 {row.lastError && (
-                  <div className="mb-3 rounded bg-red-50 px-2 py-1 text-xs text-red-800">
+                  <div className="mb-3 rounded bg-[var(--error-soft)] px-2 py-1 text-xs text-[var(--error-strong)]">
                     آخرین خطا: {row.lastError}
                   </div>
                 )}
@@ -191,7 +191,7 @@ export default function SourceCompaniesClient({
                         )
                       }
                       disabled={busy !== null}
-                      className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white active:scale-95 disabled:opacity-50"
+                      className="flex-1 rounded-lg bg-[var(--success)] px-4 py-3 text-sm font-bold text-[var(--text-on-brand)] active:scale-95 disabled:opacity-50"
                     >
                       {busy === row.id ? "..." : "✅ تأیید حقوقی"}
                     </button>
@@ -210,14 +210,14 @@ export default function SourceCompaniesClient({
                         )
                       }
                       disabled={busy !== null}
-                      className="flex-1 rounded-lg bg-red-600 px-4 py-3 text-sm font-bold text-white active:scale-95 disabled:opacity-50"
+                      className="flex-1 rounded-lg bg-[var(--error)] px-4 py-3 text-sm font-bold text-[var(--text-on-brand)] active:scale-95 disabled:opacity-50"
                     >
                       {busy === row.id ? "..." : "🚫 غیرفعال کن"}
                     </button>
                   )}
                 </div>
 
-                <div className="mt-3 text-xs text-gray-500">
+                <div className="mt-3 text-xs text-[var(--text-muted)]">
                   {active
                     ? "این شرکت مجاز است. jobهایش در sync شبانه وارد سایت می‌شوند."
                     : "برای تأیید، اول Terms و robots این شرکت را خوانده‌ای، سپس این دکمه را بزن."}
