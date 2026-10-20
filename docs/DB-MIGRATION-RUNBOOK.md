@@ -68,22 +68,27 @@ delete 12 columns and 1 table.
 
 ## Repair (owner step — needs database credentials)
 
+Two ready-to-paste files, no Node install needed:
+
+| File | What it is |
+| --- | --- |
+| `docs/repair/01-schema.sql` | The 17 pending migrations, in order, all idempotent. 137 statements: 51 `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, 7 `CREATE TABLE IF NOT EXISTS`, 69 `CREATE INDEX IF NOT EXISTS`, 10 guarded `DO` blocks. Zero `DROP` / `DELETE` / `TRUNCATE`. |
+| `docs/repair/02-migration-history.sql` | The SQL equivalent of `prisma migrate resolve --applied` for those 17 migrations, with the exact SHA-256 Prisma stores. Idempotent. Run it **after** 01 succeeds. |
+
+Run them in the production Postgres SQL editor (Neon / Supabase / Vercel
+Postgres), 01 then 02. Take a backup first if the provider offers one.
+
+Prefer a terminal? The same repair exists as a script:
+
 ```bash
 cd global-job-matching
 npm ci
 export DATABASE_URL="postgresql://…"        # production direct URL
 
-# 1. dry run: inspect what will be added, nothing is executed
-bash scripts/apply-additive-drift.sh
-
-# 2. apply only ADD COLUMN / CREATE TABLE / CREATE INDEX / ADD CONSTRAINT
-APPLY=yes bash scripts/apply-additive-drift.sh
-
-# 3. mark the migrations the database already satisfies as applied
-RESOLVE=yes bash scripts/apply-additive-drift.sh
-
-# 4. verify the live API
-bash scripts/apply-additive-drift.sh --verify
+bash scripts/apply-additive-drift.sh              # 1. dry run, inspect the SQL
+APPLY=yes bash scripts/apply-additive-drift.sh    # 2. additive statements only
+RESOLVE=yes bash scripts/apply-additive-drift.sh  # 3. align the history
+bash scripts/apply-additive-drift.sh --verify     # 4. /api/jobs must be 200
 ```
 
 Expected end state: `prisma migrate status` reports
@@ -97,6 +102,24 @@ Optional safety net before step 2 (needs `pg_dump`):
 ```bash
 pg_dump "$DATABASE_URL" --no-owner --format=custom -f gjm-$(date +%F).dump
 ```
+
+## Second defect found while building the repair
+
+Four columns existed in `prisma/schema.prisma` but in **no** migration:
+
+```
+PaymentIntent.jobId, PaymentIntent.featuredDuration,
+Transaction.jobId,   Transaction.featuredDuration
+```
+
+The Prisma client selects them, the database does not have them, and no
+`migrate deploy` would ever create them — so the drift was self-renewing.
+`prisma/migrations/20261020030000_add_payment_intent_links/migration.sql` adds
+them with `ADD COLUMN IF NOT EXISTS` plus guarded foreign keys, and is included
+in `docs/repair/01-schema.sql`.
+
+A local audit now confirms that every scalar field in `schema.prisma` is created
+by at least one migration (0 gaps).
 
 ## Prevent recurrence (in this PR)
 
