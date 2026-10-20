@@ -48,6 +48,19 @@ def one_line(text, limit=200):
     return re.sub(r"\s+", " ", text)[:limit]
 
 
+def visible_text(html: str) -> str:
+    """Strip scripts, styles and comments.
+
+    Client bundles ship translated strings (e.g. the error boundary's
+    "Something went wrong"), so a raw substring match produces false positives.
+    Only text that survives this filter is rendered to the visitor.
+    """
+    html = re.sub(r"(?is)<script\b.*?</script>", " ", html)
+    html = re.sub(r"(?is)<style\b.*?</style>", " ", html)
+    html = re.sub(r"(?s)<!--.*?-->", " ", html)
+    return html
+
+
 def fetch(path, timeout=45):
     req = urllib.request.Request(BASE + path, headers={"User-Agent": UA})
     try:
@@ -147,17 +160,21 @@ code, _, jobs_html = fetch("/jobs")
 cards = re.findall(r'href="[^"]*/jobs/([a-z0-9]{20,})"', jobs_html)
 record("PASS" if len(cards) >= 5 else "FAIL",
        f"/jobs lists {len(cards)} job links")
-record("PASS" if "Could not load jobs" not in jobs_html else "FAIL",
+record("PASS" if "Could not load jobs" not in visible_text(jobs_html) else "FAIL",
        "/jobs has no 'Could not load jobs' error")
 if cards:
     detail = f"/jobs/{cards[0]}"
     code, _, detail_html = fetch(detail)
     record("PASS" if code == 200 else "FAIL", f"GET {detail} → {code}")
-    record("PASS" if "Something went wrong" not in detail_html else "FAIL",
+    record("PASS" if "Something went wrong" not in visible_text(detail_html) else "FAIL",
            "job detail has no error boundary")
     record("PASS" if len(detail_html) > 4000 else "WARN",
            f"job detail payload {len(detail_html)} bytes")
-record("PASS" if "Could not load jobs" not in html else "FAIL",
+    record("PASS" if "<h1" in detail_html else "FAIL", "job detail has an <h1> title")
+    visible = visible_text(detail_html)
+    record("PASS" if "Apply" in visible or "Sign In" in visible else "FAIL",
+           "job detail shows an apply / sign-in call to action")
+record("PASS" if "Could not load jobs" not in visible_text(html) else "FAIL",
        "homepage has no 'Could not load jobs' error")
 code, _, companies = fetch("/companies")
 record("PASS" if code == 200 and re.search(r"/jobs\?company=", companies) else "FAIL",
