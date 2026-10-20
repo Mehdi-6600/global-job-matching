@@ -9,9 +9,6 @@ on:
         description: Base URL to probe
         required: false
         default: https://global-job-matching.vercel.app
-  push:
-    branches: [arena/a17bbb2a-global-job-matching]
-    paths: [.github/workflows/live-verify.yml]
 
 permissions:
   contents: write

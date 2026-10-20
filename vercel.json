@@ -16,6 +16,5 @@
       "path": "/api/cron/outreach",
       "schedule": "0 9 * * *"
     }
-  ],
-  "buildCommand": "bash scripts/db-drift-report.sh; npm run build"
+  ]
 }
