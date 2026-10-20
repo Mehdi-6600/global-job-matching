@@ -127,6 +127,15 @@ check_pattern("/hi renders Devanagari", "/hi", r"[\u0900-\u097f]")
 code, _, _ = fetch("/he")
 record("PASS" if code in (302, 307, 404) else "WARN", f"/he (unsupported locale) → {code}")
 
+record("--", "pricing page content")
+code, _, pricing_html = fetch("/pricing")
+pricing_text = visible_text(pricing_html)
+record("PASS" if code == 200 else "FAIL", f"/pricing → {code}")
+record("PASS" if re.search(r"\$\s?\d+|\d+\s?USD|/month|/mo", pricing_text) else "WARN",
+       "pricing page shows a price")
+record("PASS" if len(re.findall(r"<(section|article|div)[^>]*class=", pricing_html)) > 20 else "WARN",
+       "pricing page renders layout blocks")
+
 record("--", "design system payload")
 code, _, html = fetch("/")
 css_urls = list(dict.fromkeys(re.findall(r'/_next/static/css/[A-Za-z0-9._-]+\.css', html)))
