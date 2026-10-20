@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { planHistoryRepair } from "../../../scripts/repair-migration-history.mjs";
 
-const row = (id: string, migration_name: string, applied = true) => ({
+const row = (id: string, migration_name: string, applied = true, rolledBack = false) => ({
   id,
   migration_name,
   finished: applied,
-  rolled_back: false,
+  rolled_back: rolledBack,
 });
 
 const LOCAL = [
@@ -21,6 +21,7 @@ describe("planHistoryRepair", () => {
     const plan = planHistoryRepair([row("1", "20260905120000_ensur")], LOCAL);
 
     expect(plan.problems).toEqual([]);
+    expect(plan.voids).toEqual([]);
     expect(plan.renames).toEqual([
       { id: "1", from: "20260905120000_ensur", to: "20260905120000_ensure_integrity" },
     ]);
@@ -32,7 +33,7 @@ describe("planHistoryRepair", () => {
       LOCAL,
     );
 
-    expect(plan).toEqual({ renames: [], problems: [] });
+    expect(plan).toEqual({ renames: [], voids: [], problems: [] });
   });
 
   it("refuses a row that matches no local migration", () => {
@@ -51,21 +52,43 @@ describe("planHistoryRepair", () => {
     expect(plan.problems[0]?.reason).toContain("ambiguous");
   });
 
-  it("refuses when the full name is already recorded", () => {
+  it("voids a shortened row when the full name is already applied", () => {
     const plan = planHistoryRepair(
       [row("1", "20260905120000_ensur"), row("2", "20260905120000_ensure_integrity")],
       LOCAL,
     );
 
+    expect(plan.problems).toEqual([]);
     expect(plan.renames).toEqual([]);
-    expect(plan.problems[0]?.reason).toContain("already exists");
+    expect(plan.voids).toEqual([
+      { id: "1", from: "20260905120000_ensur", to: "20260905120000_ensure_integrity" },
+    ]);
   });
 
-  it("does not rename failed or rolled-back rows", () => {
+  it("refuses to void when the full name is not applied", () => {
+    const plan = planHistoryRepair(
+      [row("1", "20260905120000_ensur"), row("2", "20260905120000_ensure_integrity", false)],
+      LOCAL,
+    );
+
+    expect(plan.voids).toEqual([]);
+    expect(plan.problems[0]?.reason).toContain("not applied");
+  });
+
+  it("ignores rows that are already voided", () => {
+    const plan = planHistoryRepair(
+      [row("1", "20260905120000_ensur", true, true), row("2", "20260905120000_ensure_integrity")],
+      LOCAL,
+    );
+
+    expect(plan).toEqual({ renames: [], voids: [], problems: [] });
+  });
+
+  it("does not rename a half-applied row", () => {
     const plan = planHistoryRepair([row("1", "20260905120000_ensur", false)], LOCAL);
 
     expect(plan.renames).toEqual([]);
-    expect(plan.problems[0]?.reason).toContain("failed or rolled back");
+    expect(plan.problems[0]?.reason).toContain("half-applied");
   });
 
   it("never maps two damaged rows onto the same migration", () => {
@@ -76,6 +99,6 @@ describe("planHistoryRepair", () => {
 
     expect(plan.renames).toHaveLength(1);
     expect(plan.problems).toHaveLength(1);
-    expect(plan.problems[0]?.reason).toContain("already exists");
+    expect(plan.problems[0]?.reason).toContain("already maps to");
   });
 });
