@@ -72,8 +72,8 @@ Two ready-to-paste files, no Node install needed:
 
 | File | What it is |
 | --- | --- |
-| `docs/repair/01-schema.sql` | The 17 pending migrations, in order, all idempotent. 137 statements: 51 `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, 7 `CREATE TABLE IF NOT EXISTS`, 69 `CREATE INDEX IF NOT EXISTS`, 10 guarded `DO` blocks. Zero `DROP` / `DELETE` / `TRUNCATE`. |
-| `docs/repair/02-migration-history.sql` | The SQL equivalent of `prisma migrate resolve --applied` for those 17 migrations, with the exact SHA-256 Prisma stores. Idempotent. Run it **after** 01 succeeds. |
+| `docs/repair/01-schema.sql` | The 18 pending migrations, in order, all idempotent. 177 statements: 86 `ALTER TABLE`, 73 `CREATE INDEX IF NOT EXISTS`, 8 `CREATE TABLE IF NOT EXISTS`, 10 guarded `DO` blocks. Zero `DROP` / `DELETE` / `TRUNCATE`. |
+| `docs/repair/02-migration-history.sql` | The SQL equivalent of `prisma migrate resolve --applied` for those 18 migrations, with the exact SHA-256 Prisma stores. Idempotent. Run it **after** 01 succeeds. |
 
 Run them in the production Postgres SQL editor (Neon / Supabase / Vercel
 Postgres), 01 then 02. Take a backup first if the provider offers one.
@@ -118,8 +118,27 @@ The Prisma client selects them, the database does not have them, and no
 them with `ADD COLUMN IF NOT EXISTS` plus guarded foreign keys, and is included
 in `docs/repair/01-schema.sql`.
 
-A local audit now confirms that every scalar field in `schema.prisma` is created
-by at least one migration (0 gaps).
+## Third defect: `JobSource` had no creator
+
+`JobSource` is created by `20260318120000_job_ingestion_network`, which predates
+`production_baseline`, and the baseline does not re-create it. Several later
+migrations add indexes to it **outside** any guard, so on a database that never
+ran the March migration those statements error out. `20261020040000_add_job_source_table`
+creates the table and every column idempotently and is emitted as the prelude of
+`docs/repair/01-schema.sql`.
+
+## Proof the repair works
+
+The two repair files were executed against a throwaway PostgreSQL 17 instance
+created with `pgserver`, starting from `production_baseline` only:
+
+* pass 1 and pass 2: **0 error lines** (idempotent),
+* afterwards: 0 tables and 0 columns from `schema.prisma` are missing,
+  148 indexes present,
+* `_prisma_migrations` holds baseline + 18 rows, all with `finished_at`.
+
+A local audit also confirms that every scalar field in `schema.prisma` is
+created by at least one migration (0 gaps).
 
 ## Prevent recurrence (in this PR)
 
