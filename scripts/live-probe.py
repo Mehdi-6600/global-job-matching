@@ -179,6 +179,11 @@ if cards:
     visible = visible_text(detail_html)
     record("PASS" if "Apply" in visible or "Sign In" in visible else "FAIL",
            "job detail shows an apply / sign-in call to action")
+    # The match-score card used to fall through to the error paragraph before
+    # hydration, so a logged-out visitor saw "Something went wrong" on every
+    # job page. It must show a loading/muted state instead.
+    record("PASS" if "Your match score" in visible else "WARN",
+           "job detail renders the match-score card")
 record("PASS" if "Could not load jobs" not in visible_text(html) else "FAIL",
        "homepage has no 'Could not load jobs' error")
 code, _, companies = fetch("/companies")
