@@ -183,6 +183,44 @@ created with `pgserver`, starting from `production_baseline` only:
 A local audit also confirms that every scalar field in `schema.prisma` is
 created by at least one migration (0 gaps).
 
+## 2026-10-20 (later): shortened history rows blocked the deploy
+
+After the repair above ran through a one-off build, `_prisma_migrations` ended up
+holding rows whose `migration_name` is **cut short** — for example
+`20260905120000_ensur` instead of `20260905120000_ensure_integrity`. The schema
+was correct, but `prisma migrate status` reported
+
+```
+Your local migration history and the migrations table from your database are different:
+The last common migration is: …
+The migrations from the database are not found locally in prisma/migrations:
+20260905120000_ensur
+…
+```
+
+so `scripts/deploy-build.sh` failed closed and **no code could ship** (builds of
+`c284ed3` and everything after it). `prisma migrate deploy` would have refused
+the same way: a row with an unknown name blocks the whole history.
+
+Two read-only/one-write diagnostic tools were added:
+
+| Command | What it does |
+| --- | --- |
+| `node scripts/migration-status-report.mjs [--full]` | Prints local vs. database migration state in ~10 short lines. Runs at the end of every Vercel build, so the tail of the build log always says why a deploy was blocked. Read-only. |
+| `node scripts/repair-migration-history.mjs [--apply]` | Renames history rows whose name is a prefix of **exactly one** migration in `prisma/migrations/`. Dry run without `--apply`. |
+
+The repair is deliberately narrow — it never deletes, never touches a business
+table, and writes only when the mapping is unambiguous (one candidate prefix, no
+existing row with the full name, no two rows mapping to the same migration).
+Otherwise it prints the offending rows and exits 1 without writing. All renames
+commit in a single transaction.
+
+`deploy-build.sh` runs it automatically when the pre-flight sees a divergence,
+then re-checks `prisma migrate status` and continues to `prisma migrate deploy`
+only if the history is clean. If you prefer to do it by hand, run
+`node scripts/repair-migration-history.mjs --apply` from a terminal that has the
+production `DATABASE_URL`.
+
 ## Payment sweep without a paid plan
 
 The 10-minute payment verification can no longer live in `vercel.json` (that is
