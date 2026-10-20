@@ -40,11 +40,18 @@
 
 ## ۴. کرون چجوری کار می‌کنه؟
 
-`vercel.json`:
+`vercel.json` (پلن Hobby فقط کرون روزانه قبول می‌کنه):
 ```json
-{ "path": "/api/cron/verify-payments", "schedule": "*/10 * * * *" }
+{ "path": "/api/cron/verify-payments", "schedule": "30 5 * * *" }
 ```
-هر ۱۰ دقیقه Vercel خودش صدا می‌زنه → ۲۰ تا قدیمی‌ترین pending رو چک می‌کنه → برای هر کدوم `verifyTxOnChain` می‌زنه:
+
+> ⚠️ محدودیت مهم Vercel Hobby: هر کرون حداکثر **یک بار در روز**. عبارت‌هایی مثل `*/10 * * * *` کل دیپلوی رو با خطای
+> «Hobby accounts are limited to daily cron jobs» رد می‌کنن. برای همون چک هر ۱۰ دقیقه،
+> `.github/workflows/verify-payments-cron.yml` هر ۱۰ دقیقه همین endpoint رو صدا می‌زنه — کافیه در
+> `GitHub → Settings → Secrets and variables → Actions` مقدار `CRON_SECRET` رو (همون مقدار Vercel) اضافه کنی.
+> بدون این secret، workflow فقط skip می‌شه و کرون روزانه Vercel پشتیبان کاره.
+
+هر ۱۰ دقیقه (از طریق workflow) یا روزی یک بار (Vercel) یکی صدا می‌زنه → ۲۰ تا قدیمی‌ترین pending رو چک می‌کنه → برای هر کدوم `verifyTxOnChain` می‌زنه:
 - `confirmed` → خودکار `Transaction.status=confirmed` + `Job.featured=true` یا `activatePlanForUser` + نوتیفیکیشن
 - `pending` → صبر (هنوز کانفرم نشده)
 - `failed/not_found` → می‌مونه pending تا تو دستی reject کنی (fail-closed)
