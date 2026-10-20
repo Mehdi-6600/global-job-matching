@@ -53,7 +53,11 @@ export function localMigrationNames(dir = MIGRATIONS_DIR) {
  *
  * @param {{ id: string, migration_name: string, finished: boolean, rolled_back: boolean }[]} rows
  * @param {string[]} localNames
- * @returns {{ renames: { id: string, from: string, to: string }[], problems: { from: string, reason: string }[] }}
+ * @returns {{
+ *   renames: { id: string, from: string, to: string }[],
+ *   voids: { id: string, from: string, to: string }[],
+ *   problems: { from: string, reason: string }[]
+ * }}
  */
 export function planHistoryRepair(rows, localNames) {
   const local = new Set(localNames);
