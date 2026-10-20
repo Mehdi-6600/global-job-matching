@@ -16,5 +16,6 @@
       "path": "/api/cron/outreach",
       "schedule": "0 9 * * *"
     }
-  ]
+  ],
+  "buildCommand": "npx prisma migrate status || true; npm run build"
 }
