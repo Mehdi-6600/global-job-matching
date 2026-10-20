@@ -683,6 +683,7 @@
     "deadline": "截止日期",
     "responsibilities": "核心工作内容",
     "matchScoreTitle": "人岗匹配度智能分析",
+    "matchUnavailable": "匹配分数暂不可用",
     "overallFit": "综合匹配指数",
     "skills": "技能重合度",
     "experience": "年限背景契合",

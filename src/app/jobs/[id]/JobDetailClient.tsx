@@ -206,7 +206,7 @@ export default function JobDetailClient({
   } | null>(null);
 
   const [match, setMatch] = useState<MatchData | null>(null);
-  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchLoading, setMatchLoading] = useState(true);
   const [matchMessage, setMatchMessage] = useState("");
 
   const timeAgo = useCallback(
@@ -382,7 +382,7 @@ export default function JobDetailClient({
           } else {
             setMatch(null);
             setMatchMessage(
-              t("Common.error", "Could not load match score"),
+              t("JobDetail.matchUnavailable", "Match score unavailable"),
             );
           }
         } else {
@@ -399,7 +399,7 @@ export default function JobDetailClient({
       .catch(() => {
         if (!cancelled) {
           setMatch(null);
-          setMatchMessage(t("Common.error", "Could not load match score"));
+          setMatchMessage(t("JobDetail.matchUnavailable", "Match score unavailable"));
         }
       })
       .finally(() => {
@@ -785,7 +785,7 @@ export default function JobDetailClient({
                 <div className="text-sm text-[var(--text-muted)] space-y-3">
                   <p>
                     {matchMessage ||
-                      t("Common.error", "Match score unavailable.")}
+                      t("JobDetail.matchUnavailable", "Match score unavailable")}
                   </p>
                   {(matchMessage || "").toLowerCase().includes("sign in") && (
                     <Link
