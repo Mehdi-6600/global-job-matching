@@ -68,17 +68,37 @@ delete 12 columns and 1 table.
 
 ## Repair (owner step — needs database credentials)
 
-Two ready-to-paste files, no Node install needed:
+Two ready-to-paste files, no Node install needed (Option 1), plus fallbacks if editing SQL on a phone or a plan limit gets in the way:
 
 | File | What it is |
 | --- | --- |
 | `docs/repair/01-schema.sql` | The 18 pending migrations, in order, all idempotent. 177 statements: 86 `ALTER TABLE`, 73 `CREATE INDEX IF NOT EXISTS`, 8 `CREATE TABLE IF NOT EXISTS`, 10 guarded `DO` blocks. Zero `DROP` / `DELETE` / `TRUNCATE`. |
 | `docs/repair/02-migration-history.sql` | The SQL equivalent of `prisma migrate resolve --applied` for those 18 migrations, with the exact SHA-256 Prisma stores. Idempotent. Run it **after** 01 succeeds. |
 
+### Option 1 — paste into a SQL editor
+
 Run them in the production Postgres SQL editor (Neon / Supabase / Vercel
 Postgres), 01 then 02. Take a backup first if the provider offers one.
 
-Prefer a terminal? The same repair exists as a script:
+### Option 2 — GitHub Actions (free, no database plan, no laptop)
+
+The repository is public, so Actions minutes are free and unlimited; the Neon
+plan does not matter for that. Add the connection string once as a repository
+secret (Settings → Secrets and variables → Actions → `DATABASE_URL`; use Neon's
+**direct** host, not the `-pooler` one), then either:
+
+* run `Database repair` from the Actions tab, or
+* commit a change to `.github/db-repair-request` (template:
+  `.github/db-repair-request.example`).
+
+The workflow applies `01-schema.sql` then `02-migration-history.sql`, prints the
+read-only pre-flight state, fails if any expected column is still missing, then
+polls `/api/jobs` until it returns 200 and posts the outcome as a commit comment.
+It masks the connection string and does nothing when the secret is absent.
+
+### Option 3 — terminal script
+
+The same repair as a script:
 
 ```bash
 cd global-job-matching
