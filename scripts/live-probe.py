@@ -166,8 +166,13 @@ if cards:
     detail = f"/jobs/{cards[0]}"
     code, _, detail_html = fetch(detail)
     record("PASS" if code == 200 else "FAIL", f"GET {detail} → {code}")
-    record("PASS" if "Something went wrong" not in visible_text(detail_html) else "FAIL",
-           "job detail has no error boundary")
+    visible_detail = visible_text(detail_html)
+    if "Something went wrong" in visible_detail:
+        at = visible_detail.find("Something went wrong")
+        record("FAIL", "job detail has no error boundary"
+               f" | context: {one_line(visible_detail[max(0, at - 300):at + 80], 380)}")
+    else:
+        record("PASS", "job detail has no error boundary")
     record("PASS" if len(detail_html) > 4000 else "WARN",
            f"job detail payload {len(detail_html)} bytes")
     record("PASS" if "<h1" in detail_html else "FAIL", "job detail has an <h1> title")
