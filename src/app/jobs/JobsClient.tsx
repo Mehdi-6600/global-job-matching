@@ -1,24 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Search,
-  MapPin,
-  DollarSign,
-  Filter,
-  X,
-  Loader2,
+  AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Building2,
+  Filter,
   Globe,
-  Tag,
-  AlertCircle,
   Layers,
-  ExternalLink,
+  Loader2,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
-import { CompanyLogo } from "@/components/company-logo";
+import { JobCard } from "@/components/jobs/job-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonJobCard } from "@/components/ui/skeleton";
 import { useLocale } from "@/components/locale-provider";
 import { categoryLabel } from "@/lib/i18n/category-labels";
 
@@ -35,11 +34,10 @@ interface Job {
   currency: string;
   tags: string[];
   createdAt: string;
-  // Featured boost (crypto one-time payment)
+  /* Featured boost (crypto one-time payment) */
   featured?: boolean;
   featuredUntil?: string | null;
-  // Ingestion provenance — present for aggregated jobs (RemoteOK, Jobicy,
-  // Arbeitnow, ...), null for employer-posted jobs.
+  /* Ingestion provenance — present for aggregated jobs. */
   source: string | null;
   attribution: string | null;
   externalUrl: string | null;
@@ -58,7 +56,7 @@ interface CategoryOption {
   name: string;
   slug: string;
   count: number;
-  /** Precomputed localized labels from /api/categories, keyed by locale code. */
+  /** Precomputed localized labels from /api/categories, keyed by locale. */
   labels?: Record<string, string>;
 }
 
@@ -90,13 +88,69 @@ const TEXT_DEBOUNCE_MS = 350;
 
 type FetchError = false | "rate_limit" | "generic";
 
-
 type JobsClientProps = {
   initialJobs?: Job[];
   initialTotalPages?: number;
 };
 
-export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClientProps) {
+/** Build the /api/jobs query string from the current filter state. */
+function buildParams(
+  filters: Filters,
+  debounced: { search: string; location: string; tag: string },
+  page: number,
+): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+
+  if (debounced.search) params.set("search", debounced.search);
+  if (debounced.location) params.set("location", debounced.location);
+  if (filters.type) params.set("type", filters.type);
+  if (filters.experience) params.set("experience", filters.experience);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.remote) params.set("remote", "true");
+  if (debounced.tag) params.set("tag", debounced.tag);
+
+  const min = parseInt(filters.minSalary, 10);
+  const max = parseInt(filters.maxSalary, 10);
+  if (Number.isFinite(min) && min >= 0) params.set("minSalary", String(min));
+  if (Number.isFinite(max) && max >= 0) params.set("maxSalary", String(max));
+
+  return params;
+}
+
+/** Filters encoded in the URL (so home/search links land pre-filtered). */
+function filtersFromUrl(): Filters | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const next: Filters = {
+    ...EMPTY_FILTERS,
+    search: params.get("search") || params.get("q") || "",
+    location: params.get("location") || "",
+    type: params.get("type") || "",
+    experience: params.get("experience") || "",
+    category: params.get("category") || "",
+    remote: params.get("remote") === "true",
+    minSalary: params.get("minSalary") || "",
+    maxSalary: params.get("maxSalary") || "",
+    tag: params.get("tag") || "",
+  };
+
+  const changed = (Object.keys(next) as (keyof Filters)[]).some(
+    (key) => next[key] !== EMPTY_FILTERS[key],
+  );
+
+  return changed ? next : null;
+}
+
+const labelClass =
+  "mb-1.5 block text-[0.75rem] font-semibold text-[var(--text-body)]";
+const controlClass =
+  "h-10 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[0.875rem] text-[var(--text-primary)] placeholder:text-[var(--text-subtle)] transition-colors focus-visible:border-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary-soft)]";
+
+export function JobsClient({
+  initialJobs = [],
+  initialTotalPages = 1,
+}: JobsClientProps) {
   const { t, locale } = useLocale();
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -110,8 +164,10 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
   const [fetchError, setFetchError] = useState<FetchError>(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [totalResults, setTotalResults] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  /* Categories (optional filter) */
   useEffect(() => {
     let cancelled = false;
 
@@ -131,24 +187,37 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
     };
   }, []);
 
+  /* Initialise from ?search=&location=… once on mount. */
+  const urlInitRef = useRef(false);
   useEffect(() => {
-    const handle = setTimeout(() => {
-      setDebouncedSearch(filters.search);
-    }, TEXT_DEBOUNCE_MS);
+    if (urlInitRef.current) return;
+    urlInitRef.current = true;
+
+    const fromUrl = filtersFromUrl();
+    if (!fromUrl) return;
+
+    setFilters(fromUrl);
+    setDebouncedSearch(fromUrl.search);
+    setDebouncedLocation(fromUrl.location);
+    setDebouncedTag(fromUrl.tag);
+  }, []);
+
+  /* Debounce free-text fields. */
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(filters.search), TEXT_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [filters.search]);
 
   useEffect(() => {
-    const handle = setTimeout(() => {
-      setDebouncedLocation(filters.location);
-    }, TEXT_DEBOUNCE_MS);
+    const handle = setTimeout(
+      () => setDebouncedLocation(filters.location),
+      TEXT_DEBOUNCE_MS,
+    );
     return () => clearTimeout(handle);
   }, [filters.location]);
 
   useEffect(() => {
-    const handle = setTimeout(() => {
-      setDebouncedTag(filters.tag);
-    }, TEXT_DEBOUNCE_MS);
+    const handle = setTimeout(() => setDebouncedTag(filters.tag), TEXT_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [filters.tag]);
 
@@ -156,9 +225,7 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
   /** Skip the first client fetch when SSR already provided the default page. */
   const ssrBootRef = useRef(initialJobs.length > 0);
 
-
   const fetchJobs = useCallback(async () => {
-    // First paint already has SSR jobs; avoid wiping them with a loading spinner.
     if (ssrBootRef.current) {
       ssrBootRef.current = false;
       const hasFilters =
@@ -184,8 +251,7 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
     setFetchError(false);
 
     const params = new URLSearchParams();
-    params.set("page", page.toString());
-
+    params.set("page", String(page));
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (debouncedLocation) params.set("location", debouncedLocation);
     if (filters.type) params.set("type", filters.type);
@@ -219,14 +285,19 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
 
       setJobs(data.jobs || data.data || []);
       setTotalPages(data.totalPages || data.pagination?.totalPages || 1);
+      setTotalResults(
+        typeof data.pagination?.total === "number"
+          ? data.pagination.total
+          : Array.isArray(data.jobs)
+            ? data.jobs.length
+            : null,
+      );
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setJobs([]);
       setFetchError("generic");
     } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, [
     page,
@@ -248,6 +319,36 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
     };
   }, [fetchJobs]);
 
+  /* Keep the address bar shareable without triggering navigation. */
+  useEffect(() => {
+    if (!urlInitRef.current) return;
+    const params = buildParams(
+      filters,
+      { search: debouncedSearch, location: debouncedLocation, tag: debouncedTag },
+      page,
+    );
+    params.delete("page");
+    const query = params.toString();
+    const next = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    window.history.replaceState(null, "", next);
+  }, [
+    filters,
+    debouncedSearch,
+    debouncedLocation,
+    debouncedTag,
+    page,
+  ]);
+
+  /* Escape closes the mobile filter sheet. */
+  useEffect(() => {
+    if (!showFilters) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowFilters(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [showFilters]);
+
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setPage(1);
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -261,518 +362,450 @@ export function JobsClient({ initialJobs = [], initialTotalPages = 1 }: JobsClie
     setDebouncedTag("");
   }
 
-  const hasFilters = Boolean(
-    filters.search ||
-      filters.location ||
-      filters.type ||
-      filters.experience ||
-      filters.category ||
-      filters.remote ||
-      filters.minSalary ||
-      filters.maxSalary ||
-      filters.tag,
-  );
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.location) count++;
+    if (filters.type) count++;
+    if (filters.experience) count++;
+    if (filters.category) count++;
+    if (filters.remote) count++;
+    if (filters.minSalary) count++;
+    if (filters.maxSalary) count++;
+    if (filters.tag) count++;
+    return count;
+  }, [filters]);
 
-  const formatSalary = useCallback(
-    (
-      currency: string | null | undefined,
-      min: number | null | undefined,
-      max: number | null | undefined,
-    ) => {
-      const cur = currency || "USD";
-      if (min == null && max == null) {
-        return t(
-          "Jobs.salaryNA",
-          t("JobDetail.salaryNA", "Salary not specified"),
-        );
-      }
-      if (min != null && max != null) {
-        return `${cur} ${min.toLocaleString(locale)} – ${max.toLocaleString(locale)}`;
-      }
-      if (min != null) {
-        return `${t("Jobs.from", "From")} ${cur} ${min.toLocaleString(locale)}`;
-      }
-      return `${t("Jobs.upTo", "Up to")} ${cur} ${Number(max).toLocaleString(locale)}`;
-    },
-    [t, locale],
+  const hasFilters = activeFilterCount > 0 || Boolean(filters.search);
+
+  const filterPanel = (
+    <div className="space-y-4">
+      <div>
+        <label htmlFor="jobs-filter-location" className={labelClass}>
+          {t("Jobs.location", "Location")}
+        </label>
+        <div className="relative">
+          <MapPin
+            size={15}
+            aria-hidden="true"
+            className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+          />
+          <input
+            id="jobs-filter-location"
+            type="text"
+            placeholder={t("Jobs.locationPlaceholder", "City or country...")}
+            value={filters.location}
+            onChange={(event) => updateFilter("location", event.target.value)}
+            className={`${controlClass} ps-9`}
+          />
+        </div>
+      </div>
+
+      {categories.length > 0 && (
+        <div>
+          <label htmlFor="jobs-filter-category" className={labelClass}>
+            {t("Jobs.category", "Category")}
+          </label>
+          <select
+            id="jobs-filter-category"
+            value={filters.category}
+            onChange={(event) => updateFilter("category", event.target.value)}
+            className={controlClass}
+          >
+            <option value="">{t("Jobs.allCategories", "All Categories")}</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.slug}>
+                {category.labels?.[locale] ??
+                  categoryLabel(category.slug, category.name, locale)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="jobs-filter-type" className={labelClass}>
+          {t("Jobs.jobType", "Job Type")}
+        </label>
+        <select
+          id="jobs-filter-type"
+          value={filters.type}
+          onChange={(event) => updateFilter("type", event.target.value)}
+          className={controlClass}
+        >
+          <option value="">{t("Jobs.allTypes", "All Types")}</option>
+          <option value="full-time">{t("Jobs.types.fullTime", "Full-time")}</option>
+          <option value="part-time">{t("Jobs.types.partTime", "Part-time")}</option>
+          <option value="contract">{t("Jobs.types.contract", "Contract")}</option>
+          <option value="freelance">{t("Jobs.types.freelance", "Freelance")}</option>
+          <option value="internship">
+            {t("Jobs.types.internship", "Internship")}
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="jobs-filter-experience" className={labelClass}>
+          {t("Jobs.experience", "Experience")}
+        </label>
+        <select
+          id="jobs-filter-experience"
+          value={filters.experience}
+          onChange={(event) => updateFilter("experience", event.target.value)}
+          className={controlClass}
+        >
+          <option value="">{t("Jobs.anyExperience", "Any Experience")}</option>
+          <option value="entry">{t("Jobs.experienceLevels.entry", "Entry Level")}</option>
+          <option value="mid">{t("Jobs.experienceLevels.mid", "Mid Level")}</option>
+          <option value="senior">
+            {t("Jobs.experienceLevels.senior", "Senior Level")}
+          </option>
+          <option value="lead">{t("Jobs.experienceLevels.lead", "Lead / Manager")}</option>
+          <option value="executive">
+            {t("Jobs.experienceLevels.executive", "Executive")}
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="jobs-filter-tag" className={labelClass}>
+          {t("Jobs.tag", "Tag")}
+        </label>
+        <input
+          id="jobs-filter-tag"
+          type="text"
+          placeholder={t("Jobs.tagPlaceholder", "e.g. React, Python...")}
+          value={filters.tag}
+          onChange={(event) => updateFilter("tag", event.target.value)}
+          className={controlClass}
+        />
+      </div>
+
+      <div>
+        <span className={labelClass}>{t("Jobs.minSalary", "Min Salary")}</span>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            id="jobs-filter-minsalary"
+            aria-label={t("Jobs.minSalary", "Min Salary")}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            placeholder={t("Jobs.noLimit", "No limit")}
+            value={filters.minSalary}
+            onChange={(event) => updateFilter("minSalary", event.target.value)}
+            className={controlClass}
+          />
+          <input
+            id="jobs-filter-maxsalary"
+            aria-label={t("Jobs.maxSalary", "Max Salary")}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            placeholder={t("Jobs.noLimit", "No limit")}
+            value={filters.maxSalary}
+            onChange={(event) => updateFilter("maxSalary", event.target.value)}
+            className={controlClass}
+          />
+        </div>
+      </div>
+
+      <label className="flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-2.5">
+        <input
+          type="checkbox"
+          checked={filters.remote}
+          onChange={(event) => updateFilter("remote", event.target.checked)}
+          className="h-4 w-4 rounded border-[var(--border)] accent-[var(--brand-primary)]"
+        />
+        <span className="inline-flex items-center gap-1.5 text-[0.8125rem] font-medium text-[var(--text-body)]">
+          <Globe size={14} aria-hidden="true" />
+          {t("Jobs.remoteOnly", "Remote Only")}
+        </span>
+      </label>
+
+      {activeFilterCount > 0 && (
+        <button
+          type="button"
+          onClick={clearFilters}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)]"
+        >
+          <X size={14} aria-hidden="true" />
+          {t("Jobs.clearAll", "Clear All")}
+        </button>
+      )}
+    </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {t("Jobs.title", "Find Your Dream Job")}
-          </h1>
-          <p className="text-slate-400">
-            {t("Jobs.subtitle", "Search among thousands of opportunities")}
-          </p>
-        </div>
+    <div className="gjm-page">
+      <div className="gjm-container">
+        <PageHeader
+          kicker={t("Jobs.kicker", "GLOBAL CAREERS")}
+          title={t("Jobs.title", "Find Your Dream Job")}
+          description={t(
+            "Jobs.subtitle",
+            "Search among thousands of opportunities",
+          )}
+        />
 
-        <div className="glass rounded-2xl p-4 mb-6 border border-white/10">
-          <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search bar */}
+        <div className="mb-6 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[var(--shadow-1)]">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <Search
+                size={17}
+                aria-hidden="true"
+                className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+              />
+              <label htmlFor="jobs-search" className="sr-only">
+                {t("Jobs.searchPlaceholder", "Job title, keywords, or company...")}
+              </label>
               <input
-                type="text"
+                id="jobs-search"
+                type="search"
                 placeholder={t(
                   "Jobs.searchPlaceholder",
                   "Job title, keywords, or company...",
                 )}
                 value={filters.search}
-                onChange={(e) => updateFilter("search", e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                onChange={(event) => updateFilter("search", event.target.value)}
+                className="h-11 w-full rounded-[var(--radius-md)] border border-transparent bg-transparent ps-9 pe-3 text-[0.9375rem] text-[var(--text-primary)] placeholder:text-[var(--text-subtle)] focus-visible:border-[var(--border)] focus-visible:outline-none"
               />
             </div>
+
             <button
               type="button"
-              onClick={() => setShowFilters((v) => !v)}
-              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                showFilters || hasFilters
-                  ? "bg-indigo-600/20 border-indigo-500/30 text-indigo-300"
-                  : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
-              }`}
+              onClick={() => setShowFilters(true)}
+              aria-expanded={showFilters}
+              aria-controls="jobs-filter-sheet"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] px-4 text-[0.875rem] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)] lg:hidden"
             >
-              <Filter className="w-4 h-4" />
+              <SlidersHorizontal size={15} aria-hidden="true" />
               {t("Jobs.filters", "Filters")}
-              {hasFilters && (
-                <span className="w-2 h-2 rounded-full bg-indigo-400" />
+              {activeFilterCount > 0 && (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[10px] font-bold text-[var(--text-on-brand)]">
+                  {activeFilterCount}
+                </span>
               )}
             </button>
           </div>
+        </div>
 
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label
-                  htmlFor="jobs-filter-location"
-                  className="block text-xs font-medium text-slate-400 mb-1.5"
-                >
-                  {t("Jobs.location", "Location")}
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    id="jobs-filter-location"
-                    type="text"
-                    placeholder={t(
-                      "Jobs.locationPlaceholder",
-                      "City or country...",
-                    )}
-                    value={filters.location}
-                    onChange={(e) => updateFilter("location", e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
+        <div className="grid gap-6 lg:grid-cols-[268px_minmax(0,1fr)] lg:items-start">
+          {/* Desktop filter rail */}
+          <aside className="hidden lg:sticky lg:top-24 lg:block">
+            <div className="rounded-[var(--radius-xl)] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="inline-flex items-center gap-2 text-[0.8125rem] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                  <Filter size={14} aria-hidden="true" />
+                  {t("Jobs.filters", "Filters")}
+                </h2>
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] px-1 text-[10px] font-bold text-[var(--brand-primary-hover)]">
+                    {activeFilterCount}
+                  </span>
+                )}
               </div>
+              {filterPanel}
+            </div>
+          </aside>
 
-              {categories.length > 0 && (
-                <div>
-                  <label
-                    htmlFor="jobs-filter-category"
-                    className="block text-xs font-medium text-slate-400 mb-1.5"
-                  >
-                    {t("Jobs.category", "Category")}
-                  </label>
-                  <div className="relative">
-                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                    <select
-                      id="jobs-filter-category"
-                      value={filters.category}
-                      onChange={(e) =>
-                        updateFilter("category", e.target.value)
-                      }
-                      className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    >
-                      <option value="">
-                        {t("Jobs.allCategories", "All Categories")}
-                      </option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.slug}>
-                          {c.labels?.[locale] ??
-                            categoryLabel(c.slug, c.name, locale)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p
+                className="text-[0.8125rem] text-[var(--text-muted)]"
+                aria-live="polite"
+              >
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                    {t("Common.loading", "Loading...")}
+                  </span>
+                ) : totalResults != null && !fetchError ? (
+                  t("Jobs.resultsCount", "{count} jobs").replace(
+                    "{count}",
+                    totalResults.toLocaleString(locale),
+                  )
+                ) : null}
+              </p>
 
-              <div>
-                <label
-                  htmlFor="jobs-filter-type"
-                  className="block text-xs font-medium text-slate-400 mb-1.5"
-                >
-                  {t("Jobs.jobType", "Job Type")}
-                </label>
-                <select
-                  id="jobs-filter-type"
-                  value={filters.type}
-                  onChange={(e) => updateFilter("type", e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                >
-                  <option value="">{t("Jobs.allTypes", "All Types")}</option>
-                  <option value="full-time">
-                    {t("Jobs.types.fullTime", "Full-time")}
-                  </option>
-                  <option value="part-time">
-                    {t("Jobs.types.partTime", "Part-time")}
-                  </option>
-                  <option value="contract">
-                    {t("Jobs.types.contract", "Contract")}
-                  </option>
-                  <option value="freelance">
-                    {t("Jobs.types.freelance", "Freelance")}
-                  </option>
-                  <option value="internship">
-                    {t("Jobs.types.internship", "Internship")}
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="jobs-filter-experience"
-                  className="block text-xs font-medium text-slate-400 mb-1.5"
-                >
-                  {t("Jobs.experience", "Experience")}
-                </label>
-                <select
-                  id="jobs-filter-experience"
-                  value={filters.experience}
-                  onChange={(e) => updateFilter("experience", e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                >
-                  <option value="">
-                    {t("Jobs.anyExperience", "Any Experience")}
-                  </option>
-                  <option value="entry">
-                    {t("Jobs.experienceLevels.entry", "Entry Level")}
-                  </option>
-                  <option value="mid">
-                    {t("Jobs.experienceLevels.mid", "Mid Level")}
-                  </option>
-                  <option value="senior">
-                    {t("Jobs.experienceLevels.senior", "Senior Level")}
-                  </option>
-                  <option value="lead">
-                    {t("Jobs.experienceLevels.lead", "Lead / Manager")}
-                  </option>
-                  <option value="executive">
-                    {t("Jobs.experienceLevels.executive", "Executive")}
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="jobs-filter-tag"
-                  className="block text-xs font-medium text-slate-400 mb-1.5"
-                >
-                  {t("Jobs.tag", "Tag")}
-                </label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    id="jobs-filter-tag"
-                    type="text"
-                    placeholder={t(
-                      "Jobs.tagPlaceholder",
-                      "e.g. React, Python...",
-                    )}
-                    value={filters.tag}
-                    onChange={(e) => updateFilter("tag", e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="jobs-filter-minsalary"
-                  className="block text-xs font-medium text-slate-400 mb-1.5"
-                >
-                  {t("Jobs.minSalary", "Min Salary")}
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    id="jobs-filter-minsalary"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    placeholder={t("Jobs.noLimit", "No limit")}
-                    value={filters.minSalary}
-                    onChange={(e) =>
-                      updateFilter("minSalary", e.target.value)
-                    }
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="jobs-filter-maxsalary"
-                  className="block text-xs font-medium text-slate-400 mb-1.5"
-                >
-                  {t("Jobs.maxSalary", "Max Salary")}
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    id="jobs-filter-maxsalary"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    placeholder={t("Jobs.noLimit", "No limit")}
-                    value={filters.maxSalary}
-                    onChange={(e) =>
-                      updateFilter("maxSalary", e.target.value)
-                    }
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-end">
-                <label className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all w-full">
-                  <input
-                    type="checkbox"
-                    checked={filters.remote}
-                    onChange={(e) => updateFilter("remote", e.target.checked)}
-                    className="w-4 h-4 rounded border-white/20 bg-white/5 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm text-slate-300">
-                      {t("Jobs.remoteOnly", "Remote Only")}
-                    </span>
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex items-end">
+              {hasFilters && (
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium w-full justify-center"
+                  className="inline-flex items-center gap-1.5 text-[0.75rem] font-semibold text-[var(--brand-primary-hover)] hover:underline"
                 >
-                  <X className="w-4 h-4" />
+                  <X size={13} aria-hidden="true" />
                   {t("Jobs.clearAll", "Clear All")}
                 </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          </div>
-        ) : fetchError ? (
-          <div className="text-center py-20 glass rounded-2xl border border-red-500/20">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">
-              {fetchError === "rate_limit"
-                ? t("Jobs.rateLimitTitle", "Too many requests")
-                : t("Jobs.loadErrorTitle", "Could not load jobs")}
-            </h3>
-            <p className="text-slate-400 text-sm mb-4">
-              {fetchError === "rate_limit"
-                ? t(
-                    "Jobs.rateLimitBody",
-                    "Please wait a moment before trying again.",
-                  )
-                : t(
-                    "Jobs.loadErrorBody",
-                    "Something went wrong. Please try again.",
-                  )}
-            </p>
-            <button
-              type="button"
-              onClick={() => void fetchJobs()}
-              className="inline-flex px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold"
-            >
-              {t("Common.retry", "Retry")}
-            </button>
-          </div>
-        ) : jobs.length === 0 ? (
-          <div className="text-center py-20 glass rounded-2xl border border-white/10">
-            <Building2 className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">
-              {t("Jobs.noJobsFound", "No jobs found")}
-            </h3>
-            <p className="text-slate-400 text-sm mb-4">
-              {t(
-                "Jobs.tryAdjusting",
-                "Try adjusting your search or filters",
               )}
-            </p>
-            {hasFilters && (
+            </div>
+
+            {loading ? (
+              <div className="grid gap-3 sm:grid-cols-2" aria-busy="true">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <SkeletonJobCard key={index} />
+                ))}
+              </div>
+            ) : fetchError ? (
+              <EmptyState
+                icon={<AlertCircle size={22} />}
+                title={
+                  fetchError === "rate_limit"
+                    ? t("Jobs.rateLimitTitle", "Too many requests")
+                    : t("Jobs.loadErrorTitle", "Could not load jobs")
+                }
+                description={
+                  fetchError === "rate_limit"
+                    ? t(
+                        "Jobs.rateLimitBody",
+                        "Please wait a moment before trying again.",
+                      )
+                    : t(
+                        "Jobs.loadErrorBody",
+                        "Something went wrong. Please try again.",
+                      )
+                }
+                action={
+                  <button
+                    type="button"
+                    onClick={() => void fetchJobs()}
+                    className="gjm-btn gjm-btn-primary"
+                  >
+                    {t("Common.retry", "Retry")}
+                  </button>
+                }
+              />
+            ) : jobs.length === 0 ? (
+              <EmptyState
+                icon={<Layers size={22} />}
+                title={t("Jobs.noJobsFound", "No jobs found")}
+                description={t(
+                  "Jobs.tryAdjusting",
+                  "Try adjusting your search or filters",
+                )}
+                action={
+                  hasFilters ? (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="gjm-btn gjm-btn-secondary"
+                    >
+                      {t("Jobs.clearAll", "Clear All")}
+                    </button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {jobs.map((job) => (
+                    <JobCard
+                      key={job.id}
+                      featured={job.featured}
+                      job={{
+                        id: job.id,
+                        title: job.title,
+                        location: job.location,
+                        remote: job.remote,
+                        type: job.type,
+                        salaryMin: job.salaryMin,
+                        salaryMax: job.salaryMax,
+                        currency: job.currency,
+                        createdAt: job.createdAt,
+                        company: job.company,
+                        category: job.category,
+                        attribution: job.attribution,
+                        externalUrl: job.externalUrl,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {totalPages > 1 && (
+                  <nav
+                    className="mt-7 flex items-center justify-center gap-3"
+                    aria-label={t("Jobs.pagination", "Pagination")}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => Math.max(1, current - 1))}
+                      disabled={page === 1}
+                      aria-label={t("Jobs.previousPage", "Previous page")}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                    >
+                      <ChevronLeft size={18} className="rtl:rotate-180" aria-hidden="true" />
+                    </button>
+
+                    <span className="tabular text-[0.8125rem] text-[var(--text-muted)]">
+                      {t("Jobs.pageOf", "Page {current} of {total}")
+                        .split("{current}")
+                        .join(String(page))
+                        .split("{total}")
+                        .join(String(totalPages))}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPage((current) => Math.min(totalPages, current + 1))
+                      }
+                      disabled={page === totalPages}
+                      aria-label={t("Jobs.nextPage", "Next page")}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                    >
+                      <ChevronRight size={18} className="rtl:rotate-180" aria-hidden="true" />
+                    </button>
+                  </nav>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile filter sheet */}
+      {showFilters && (
+        <div className="fixed inset-0 z-[70] lg:hidden">
+          <button
+            type="button"
+            aria-label={t("Common.close", "Close")}
+            onClick={() => setShowFilters(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+          />
+          <div
+            id="jobs-filter-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("Jobs.filters", "Filters")}
+            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[var(--radius-2xl)] border border-[var(--border)] bg-[var(--surface)] p-5 pb-8 shadow-[var(--shadow-5)]"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                {t("Jobs.filters", "Filters")}
+              </h2>
               <button
                 type="button"
-                onClick={clearFilters}
-                className="text-indigo-400 text-sm hover:underline"
+                onClick={() => setShowFilters(false)}
+                className="gjm-icon-btn"
+                aria-label={t("Common.close", "Close")}
               >
-                {t("Jobs.clearAll", "Clear All")}
+                <X size={18} aria-hidden="true" />
               </button>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
-              {jobs.map((job) => (
-                <Link
-                  key={job.id}
-                  href={`/jobs/${job.id}`}
-                  className={`glass rounded-2xl p-5 border transition-all block ${
-                    job.featured
-                      ? "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-orange-500/5 hover:border-amber-500/50"
-                      : "border-white/10 hover:border-indigo-500/30"
-                  }`}
-                >
-                  {job.featured && (
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold mb-2">
-                      ⭐ FEATURED
-                    </div>
-                  )}
-                  <div className="flex items-start gap-3 mb-3">
-                    <CompanyLogo
-                      name={
-                        job.company?.name ||
-                        t("Jobs.companyFallback", "Company")
-                      }
-                      logo={job.company?.logo}
-                      size={40}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-base font-semibold text-white line-clamp-2">
-                        {job.title}
-                      </h2>
-                      <p className="text-sm text-slate-400 truncate">
-                        {job.company?.name ||
-                          t("Jobs.companyFallback", "Company")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 text-xs text-slate-400 mb-3">
-                    {job.location && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5">
-                        <MapPin className="w-3 h-3" />
-                        {job.location}
-                      </span>
-                    )}
-                    {job.remote && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300">
-                        <Globe className="w-3 h-3" />
-                        {t("Common.remote", "Remote")}
-                      </span>
-                    )}
-                    {job.category?.slug && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5">
-                        <Layers className="w-3 h-3" />
-                        {categoryLabel(
-                          job.category.slug,
-                          job.category.name,
-                          locale,
-                        )}
-                      </span>
-                    )}
-                    {job.type && (
-                      <span className="px-2 py-0.5 rounded-md bg-white/5">
-                        {job.type}
-                      </span>
-                    )}
-                    {job.experience && (
-                      <span className="px-2 py-0.5 rounded-md bg-white/5">
-                        {job.experience}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                    <span className="text-sm font-medium text-slate-300">
-                      {formatSalary(
-                        job.currency,
-                        job.salaryMin,
-                        job.salaryMax,
-                      )}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {new Date(job.createdAt).toLocaleDateString(locale)}
-                    </span>
-                  </div>
-
-                  {job.tags?.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {job.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/5"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Source attribution for aggregated jobs (RemoteOK, Jobicy, ...).
-                      RemoteOK's API ToS requires a follow link (no rel="nofollow")
-                      and naming the source. */}
-                  {job.attribution && job.externalUrl && (
-                    <div className="mt-3 pt-3 border-t border-white/5">
-                      <a
-                        href={job.externalUrl}
-                        target="_blank"
-                        rel="noopener"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        {job.attribution}
-                      </a>
-                    </div>
-                  )}
-                </Link>
-              ))}
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  aria-label={t("Jobs.previousPage", "Previous page")}
-                  className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-30 transition-all"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-slate-400 px-4">
-                  {t("Jobs.pageOf", "Page {current} of {total}")
-                    .split("{current}")
-                    .join(String(page))
-                    .split("{total}")
-                    .join(String(totalPages))}
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={page === totalPages}
-                  aria-label={t("Jobs.nextPage", "Next page")}
-                  className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-30 transition-all"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+            {filterPanel}
+
+            <button
+              type="button"
+              onClick={() => setShowFilters(false)}
+              className="gjm-btn gjm-btn-primary mt-4 w-full"
+            >
+              {t("Jobs.showResults", "Show results")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default JobsClient;

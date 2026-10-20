@@ -155,7 +155,7 @@ export default async function CategoryJobsPage({ params }: Props) {
   const jobsWord = t(dict, "Nav.jobs", "Jobs");
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
+    <div className="gjm-page px-4">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbs) }}
@@ -165,27 +165,27 @@ export default async function CategoryJobsPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jobList) }}
       />
       <div className="max-w-5xl mx-auto">
-        <nav className="text-xs text-slate-500 mb-6 flex flex-wrap gap-1">
-          <Link href="/" className="hover:text-indigo-400">
+        <nav className="text-xs text-[var(--text-muted)] mb-6 flex flex-wrap gap-1">
+          <Link href="/" className="hover:text-[var(--brand-accent)]">
             {homeLabel}
           </Link>
           <span>/</span>
-          <Link href="/categories" className="hover:text-indigo-400">
+          <Link href="/categories" className="hover:text-[var(--brand-accent)]">
             {categoriesLabel}
           </Link>
           <span>/</span>
-          <span className="text-slate-300">{category.name}</span>
+          <span className="text-[var(--text-body)]">{category.name}</span>
         </nav>
 
         <header className="mb-8">
-          <div className="flex items-center gap-2 text-indigo-400 mb-2">
+          <div className="flex items-center gap-2 text-[var(--brand-accent)] mb-2">
             <Layers className="w-5 h-5" />
             <span className="text-sm font-medium">{categoryLabel}</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
             {category.name} — {jobsWord}
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-[var(--text-muted)] text-sm">
             {category._count.jobs} {activeJobs}
           </p>
         </header>
@@ -195,12 +195,12 @@ export default async function CategoryJobsPage({ params }: Props) {
             <li key={job.id}>
               <Link
                 href={`/jobs/${job.id}`}
-                className="glass block rounded-2xl border border-white/10 p-5 h-full hover:border-indigo-500/30 transition-all"
+                className="glass block rounded-2xl border border-[var(--border)] p-5 h-full hover:border-[var(--brand-accent)] transition-all"
               >
-                <h2 className="text-lg font-semibold text-white mb-2 line-clamp-2">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2 line-clamp-2">
                   {job.title}
                 </h2>
-                <div className="flex flex-wrap gap-3 text-xs text-slate-400">
+                <div className="flex flex-wrap gap-3 text-xs text-[var(--text-muted)]">
                   {job.company?.name && (
                     <span className="inline-flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5" />
@@ -212,7 +212,7 @@ export default async function CategoryJobsPage({ params }: Props) {
                     {normalizeLocation(job.location) || job.location || "—"}
                   </span>
                   {job.remote && (
-                    <span className="inline-flex items-center gap-1 text-emerald-400">
+                    <span className="inline-flex items-center gap-1 text-[var(--success)]">
                       <Wifi className="w-3.5 h-3.5" />
                       {remoteLabel}
                     </span>
@@ -225,7 +225,7 @@ export default async function CategoryJobsPage({ params }: Props) {
 
         {otherCategories.length > 0 && (
           <section className="mt-12">
-            <h2 className="text-lg font-semibold text-white mb-4">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
               {otherLabel}
             </h2>
             <ul className="flex flex-wrap gap-2">
@@ -233,10 +233,10 @@ export default async function CategoryJobsPage({ params }: Props) {
                 <li key={c.slug}>
                   <Link
                     href={`/categories/${c.slug}`}
-                    className="inline-block rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500/40 hover:text-indigo-300 transition-colors"
+                    className="inline-block rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--text-body)] hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)] transition-colors"
                   >
                     {c.name}
-                    <span className="text-slate-500 ml-1">
+                    <span className="text-[var(--text-muted)] ms-1">
                       ({c._count.jobs})
                     </span>
                   </Link>
@@ -247,14 +247,14 @@ export default async function CategoryJobsPage({ params }: Props) {
         )}
 
         <div className="mt-10 flex flex-wrap gap-4 text-sm">
-          <Link href="/jobs" className="text-indigo-400 hover:underline">
+          <Link href="/jobs" className="text-[var(--brand-accent)] hover:underline">
             {viewAllJobs}
           </Link>
-          <Link href="/locations" className="text-indigo-400 hover:underline">
+          <Link href="/locations" className="text-[var(--brand-accent)] hover:underline">
             {browseLocations}
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

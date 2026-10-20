@@ -26,7 +26,11 @@
     "jobAlerts": "İş Alarmları",
     "help": "Yardım",
     "profile": "Profil",
-    "search": "Ara"
+    "search": "Ara",
+    "language": "Dil",
+    "postJob": "İlan ver",
+    "account": "Hesap",
+    "searchJobs": "İş ara"
   },
   "Common": {
     "loading": "Yükleniyor...",
@@ -77,7 +81,19 @@
     "forbidden": "Erişim engellendi",
     "status": "Durum",
     "print": "Yazdır",
-    "copied": "Kopyalandı"
+    "copied": "Kopyalandı",
+    "toggleTheme": "Temayı değiştir",
+    "skipToContent": "İçeriğe geç",
+    "pageNotFound": "Sayfa bulunamadı",
+    "pageNotFoundDesc": "Bu sayfa mevcut değil veya taşınmış. Şu popüler bölümlerden birini deneyin:",
+    "copy": "Kopyala",
+    "errorUnexpected": "Beklenmeyen bir hata oluştu. Tekrar deneyebilir veya ana sayfaya dönebilirsiniz.",
+    "planRequired": "Bu özellik daha üst bir plan gerektirir.",
+    "rateLimited": "Çok fazla istek. Lütfen bekleyip tekrar deneyin.",
+    "serviceUnavailable": "Hizmet geçici olarak kullanılamıyor. Lütfen kısa süre sonra tekrar deneyin.",
+    "mainNavigation": "Ana gezinme",
+    "relatedSections": "İlgili bölümler",
+    "exploreMore": "Daha fazlasını keşfet"
   },
   "Footer": {
     "tagline": "Yetenekleri küresel iş fırsatlarıyla güvenle ve akılla buluşturuyoruz.",
@@ -137,7 +153,8 @@
     "browseJobs": "İşleri Gör",
     "activeJobs": "aktif iş ilanı",
     "viewAllJobs": "Tüm İlanları Gör",
-    "browseLocations": "Konumlara Göre Göz At"
+    "browseLocations": "Konumlara Göre Göz At",
+    "alphabet": "Alfabe"
   },
   "Locations": {
     "title": "Konumlar",
@@ -268,7 +285,9 @@
     "viewProfile": "Profili İncele",
     "location": "Konum",
     "website": "Web Sitesi",
-    "pending": "Beklemede"
+    "pending": "Beklemede",
+    "unknown": "Bilinmeyen şirket",
+    "emptyBody": "İşverenler profil oluşturduğunda şirketler burada görünecek."
   },
   "Auth": {
     "loginTitle": "Hesabınıza Giriş Yapın",
@@ -297,8 +316,28 @@
       "emailExists": "Bu e-posta adresi zaten kayıtlı.",
       "generic": "Bir sorun oluştu.",
       "network": "Ağ hatası. Lütfen tekrar deneyin.",
-      "rateLimited": "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin."
-    }
+      "rateLimited": "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin.",
+      "unauthorized": "Devam etmek için giriş yapın."
+    },
+    "sideTitle": "Sıradaki rolünüz daha iyi bir aramayla başlar.",
+    "sidePoint1": "Doğrulanmış işverenlerden her gün güncellenen küresel ilanlar.",
+    "sidePoint2": "Yapay zekâ uyum puanları, CV desteği ve kariyer riski analizleri.",
+    "sidePoint3": "Şeffaf maaşlar ve her başvuru için tek profil.",
+    "sideFooter": "Ücretsiz katılım. Kredi kartı gerekmez.",
+    "hidePassword": "Parolayı gizle",
+    "registeredSuccess": "Hesap oluşturuldu. Devam etmek için giriş yapın.",
+    "sessionExpired": "Oturumunuz sona erdi. Lütfen yeniden giriş yapın.",
+    "showPassword": "Parolayı göster",
+    "verifyEmailErrorBody": "Bağlantı geçersiz veya süresi dolmuş.",
+    "verifyEmailErrorTitle": "Doğrulama başarısız",
+    "verifyEmailMissingBody": "Bu doğrulama bağlantısında gerekli parametreler eksik.",
+    "verifyEmailMissingTitle": "Geçersiz bağlantı",
+    "verifyEmailResend": "Doğrulama e-postasını yeniden gönder",
+    "verifyEmailResendFailed": "E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+    "verifyEmailResending": "Gönderiliyor…",
+    "verifyEmailResent": "Doğrulama e-postası gönderildi. Gelen kutunuzu kontrol edin.",
+    "verifyEmailSuccessBody": "E-postanız başarıyla doğrulandı.",
+    "verifyEmailSuccessTitle": "E-posta doğrulandı!"
   },
   "AuthExtra": {
     "forgotTitle": "Şifremi Unuttum",
@@ -381,7 +420,12 @@
     "remote": "Uzaktan",
     "noJobs": "Şu anda listelenecek ilan bulunamadı.",
     "recent": "Son İlanlar",
-    "stats": "İstatistikler"
+    "stats": "İstatistikler",
+    "completeProfile": "Profili tamamla →",
+    "matchNeedProfile": "Kişisel eşleşme puanlarını açmak için profilinize beceri veya biyografi ekleyin.",
+    "matchScore": "Eşleşme puanı",
+    "matchedJobs": "Sizin için en iyi eşleşmeler",
+    "noMatches": "Henüz güçlü eşleşme yok. Becerilerinizi güncelleyin veya tüm ilanlara göz atın."
   },
   "Settings": {
     "title": "Hesap Ayarları",
@@ -457,7 +501,8 @@
     "youPrefix": "Siz: ",
     "messagePlaceholder": "Bir mesaj yazın...",
     "startConversation": "Sohbet başlat",
-    "selectConversation": "Mesajları görüntülemek için bir sohbet seçin."
+    "selectConversation": "Mesajları görüntülemek için bir sohbet seçin.",
+    "send": "Mesaj gönder"
   },
   "Notifications": {
     "title": "Bildirimler",
@@ -603,7 +648,15 @@
     "pending": "Beklemede",
     "salaryNA": "Maaş belirtilmedi",
     "loadErrorTitle": "İlanlar yüklenemedi",
-    "loadErrorBody": "İş ilanları şu anda yüklenemiyor. Lütfen daha sonra tekrar deneyin."
+    "loadErrorBody": "İş ilanları şu anda yüklenemiyor. Lütfen daha sonra tekrar deneyin.",
+    "kicker": "KÜRESEL KARİYERLER",
+    "resultsCount": "{count} ilan",
+    "pagination": "Sayfalama",
+    "showResults": "Sonuçları göster",
+    "featured": "Öne çıkan",
+    "allCategories": "Tüm kategoriler",
+    "rateLimitBody": "Tekrar denemeden önce lütfen biraz bekleyin.",
+    "rateLimitTitle": "Çok fazla istek"
   },
   "JobDetail": {
     "apply": "Başvur",
@@ -646,7 +699,12 @@
     "contactDraft": "Yapay zeka ile taslak yaz",
     "contactGenerateDraft": "Taslak Oluştur",
     "contactCopy": "Metni kopyala",
-    "contactSend": "Mesajı Gönder"
+    "contactSend": "Mesajı Gönder",
+    "loginForMatch": "Eşleşme puanınızı görmek için giriş yapın",
+    "matchLabel": "eşleşme",
+    "matchLoading": "Eşleşme kontrol ediliyor…",
+    "matchNeedProfile": "Eşleşme puanı için profili tamamlayın",
+    "matchScore": "Bu ilan için eşleşme puanınız"
   },
   "Pricing": {
     "title": "Kariyerinizi İleri Taşıyacak Şeffaf Fiyatlandırma",
@@ -722,7 +780,12 @@
     "errIntentExpired": "Ödeme oturumu zaman aşımına uğradı. Yeni teklif alın.",
     "errRecipient": "Alıcı cüzdan adresi geçersiz.",
     "errSubmit": "Ödeme kaydedilirken bir hata oluştu.",
-    "errWallet": "Cüzdan altyapısına şu anda ulaşılamıyor."
+    "errWallet": "Cüzdan altyapısına şu anda ulaşılamıyor.",
+    "cta": "Fiyatlandırmada kripto ile devam et",
+    "free": "Ücretsiz plan",
+    "perMonth": "/ay",
+    "perYear": "/yıl",
+    "qrAlt": "Ödeme adresinin QR kodu"
   },
   "CareerRisk": {
     "title": "Yapay Zeka Kariyer Riski Değerlendirmesi",
@@ -912,6 +975,13 @@
     "trustSectionKicker": "Güven ve Şeffaflık",
     "trustSectionTitle": "Uluslararası standartlarda güvenli iş platformu",
     "feedTitle": "Fırsat Akışı",
-    "feedEmpty": "Şu anda gösterilecek fırsat bulunmuyor."
+    "feedEmpty": "Şu anda gösterilecek fırsat bulunmuyor.",
+    "popularSearches": "Popüler",
+    "featuredFull": "Öne çıkan kontenjan doldu — bekleme listesi açık",
+    "featuredSpotsLeft": "Yalnızca {left}/{total} öne çıkan yer kaldı",
+    "featuredStats": "{featured} öne çıkan · {jobs} aktif ilan",
+    "campaignEnds": "{date} tarihinde bitiyor",
+    "featureCta": "Öne çıkar · ${price} / 7 gün",
+    "postJobCta": "İlan ver"
   }
 }

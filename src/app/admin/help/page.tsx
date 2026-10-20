@@ -140,32 +140,32 @@ export default function HelpCenterPage() {
     .filter((cat) => cat.items.length > 0);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4">
+    <div className="gjm-page px-4">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-4"
+          className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Common.back", "Back")}
         </Link>
 
         <div className="text-center mb-10">
-          <HelpCircle className="w-12 h-12 text-cyan-400 mx-auto mb-3" />
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+          <HelpCircle className="w-12 h-12 text-[var(--brand-primary)] mx-auto mb-3" />
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-2">
             {t("Nav.help", "Help Center")}
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-[var(--text-muted)] text-sm">
             {t("Dashboard.welcomeSub", "Answers for admins and operators")}
           </p>
         </div>
 
         <div className="relative mb-8">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("Common.search", "Search FAQ...")}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-500"
+            className="w-full ps-10 pe-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-muted)]"
           />
         </div>
 
@@ -176,7 +176,7 @@ export default function HelpCenterPage() {
             return (
               <div
                 key={cat.id}
-                className="glass rounded-2xl border border-white/10 overflow-hidden"
+                className="glass rounded-2xl border border-[var(--border)] overflow-hidden"
               >
                 <button
                   type="button"
@@ -185,14 +185,14 @@ export default function HelpCenterPage() {
                   }
                   className="w-full flex items-center justify-between p-4 text-left"
                 >
-                  <span className="flex items-center gap-3 text-white font-medium">
-                    <Icon className="w-5 h-5 text-cyan-400" />
+                  <span className="flex items-center gap-3 text-[var(--text-primary)] font-medium">
+                    <Icon className="w-5 h-5 text-[var(--brand-primary)]" />
                     {cat.title}
                   </span>
                   {open ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                    <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                    <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
                   )}
                 </button>
                 {open && (
@@ -202,7 +202,7 @@ export default function HelpCenterPage() {
                       return (
                         <div
                           key={item.question}
-                          className="rounded-xl bg-white/5 border border-white/5"
+                          className="rounded-xl bg-[var(--surface-2)] border border-[var(--border-soft)]"
                         >
                           <button
                             type="button"
@@ -211,7 +211,7 @@ export default function HelpCenterPage() {
                                 qOpen ? null : item.question
                               )
                             }
-                            className="w-full text-left p-3 text-sm text-slate-200 flex justify-between gap-2"
+                            className="w-full text-left p-3 text-sm text-[var(--text-primary)] flex justify-between gap-2"
                           >
                             {item.question}
                             {qOpen ? (
@@ -221,7 +221,7 @@ export default function HelpCenterPage() {
                             )}
                           </button>
                           {qOpen && (
-                            <p className="px-3 pb-3 text-sm text-slate-400 leading-relaxed">
+                            <p className="px-3 pb-3 text-sm text-[var(--text-muted)] leading-relaxed">
                               {item.answer}
                             </p>
                           )}
@@ -236,25 +236,25 @@ export default function HelpCenterPage() {
         </div>
 
         {filteredCategories.length === 0 && (
-          <p className="text-center text-slate-500 text-sm py-8">
+          <p className="text-center text-[var(--text-muted)] text-sm py-8">
             {t("Common.noResults", "No results")}
           </p>
         )}
 
-        <div className="mt-10 glass rounded-2xl p-6 border border-white/10 text-center">
-          <MessageCircle className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-          <p className="text-white font-medium mb-1">
+        <div className="mt-10 glass rounded-2xl p-6 border border-[var(--border)] text-center">
+          <MessageCircle className="w-8 h-8 text-[var(--brand-primary)] mx-auto mb-2" />
+          <p className="text-[var(--text-primary)] font-medium mb-1">
             {t("Contact.title", "Still need help?")}
           </p>
           <a
             href="mailto:support@example.com"
-            className="inline-flex items-center gap-2 text-cyan-400 text-sm hover:underline"
+            className="inline-flex items-center gap-2 text-[var(--brand-primary)] text-sm hover:underline"
           >
             <Mail className="w-4 h-4" />
             {t("Contact.email", "Email support")}
           </a>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

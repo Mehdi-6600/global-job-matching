@@ -19,10 +19,10 @@ type Tx = {
 
 function statusClass(status: string) {
   const s = status.toLowerCase();
-  if (s === "confirmed") return "text-emerald-300 bg-emerald-500/15";
-  if (s === "pending") return "text-amber-300 bg-amber-500/15";
-  if (s === "rejected") return "text-red-300 bg-red-500/15";
-  return "text-slate-300 bg-white/10";
+  if (s === "confirmed") return "text-[var(--success)] bg-[var(--success-soft)]";
+  if (s === "pending") return "text-[var(--warning)] bg-[var(--warning-soft)]";
+  if (s === "rejected") return "text-[var(--error)] bg-[var(--error-soft)]";
+  return "text-[var(--text-body)] bg-[var(--surface-3)]";
 }
 
 export function PaymentHistoryCard() {
@@ -61,7 +61,7 @@ export function PaymentHistoryCard() {
 
   if (loading) {
     return (
-      <div className="glass rounded-2xl p-5 flex items-center gap-2 text-slate-400 border border-white/10">
+      <div className="glass rounded-2xl p-5 flex items-center gap-2 text-[var(--text-muted)] border border-[var(--border)]">
         <Loader2 className="h-4 w-4 animate-spin" />
         {t("PaymentHistory.loading", "Loading payments…")}
       </div>
@@ -69,23 +69,23 @@ export function PaymentHistoryCard() {
   }
 
   return (
-    <div className="glass rounded-2xl p-5 space-y-4 border border-white/10">
+    <div className="glass rounded-2xl p-5 space-y-4 border border-[var(--border)]">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Receipt className="h-5 w-5 text-cyan-400" />
-          <h3 className="text-white font-semibold">{t("PaymentHistory.title", "Payment history")}</h3>
+          <Receipt className="h-5 w-5 text-[var(--brand-primary)]" />
+          <h3 className="text-[var(--text-primary)] font-semibold">{t("PaymentHistory.title", "Payment history")}</h3>
         </div>
-        <Link href="/pricing" className="text-xs text-cyan-400 hover:underline">
+        <Link href="/pricing" className="text-xs text-[var(--brand-primary)] hover:underline">
           {t("PaymentHistory.pricingLink", "Pricing")}
         </Link>
       </div>
 
-      {error && <p className="text-sm text-slate-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--text-muted)]">{error}</p>}
 
       {!error && items.length === 0 && (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-[var(--text-muted)]">
           {t("PaymentHistory.noPayments", "No payments yet.")}{" "}
-          <Link href="/pricing" className="text-cyan-400 hover:underline">
+          <Link href="/pricing" className="text-[var(--brand-primary)] hover:underline">
             {t("PaymentHistory.upgradePlanLink", "Upgrade a plan")}
           </Link>
         </p>
@@ -96,10 +96,10 @@ export function PaymentHistoryCard() {
           {items.map((tx) => (
             <li
               key={tx.id}
-              className="rounded-xl bg-white/5 border border-white/10 p-3 text-sm"
+              className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3 text-sm"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-white font-medium capitalize">
+                <span className="text-[var(--text-primary)] font-medium capitalize">
                   {tx.planId}
                   {tx.billingCycle ? ` · ${tx.billingCycle}` : ""}
                 </span>
@@ -116,7 +116,7 @@ export function PaymentHistoryCard() {
                   }[tx.status.toLowerCase()] || tx.status)}
                 </span>
               </div>
-              <div className="mt-1 text-slate-400 text-xs flex flex-wrap gap-x-3 gap-y-1">
+              <div className="mt-1 text-[var(--text-muted)] text-xs flex flex-wrap gap-x-3 gap-y-1">
                 <span>
                   {tx.amount} {tx.currency}
                 </span>
@@ -124,7 +124,7 @@ export function PaymentHistoryCard() {
                 <span>{new Date(tx.createdAt).toLocaleDateString()}</span>
               </div>
               {tx.txHash && (
-                <p className="mt-1 text-[10px] text-slate-500 break-all font-mono">
+                <p className="mt-1 text-[10px] text-[var(--text-muted)] break-all font-mono">
                   {tx.txHash}
                 </p>
               )}

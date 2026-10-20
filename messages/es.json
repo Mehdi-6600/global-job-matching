@@ -26,7 +26,11 @@
     "jobAlerts": "Alertas de empleo",
     "help": "Ayuda",
     "profile": "Perfil",
-    "search": "Buscar"
+    "search": "Buscar",
+    "language": "Idioma",
+    "postJob": "Publicar empleo",
+    "account": "Cuenta",
+    "searchJobs": "Buscar empleos"
   },
   "Home": {
     "eyebrow": "PLATAFORMA GLOBAL DE CARRERA",
@@ -132,7 +136,14 @@
     "trustSectionKicker": "BASADO EN DATOS REALES",
     "trustSectionTitle": "Infraestructura de confianza, no testimonios.",
     "feedTitle": "Feed de oportunidades en vivo",
-    "feedEmpty": "Las nuevas vacantes aparecen aquí en cuanto se publican."
+    "feedEmpty": "Las nuevas vacantes aparecen aquí en cuanto se publican.",
+    "popularSearches": "Popular",
+    "featuredFull": "Los espacios destacados están llenos — lista de espera abierta",
+    "featuredSpotsLeft": "Solo quedan {left}/{total} espacios destacados",
+    "featuredStats": "{featured} destacados · {jobs} empleos activos",
+    "campaignEnds": "Termina el {date}",
+    "featureCta": "Destacar · ${price} / 7 días",
+    "postJobCta": "Publicar empleo"
   },
   "Common": {
     "loading": "Cargando...",
@@ -183,7 +194,19 @@
     "forbidden": "Acceso denegado",
     "status": "Estado",
     "print": "Imprimir",
-    "copied": "Copiado"
+    "copied": "Copiado",
+    "toggleTheme": "Cambiar tema",
+    "skipToContent": "Ir al contenido",
+    "pageNotFound": "Página no encontrada",
+    "pageNotFoundDesc": "Esta página no existe o se ha movido. Prueba una de estas secciones populares:",
+    "copy": "Copiar",
+    "errorUnexpected": "Se ha producido un error inesperado. Inténtalo de nuevo o vuelve al inicio.",
+    "planRequired": "Esta función requiere un plan superior.",
+    "rateLimited": "Demasiadas solicitudes. Espera e inténtalo de nuevo.",
+    "serviceUnavailable": "Servicio no disponible temporalmente. Inténtalo de nuevo en breve.",
+    "mainNavigation": "Navegación principal",
+    "relatedSections": "Secciones relacionadas",
+    "exploreMore": "Explorar más"
   },
   "ApiErrors": {
     "badRequest": "La solicitud no es válida. Revisa tus datos.",
@@ -240,8 +263,28 @@
       "emailExists": "El correo ya está registrado",
       "generic": "Algo salió mal",
       "network": "Error de red. Inténtalo de nuevo.",
-      "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo más tarde."
-    }
+      "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
+      "unauthorized": "Inicia sesión para continuar."
+    },
+    "sideTitle": "Tu próximo puesto empieza con una mejor búsqueda.",
+    "sidePoint1": "Puestos globales de empleadores verificados, actualizados a diario.",
+    "sidePoint2": "Puntuaciones de afinidad con IA, ayuda con el CV e información sobre riesgo profesional.",
+    "sidePoint3": "Salarios transparentes y un solo perfil para cada candidatura.",
+    "sideFooter": "Registro gratuito. Sin tarjeta de crédito.",
+    "hidePassword": "Ocultar contraseña",
+    "registeredSuccess": "Cuenta creada. Inicia sesión para continuar.",
+    "sessionExpired": "Tu sesión ha caducado. Inicia sesión de nuevo.",
+    "showPassword": "Mostrar contraseña",
+    "verifyEmailErrorBody": "El enlace no es válido o ha caducado.",
+    "verifyEmailErrorTitle": "No se pudo verificar",
+    "verifyEmailMissingBody": "A este enlace de verificación le faltan parámetros obligatorios.",
+    "verifyEmailMissingTitle": "Enlace no válido",
+    "verifyEmailResend": "Reenviar correo de verificación",
+    "verifyEmailResendFailed": "No se pudo enviar el correo. Inténtalo más tarde.",
+    "verifyEmailResending": "Enviando…",
+    "verifyEmailResent": "Correo de verificación enviado. Revisa tu bandeja de entrada.",
+    "verifyEmailSuccessBody": "Tu correo se ha verificado correctamente.",
+    "verifyEmailSuccessTitle": "¡Correo verificado!"
   },
   "Contact": {
     "title": "Contáctanos",
@@ -368,7 +411,12 @@
     "errIntentExpired": "Esta cotización de pago expiró o ya fue usada. Crea una nueva.",
     "errRecipient": "La dirección de la cartera cambió. Crea una nueva cotización.",
     "errSubmit": "El envío falló. Inténtalo de nuevo.",
-    "errWallet": "Esa criptomoneda no está configurada para pagos."
+    "errWallet": "Esa criptomoneda no está configurada para pagos.",
+    "cta": "Continuar con cripto en Precios",
+    "free": "Plan gratuito",
+    "perMonth": "/mes",
+    "perYear": "/año",
+    "qrAlt": "Código QR de la dirección de pago"
   },
   "Dashboard": {
     "navDashboard": "Panel",
@@ -406,7 +454,12 @@
     "remote": "Remoto",
     "noJobs": "Aún no hay empleos para mostrar.",
     "recent": "Recientes",
-    "stats": "Estadísticas"
+    "stats": "Estadísticas",
+    "completeProfile": "Completar perfil →",
+    "matchNeedProfile": "Añade habilidades o una biografía en tu perfil para desbloquear puntuaciones de coincidencia.",
+    "matchScore": "Puntuación de coincidencia",
+    "matchedJobs": "Mejores coincidencias para ti",
+    "noMatches": "Aún no hay coincidencias fuertes. Actualiza tus habilidades o explora todas las ofertas."
   },
   "Settings": {
     "title": "Ajustes",
@@ -569,7 +622,15 @@
     "pending": "Pendiente",
     "salaryNA": "Salario no especificado",
     "loadErrorTitle": "No se pudieron cargar los empleos",
-    "loadErrorBody": "Algo salió mal. Inténtalo de nuevo."
+    "loadErrorBody": "Algo salió mal. Inténtalo de nuevo.",
+    "kicker": "CARRERAS GLOBALES",
+    "resultsCount": "{count} empleos",
+    "pagination": "Paginación",
+    "showResults": "Ver resultados",
+    "featured": "Destacado",
+    "allCategories": "Todas las categorías",
+    "rateLimitBody": "Espera un momento antes de volver a intentarlo.",
+    "rateLimitTitle": "Demasiadas solicitudes"
   },
   "Applications": {
     "title": "Mis solicitudes",
@@ -609,7 +670,8 @@
     "youPrefix": "Tú: ",
     "messagePlaceholder": "Escribe un mensaje...",
     "startConversation": "Iniciar conversación",
-    "selectConversation": "Selecciona una conversación"
+    "selectConversation": "Selecciona una conversación",
+    "send": "Enviar mensaje"
   },
   "Notifications": {
     "title": "Notificaciones",
@@ -802,7 +864,12 @@
     "contactDraft": "Borrador",
     "contactGenerateDraft": "Generar borrador",
     "contactCopy": "Copiar",
-    "contactSend": "Enviar"
+    "contactSend": "Enviar",
+    "loginForMatch": "Inicia sesión para ver tu puntuación",
+    "matchLabel": "coincidencia",
+    "matchLoading": "Comprobando coincidencia…",
+    "matchNeedProfile": "Completa tu perfil para la puntuación",
+    "matchScore": "Tu puntuación para esta oferta"
   },
   "Companies": {
     "title": "Empresas",
@@ -813,7 +880,9 @@
     "viewProfile": "Ver perfil",
     "location": "Ubicación",
     "website": "Sitio web",
-    "pending": "Empresas pendientes"
+    "pending": "Empresas pendientes",
+    "unknown": "Empresa desconocida",
+    "emptyBody": "Las empresas aparecerán aquí cuando los empleadores creen perfiles."
   },
   "AuthExtra": {
     "forgotTitle": "Olvidé mi contraseña",
@@ -839,7 +908,8 @@
     "browseJobs": "Explorar todos los empleos",
     "activeJobs": "empleos activos",
     "viewAllJobs": "Ver todos los empleos →",
-    "browseLocations": "Explorar ubicaciones →"
+    "browseLocations": "Explorar ubicaciones →",
+    "alphabet": "Alfabeto"
   },
   "CategoryNames": {
     "accounting": "Contabilidad",

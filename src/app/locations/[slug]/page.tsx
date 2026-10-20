@@ -120,7 +120,7 @@ export default async function LocationJobsPage({ params }: Props) {
   const jobsWord = t(dict, "Nav.jobs", "Jobs");
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
+    <div className="gjm-page px-4">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbs) }}
@@ -130,31 +130,31 @@ export default async function LocationJobsPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jobList) }}
       />
       <div className="max-w-5xl mx-auto">
-        <nav className="text-xs text-slate-500 mb-6 flex flex-wrap gap-1">
-          <Link href="/" className="hover:text-cyan-400">
+        <nav className="text-xs text-[var(--text-muted)] mb-6 flex flex-wrap gap-1">
+          <Link href="/" className="hover:text-[var(--brand-primary)]">
             {homeLabel}
           </Link>
           <span>/</span>
-          <Link href="/locations" className="hover:text-cyan-400">
+          <Link href="/locations" className="hover:text-[var(--brand-primary)]">
             {locationsLabel}
           </Link>
           <span>/</span>
-          <span className="text-slate-300">{def.name}</span>
+          <span className="text-[var(--text-body)]">{def.name}</span>
         </nav>
 
         <header className="mb-8">
-          <div className="flex items-center gap-2 text-cyan-400 mb-2">
+          <div className="flex items-center gap-2 text-[var(--brand-primary)] mb-2">
             <MapPin className="w-5 h-5" />
             <span className="text-sm font-medium">{locationsLabel}</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
             {jobsWord} — {def.name}
           </h1>
-          <p className="text-slate-400 text-sm mb-2">
+          <p className="text-[var(--text-muted)] text-sm mb-2">
             {count} {activeJobs}
           </p>
           {def.intro ? (
-            <p className="text-slate-500 text-sm max-w-2xl">{def.intro}</p>
+            <p className="text-[var(--text-muted)] text-sm max-w-2xl">{def.intro}</p>
           ) : null}
         </header>
 
@@ -166,12 +166,12 @@ export default async function LocationJobsPage({ params }: Props) {
               <li key={job.id}>
                 <Link
                   href={`/jobs/${job.id}`}
-                  className="glass block rounded-2xl border border-white/10 p-5 h-full hover:border-cyan-500/30 transition-all"
+                  className="glass block rounded-2xl border border-[var(--border)] p-5 h-full hover:border-[var(--brand-primary)] transition-all"
                 >
-                  <h2 className="text-lg font-semibold text-white mb-2 line-clamp-2">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2 line-clamp-2">
                     {job.title}
                   </h2>
-                  <div className="flex flex-wrap gap-3 text-xs text-slate-400">
+                  <div className="flex flex-wrap gap-3 text-xs text-[var(--text-muted)]">
                     {job.company?.name && (
                       <span className="inline-flex items-center gap-1">
                         <Building2 className="w-3.5 h-3.5" />
@@ -183,7 +183,7 @@ export default async function LocationJobsPage({ params }: Props) {
                       {loc}
                     </span>
                     {job.remote && (
-                      <span className="inline-flex items-center gap-1 text-emerald-400">
+                      <span className="inline-flex items-center gap-1 text-[var(--success)]">
                         <Wifi className="w-3.5 h-3.5" />
                         {remoteLabel}
                       </span>
@@ -197,16 +197,16 @@ export default async function LocationJobsPage({ params }: Props) {
 
         {related.length > 0 && (
           <section className="mt-12">
-            <h2 className="text-lg font-semibold text-white mb-4">{moreLoc}</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">{moreLoc}</h2>
             <ul className="flex flex-wrap gap-2">
               {related.map((loc: typeof related[number]) => (
                 <li key={loc.slug}>
                   <Link
                     href={`/locations/${loc.slug}`}
-                    className="inline-block rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300 transition-colors"
+                    className="inline-block rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--text-body)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-colors"
                   >
                     {loc.name}
-                    <span className="text-slate-500 ml-1">({loc.count})</span>
+                    <span className="text-[var(--text-muted)] ms-1">({loc.count})</span>
                   </Link>
                 </li>
               ))}
@@ -215,20 +215,20 @@ export default async function LocationJobsPage({ params }: Props) {
         )}
 
         <div className="mt-10 flex flex-wrap gap-4 text-sm">
-          <Link href="/jobs" className="text-cyan-400 hover:underline">
+          <Link href="/jobs" className="text-[var(--brand-primary)] hover:underline">
             {allJobs}
           </Link>
-          <Link href="/locations" className="text-cyan-400 hover:underline">
+          <Link href="/locations" className="text-[var(--brand-primary)] hover:underline">
             {allLocations}
           </Link>
-          <Link href="/categories" className="text-cyan-400 hover:underline">
+          <Link href="/categories" className="text-[var(--brand-primary)] hover:underline">
             {categoriesLabel}
           </Link>
-          <Link href="/companies" className="text-cyan-400 hover:underline">
+          <Link href="/companies" className="text-[var(--brand-primary)] hover:underline">
             {companiesLabel}
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

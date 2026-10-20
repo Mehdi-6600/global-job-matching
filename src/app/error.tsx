@@ -20,21 +20,21 @@ export default function Error({
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-16">
-      <div className="glass rounded-3xl p-10 max-w-md w-full text-center border border-red-500/15 shadow-xl">
-        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
-          <AlertTriangle className="w-8 h-8 text-red-400" />
+      <div className="glass rounded-3xl p-10 max-w-md w-full text-center border border-[var(--error)] shadow-xl">
+        <div className="w-16 h-16 rounded-full bg-[var(--error-soft)] border border-[var(--error)] flex items-center justify-center mx-auto mb-5">
+          <AlertTriangle className="w-8 h-8 text-[var(--error)]" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">
+        <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
           {t("Common.error", "Something went wrong")}
         </h2>
-        <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+        <p className="text-[var(--text-muted)] text-sm mb-6 leading-relaxed">
           {t(
             "Common.errorUnexpected",
             "An unexpected error occurred. You can try again or return home."
           )}
         </p>
         {error?.digest ? (
-          <p className="text-[11px] text-slate-500 mb-4 font-mono">
+          <p className="text-[11px] text-[var(--text-muted)] mb-4 font-mono">
             Ref: {error.digest}
           </p>
         ) : null}
@@ -42,14 +42,14 @@ export default function Error({
           <button
             type="button"
             onClick={() => reset()}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white w-full py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-95"
+            className="flex items-center justify-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] w-full py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-95"
           >
             <RefreshCw className="w-4 h-4" />
             {t("Common.retry", "Try again")}
           </button>
           <Link
             href="/"
-            className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white w-full py-2.5 rounded-xl text-sm font-medium border border-white/10 transition-all"
+            className="flex items-center justify-center gap-2 bg-[var(--surface-3)] hover:bg-white/15 text-[var(--text-primary)] w-full py-2.5 rounded-xl text-sm font-medium border border-[var(--border)] transition-all"
           >
             <Home className="w-4 h-4" />
             {t("Nav.home", "Go home")}

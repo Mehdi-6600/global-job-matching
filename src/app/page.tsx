@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
+  ArrowUpRight,
   BriefcaseBusiness,
   Building2,
   FileText,
@@ -18,19 +18,28 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { locales } from "@/lib/i18n/config";
+import { categoryLabel } from "@/lib/i18n/category-labels";
 import {
-  initials,
   salaryLabel,
   splitHeroTitle,
   type HomeJob,
   type JobsResponse,
 } from "@/lib/home/content";
+import { JobCard } from "@/components/jobs/job-card";
+import { CompanyLogo } from "@/components/company-logo";
 import Newsletter from "./components/Newsletter";
 import FeaturedUrgencyBanner from "@/components/featured-urgency-banner";
 
 type Audience = "seeker" | "employer";
 
 const HOME_JOB_LIMIT = 3;
+
+const FEATURED_CATEGORIES = [
+  "software-engineering",
+  "design",
+  "marketing",
+  "sales",
+] as const;
 
 export default function HomePage() {
   const { t, locale } = useLocale();
@@ -58,9 +67,7 @@ export default function HomePage() {
           { cache: "no-store" },
         );
 
-        if (!response.ok) {
-          throw new Error("Failed to load jobs");
-        }
+        if (!response.ok) throw new Error("Failed to load jobs");
 
         const data = (await response.json()) as JobsResponse;
         if (cancelled) return;
@@ -103,10 +110,20 @@ export default function HomePage() {
     const params = new URLSearchParams();
     if (search.trim()) params.set("search", search.trim());
     if (location.trim()) params.set("location", location.trim());
+    if (audience === "employer") {
+      router.push("/employer/post-job");
+      return;
+    }
 
     const query = params.toString();
     router.push(`/jobs${query ? `?${query}` : ""}`);
   }
+
+  const primaryHref = audience === "seeker" ? "/jobs" : "/employer/dashboard";
+  const primaryLabel =
+    audience === "seeker"
+      ? t("Home.ctaJobs", "Find Jobs")
+      : t("Home.employerCta", "Explore Employer Tools");
 
   const discoveryLinks = [
     {
@@ -165,329 +182,402 @@ export default function HomePage() {
     },
   ];
 
-  const primaryHref = audience === "seeker" ? "/jobs" : "/employer/dashboard";
-  const primaryLabel =
-    audience === "seeker"
-      ? t("Home.ctaJobs", "Find Jobs")
-      : t("Home.employerCta", "Explore Employer Tools");
+  const liveJobs = jobs.slice(0, 2);
 
   return (
-    <div id="gjm-home" className="gjmx-home">
-      <section className="gjmx-hero">
-        <div className="gjm-container gjmx-hero-grid">
-          <div className="gjmx-hero-copy">
-            <div
-              className="gjmx-audience"
-              role="group"
-              aria-label={t("Home.audienceLabel", "Choose your audience")}
-            >
-              <button
-                type="button"
-                aria-pressed={audience === "seeker"}
-                onClick={() => setAudience("seeker")}
-                className="gjmx-audience-button"
-              >
-                {t("Home.audienceSeeker", "For Job Seekers")}
-              </button>
-              <button
-                type="button"
-                aria-pressed={audience === "employer"}
-                onClick={() => setAudience("employer")}
-                className="gjmx-audience-button"
-              >
-                {t("Home.audienceEmployer", "For Employers")}
-              </button>
-            </div>
-
-            <p className="gjmx-eyebrow">
-              <span className="gjmx-eyebrow-mark" aria-hidden="true">
-                <Globe2 size={14} />
-              </span>
-              {t("Home.eyebrow", "GLOBAL CAREER PLATFORM")}
-            </p>
-
-            <h1 className="gjmx-title">
-              <span className="gjmx-title-line">{heroTitle.line1}</span>
-              {heroTitle.line2 ? (
-                <span className="gjmx-title-line gjmx-title-line--accent">
-                  {heroTitle.line2}
-                </span>
-              ) : null}
-            </h1>
-
-            <p className="gjmx-lede">
-              {t(
-                "Home.subtitle",
-                "Discover global jobs, connect with employers, and move your career forward without borders.",
-              )}
-            </p>
-
-            <p className="gjmx-value">
-              <Sparkles size={16} aria-hidden="true" />
-              {audience === "seeker"
-                ? t(
-                    "Home.valueSeekers",
-                    "AI career intelligence, global jobs, 12 languages.",
-                  )
-                : t(
-                    "Home.valueEmployers",
-                    "Reach global talent, manage hiring in one place.",
-                  )}
-            </p>
-
-            <div className="gjmx-hero-actions">
-              <Link href={primaryHref} className="gjm-btn gjm-btn-primary">
-                {primaryLabel}
-                <ArrowRight size={18} className="gjmx-mirror" aria-hidden="true" />
-              </Link>
-              <Link href="/register" className="gjm-btn gjm-btn-secondary">
-                {t("Home.ctaRegister", "Create Your Profile")}
-              </Link>
-            </div>
-          </div>
-
-          <aside className="gjmx-world-card" aria-labelledby="gjmx-world-label">
-            <div className="gjmx-world-card-top">
-              <span className="gjmx-world-label" id="gjmx-world-label">
-                <span className="gjmx-world-label-dot" aria-hidden="true" />
-                {t("Home.trustGlobal", "Global opportunities")}
-              </span>
-              <span className="gjmx-world-mark" aria-hidden="true">
-                <BriefcaseBusiness size={17} />
-              </span>
-            </div>
-
-            <div className="gjmx-world-graphic" aria-hidden="true">
-              <svg viewBox="0 0 440 300" fill="none" role="presentation">
-                <circle className="gjmx-globe-outline" cx="220" cy="148" r="112" />
-                <ellipse className="gjmx-globe-line" cx="220" cy="148" rx="52" ry="112" />
-                <ellipse className="gjmx-globe-line" cx="220" cy="148" rx="92" ry="112" />
-                <path className="gjmx-globe-line" d="M110 148h220M126 102c27 17 60 25 94 25s67-8 94-25M126 194c27-17 60-25 94-25s67 8 94 25" />
-                <path className="gjmx-route" d="M111 105c34-31 66-37 102-10 28 21 52 26 93 3M143 207c34-20 58-17 83 4 28 23 55 20 100-19" />
-                <circle className="gjmx-route-node" cx="111" cy="105" r="5" />
-                <circle className="gjmx-route-node" cx="306" cy="98" r="5" />
-                <circle className="gjmx-route-node" cx="143" cy="207" r="5" />
-                <circle className="gjmx-route-node" cx="326" cy="192" r="5" />
-                <circle className="gjmx-route-center" cx="220" cy="148" r="5" />
-              </svg>
-            </div>
-
-            <div className="gjmx-world-stats" aria-busy={loadingJobs}>
-              <div className="gjmx-world-stat">
-                <strong>{totalJobs == null ? "—" : totalJobs.toLocaleString(locale)}</strong>
-                <span>{t("Home.activeJobs", "active jobs")}</span>
-              </div>
-              <span className="gjmx-world-divider" aria-hidden="true" />
-              <div className="gjmx-world-stat">
-                <strong>{locales.length}</strong>
-                <span>{t("Home.trustLanguagesLabel", "Languages")}</span>
-              </div>
-            </div>
-          </aside>
-        </div>
-
-        <div className="gjm-container gjmx-search-wrap">
-          <form onSubmit={submitSearch} className="gjmx-search" role="search">
-            <div className="gjmx-field">
-              <Search className="gjmx-field-icon" size={19} aria-hidden="true" />
-              <div className="gjmx-field-body">
-                <label htmlFor="gjmx-keyword">
-                  {t("Home.searchKeywordLabel", "What are you looking for?")}
-                </label>
-                <input
-                  id="gjmx-keyword"
-                  name="search"
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={t(
-                    "Home.searchKeywordPlaceholder",
-                    "Job title, skills or keyword",
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="gjmx-field">
-              <MapPin className="gjmx-field-icon" size={19} aria-hidden="true" />
-              <div className="gjmx-field-body">
-                <label htmlFor="gjmx-location">
-                  {t("Home.searchLocationLabel", "Where?")}
-                </label>
-                <input
-                  id="gjmx-location"
-                  name="location"
-                  type="search"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                  placeholder={t(
-                    "Home.searchLocationPlaceholder",
-                    "Country, city or remote",
-                  )}
-                />
-              </div>
-            </div>
-
-            <button type="submit" className="gjmx-search-submit">
-              <Search size={17} aria-hidden="true" />
-              <span>{t("Home.searchButton", "Search Jobs")}</span>
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <div className="gjm-container" style={{ marginTop: "12px" }}>
-        <FeaturedUrgencyBanner />
-      </div>
-
-      <section className="gjmx-jobs-section" aria-labelledby="gjmx-jobs-title">
-        <div className="gjm-container">
-          <div className="gjmx-section-heading">
+    <div className="overflow-x-clip">
+      {/* ================= HERO ================= */}
+      <section className="relative border-b border-[var(--border-soft)]">
+        <div
+          aria-hidden="true"
+          className="gjm-grid-bg pointer-events-none absolute inset-0 opacity-40"
+        />
+        <div className="gjm-container relative py-10 sm:py-14 lg:py-20">
+          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-14">
             <div>
-              <p className="gjmx-section-kicker">
-                {t("Home.trendingKicker", "LATEST OPPORTUNITIES")}
+              <div
+                className="inline-flex rounded-[var(--radius-pill)] border border-[var(--border)] bg-[var(--surface)] p-1"
+                role="group"
+                aria-label={t("Home.audienceLabel", "Choose your audience")}
+              >
+                {(
+                  [
+                    ["seeker", t("Home.audienceSeeker", "For Job Seekers")],
+                    ["employer", t("Home.audienceEmployer", "For Employers")],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={audience === value}
+                    onClick={() => setAudience(value)}
+                    className={[
+                      "rounded-[var(--radius-pill)] px-3.5 py-1.5 text-[0.75rem] font-semibold transition-colors",
+                      audience === value
+                        ? "bg-[var(--brand-primary-tint)] text-[var(--brand-primary-hover)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="gjm-eyebrow mt-6">
+                <Globe2 size={13} aria-hidden="true" />
+                {t("Home.eyebrow", "GLOBAL CAREER PLATFORM")}
               </p>
-              <h2 id="gjmx-jobs-title" className="gjmx-section-title">
-                {t("Home.trendingTitle", "Trending opportunities")}
-              </h2>
+
+              <h1 className="mt-3 text-[clamp(2.25rem,5vw,3.75rem)] font-[650] leading-[1.04] tracking-[-0.04em] text-[var(--text-primary)]">
+                <span className="block">{heroTitle.line1}</span>
+                {heroTitle.line2 ? (
+                  <span className="mt-1 block text-[var(--brand-primary)]">
+                    {heroTitle.line2}
+                  </span>
+                ) : null}
+              </h1>
+
+              <p className="mt-5 max-w-xl text-[1.0625rem] leading-relaxed text-[var(--text-body)]">
+                {t(
+                  "Home.subtitle",
+                  "Discover global jobs, connect with employers, and move your career forward without borders.",
+                )}
+              </p>
+
+              {/* Search */}
+              <form
+                onSubmit={submitSearch}
+                role="search"
+                className="mt-7 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[var(--shadow-2)]"
+              >
+                <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                  <div className="relative flex-1">
+                    <Search
+                      size={17}
+                      aria-hidden="true"
+                      className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+                    />
+                    <label htmlFor="home-keyword" className="sr-only">
+                      {t("Home.searchKeywordLabel", "What are you looking for?")}
+                    </label>
+                    <input
+                      id="home-keyword"
+                      name="search"
+                      type="search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder={t(
+                        "Home.searchKeywordPlaceholder",
+                        "Job title, skill or company",
+                      )}
+                      className="h-11 w-full rounded-[var(--radius-md)] border border-transparent bg-transparent ps-9 pe-3 text-[0.9375rem] text-[var(--text-primary)] placeholder:text-[var(--text-subtle)] focus-visible:border-[var(--border)] focus-visible:outline-none"
+                    />
+                  </div>
+
+                  <span
+                    aria-hidden="true"
+                    className="hidden h-7 w-px bg-[var(--border-soft)] md:block"
+                  />
+
+                  <div className="relative flex-1">
+                    <MapPin
+                      size={17}
+                      aria-hidden="true"
+                      className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+                    />
+                    <label htmlFor="home-location" className="sr-only">
+                      {t("Home.searchLocationLabel", "Where?")}
+                    </label>
+                    <input
+                      id="home-location"
+                      name="location"
+                      type="search"
+                      value={location}
+                      onChange={(event) => setLocation(event.target.value)}
+                      placeholder={t(
+                        "Home.searchLocationPlaceholder",
+                        "Country, city or remote",
+                      )}
+                      className="h-11 w-full rounded-[var(--radius-md)] border border-transparent bg-transparent ps-9 pe-3 text-[0.9375rem] text-[var(--text-primary)] placeholder:text-[var(--text-subtle)] focus-visible:border-[var(--border)] focus-visible:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--brand-action)] px-5 text-[0.9375rem] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-action-hover)]"
+                  >
+                    <Search size={16} aria-hidden="true" />
+                    {t("Home.searchButton", "Search Jobs")}
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-4 flex flex-wrap items-center gap-1.5">
+                <span className="me-1 text-[0.75rem] font-medium text-[var(--text-subtle)]">
+                  {t("Home.popularSearches", "Popular")}
+                </span>
+                {FEATURED_CATEGORIES.map((slug) => (
+                  <Link
+                    key={slug}
+                    href={`/jobs?category=${slug}`}
+                    className="gjm-chip transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
+                  >
+                    {categoryLabel(slug, slug, locale)}
+                  </Link>
+                ))}
+                <Link
+                  href="/jobs?remote=true"
+                  className="gjm-chip gjm-chip--brand transition-opacity hover:opacity-85"
+                >
+                  {t("Common.remote", "Remote")}
+                </Link>
+              </div>
+
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Link href={primaryHref} className="gjm-btn gjm-btn-primary">
+                  {primaryLabel}
+                  <ArrowRight
+                    size={16}
+                    aria-hidden="true"
+                    className="rtl:rotate-180"
+                  />
+                </Link>
+                <Link href="/register" className="gjm-btn gjm-btn-secondary">
+                  {t("Home.ctaRegister", "Create Your Profile")}
+                </Link>
+              </div>
             </div>
 
-            <Link href="/jobs" className="gjmx-text-link">
-              {t("Home.viewAllJobs", "View all jobs")}
-              <ArrowRight size={17} className="gjmx-mirror" aria-hidden="true" />
-            </Link>
-          </div>
-
-          <div className="gjmx-job-grid" aria-busy={loadingJobs}>
-            {loadingJobs ? (
-              Array.from({ length: HOME_JOB_LIMIT }).map((_, index) => (
-                <div className="gjmx-job-skeleton" key={index} aria-hidden="true">
-                  <span className="gjmx-skeleton-logo" />
-                  <span className="gjmx-skeleton-line" />
-                  <span className="gjmx-skeleton-line gjmx-skeleton-line--short" />
-                  <span className="gjmx-skeleton-rule" />
-                </div>
-              ))
-            ) : jobsError ? (
-              <div className="gjmx-jobs-empty" role="status">
-                <span className="gjmx-empty-icon" aria-hidden="true">
-                  <BriefcaseBusiness size={22} />
+            {/* Live board */}
+            <aside className="rounded-[var(--radius-2xl)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-2)] sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-[0.8125rem] font-semibold text-[var(--text-primary)]">
+                  <span className="relative flex h-2 w-2" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--brand-primary)] opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-primary)]" />
+                  </span>
+                  {t("Home.dashboardLive", "Live board")}
                 </span>
-                <h3>{t("Jobs.loadErrorTitle", "Could not load jobs")}</h3>
-                <p>{t("Jobs.loadErrorBody", "Something went wrong. Please try again.")}</p>
-                <button
-                  type="button"
-                  className="gjmx-retry-button"
-                  onClick={() => setReloadKey((current) => current + 1)}
+                <Link
+                  href="/jobs"
+                  className="inline-flex items-center gap-1 text-[0.75rem] font-semibold text-[var(--brand-primary-hover)] hover:underline"
                 >
-                  {t("Common.retry", "Try again")}
-                </button>
+                  {t("Home.viewAllJobs", "View all jobs")}
+                  <ArrowUpRight size={12} aria-hidden="true" />
+                </Link>
               </div>
-            ) : jobs.length > 0 ? (
-              jobs.map((job) => {
-                const salary = salaryLabel(
-                  job,
-                  locale,
-                  t("Jobs.upTo", "Up to"),
-                );
-                const companyName =
-                  job.company?.name || t("Home.globalCompany", "Global company");
-                const typeLabel = job.type?.trim();
-                const hasRemoteType = typeLabel?.toLowerCase() === "remote";
 
-                return (
-                  <article className="gjmx-job-card" key={job.id}>
-                    <div className="gjmx-job-main">
-                      <span className="gjmx-job-logo" aria-hidden="true">
-                        {job.company?.logo ? (
-                          <Image
-                            src={job.company.logo}
-                            alt=""
-                            width={48}
-                            height={48}
-                            className="gjmx-job-logo-image"
-                          />
-                        ) : (
-                          initials(job.company?.name)
-                        )}
+              {loadingJobs ? (
+                <div className="mt-4 space-y-3" aria-busy="true">
+                  {[0, 1].map((key) => (
+                    <div
+                      key={key}
+                      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-soft)] p-3"
+                    >
+                      <span className="h-9 w-9 animate-pulse rounded-[var(--radius-sm)] bg-[var(--surface-2)]" />
+                      <span className="flex-1 space-y-2">
+                        <span className="block h-3 w-3/4 animate-pulse rounded bg-[var(--surface-2)]" />
+                        <span className="block h-2.5 w-1/2 animate-pulse rounded bg-[var(--surface-2)]" />
                       </span>
-
-                      <div className="gjmx-job-content">
-                        <h3>
-                          <Link href={`/jobs/${job.id}`}>{job.title}</Link>
-                        </h3>
-                        <p className="gjmx-job-company">{companyName}</p>
-                      </div>
                     </div>
-
-                    <div className="gjmx-job-details">
-                      {job.location ? (
-                        <span className="gjmx-job-detail">
-                          <MapPin size={14} aria-hidden="true" />
-                          <span>{job.location}</span>
-                        </span>
-                      ) : null}
-                      {job.remote || hasRemoteType ? (
-                        <span className="gjmx-job-type">
-                          {t("Home.remote", "Remote")}
-                        </span>
-                      ) : null}
-                      {typeLabel && !hasRemoteType ? (
-                        <span className="gjmx-job-type">{typeLabel}</span>
-                      ) : null}
-                    </div>
-
-                    <div className="gjmx-job-footer">
-                      {salary ? (
-                        <strong className="gjmx-job-salary">{salary}</strong>
-                      ) : (
-                        <span className="gjmx-job-salary-placeholder" />
-                      )}
-                      <Link
-                        href={`/jobs/${job.id}`}
-                        className="gjmx-job-open"
-                        aria-label={`${t("Home.viewJob", "View Job")}: ${job.title}`}
-                      >
-                        <ArrowRight size={17} className="gjmx-mirror" aria-hidden="true" />
-                      </Link>
-                    </div>
-                  </article>
-                );
-              })
-            ) : (
-              <div className="gjmx-jobs-empty" role="status">
-                <span className="gjmx-empty-icon" aria-hidden="true">
-                  <BriefcaseBusiness size={22} />
-                </span>
-                <h3>{t("Home.noJobsTitle", "No active jobs to display yet")}</h3>
-                <p>
+                  ))}
+                </div>
+              ) : liveJobs.length > 0 ? (
+                <ul className="mt-4 space-y-2">
+                  {liveJobs.map((job) => {
+                    const salary = salaryLabel(
+                      job,
+                      locale,
+                      t("Jobs.upTo", "Up to"),
+                    );
+                    return (
+                      <li key={job.id}>
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-soft)] p-3 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+                        >
+                          <CompanyLogo
+                            name={job.company?.name || "GJ"}
+                            logo={job.company?.logo}
+                            size={38}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[0.8125rem] font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary-hover)]">
+                              {job.title}
+                            </span>
+                            <span className="block truncate text-[0.75rem] text-[var(--text-muted)]">
+                              {job.company?.name ||
+                                t("Home.globalCompany", "Global company")}
+                              {salary ? ` · ${salary}` : ""}
+                            </span>
+                          </span>
+                          <ArrowUpRight
+                            size={14}
+                            aria-hidden="true"
+                            className="shrink-0 text-[var(--text-subtle)]"
+                          />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="mt-4 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] p-4 text-[0.8125rem] text-[var(--text-muted)]">
                   {t(
                     "Home.noJobsDescription",
                     "Check the jobs page for the latest opportunities.",
                   )}
                 </p>
-                <Link href="/jobs" className="gjmx-retry-button">
-                  {t("Home.browseJobs", "Browse Jobs")}
-                  <ArrowRight size={16} className="gjmx-mirror" aria-hidden="true" />
-                </Link>
+              )}
+
+              {jobsError ? (
+                <button
+                  type="button"
+                  onClick={() => setReloadKey((value) => value + 1)}
+                  className="mt-3 text-[0.75rem] font-semibold text-[var(--brand-primary-hover)] hover:underline"
+                >
+                  {t("Common.retry", "Try again")}
+                </button>
+              ) : null}
+
+              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[var(--border-soft)] pt-4">
+                <div>
+                  <p className="tabular text-[1.375rem] font-[650] leading-none tracking-[-0.03em] text-[var(--text-primary)]">
+                    {totalJobs == null
+                      ? "—"
+                      : totalJobs.toLocaleString(locale)}
+                  </p>
+                  <p className="mt-1 text-[0.6875rem] font-medium uppercase tracking-[0.09em] text-[var(--text-subtle)]">
+                    {t("Home.activeJobs", "active jobs")}
+                  </p>
+                </div>
+                <div>
+                  <p className="tabular text-[1.375rem] font-[650] leading-none tracking-[-0.03em] text-[var(--text-primary)]">
+                    {locales.length}
+                  </p>
+                  <p className="mt-1 text-[0.6875rem] font-medium uppercase tracking-[0.09em] text-[var(--text-subtle)]">
+                    {t("Home.trustLanguagesLabel", "Languages")}
+                  </p>
+                </div>
               </div>
-            )}
+            </aside>
           </div>
         </div>
       </section>
 
-      <section className="gjmx-discovery" aria-labelledby="gjmx-discovery-title">
+      {/* ================= URGENCY ================= */}
+      <div className="gjm-container pt-6">
+        <FeaturedUrgencyBanner />
+      </div>
+
+      {/* ================= TRENDING JOBS ================= */}
+      <section
+        className="gjm-container py-10 sm:py-14"
+        aria-labelledby="home-jobs-title"
+      >
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="gjm-eyebrow">
+              {t("Home.trendingKicker", "LATEST OPPORTUNITIES")}
+            </p>
+            <h2
+              id="home-jobs-title"
+              className="mt-2 text-[clamp(1.5rem,2vw+1rem,2.125rem)] font-[650] tracking-[-0.03em] text-[var(--text-primary)]"
+            >
+              {t("Home.trendingTitle", "Trending opportunities")}
+            </h2>
+          </div>
+
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary-hover)] hover:underline"
+          >
+            {t("Home.viewAllJobs", "View all jobs")}
+            <ArrowRight size={15} aria-hidden="true" className="rtl:rotate-180" />
+          </Link>
+        </div>
+
+        {loadingJobs ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+            {Array.from({ length: HOME_JOB_LIMIT }).map((_, index) => (
+              <div
+                key={index}
+                className="rounded-[var(--radius-xl)] border border-[var(--border-soft)] bg-[var(--surface)] p-5"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="h-11 w-11 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-2)]" />
+                  <span className="flex-1 space-y-2">
+                    <span className="block h-3.5 w-3/4 animate-pulse rounded bg-[var(--surface-2)]" />
+                    <span className="block h-2.5 w-1/2 animate-pulse rounded bg-[var(--surface-2)]" />
+                  </span>
+                </div>
+                <div className="mt-4 h-16 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-2)]" />
+              </div>
+            ))}
+          </div>
+        ) : jobsError ? (
+          <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--border)] bg-[var(--surface)] p-10 text-center">
+            <span className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--text-muted)]">
+              <BriefcaseBusiness size={22} aria-hidden="true" />
+            </span>
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">
+              {t("Jobs.loadErrorTitle", "Could not load jobs")}
+            </h3>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {t("Jobs.loadErrorBody", "Something went wrong. Please try again.")}
+            </p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((value) => value + 1)}
+              className="gjm-btn gjm-btn-secondary mt-4"
+            >
+              {t("Common.retry", "Try again")}
+            </button>
+          </div>
+        ) : jobs.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {jobs.map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--border)] bg-[var(--surface)] p-10 text-center">
+            <span className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--text-muted)]">
+              <BriefcaseBusiness size={22} aria-hidden="true" />
+            </span>
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">
+              {t("Home.noJobsTitle", "No active jobs to display yet")}
+            </h3>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {t(
+                "Home.noJobsDescription",
+                "Check the jobs page for the latest opportunities.",
+              )}
+            </p>
+            <Link href="/jobs" className="gjm-btn gjm-btn-secondary mt-4">
+              {t("Home.browseJobs", "Browse Jobs")}
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* ================= PLATFORM ================= */}
+      <section
+        className="border-y border-[var(--border-soft)] bg-[var(--surface)] py-10 sm:py-14"
+        aria-labelledby="home-platform-title"
+      >
         <div className="gjm-container">
-          <div className="gjmx-section-heading gjmx-section-heading--copy">
-            <div>
-              <p className="gjmx-section-kicker">
-                {t("Home.platformKicker", "ONE PLATFORM")}
-              </p>
-              <h2 id="gjmx-discovery-title" className="gjmx-section-title">
-                {t("Home.platformTitle", "Everything around your job search.")}
-              </h2>
-            </div>
-            <p className="gjmx-section-description">
+          <div className="mb-7 max-w-2xl">
+            <p className="gjm-eyebrow">
+              {t("Home.platformKicker", "ONE PLATFORM")}
+            </p>
+            <h2
+              id="home-platform-title"
+              className="mt-2 text-[clamp(1.5rem,2vw+1rem,2.125rem)] font-[650] tracking-[-0.03em] text-[var(--text-primary)]"
+            >
+              {t("Home.platformTitle", "Everything around your job search.")}
+            </h2>
+            <p className="mt-2 text-[0.9375rem] leading-relaxed text-[var(--text-muted)]">
               {t(
                 "Home.platformDescription",
                 "A focused set of tools and destinations designed to make global job discovery simpler.",
@@ -495,23 +585,29 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="gjmx-discovery-grid">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {discoveryLinks.map((item) => {
               const Icon = item.icon;
               return (
-                <Link href={item.href} className="gjmx-discovery-link" key={item.href}>
-                  <span className="gjmx-discovery-icon" aria-hidden="true">
-                    <Icon size={19} />
-                  </span>
-                  <span className="gjmx-discovery-copy">
-                    <strong>{item.title}</strong>
-                    <span>{item.description}</span>
-                  </span>
-                  <ArrowRight
-                    size={16}
-                    className="gjmx-discovery-arrow gjmx-mirror"
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group flex items-start gap-3 rounded-[var(--radius-xl)] border border-[var(--border-soft)] bg-[var(--bg-page)] p-4 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+                >
+                  <span
                     aria-hidden="true"
-                  />
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-primary-tint)] text-[var(--brand-primary-hover)]"
+                  >
+                    <Icon size={17} />
+                  </span>
+                  <span className="min-w-0">
+                    <strong className="block text-[0.9375rem] font-semibold text-[var(--text-primary)]">
+                      {item.title}
+                    </strong>
+                    <span className="mt-0.5 block text-[0.8125rem] leading-relaxed text-[var(--text-muted)]">
+                      {item.description}
+                    </span>
+                  </span>
                 </Link>
               );
             })}
@@ -519,38 +615,51 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="gjmx-employer-section" aria-labelledby="gjmx-employer-title">
-        <div className="gjm-container">
-          <div className="gjmx-employer-card">
-            <span className="gjmx-employer-mark" aria-hidden="true">
-              <Building2 size={27} />
-            </span>
-            <div className="gjmx-employer-copy">
-              <p className="gjmx-section-kicker">
+      {/* ================= EMPLOYERS ================= */}
+      <section className="gjm-container py-10 sm:py-14">
+        <div className="gjm-ink-panel px-6 py-8 sm:px-10 sm:py-10">
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <p className="gjm-eyebrow">
                 {t("Home.employerKicker", "FOR EMPLOYERS")}
               </p>
-              <h2 id="gjmx-employer-title">
+              <h2 className="mt-2 text-[clamp(1.5rem,2.2vw+1rem,2.25rem)] font-[650] tracking-[-0.03em]">
                 {t("Home.employerTitle", "Find talent without borders.")}
               </h2>
-              <p>
+              <p className="mt-2 text-[0.9375rem] leading-relaxed">
                 {t(
                   "Home.employerDescription",
                   "Publish opportunities, discover candidates and manage hiring from one professional workspace.",
                 )}
               </p>
             </div>
-            <Link href="/employer/dashboard" className="gjm-btn gjm-btn-primary">
-              {t("Home.employerCta", "Explore Employer Tools")}
-              <ArrowRight size={18} className="gjmx-mirror" aria-hidden="true" />
-            </Link>
+
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/employer/dashboard"
+                className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] bg-[#7ef0c4] px-5 text-[0.9375rem] font-semibold text-[#04120c] transition-transform hover:-translate-y-0.5"
+              >
+                {t("Home.employerCta", "Explore Employer Tools")}
+                <ArrowRight
+                  size={16}
+                  aria-hidden="true"
+                  className="rtl:rotate-180"
+                />
+              </Link>
+              <Link
+                href="/pricing"
+                className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] border border-[rgba(255,255,255,0.25)] px-5 text-[0.9375rem] font-semibold text-[#eef4f0] transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+              >
+                {t("Nav.pricing", "Pricing")}
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="gjmx-newsletter-section">
-        <div className="gjm-container">
-          <Newsletter />
-        </div>
+      {/* ================= NEWSLETTER ================= */}
+      <section className="gjm-container pb-14 sm:pb-20">
+        <Newsletter />
       </section>
     </div>
   );

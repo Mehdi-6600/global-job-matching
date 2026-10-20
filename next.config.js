@@ -51,6 +51,10 @@ const CSP_ENFORCE = [
     "https://images.unsplash.com",
     "https://remoteok.com",
     "https://www.arbeitnow.com",
+    // Crypto checkout renders the deposit address as a QR image from this
+    // service. Without the allowlist entry the <img> is blocked and customers
+    // cannot scan the address at all.
+    "https://api.qrserver.com",
   ].join(" "),
   "font-src 'self' data:",
   [

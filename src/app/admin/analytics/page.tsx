@@ -69,22 +69,22 @@ export default function AdminAnalyticsPage() {
   }, [days, t]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+    <div className="gjm-page">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <Link
               href="/admin"
-              className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-2"
+              className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-2"
             >
               <ArrowLeft className="w-4 h-4" />{" "}
               {t("Common.back", "Back to Admin")}
             </Link>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-cyan-400" />
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-[var(--brand-primary)]" />
               {t("Dashboard.stats", "Analytics")}
             </h1>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-[var(--text-muted)] text-sm mt-1">
               {t("Dashboard.welcomeSub", "Page views (Owner/Admin only)")}
             </p>
           </div>
@@ -97,8 +97,8 @@ export default function AdminAnalyticsPage() {
                 onClick={() => setDays(d)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   days === d
-                    ? "bg-cyan-600 text-white"
-                    : "bg-white/5 text-slate-400 hover:text-white"
+                    ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)]"
+                    : "bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
                 {d}d
@@ -108,7 +108,7 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+          <div className="mb-6 p-4 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
             {error}
           </div>
@@ -116,18 +116,18 @@ export default function AdminAnalyticsPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+            <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
           </div>
         ) : (
           <>
-            <div className="glass rounded-2xl p-6 border border-white/10 mb-6">
+            <div className="glass rounded-2xl p-6 border border-[var(--border)] mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                  <Eye className="w-6 h-6 text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl bg-[var(--brand-primary-soft)] flex items-center justify-center">
+                  <Eye className="w-6 h-6 text-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-white">{totalViews}</p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-3xl font-bold text-[var(--text-primary)]">{totalViews}</p>
+                  <p className="text-[var(--text-muted)] text-sm">
                     {t("Dashboard.stats", "Total views")} ({days}d)
                   </p>
                 </div>
@@ -135,12 +135,12 @@ export default function AdminAnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="glass rounded-2xl p-6 border border-white/10">
-                <h2 className="text-white font-semibold mb-4">
+              <div className="glass rounded-2xl p-6 border border-[var(--border)]">
+                <h2 className="text-[var(--text-primary)] font-semibold mb-4">
                   {t("Dashboard.stats", "Top paths")}
                 </h2>
                 {topPaths.length === 0 ? (
-                  <p className="text-slate-500 text-sm">
+                  <p className="text-[var(--text-muted)] text-sm">
                     {t("Common.noResults", "No data")}
                   </p>
                 ) : (
@@ -150,29 +150,29 @@ export default function AdminAnalyticsPage() {
                         key={p.path}
                         className="flex justify-between text-sm gap-4"
                       >
-                        <span className="text-slate-300 truncate">{p.path}</span>
-                        <span className="text-cyan-400 shrink-0">{p.views}</span>
+                        <span className="text-[var(--text-body)] truncate">{p.path}</span>
+                        <span className="text-[var(--brand-primary)] shrink-0">{p.views}</span>
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
 
-              <div className="glass rounded-2xl p-6 border border-white/10">
-                <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-400" />
+              <div className="glass rounded-2xl p-6 border border-[var(--border)]">
+                <h2 className="text-[var(--text-primary)] font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[var(--text-muted)]" />
                   {t("Dashboard.recent", "Recent")}
                 </h2>
                 {recent.length === 0 ? (
-                  <p className="text-slate-500 text-sm">
+                  <p className="text-[var(--text-muted)] text-sm">
                     {t("Common.noResults", "No events")}
                   </p>
                 ) : (
                   <ul className="space-y-3 max-h-80 overflow-y-auto">
                     {recent.map((e) => (
-                      <li key={e.id} className="text-sm border-b border-white/5 pb-2">
-                        <p className="text-slate-200 truncate">{e.path}</p>
-                        <p className="text-slate-500 text-xs">
+                      <li key={e.id} className="text-sm border-b border-[var(--border-soft)] pb-2">
+                        <p className="text-[var(--text-primary)] truncate">{e.path}</p>
+                        <p className="text-[var(--text-muted)] text-xs">
                           {new Date(e.createdAt).toLocaleString(locale)}
                         </p>
                       </li>

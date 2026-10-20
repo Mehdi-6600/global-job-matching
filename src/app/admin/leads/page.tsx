@@ -98,81 +98,81 @@ global-job-matching.vercel.app/crypto-jobs`;
   const doneCount = Object.values(checked).filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
+    <div className="gjm-page">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <Link href="/admin" className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6">
+        <Link href="/admin" className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6">
           <ArrowLeft className="w-4 h-4" /> Admin
         </Link>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Target className="w-6 h-6 text-amber-400" /> Employer Leads — 30 Hot Companies
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <Target className="w-6 h-6 text-[var(--warning)]" /> Employer Leads — 30 Hot Companies
             </h1>
-            <p className="text-slate-400 text-sm mt-1">همه الان remote استخدام می‌کنند و قبلاً $150-499 برای آگهی دادن — آماده‌ان $19 بدن. با جیمیل شخصی‌ات بفرست.</p>
+            <p className="text-[var(--text-muted)] text-sm mt-1">همه الان remote استخدام می‌کنند و قبلاً $150-499 برای آگهی دادن — آماده‌ان $19 بدن. با جیمیل شخصی‌ات بفرست.</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">{doneCount}/30 emailed</span>
-            <a href="https://hunter.io" target="_blank" rel="noopener" className="px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold flex items-center gap-1"><Search className="w-3.5 h-3.5" /> Hunter.io</a>
+            <span className="px-3 py-1 rounded-full bg-[var(--success-soft)] border border-[var(--success)] text-[var(--success)] text-xs font-bold">{doneCount}/30 emailed</span>
+            <a href="https://hunter.io" target="_blank" rel="noopener" className="px-3 py-1.5 rounded-xl bg-[var(--warning)] text-[var(--text-on-brand)] text-xs font-bold flex items-center gap-1"><Search className="w-3.5 h-3.5" /> Hunter.io</a>
           </div>
         </div>
 
-        <div className="glass rounded-2xl border border-white/10 p-4 mb-6">
-          <h2 className="font-bold text-white mb-2 flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400" /> چطوری ایمیل پیدا کنم (۳۰ ثانیه/شرکت):</h2>
-          <ol className="text-sm text-slate-300 space-y-1 list-decimal pl-5">
+        <div className="glass rounded-2xl border border-[var(--border)] p-4 mb-6">
+          <h2 className="font-bold text-[var(--text-primary)] mb-2 flex items-center gap-2"><Zap className="w-4 h-4 text-[var(--warning)]" /> چطوری ایمیل پیدا کنم (۳۰ ثانیه/شرکت):</h2>
+          <ol className="text-sm text-[var(--text-body)] space-y-1 list-decimal ps-5">
             <li>روی <strong>Hunter</strong> کلیک کن → دامین رو بزن → ایمیل موسس/HR رو کپی کن (۲۵ تا رایگان/ماه)</li>
-            <li>اگر نبود: برو <code className="px-1 py-0.5 rounded bg-white/10 text-xs">{`careers@domain.com`}</code> یا <code className="px-1 py-0.5 rounded bg-white/10 text-xs">{`hiring@domain.com`}</code> رو با جیمیل بفرست — ۸۰٪ جواب می‌ده</li>
+            <li>اگر نبود: برو <code className="px-1 py-0.5 rounded bg-[var(--surface-3)] text-xs">{`careers@domain.com`}</code> یا <code className="px-1 py-0.5 rounded bg-[var(--surface-3)] text-xs">{`hiring@domain.com`}</code> رو با جیمیل بفرست — ۸۰٪ جواب می‌ده</li>
             <li>قالب آماده رو Copy کن → اسم شرکت/نقش رو عوض کن → با جیمیل بفرست (روزی ۱۰ تا)</li>
             <li>تیک ✅ بزن تا یادت بمونه</li>
           </ol>
-          <p className="text-xs text-slate-500 mt-3">ایمیل سایت (Resend) برای outreach استفاده نکن — اسپم میشی. فقط جیمیل شخصی.</p>
+          <p className="text-xs text-[var(--text-muted)] mt-3">ایمیل سایت (Resend) برای outreach استفاده نکن — اسپم میشی. فقط جیمیل شخصی.</p>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
             {(["all", "crypto-native", "web3-remote"] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === f ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>{f === "all" ? "All 30" : f === "crypto-native" ? "Crypto Native (15)" : "Web3 Remote (15)"}</button>
+              <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === f ? "bg-[var(--brand-accent)] text-[var(--text-on-brand)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}>{f === "all" ? "All 30" : f === "crypto-native" ? "Crypto Native (15)" : "Web3 Remote (15)"}</button>
             ))}
           </div>
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search company or role..." className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search company or role..." className="w-full ps-9 pe-3 py-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-subtle)] text-sm" />
           </div>
         </div>
 
         <div className="space-y-3">
           {filtered.map(lead => (
-            <div key={lead.id} className={`glass rounded-xl p-4 border flex flex-col sm:flex-row gap-4 ${checked[lead.id] ? "border-emerald-500/30 bg-emerald-500/5" : "border-white/10"}`}>
+            <div key={lead.id} className={`glass rounded-xl p-4 border flex flex-col sm:flex-row gap-4 ${checked[lead.id] ? "border-[var(--success)] bg-[var(--success-soft)]" : "border-white/10"}`}>
               <label className="flex items-start gap-3 flex-1 cursor-pointer">
                 <input type="checkbox" checked={!!checked[lead.id]} onChange={() => toggle(lead.id)} className="mt-1 w-5 h-5 rounded" />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-bold text-white">{lead.company}</h3>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${lead.category === "crypto-native" ? "bg-amber-500 text-white" : "bg-indigo-500 text-white"}`}>{lead.category === "crypto-native" ? "CRYPTO" : "WEB3"}</span>
-                    <span className="text-xs text-slate-400">• {lead.role} • {lead.salary}</span>
+                    <h3 className="font-bold text-[var(--text-primary)]">{lead.company}</h3>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${lead.category === "crypto-native" ? "bg-[var(--warning)] text-[var(--text-on-brand)]" : "bg-[var(--brand-accent)] text-[var(--text-on-brand)]"}`}>{lead.category === "crypto-native" ? "CRYPTO" : "WEB3"}</span>
+                    <span className="text-xs text-[var(--text-muted)]">• {lead.role} • {lead.salary}</span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">{lead.whyHot} — {lead.domain}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">{lead.whyHot} — {lead.domain}</p>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {lead.emails.map(email => (
-                      <button key={email} onClick={() => copyEmail(email)} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-cyan-300 hover:bg-white/10">
-                        <Mail className="w-3 h-3" /> {email} {copied === email ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 opacity-50" />}
+                      <button key={email} onClick={() => copyEmail(email)} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--brand-primary)] hover:bg-[var(--surface-3)]">
+                        <Mail className="w-3 h-3" /> {email} {copied === email ? <Check className="w-3 h-3 text-[var(--success)]" /> : <Copy className="w-3 h-3 opacity-50" />}
                       </button>
                     ))}
                   </div>
                 </div>
               </label>
               <div className="flex sm:flex-col gap-2 shrink-0">
-                <a href={lead.hunterUrl} target="_blank" rel="noopener" className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium flex items-center gap-1 hover:bg-amber-500/20"><Search className="w-3.5 h-3.5" /> Hunter</a>
-                <a href={lead.website} target="_blank" rel="noopener" className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs flex items-center gap-1 hover:bg-white/10"><Building2 className="w-3.5 h-3.5" /> Site <ExternalLink className="w-3 h-3" /></a>
-                <button onClick={() => copyTemplate(lead.company, lead.role)} className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-medium flex items-center gap-1 hover:bg-indigo-500">{copied === `template-${lead.company}` ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy Email</button>
+                <a href={lead.hunterUrl} target="_blank" rel="noopener" className="px-3 py-1.5 rounded-xl bg-[var(--warning-soft)] border border-[var(--warning)] text-[var(--warning)] text-xs font-medium flex items-center gap-1 hover:bg-[var(--warning-soft)]"><Search className="w-3.5 h-3.5" /> Hunter</a>
+                <a href={lead.website} target="_blank" rel="noopener" className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-xs flex items-center gap-1 hover:bg-[var(--surface-3)]"><Building2 className="w-3.5 h-3.5" /> Site <ExternalLink className="w-3 h-3" /></a>
+                <button onClick={() => copyTemplate(lead.company, lead.role)} className="px-3 py-1.5 rounded-xl bg-[var(--brand-accent)] text-[var(--text-on-brand)] text-xs font-medium flex items-center gap-1 hover:bg-[var(--brand-accent)]">{copied === `template-${lead.company}` ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy Email</button>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-8 glass rounded-2xl border border-indigo-500/20 p-6 bg-gradient-to-br from-indigo-500/5 to-purple-500/5">
-          <h3 className="font-bold text-white mb-2">قالب ایمیل (کپی و بفرست):</h3>
-          <pre className="text-xs text-slate-300 whitespace-pre-wrap bg-black/20 rounded-xl p-4 border border-white/10 overflow-x-auto">{`Subject: Feature your [Role] for $39 in crypto (vs $499 elsewhere)
+        <div className="mt-8 glass rounded-2xl border border-[var(--border)] p-6 bg-[var(--brand-accent-soft)]">
+          <h3 className="font-bold text-[var(--text-primary)] mb-2">قالب ایمیل (کپی و بفرست):</h3>
+          <pre className="text-xs text-[var(--text-body)] whitespace-pre-wrap bg-black/20 rounded-xl p-4 border border-[var(--border)] overflow-x-auto">{`Subject: Feature your [Role] for $39 in crypto (vs $499 elsewhere)
 
 Hi [Name],
 

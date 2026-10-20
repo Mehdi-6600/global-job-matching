@@ -26,7 +26,11 @@
     "jobAlerts": "Alertes emploi",
     "help": "Aide",
     "profile": "Profil",
-    "search": "Rechercher"
+    "search": "Rechercher",
+    "language": "Langue",
+    "postJob": "Publier une offre",
+    "account": "Compte",
+    "searchJobs": "Rechercher des emplois"
   },
   "Home": {
     "eyebrow": "PLATEFORME DE CARRIÈRE MONDIALE",
@@ -132,7 +136,14 @@
     "trustSectionKicker": "BASÉ SUR DES DONNÉES RÉELLES",
     "trustSectionTitle": "Infrastructure fiable, pas des témoignages.",
     "feedTitle": "Fil des opportunités en direct",
-    "feedEmpty": "Les nouveaux postes apparaissent ici dès leur publication."
+    "feedEmpty": "Les nouveaux postes apparaissent ici dès leur publication.",
+    "popularSearches": "Populaire",
+    "featuredFull": "Les places en vedette sont complètes — liste d’attente ouverte",
+    "featuredSpotsLeft": "Plus que {left}/{total} places en vedette",
+    "featuredStats": "{featured} en vedette · {jobs} offres actives",
+    "campaignEnds": "Se termine le {date}",
+    "featureCta": "Mettre en vedette · ${price} / 7 j",
+    "postJobCta": "Publier une offre"
   },
   "Common": {
     "loading": "Chargement...",
@@ -183,7 +194,19 @@
     "forbidden": "Accès refusé",
     "status": "Statut",
     "print": "Imprimer",
-    "copied": "Copié"
+    "copied": "Copié",
+    "toggleTheme": "Changer de thème",
+    "skipToContent": "Aller au contenu",
+    "pageNotFound": "Page introuvable",
+    "pageNotFoundDesc": "Cette page n’existe pas ou a été déplacée. Essayez l’une de ces sections populaires :",
+    "copy": "Copier",
+    "errorUnexpected": "Une erreur inattendue est survenue. Réessayez ou revenez à l'accueil.",
+    "planRequired": "Cette fonctionnalité nécessite une offre supérieure.",
+    "rateLimited": "Trop de requêtes. Patientez puis réessayez.",
+    "serviceUnavailable": "Service temporairement indisponible. Réessayez dans un instant.",
+    "mainNavigation": "Navigation principale",
+    "relatedSections": "Sections associées",
+    "exploreMore": "Explorer davantage"
   },
   "ApiErrors": {
     "badRequest": "La requête est invalide. Vérifiez vos saisies.",
@@ -240,8 +263,28 @@
       "emailExists": "Cet e-mail est déjà enregistré",
       "generic": "Une erreur est survenue",
       "network": "Erreur réseau. Veuillez réessayer.",
-      "rateLimited": "Trop de requêtes. Veuillez réessayer plus tard."
-    }
+      "rateLimited": "Trop de requêtes. Veuillez réessayer plus tard.",
+      "unauthorized": "Connectez-vous pour continuer."
+    },
+    "sideTitle": "Votre prochain poste commence par une meilleure recherche.",
+    "sidePoint1": "Des postes mondiaux chez des employeurs vérifiés, mis à jour chaque jour.",
+    "sidePoint2": "Scores de correspondance IA, aide au CV et analyse du risque de carrière.",
+    "sidePoint3": "Salaires transparents et un seul profil pour chaque candidature.",
+    "sideFooter": "Inscription gratuite. Sans carte bancaire.",
+    "hidePassword": "Masquer le mot de passe",
+    "registeredSuccess": "Compte créé. Connectez-vous pour continuer.",
+    "sessionExpired": "Votre session a expiré. Reconnectez-vous.",
+    "showPassword": "Afficher le mot de passe",
+    "verifyEmailErrorBody": "Le lien est invalide ou a expiré.",
+    "verifyEmailErrorTitle": "Échec de la vérification",
+    "verifyEmailMissingBody": "Ce lien de vérification manque de paramètres requis.",
+    "verifyEmailMissingTitle": "Lien invalide",
+    "verifyEmailResend": "Renvoyer l'e-mail de vérification",
+    "verifyEmailResendFailed": "Impossible d'envoyer l'e-mail. Réessayez plus tard.",
+    "verifyEmailResending": "Envoi…",
+    "verifyEmailResent": "E-mail de vérification envoyé. Vérifiez votre boîte de réception.",
+    "verifyEmailSuccessBody": "Votre e-mail a bien été vérifié.",
+    "verifyEmailSuccessTitle": "E-mail vérifié !"
   },
   "Contact": {
     "title": "Nous contacter",
@@ -368,7 +411,12 @@
     "errIntentExpired": "Ce devis de paiement a expiré ou a déjà été utilisé. Créez-en un nouveau.",
     "errRecipient": "L'adresse du portefeuille a changé. Créez un nouveau devis.",
     "errSubmit": "Échec de l'envoi. Veuillez réessayer.",
-    "errWallet": "Cette crypto n'est pas configurée pour les paiements."
+    "errWallet": "Cette crypto n'est pas configurée pour les paiements.",
+    "cta": "Continuer en crypto sur les tarifs",
+    "free": "Offre gratuite",
+    "perMonth": "/mois",
+    "perYear": "/an",
+    "qrAlt": "Code QR de l'adresse de paiement"
   },
   "Dashboard": {
     "navDashboard": "Tableau de bord",
@@ -406,7 +454,12 @@
     "remote": "Télétravail",
     "noJobs": "Aucun emploi à afficher pour l'instant.",
     "recent": "Récent",
-    "stats": "Statistiques"
+    "stats": "Statistiques",
+    "completeProfile": "Compléter le profil →",
+    "matchNeedProfile": "Ajoutez des compétences ou une biographie à votre profil pour débloquer les scores de correspondance.",
+    "matchScore": "Score de correspondance",
+    "matchedJobs": "Meilleures correspondances",
+    "noMatches": "Pas encore de correspondances fortes. Mettez à jour vos compétences ou parcourez toutes les offres."
   },
   "Settings": {
     "title": "Paramètres",
@@ -569,7 +622,15 @@
     "pending": "En attente",
     "salaryNA": "Salaire non précisé",
     "loadErrorTitle": "Impossible de charger les emplois",
-    "loadErrorBody": "Une erreur est survenue. Veuillez réessayer."
+    "loadErrorBody": "Une erreur est survenue. Veuillez réessayer.",
+    "kicker": "CARRIÈRES MONDIALES",
+    "resultsCount": "{count} offres",
+    "pagination": "Pagination",
+    "showResults": "Voir les résultats",
+    "featured": "En vedette",
+    "allCategories": "Toutes les catégories",
+    "rateLimitBody": "Patientez un instant avant de réessayer.",
+    "rateLimitTitle": "Trop de requêtes"
   },
   "Applications": {
     "title": "Mes candidatures",
@@ -609,7 +670,8 @@
     "youPrefix": "Vous : ",
     "messagePlaceholder": "Écrivez un message...",
     "startConversation": "Démarrer une conversation",
-    "selectConversation": "Sélectionnez une conversation"
+    "selectConversation": "Sélectionnez une conversation",
+    "send": "Envoyer le message"
   },
   "Notifications": {
     "title": "Notifications",
@@ -802,7 +864,12 @@
     "contactDraft": "Brouillon",
     "contactGenerateDraft": "Générer un brouillon",
     "contactCopy": "Copier",
-    "contactSend": "Envoyer"
+    "contactSend": "Envoyer",
+    "loginForMatch": "Connectez-vous pour voir votre score",
+    "matchLabel": "correspondance",
+    "matchLoading": "Vérification du score…",
+    "matchNeedProfile": "Complétez le profil pour le score",
+    "matchScore": "Votre score pour cette offre"
   },
   "Companies": {
     "title": "Entreprises",
@@ -813,7 +880,9 @@
     "viewProfile": "Voir le profil",
     "location": "Lieu",
     "website": "Site web",
-    "pending": "Entreprises en attente"
+    "pending": "Entreprises en attente",
+    "unknown": "Entreprise inconnue",
+    "emptyBody": "Les entreprises apparaîtront ici dès que des employeurs créeront des profils."
   },
   "AuthExtra": {
     "forgotTitle": "Mot de passe oublié",
@@ -839,7 +908,8 @@
     "browseJobs": "Parcourir tous les emplois",
     "activeJobs": "emplois actifs",
     "viewAllJobs": "Voir tous les emplois →",
-    "browseLocations": "Parcourir les lieux →"
+    "browseLocations": "Parcourir les lieux →",
+    "alphabet": "Alphabet"
   },
   "CategoryNames": {
     "accounting": "Comptabilité",

@@ -97,51 +97,51 @@ export default function CompanyDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 flex items-center justify-center">
+      <div className="gjm-page flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">
+          <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin mx-auto mb-3" />
+          <p className="text-[var(--text-muted)] text-sm">
             {t("Common.loading", "Loading...")}
           </p>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error || !company) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 flex items-center justify-center px-4">
-        <div className="glass rounded-2xl p-8 border border-white/10 text-center max-w-md">
-          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-          <p className="text-white font-medium mb-4">
+      <div className="gjm-page flex items-center justify-center px-4">
+        <div className="glass rounded-2xl p-8 border border-[var(--border)] text-center max-w-md">
+          <AlertCircle className="w-10 h-10 text-[var(--error)] mx-auto mb-3" />
+          <p className="text-[var(--text-primary)] font-medium mb-4">
             {error || t("Companies.noCompanies", "Company not found")}
           </p>
           <Link
             href="/companies"
-            className="inline-flex items-center gap-2 text-cyan-400 text-sm"
+            className="inline-flex items-center gap-2 text-[var(--brand-primary)] text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             {t("Companies.title", "Companies")}
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6">
+    <div className="gjm-page px-4 sm:px-6">
       <div className="max-w-4xl mx-auto">
         <Link
           href="/companies"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
+          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("Common.back", "Back")}
         </Link>
 
-        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10 mb-6">
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)] mb-6">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-cyan-300 font-bold text-lg shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--brand-primary-soft)] border border-[var(--border)] flex items-center justify-center text-[var(--brand-primary)] font-bold text-lg shrink-0">
               {company.logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -154,10 +154,10 @@ export default function CompanyDetailPage() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold text-white mb-1">
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-1">
                 {company.name}
               </h1>
-              <div className="flex flex-wrap gap-3 text-sm text-slate-400">
+              <div className="flex flex-wrap gap-3 text-sm text-[var(--text-muted)]">
                 {company.location && (
                   <span className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5" />
@@ -173,7 +173,7 @@ export default function CompanyDetailPage() {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-cyan-400 hover:underline"
+                    className="flex items-center gap-1 text-[var(--brand-primary)] hover:underline"
                   >
                     <Globe className="w-3.5 h-3.5" />
                     {t("Companies.website", "Website")}
@@ -184,21 +184,21 @@ export default function CompanyDetailPage() {
             </div>
           </div>
           {company.description && (
-            <p className="mt-4 text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="mt-4 text-[var(--text-body)] text-sm leading-relaxed whitespace-pre-wrap">
               {company.description}
             </p>
           )}
         </div>
 
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Briefcase className="w-5 h-5 text-cyan-400" />
+        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+          <Briefcase className="w-5 h-5 text-[var(--brand-primary)]" />
           {t("Companies.jobs", "Jobs")} ({jobs.length})
         </h2>
 
         {jobs.length === 0 ? (
-          <div className="glass rounded-2xl p-10 text-center border border-white/10">
-            <Building2 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">
+          <div className="glass rounded-2xl p-10 text-center border border-[var(--border)]">
+            <Building2 className="w-10 h-10 text-[var(--text-subtle)] mx-auto mb-3" />
+            <p className="text-[var(--text-muted)] text-sm">
               {t("Jobs.noJobsFound", "No open positions right now.")}
             </p>
           </div>
@@ -208,20 +208,20 @@ export default function CompanyDetailPage() {
               <Link
                 key={job.id}
                 href={`/jobs/${job.id}`}
-                className="block glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all"
+                className="block glass rounded-xl p-4 border border-[var(--border)] hover:border-[var(--border-strong)] transition-all"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-white font-medium text-sm">
+                    <h3 className="text-[var(--text-primary)] font-medium text-sm">
                       {job.title}
                     </h3>
-                    <div className="flex flex-wrap gap-2 mt-1 text-xs text-slate-400">
+                    <div className="flex flex-wrap gap-2 mt-1 text-xs text-[var(--text-muted)]">
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
                         {job.location}
                       </span>
                       {job.remote && (
-                        <span className="flex items-center gap-1 text-cyan-400">
+                        <span className="flex items-center gap-1 text-[var(--brand-primary)]">
                           <Wifi className="w-3 h-3" />
                           {t("Common.remote", "Remote")}
                         </span>
@@ -237,7 +237,7 @@ export default function CompanyDetailPage() {
                       )}
                     </div>
                   </div>
-                  <span className="text-cyan-400 text-xs font-medium">
+                  <span className="text-[var(--brand-primary)] text-xs font-medium">
                     {t("Common.view", "View")} →
                   </span>
                 </div>
@@ -246,6 +246,6 @@ export default function CompanyDetailPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

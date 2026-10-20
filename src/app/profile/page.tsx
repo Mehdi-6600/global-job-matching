@@ -240,32 +240,32 @@ export default function ProfilePage() {
   /* -------------------------------------------------------------- */
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
+      <div className="gjm-page flex items-center justify-center px-4">
         <div className="text-center">
-          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">
+          <Loader2 className="w-10 h-10 text-[var(--brand-primary)] animate-spin mx-auto mb-4" />
+          <p className="text-[var(--text-muted)]">
             {t("Profile.loading", "Loading profile...")}
           </p>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (loadError) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
-        <div className="text-center glass rounded-2xl p-8 border border-red-500/20 max-w-sm">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="text-red-400 font-medium mb-4">{loadError}</p>
+      <div className="gjm-page flex items-center justify-center px-4">
+        <div className="text-center glass rounded-2xl p-8 border border-[var(--error)] max-w-sm">
+          <AlertCircle className="w-12 h-12 text-[var(--error)] mx-auto mb-4" />
+          <p className="text-[var(--error)] font-medium mb-4">{loadError}</p>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+            className="inline-flex items-center gap-2 bg-[var(--brand-primary)] text-[var(--text-on-brand)] px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
             {t("Common.back", "Back")}
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -293,18 +293,18 @@ export default function ProfilePage() {
   /* Render                                                         */
   /* -------------------------------------------------------------- */
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <div className="gjm-page px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         {/* Success / error banners */}
         {saveSuccess && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-xl bg-[var(--success-soft)] border border-[var(--success)] text-[var(--success)] text-sm flex items-center gap-2">
             <Save className="w-4 h-4" />
             {t("Profile.saved", "Profile saved")}
           </div>
         )}
 
         {saveError && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {saveError}
           </div>
@@ -312,11 +312,11 @@ export default function ProfilePage() {
 
         {/* Header card */}
         <div className="glass rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden gjm-card-accent gjm-card-accent--cyan">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute top-0 end-0 w-96 h-96 bg-[var(--brand-primary-soft)] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
           <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className="relative">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white text-3xl md:text-4xl font-bold shadow-2xl">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-[image:var(--gradient-brand)] flex items-center justify-center text-[var(--text-primary)] text-3xl md:text-4xl font-bold shadow-2xl">
                 {initials}
               </div>
             </div>
@@ -329,30 +329,30 @@ export default function ProfilePage() {
                     value={profile.name}
                     onChange={(e) => handleChange("name", e.target.value)}
                     placeholder={t("Profile.name", "Full name")}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xl font-bold outline-none focus:border-cyan-500/50"
+                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-xl font-bold outline-none focus:border-[var(--brand-primary)]"
                   />
                   <input
                     type="text"
                     value={profile.title}
                     onChange={(e) => handleChange("title", e.target.value)}
                     placeholder={t("Profile.headline", "Headline / title")}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-slate-300 outline-none focus:border-cyan-500/50"
+                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2 text-[var(--text-body)] outline-none focus:border-[var(--brand-primary)]"
                   />
                 </div>
               ) : (
                 <>
-                  <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
+                  <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-1">
                     {displayName}
                   </h1>
                   {profile.title && (
-                    <p className="text-cyan-400 font-medium mb-3">
+                    <p className="text-[var(--brand-primary)] font-medium mb-3">
                       {profile.title}
                     </p>
                   )}
                 </>
               )}
 
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-slate-400 mt-3">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-[var(--text-muted)] mt-3">
                 {isEditing ? (
                   <>
                     <div className="flex items-center gap-1.5 w-full sm:w-auto">
@@ -364,12 +364,12 @@ export default function ProfilePage() {
                           handleChange("location", e.target.value)
                         }
                         placeholder={t("Profile.location", "Location")}
-                        className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm outline-none focus:border-cyan-500/50 flex-1"
+                        className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] flex-1"
                       />
                     </div>
                     <div className="flex items-center gap-1.5 w-full sm:w-auto">
                       <Mail className="w-4 h-4 shrink-0" />
-                      <span className="text-slate-400">{profile.email}</span>
+                      <span className="text-[var(--text-muted)]">{profile.email}</span>
                     </div>
                   </>
                 ) : (
@@ -397,7 +397,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={handleCancel}
                   disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all glass text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 disabled:opacity-60"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all glass text-[var(--text-body)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] border border-[var(--border)] disabled:opacity-60"
                 >
                   <X className="w-4 h-4" />
                   {t("Common.cancel", "Cancel")}
@@ -409,8 +409,8 @@ export default function ProfilePage() {
                 disabled={saving}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all disabled:opacity-60 ${
                   isEditing
-                    ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                    : "glass text-slate-300 hover:text-white hover:bg-white/10 border border-white/10"
+                    ? "bg-[var(--success)] hover:bg-[var(--success-hover)] text-[var(--text-on-brand)]"
+                    : "glass text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] border border-[var(--border)]"
                 }`}
               >
                 {isEditing ? (
@@ -440,8 +440,8 @@ export default function ProfilePage() {
           <div className="space-y-6">
             {/* About */}
             <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[var(--brand-primary)]" />
                 {t("Profile.about", "About")}
               </h3>
               {isEditing ? (
@@ -453,14 +453,14 @@ export default function ProfilePage() {
                     "Profile.bioPlaceholder",
                     "Write something about yourself...",
                   )}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-300 text-sm outline-none focus:border-cyan-500/50 resize-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-body)] text-sm outline-none focus:border-[var(--brand-primary)] resize-none"
                 />
               ) : profile.bio ? (
-                <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+                <p className="text-[var(--text-body)] text-sm leading-relaxed whitespace-pre-line">
                   {profile.bio}
                 </p>
               ) : (
-                <p className="text-slate-500 text-sm italic">
+                <p className="text-[var(--text-muted)] text-sm italic">
                   {t("Profile.bioEmpty", "No bio yet.")}
                 </p>
               )}
@@ -468,15 +468,15 @@ export default function ProfilePage() {
 
             {/* Links */}
             <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <LinkIcon className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-[var(--brand-primary)]" />
                 {t("Profile.links", "Links")}
               </h3>
               <div className="space-y-3">
                 {isEditing ? (
                   <>
                     <div className="relative">
-                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Globe className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                       <input
                         type="text"
                         value={profile.website}
@@ -487,11 +487,11 @@ export default function ProfilePage() {
                           "Profile.websitePlaceholder",
                           "Website",
                         )}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl ps-10 pe-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                       />
                     </div>
                     <div className="relative">
-                      <Github className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Github className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                       <input
                         type="text"
                         value={profile.github}
@@ -502,11 +502,11 @@ export default function ProfilePage() {
                           "Profile.githubPlaceholder",
                           "GitHub",
                         )}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl ps-10 pe-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                       />
                     </div>
                     <div className="relative">
-                      <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Linkedin className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                       <input
                         type="text"
                         value={profile.linkedin}
@@ -517,7 +517,7 @@ export default function ProfilePage() {
                           "Profile.linkedinPlaceholder",
                           "LinkedIn",
                         )}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl ps-10 pe-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                       />
                     </div>
                   </>
@@ -532,9 +532,9 @@ export default function ProfilePage() {
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 text-slate-300 hover:text-cyan-400 transition-colors text-sm break-all"
+                        className="flex items-center gap-3 text-[var(--text-body)] hover:text-[var(--brand-primary)] transition-colors text-sm break-all"
                       >
-                        <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <Globe className="w-4 h-4 text-[var(--brand-primary)] shrink-0" />
                         {profile.website}
                       </a>
                     )}
@@ -547,9 +547,9 @@ export default function ProfilePage() {
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 text-slate-300 hover:text-cyan-400 transition-colors text-sm break-all"
+                        className="flex items-center gap-3 text-[var(--text-body)] hover:text-[var(--brand-primary)] transition-colors text-sm break-all"
                       >
-                        <Github className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <Github className="w-4 h-4 text-[var(--brand-primary)] shrink-0" />
                         {profile.github}
                       </a>
                     )}
@@ -562,15 +562,15 @@ export default function ProfilePage() {
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 text-slate-300 hover:text-cyan-400 transition-colors text-sm break-all"
+                        className="flex items-center gap-3 text-[var(--text-body)] hover:text-[var(--brand-primary)] transition-colors text-sm break-all"
                       >
-                        <Linkedin className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <Linkedin className="w-4 h-4 text-[var(--brand-primary)] shrink-0" />
                         {profile.linkedin}
                       </a>
                     )}
                   </>
                 ) : (
-                  <p className="text-slate-500 text-sm italic">
+                  <p className="text-[var(--text-muted)] text-sm italic">
                     {t("Profile.linksEmpty", "No links added yet.")}
                   </p>
                 )}
@@ -579,8 +579,8 @@ export default function ProfilePage() {
 
             {/* Skills */}
             <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Award className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                <Award className="w-5 h-5 text-[var(--brand-primary)]" />
                 {t("Profile.skills", "Skills")}
               </h3>
               {profile.skills.length > 0 ? (
@@ -588,14 +588,14 @@ export default function ProfilePage() {
                   {profile.skills.map((skill) => (
                     <span
                       key={skill}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 text-slate-300 text-xs border border-white/10"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--surface-2)] text-[var(--text-body)] text-xs border border-[var(--border)]"
                     >
                       {skill}
                       {isEditing && (
                         <button
                           type="button"
                           onClick={() => removeSkill(skill)}
-                          className="ml-1 text-slate-400 hover:text-red-400 transition-colors"
+                          className="ms-1 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
                           aria-label={t(
                             "Profile.removeSkill",
                             "Remove skill",
@@ -608,7 +608,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-500 text-sm italic">
+                <p className="text-[var(--text-muted)] text-sm italic">
                   {t("Profile.skillsEmpty", "No skills added yet.")}
                 </p>
               )}
@@ -628,12 +628,12 @@ export default function ProfilePage() {
                       "Profile.addSkillPlaceholder",
                       "Add a skill...",
                     )}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-cyan-500/50"
+                    className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                   />
                   <button
                     type="button"
                     onClick={addSkill}
-                    className="px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white transition-colors"
+                    className="px-3 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-[var(--text-on-brand)] transition-colors"
                     aria-label={t("Profile.addSkill", "Add skill")}
                   >
                     <Plus className="w-4 h-4" />
@@ -646,8 +646,8 @@ export default function ProfilePage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Experience */}
             <div className="glass rounded-2xl p-6 md:p-8">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-[var(--brand-primary)]" />
                 {t("Profile.experience", "Experience")}
               </h3>
               {isEditing ? (
@@ -659,14 +659,14 @@ export default function ProfilePage() {
                     "Profile.experiencePlaceholder",
                     "Roles, years, achievements",
                   )}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-300 text-sm outline-none focus:border-cyan-500/50 resize-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-body)] text-sm outline-none focus:border-[var(--brand-primary)] resize-none"
                 />
               ) : profile.bio ? (
-                <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+                <p className="text-[var(--text-body)] text-sm leading-relaxed whitespace-pre-line">
                   {profile.bio}
                 </p>
               ) : (
-                <p className="text-slate-500 text-sm italic">
+                <p className="text-[var(--text-muted)] text-sm italic">
                   {t(
                     "Profile.experienceEmpty",
                     "No experience added yet.",
@@ -677,8 +677,8 @@ export default function ProfilePage() {
 
             {/* Education */}
             <div className="glass rounded-2xl p-6 md:p-8">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-purple-400" />
+              <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[var(--brand-accent)]" />
                 {t("Profile.education", "Education")}
               </h3>
               {t("Profile.educationPlaceholder", "Your education details")}
@@ -686,6 +686,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

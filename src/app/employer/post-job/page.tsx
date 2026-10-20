@@ -141,24 +141,24 @@ export default function PostJobPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
+      <div className="gjm-page px-4 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">{t("Common.loading", "Loading...")}</p>
+          <Loader2 className="w-10 h-10 text-[var(--brand-primary)] animate-spin mx-auto mb-4" />
+          <p className="text-[var(--text-muted)]">{t("Common.loading", "Loading...")}</p>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (companies.length === 0) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
-        <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-md">
-          <Building2 className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">
+      <div className="gjm-page px-4 flex items-center justify-center">
+        <div className="text-center glass rounded-2xl p-8 border border-[var(--border)] max-w-md">
+          <Building2 className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
             {t("Companies.noCompanies", "No Company Found")}
           </h2>
-          <p className="text-slate-400 text-sm mb-6">
+          <p className="text-[var(--text-muted)] text-sm mb-6">
             {t(
               "Employer.company",
               "You need to create a company profile before posting jobs."
@@ -166,41 +166,41 @@ export default function PostJobPage() {
           </p>
           <Link
             href="/employer/company/new"
-            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+            className="inline-flex items-center gap-2 bg-[var(--brand-primary)] text-[var(--text-on-brand)] px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           >
             <Building2 className="w-4 h-4" />
             {t("Employer.company", "Create Company Profile")}
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (success) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
+      <div className="gjm-page px-4 flex items-center justify-center">
         <div className="w-full max-w-lg space-y-4">
-          <div className="text-center glass rounded-2xl p-8 border border-white/10">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          <div className="text-center glass rounded-2xl p-8 border border-[var(--border)]">
+            <div className="w-16 h-16 rounded-full bg-[var(--success-soft)] border border-[var(--success)] flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-[var(--success)]" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">
+            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
               {t("Common.success", "Job Posted!")}
             </h2>
-            <p className="text-slate-400 text-sm mb-6">
+            <p className="text-[var(--text-muted)] text-sm mb-6">
               Your job is now live. Boost it to get 10× more views?
             </p>
             <div className="flex gap-3 justify-center">
               <button
                 type="button"
                 onClick={() => setSuccess(false)}
-                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
+                className="px-4 py-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-sm"
               >
                 Post another
               </button>
               <Link
                 href="/employer/dashboard"
-                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
+                className="px-4 py-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] text-sm"
               >
                 Dashboard
               </Link>
@@ -208,64 +208,64 @@ export default function PostJobPage() {
           </div>
 
           {/* UPSELL: Featured Boost — key monetization */}
-          <div className="glass rounded-2xl p-6 border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/10">
+          <div className="glass rounded-2xl p-6 border border-[var(--warning)] bg-[var(--warning-soft)]">
             <div className="flex items-center gap-2 mb-3">
-              <span className="px-2 py-1 rounded-full bg-amber-500 text-white text-xs font-bold">🚀 BOOST</span>
-              <span className="text-amber-300 text-xs font-medium">Get 10× more applicants</span>
+              <span className="px-2 py-1 rounded-full bg-[var(--warning)] text-[var(--text-on-brand)] text-xs font-bold">🚀 BOOST</span>
+              <span className="text-[var(--warning)] text-xs font-medium">Get 10× more applicants</span>
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Feature this job?</h3>
-            <p className="text-sm text-slate-300 mb-4">Featured jobs appear on <strong>homepage</strong> + <strong>top of search</strong> with gold badge. One-time crypto payment, no subscription.</p>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">Feature this job?</h3>
+            <p className="text-sm text-[var(--text-body)] mb-4">Featured jobs appear on <strong>homepage</strong> + <strong>top of search</strong> with gold badge. One-time crypto payment, no subscription.</p>
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-                <p className="text-xs text-slate-400">7 Days</p>
-                <p className="text-xl font-bold text-white">$19</p>
-                <p className="text-[11px] text-slate-500">in USDT, BTC, ETH</p>
+              <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3 text-center">
+                <p className="text-xs text-[var(--text-muted)]">7 Days</p>
+                <p className="text-xl font-bold text-[var(--text-primary)]">$19</p>
+                <p className="text-[11px] text-[var(--text-muted)]">in USDT, BTC, ETH</p>
               </div>
-              <div className="rounded-xl bg-amber-500 border border-amber-400 p-3 text-center relative">
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-white text-amber-600 text-[10px] font-bold">BEST</span>
-                <p className="text-xs text-amber-900">30 Days</p>
-                <p className="text-xl font-bold text-white">$39</p>
-                <p className="text-[11px] text-amber-100">save 50%</p>
+              <div className="rounded-xl bg-[var(--warning)] border border-[var(--warning)] p-3 text-center relative">
+                <span className="absolute -top-2 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 px-2 py-0.5 rounded-full bg-[var(--surface)] text-[var(--warning)] text-[10px] font-bold">BEST</span>
+                <p className="text-xs text-[var(--text-on-brand)]">30 Days</p>
+                <p className="text-xl font-bold text-[var(--text-on-brand)]">$39</p>
+                <p className="text-[11px] text-[var(--text-on-brand)]">save 50%</p>
               </div>
             </div>
             <Link
               href="/pricing"
-              className="block w-full text-center py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm"
+              className="block w-full text-center py-3 rounded-xl bg-[var(--warning)] hover:bg-[var(--warning-hover)] text-[var(--text-on-brand)] font-bold text-sm"
             >
               Feature My Job — Pay with Crypto →
             </Link>
-            <p className="text-xs text-slate-400 text-center mt-2">✓ Pay in USDT (~$1 fee) • ✓ Verified on-chain in ~5 min</p>
+            <p className="text-xs text-[var(--text-muted)] text-center mt-2">✓ Pay in USDT (~$1 fee) • ✓ Verified on-chain in ~5 min</p>
           </div>
 
-          <Link href="/pricing" className="block text-center text-sm text-slate-400 hover:text-white">
+          <Link href="/pricing" className="block text-center text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
             See all pricing →
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6">
+    <div className="gjm-page px-4 sm:px-6">
       <div className="max-w-2xl mx-auto">
         <Link
           href="/employer/dashboard"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
+          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("Common.back", "Back")}
         </Link>
 
-        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
           <div className="flex items-center gap-3 mb-6">
-            <PlusSquare className="w-7 h-7 text-indigo-400" />
-            <h1 className="text-2xl font-bold text-white">
+            <PlusSquare className="w-7 h-7 text-[var(--brand-accent)]" />
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
               {t("Employer.postJob", "Post a Job")}
             </h1>
           </div>
 
           {error && (
-            <div className="mb-4 flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <div className="mb-4 flex items-start gap-2 p-3 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               {error}
             </div>
@@ -273,8 +273,8 @@ export default function PostJobPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <Briefcase className="w-3.5 h-3.5 inline mr-1" />
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                <Briefcase className="w-3.5 h-3.5 inline me-1" />
                 {t("Jobs.title", "Job title")} *
               </label>
               <input
@@ -283,12 +283,12 @@ export default function PostJobPage() {
                 required
                 value={form.title}
                 onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
                 {t("JobDetail.description", "Description")} *
               </label>
               <textarea
@@ -297,14 +297,14 @@ export default function PostJobPage() {
                 value={form.description}
                 onChange={handleChange}
                 rows={5}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 resize-none"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] resize-none"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  <MapPin className="w-3.5 h-3.5 inline mr-1" />
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                  <MapPin className="w-3.5 h-3.5 inline me-1" />
                   {t("Jobs.location", "Location")}
                 </label>
                 <input
@@ -312,18 +312,18 @@ export default function PostJobPage() {
                   name="location"
                   value={form.location}
                   onChange={handleChange}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
                   {t("Jobs.jobType", "Job Type")}
                 </label>
                 <select
                   name="type"
                   value={form.type}
                   onChange={handleChange}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
                 >
                   <option value="Full-time">
                     {t("Jobs.types.fullTime", "Full-time")}
@@ -346,7 +346,7 @@ export default function PostJobPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
                   {t("Jobs.minSalary", "Min Salary")}
                 </label>
                 <input
@@ -354,11 +354,11 @@ export default function PostJobPage() {
                   name="salaryMin"
                   value={form.salaryMin}
                   onChange={handleChange}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
                   {t("Jobs.maxSalary", "Max Salary")}
                 </label>
                 <input
@@ -366,19 +366,19 @@ export default function PostJobPage() {
                   name="salaryMax"
                   value={form.salaryMax}
                   onChange={handleChange}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  <DollarSign className="w-3.5 h-3.5 inline mr-1" />
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                  <DollarSign className="w-3.5 h-3.5 inline me-1" />
                   Currency
                 </label>
                 <select
                   name="currency"
                   value={form.currency}
                   onChange={handleChange}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
                 >
                   {currencies.map((c) => (
                     <option key={c} value={c}>
@@ -389,7 +389,7 @@ export default function PostJobPage() {
               </div>
             </div>
 
-            <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer w-fit">
+            <label className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] cursor-pointer w-fit">
               <input
                 type="checkbox"
                 name="remote"
@@ -397,15 +397,15 @@ export default function PostJobPage() {
                 onChange={handleChange}
                 className="w-4 h-4 rounded"
               />
-              <Wifi className="w-4 h-4 text-slate-400" />
-              <span className="text-sm text-slate-300">
+              <Wifi className="w-4 h-4 text-[var(--text-muted)]" />
+              <span className="text-sm text-[var(--text-body)]">
                 {t("Jobs.remoteOnly", "Remote")}
               </span>
             </label>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <ListChecks className="w-3.5 h-3.5 inline mr-1" />
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
+                <ListChecks className="w-3.5 h-3.5 inline me-1" />
                 {t("JobDetail.requirements", "Requirements")} (one per line)
               </label>
               <textarea
@@ -413,12 +413,12 @@ export default function PostJobPage() {
                 value={form.requirements}
                 onChange={handleChange}
                 rows={3}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
                 {t("JobDetail.benefits", "Benefits")} (one per line)
               </label>
               <textarea
@@ -426,12 +426,12 @@ export default function PostJobPage() {
                 value={form.benefits}
                 onChange={handleChange}
                 rows={2}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-[var(--text-body)] mb-1.5">
                 {t("Jobs.tag", "Tags")}
               </label>
               <input
@@ -440,14 +440,14 @@ export default function PostJobPage() {
                 value={form.tags}
                 onChange={handleChange}
                 placeholder={t("Jobs.tagPlaceholder", "React, TypeScript")}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] py-3 rounded-xl text-sm font-semibold disabled:opacity-60"
             >
               {submitting ? (
                 <>
@@ -464,6 +464,6 @@ export default function PostJobPage() {
           </form>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,15 +1,33 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
-export function ThemeToggle() {
+/**
+ * Canonical theme toggle (light / dark).
+ *
+ * next-themes resolves `system` on the client, so the first paint renders an
+ * inert placeholder to avoid a hydration mismatch.
+ */
+export function ThemeToggle({ className = "" }: { className?: string }) {
   const { setTheme, resolvedTheme } = useTheme();
+  const { t } = useLocale();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="w-9 h-9" />;
+
+  const label = t("Common.toggleTheme", "Toggle theme");
+
+  if (!mounted) {
+    return (
+      <span
+        aria-hidden="true"
+        className={`inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] ${className}`}
+      />
+    );
+  }
 
   const isDark = resolvedTheme === "dark";
 
@@ -17,23 +35,18 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="relative p-2.5 rounded-xl glass hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-      aria-label="Toggle theme"
+      aria-label={label}
+      title={label}
+      aria-pressed={isDark}
+      className={`relative inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] border border-transparent text-[var(--text-muted)] transition-colors duration-200 hover:border-[var(--border-soft)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] ${className}`}
     >
-      <Sun
-        className={`w-5 h-5 text-amber-500 transition-all duration-300 ${
-          isDark
-            ? "rotate-90 scale-0 opacity-0 absolute"
-            : "rotate-0 scale-100 opacity-100"
-        }`}
-      />
-      <Moon
-        className={`w-5 h-5 text-blue-300 transition-all duration-300 ${
-          isDark
-            ? "rotate-0 scale-100 opacity-100"
-            : "-rotate-90 scale-0 opacity-0 absolute"
-        }`}
-      />
+      {isDark ? (
+        <Sun size={18} aria-hidden="true" />
+      ) : (
+        <Moon size={18} aria-hidden="true" />
+      )}
     </button>
   );
 }
+
+export default ThemeToggle;

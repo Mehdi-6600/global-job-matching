@@ -128,8 +128,8 @@ function Banner({
 }) {
   const styles =
     kind === "error"
-      ? "bg-red-500/10 border-red-500/20 text-red-300"
-      : "bg-emerald-500/10 border-emerald-500/20 text-emerald-300";
+      ? "bg-[var(--error-soft)] border-[var(--error)] text-[var(--error)]"
+      : "bg-[var(--success-soft)] border-[var(--success)] text-[var(--success)]";
   const Icon = kind === "error" ? AlertCircle : CheckCircle2;
   return (
     <div
@@ -339,31 +339,31 @@ export default function ResumeBuilderPage() {
   /* -------- Prefill loading screen -------- */
   if (prefillLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-      </main>
+      <div className="gjm-page flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
+      </div>
     );
   }
 
   /* -------- Render -------- */
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
+    <div className="gjm-page px-4">
       <div className="max-w-5xl mx-auto">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
+          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("Common.back", "Back to Dashboard")}
         </Link>
 
         <div className="flex items-center gap-3 mb-8">
-          <FileText className="w-7 h-7 text-cyan-400" />
+          <FileText className="w-7 h-7 text-[var(--brand-primary)]" />
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
               {t("Resume.title", "AI Resume Builder")}
             </h1>
-            <p className="text-slate-400 text-sm">
+            <p className="text-[var(--text-muted)] text-sm">
               {t(
                 "Resume.subtitle",
                 "Fill your details — generate a professional resume",
@@ -377,7 +377,7 @@ export default function ResumeBuilderPage() {
           <Banner kind="success">
             {success}
             {sourceLabel && (
-              <span className="text-slate-500">({sourceLabel})</span>
+              <span className="text-[var(--text-muted)]">({sourceLabel})</span>
             )}
           </Banner>
         )}
@@ -386,7 +386,7 @@ export default function ResumeBuilderPage() {
           {/* -------- Form -------- */}
           <form
             onSubmit={handleGenerate}
-            className="glass rounded-2xl p-6 border border-white/10 space-y-4"
+            className="glass rounded-2xl p-6 border border-[var(--border)] space-y-4"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
@@ -396,7 +396,7 @@ export default function ResumeBuilderPage() {
                 required
                 autoComplete="name"
                 placeholder={t("Settings.name", "Full name") + " *"}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
               />
               <input
                 name="targetRole"
@@ -404,7 +404,7 @@ export default function ResumeBuilderPage() {
                 onChange={handleChange}
                 autoComplete="organization-title"
                 placeholder={t("Settings.headline", "Target role")}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
               />
             </div>
 
@@ -416,7 +416,7 @@ export default function ResumeBuilderPage() {
                 onChange={handleChange}
                 autoComplete="email"
                 placeholder={t("Settings.email", "Email")}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
               />
               <input
                 name="phone"
@@ -424,7 +424,7 @@ export default function ResumeBuilderPage() {
                 onChange={handleChange}
                 autoComplete="tel"
                 placeholder={t("Settings.phone", "Phone")}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
               />
             </div>
 
@@ -434,7 +434,7 @@ export default function ResumeBuilderPage() {
               onChange={handleChange}
               autoComplete="address-level2"
               placeholder={t("Settings.location", "Location")}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
             />
 
             <textarea
@@ -443,7 +443,7 @@ export default function ResumeBuilderPage() {
               onChange={handleChange}
               rows={3}
               placeholder={t("Settings.bio", "Short summary / career goal")}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none resize-none"
             />
 
             <textarea
@@ -452,7 +452,7 @@ export default function ResumeBuilderPage() {
               onChange={handleChange}
               rows={2}
               placeholder={t("Jobs.tagPlaceholder", "Skills")}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none resize-none"
             />
 
             <textarea
@@ -464,7 +464,7 @@ export default function ResumeBuilderPage() {
                 "Resume.experiencePlaceholder",
                 "Work experience (roles, years, achievements)",
               )}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none resize-none"
             />
 
             <textarea
@@ -473,7 +473,7 @@ export default function ResumeBuilderPage() {
               onChange={handleChange}
               rows={2}
               placeholder={t("Resume.educationPlaceholder", "Education")}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none resize-none"
             />
 
             <input
@@ -484,18 +484,18 @@ export default function ResumeBuilderPage() {
                 "Resume.languagesPlaceholder",
                 "Languages (e.g. English, Persian)",
               )}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none"
             />
 
             <div className="flex flex-wrap items-center gap-3">
-              <label className="text-slate-400 text-xs">
+              <label className="text-[var(--text-muted)] text-xs">
                 {t("Resume.tone", "Tone")}
               </label>
               <select
                 name="tone"
                 value={form.tone}
                 onChange={handleChange}
-                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none"
+                className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm outline-none"
               >
                 <option value="professional">
                   {t("Resume.toneProfessional", "Professional")}
@@ -507,13 +507,13 @@ export default function ResumeBuilderPage() {
                   {t("Resume.toneConcise", "Concise")}
                 </option>
               </select>
-              <label className="inline-flex items-center gap-2 text-slate-400 text-xs ml-auto">
+              <label className="inline-flex items-center gap-2 text-[var(--text-muted)] text-xs ms-auto">
                 <input
                   type="checkbox"
                   name="saveToProfile"
                   checked={form.saveToProfile}
                   onChange={handleChange}
-                  className="rounded border-white/20"
+                  className="rounded border-[var(--border-strong)]"
                 />
                 {t("Resume.saveToProfile", "Save note to profile")}
               </label>
@@ -537,9 +537,9 @@ export default function ResumeBuilderPage() {
           </form>
 
           {/* -------- Preview -------- */}
-          <div className="glass rounded-2xl p-6 border border-white/10 flex flex-col min-h-[420px]">
+          <div className="glass rounded-2xl p-6 border border-[var(--border)] flex flex-col min-h-[420px]">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-white font-semibold text-sm">
+              <h2 className="text-[var(--text-primary)] font-semibold text-sm">
                 {t("Common.view", "Preview")}
               </h2>
               <div className="flex gap-2">
@@ -547,10 +547,10 @@ export default function ResumeBuilderPage() {
                   type="button"
                   onClick={() => void handleCopy()}
                   disabled={!resume}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-xs disabled:opacity-40"
                 >
                   {copied ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--success)]" />
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
@@ -562,7 +562,7 @@ export default function ResumeBuilderPage() {
                   type="button"
                   onClick={handlePrint}
                   disabled={!resume}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-xs disabled:opacity-40"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   {t("Common.print", "Print")}
@@ -582,12 +582,12 @@ export default function ResumeBuilderPage() {
             ) : resume ? (
               <pre
                 key={resume}
-                className="gjm-feed-in flex-1 whitespace-pre-wrap text-slate-200 text-sm leading-relaxed overflow-auto font-sans"
+                className="gjm-feed-in flex-1 whitespace-pre-wrap text-[var(--text-primary)] text-sm leading-relaxed overflow-auto font-sans"
               >
                 {resume}
               </pre>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-slate-500 text-sm text-center px-4">
+              <div className="flex-1 flex items-center justify-center text-[var(--text-muted)] text-sm text-center px-4">
                 {t(
                   "Resume.previewEmpty",
                   "Your generated resume will appear here",
@@ -597,6 +597,6 @@ export default function ResumeBuilderPage() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

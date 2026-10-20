@@ -1,62 +1,76 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Home, Briefcase, MapPin, Layers, ShieldAlert } from "lucide-react";
+import { cookies } from "next/headers";
+import { Briefcase, Home, Layers, MapPin, ShieldAlert } from "lucide-react";
+import { LOCALE_COOKIE } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/resolve-locale";
+import { getDictionary, t } from "@/lib/i18n/get-dictionary";
 
 export const metadata: Metadata = {
   title: "Page not found",
   robots: { index: false, follow: true },
 };
 
-export default function NotFound() {
+export default async function NotFound() {
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const dict = getDictionary(locale);
+
+  const links = [
+    { href: "/", label: t(dict, "Nav.home", "Home"), icon: Home },
+    { href: "/jobs", label: t(dict, "Nav.jobs", "Jobs"), icon: Briefcase },
+    {
+      href: "/locations",
+      label: t(dict, "Nav.locations", "Locations"),
+      icon: MapPin,
+    },
+    {
+      href: "/categories",
+      label: t(dict, "Nav.categories", "Categories"),
+      icon: Layers,
+    },
+    {
+      href: "/career-risk",
+      label: t(dict, "Nav.careerRisk", "Career Risk"),
+      icon: ShieldAlert,
+    },
+  ];
+
   return (
-    <main className="min-h-[70vh] flex items-center justify-center px-4 py-16">
-      <div className="glass rounded-2xl p-10 max-w-lg w-full text-center border border-white/10 shadow-xl">
-        <p className="text-6xl font-bold text-sky-400 mb-3">404</p>
-        <h1 className="text-2xl font-semibold text-white mb-2">
-          Page not found
-        </h1>
-        <p className="text-slate-400 mb-8 text-sm leading-relaxed">
-          This page does not exist or was moved. Try one of these popular
-          sections:
-        </p>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center">
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-400 text-white font-semibold px-5 py-2.5 rounded-xl transition-all"
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </Link>
-          <Link
-            href="/jobs"
-            className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-medium px-5 py-2.5 rounded-xl border border-white/10 transition-all"
-          >
-            <Briefcase className="w-4 h-4" />
-            Jobs
-          </Link>
-          <Link
-            href="/locations"
-            className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-medium px-5 py-2.5 rounded-xl border border-white/10 transition-all"
-          >
-            <MapPin className="w-4 h-4" />
-            Locations
-          </Link>
-          <Link
-            href="/categories"
-            className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-medium px-5 py-2.5 rounded-xl border border-white/10 transition-all"
-          >
-            <Layers className="w-4 h-4" />
-            Categories
-          </Link>
-          <Link
-            href="/career-risk"
-            className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-medium px-5 py-2.5 rounded-xl border border-white/10 transition-all"
-          >
-            <ShieldAlert className="w-4 h-4" />
-            Career Risk
-          </Link>
+    <div className="gjm-page">
+      <div className="gjm-container">
+        <div className="mx-auto max-w-lg rounded-[var(--radius-2xl)] border border-[var(--border-soft)] bg-[var(--surface)] p-8 text-center shadow-[var(--shadow-2)] sm:p-10">
+          <p className="tabular text-[3.5rem] font-[650] leading-none tracking-[-0.05em] text-[var(--brand-primary)]">
+            404
+          </p>
+          <h1 className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+            {t(dict, "Common.pageNotFound", "Page not found")}
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+            {t(
+              dict,
+              "Common.pageNotFoundDesc",
+              "This page does not exist or was moved. Try one of these popular sections:",
+            )}
+          </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {links.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-sm font-medium text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                >
+                  <Icon size={15} aria-hidden="true" />
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

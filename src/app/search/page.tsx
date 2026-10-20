@@ -240,21 +240,21 @@ export default function AdvancedSearchPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <div className="gjm-page px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-1">
             {t("Jobs.title", "Jobs")}
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-[var(--text-muted)] text-sm">
             {t("Jobs.subtitle", "Find roles that match your skills")}
           </p>
         </div>
 
-        <div className="glass rounded-2xl p-4 sm:p-6 border border-white/10 mb-6">
+        <div className="glass rounded-2xl p-4 sm:p-6 border border-[var(--border)] mb-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
               <input
                 type="text"
                 value={search}
@@ -263,18 +263,18 @@ export default function AdvancedSearchPage() {
                   "Jobs.searchPlaceholder",
                   "Job title, keywords..."
                 )}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-slate-500 outline-none focus:border-cyan-500/50"
+                className="w-full ps-10 pe-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] text-sm placeholder-[var(--text-subtle)] outline-none focus:border-[var(--brand-primary)]"
               />
             </div>
             <button
               type="button"
               onClick={() => setFiltersOpen(!filtersOpen)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10 transition-all"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-sm hover:bg-[var(--surface-3)] transition-all"
             >
               <SlidersHorizontal className="w-4 h-4" />
               {t("Jobs.filters", "Filters")}
               {activeFiltersCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-xs">
+                <span className="ms-1 px-1.5 py-0.5 rounded-md bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] text-xs">
                   {activeFiltersCount}
                 </span>
               )}
@@ -282,7 +282,7 @@ export default function AdvancedSearchPage() {
             <button
               type="button"
               onClick={fetchJobs}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[image:var(--gradient-brand)] text-[var(--text-primary)] text-sm font-medium"
             >
               <Search className="w-4 h-4" />
               {t("Common.search", "Search")}
@@ -290,21 +290,21 @@ export default function AdvancedSearchPage() {
           </div>
 
           {filtersOpen && (
-            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="mt-4 pt-4 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
                   {t("Jobs.jobType", "Job Type")}
                 </label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] appearance-none"
                 >
                   {jobTypes.map((opt) => (
                     <option
                       key={opt.value}
                       value={opt.value}
-                      className="bg-slate-800"
+                      className="bg-[var(--surface-2)]"
                     >
                       {opt.label}
                     </option>
@@ -312,19 +312,19 @@ export default function AdvancedSearchPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
                   {t("Jobs.experience", "Experience")}
                 </label>
                 <select
                   value={experience}
                   onChange={(e) => setExperience(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] appearance-none"
                 >
                   {experiences.map((opt) => (
                     <option
                       key={opt.value}
                       value={opt.value}
-                      className="bg-slate-800"
+                      className="bg-[var(--surface-2)]"
                     >
                       {opt.label}
                     </option>
@@ -332,19 +332,19 @@ export default function AdvancedSearchPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
                   {t("JobDetail.posted", "Posted")}
                 </label>
                 <select
                   value={postedWithin}
                   onChange={(e) => setPostedWithin(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] appearance-none"
                 >
                   {postedOptions.map((opt) => (
                     <option
                       key={opt.value}
                       value={opt.value}
-                      className="bg-slate-800"
+                      className="bg-[var(--surface-2)]"
                     >
                       {opt.label}
                     </option>
@@ -357,8 +357,8 @@ export default function AdvancedSearchPage() {
                   onClick={() => setRemote(!remote)}
                   className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
                     remote
-                      ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
-                      : "bg-white/5 text-slate-400 border-white/10"
+                      ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border-[var(--border)]"
+                      : "bg-[var(--surface-2)] text-[var(--text-muted)] border-[var(--border)]"
                   }`}
                 >
                   {remote ? (
@@ -370,7 +370,7 @@ export default function AdvancedSearchPage() {
                 </button>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
                   {t("Jobs.minSalary", "Min Salary")}
                 </label>
                 <input
@@ -378,11 +378,11 @@ export default function AdvancedSearchPage() {
                   value={salaryMin}
                   onChange={(e) => setSalaryMin(e.target.value)}
                   placeholder={t("Jobs.noLimit", "No limit")}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] placeholder:text-[var(--text-subtle)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
                   {t("Jobs.maxSalary", "Max Salary")}
                 </label>
                 <input
@@ -390,23 +390,23 @@ export default function AdvancedSearchPage() {
                   value={salaryMax}
                   onChange={(e) => setSalaryMax(e.target.value)}
                   placeholder={t("Jobs.noLimit", "No limit")}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] placeholder:text-[var(--text-subtle)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
                   {t("Common.search", "Sort")}
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-cyan-500/50 appearance-none"
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] appearance-none"
                 >
                   {sortOptions.map((opt) => (
                     <option
                       key={opt.value}
                       value={opt.value}
-                      className="bg-slate-800"
+                      className="bg-[var(--surface-2)]"
                     >
                       {opt.label}
                     </option>
@@ -418,7 +418,7 @@ export default function AdvancedSearchPage() {
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-[var(--text-body)] bg-[var(--surface-2)] border border-[var(--border)] hover:bg-[var(--surface-3)]"
                   >
                     <X className="w-4 h-4" />
                     {t("Jobs.clearAll", "Clear all")}
@@ -430,14 +430,14 @@ export default function AdvancedSearchPage() {
         </div>
 
         <div className="flex items-center justify-between mb-4">
-          <p className="text-slate-400 text-sm">
+          <p className="text-[var(--text-muted)] text-sm">
             {loading ? t("Common.loading", "Loading...") : `${jobs.length}`}
           </p>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+            <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
           </div>
         ) : jobs.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -447,11 +447,11 @@ export default function AdvancedSearchPage() {
               return (
                 <div
                   key={job.id}
-                  className="glass rounded-2xl p-5 border border-white/10 flex flex-col hover:border-white/20 transition-all"
+                  className="glass rounded-2xl p-5 border border-[var(--border)] flex flex-col hover:border-[var(--border-strong)] transition-all"
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-cyan-300 text-xs font-bold shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--brand-primary-soft)] border border-[var(--border)] flex items-center justify-center text-[var(--brand-primary)] text-xs font-bold shrink-0">
                         {job.company?.logo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -467,10 +467,10 @@ export default function AdvancedSearchPage() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-white font-semibold text-sm truncate">
+                        <h3 className="text-[var(--text-primary)] font-semibold text-sm truncate">
                           {job.title}
                         </h3>
-                        <p className="text-slate-400 text-xs flex items-center gap-1 truncate">
+                        <p className="text-[var(--text-muted)] text-xs flex items-center gap-1 truncate">
                           <Building2 className="w-3 h-3 shrink-0" />
                           {job.company?.name ||
                             t("Jobs.companyFallback", "Company")}
@@ -480,20 +480,20 @@ export default function AdvancedSearchPage() {
                     <button
                       type="button"
                       onClick={() => toggleSave(job.id)}
-                      className="p-1.5 rounded-lg hover:bg-white/10 transition-all"
+                      className="p-1.5 rounded-lg hover:bg-[var(--surface-3)] transition-all"
                       aria-label={t("Common.save", "Save")}
                     >
                       <Heart
                         className={`w-4 h-4 ${
                           isSaved
-                            ? "fill-rose-400 text-rose-400"
-                            : "text-slate-500"
+                            ? "fill-rose-400 text-[var(--error)]"
+                            : "text-[var(--text-muted)]"
                         }`}
                       />
                     </button>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)] mb-3">
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       {job.location}
@@ -511,20 +511,20 @@ export default function AdvancedSearchPage() {
                     {displayTags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/5 break-all max-w-[100px] truncate"
+                        className="text-[10px] px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-body)] border border-[var(--border-soft)] break-all max-w-[100px] truncate"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
-                    <span className="text-[10px] text-slate-500">
+                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-[var(--border-soft)]">
+                    <span className="text-[10px] text-[var(--text-muted)]">
                       {timeAgo(job.createdAt)}
                     </span>
                     <Link
                       href={`/jobs/${job.id}`}
-                      className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                      className="flex items-center gap-1.5 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                     >
                       {t("Common.view", "View")}{" "}
                       <ArrowRight className="w-3 h-3" />
@@ -536,17 +536,17 @@ export default function AdvancedSearchPage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <Search className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-white font-medium mb-1">
+            <Search className="w-12 h-12 text-[var(--text-subtle)] mx-auto mb-4" />
+            <p className="text-[var(--text-primary)] font-medium mb-1">
               {t("Jobs.noJobsFound", "No jobs found")}
             </p>
-            <p className="text-slate-400 text-sm mb-6">
+            <p className="text-[var(--text-muted)] text-sm mb-6">
               {t("Jobs.tryAdjusting", "Try adjusting your search criteria")}
             </p>
             <button
               type="button"
               onClick={clearFilters}
-              className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm transition-all"
+              className="inline-flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] hover:text-[var(--text-primary)] px-5 py-2 rounded-xl text-sm transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               {t("Jobs.clearAll", "Clear all")}
@@ -554,6 +554,6 @@ export default function AdvancedSearchPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

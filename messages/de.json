@@ -26,7 +26,11 @@
     "jobAlerts": "Job-Benachrichtigungen",
     "help": "Hilfe",
     "profile": "Profil",
-    "search": "Suchen"
+    "search": "Suchen",
+    "language": "Sprache",
+    "postJob": "Stelle veröffentlichen",
+    "account": "Konto",
+    "searchJobs": "Jobs suchen"
   },
   "Home": {
     "eyebrow": "GLOBALE KARRIEREPLATTFORM",
@@ -132,7 +136,14 @@
     "trustSectionKicker": "AUF ECHTEN DATEN AUFGEBAUT",
     "trustSectionTitle": "Vertrauenswürdige Infrastruktur, keine Testimonials.",
     "feedTitle": "Live-Feed für Stellenangebote",
-    "feedEmpty": "Neue Stellen erscheinen hier, sobald sie veröffentlicht werden."
+    "feedEmpty": "Neue Stellen erscheinen hier, sobald sie veröffentlicht werden.",
+    "popularSearches": "Beliebt",
+    "featuredFull": "Hervorgehobene Plätze sind voll — Warteliste offen",
+    "featuredSpotsLeft": "Nur noch {left}/{total} hervorgehobene Plätze",
+    "featuredStats": "{featured} hervorgehoben · {jobs} aktive Stellen",
+    "campaignEnds": "Endet am {date}",
+    "featureCta": "Hervorheben · ${price} / 7 Tage",
+    "postJobCta": "Stelle veröffentlichen"
   },
   "Common": {
     "loading": "Wird geladen...",
@@ -183,7 +194,19 @@
     "forbidden": "Zugriff verweigert",
     "status": "Status",
     "print": "Drucken",
-    "copied": "Kopiert"
+    "copied": "Kopiert",
+    "toggleTheme": "Design wechseln",
+    "skipToContent": "Zum Inhalt springen",
+    "pageNotFound": "Seite nicht gefunden",
+    "pageNotFoundDesc": "Diese Seite existiert nicht oder wurde verschoben. Versuche einen dieser beliebten Bereiche:",
+    "copy": "Kopieren",
+    "errorUnexpected": "Ein unerwarteter Fehler ist aufgetreten. Versuche es erneut oder kehre zur Startseite zurück.",
+    "planRequired": "Diese Funktion erfordert einen höheren Tarif.",
+    "rateLimited": "Zu viele Anfragen. Bitte warte und versuche es erneut.",
+    "serviceUnavailable": "Dienst vorübergehend nicht verfügbar. Bitte versuche es gleich noch einmal.",
+    "mainNavigation": "Hauptnavigation",
+    "relatedSections": "Verwandte Bereiche",
+    "exploreMore": "Mehr entdecken"
   },
   "ApiErrors": {
     "badRequest": "Die Anfrage ist ungültig. Bitte prüfe deine Eingaben.",
@@ -240,8 +263,28 @@
       "emailExists": "E-Mail ist bereits registriert",
       "generic": "Etwas ist schiefgelaufen",
       "network": "Netzwerkfehler. Bitte erneut versuchen.",
-      "rateLimited": "Zu viele Anfragen. Bitte später erneut versuchen."
-    }
+      "rateLimited": "Zu viele Anfragen. Bitte später erneut versuchen.",
+      "unauthorized": "Bitte melde dich an, um fortzufahren."
+    },
+    "sideTitle": "Deine nächste Stelle beginnt mit einer besseren Suche.",
+    "sidePoint1": "Globale Stellen von geprüften Arbeitgebern, täglich aktualisiert.",
+    "sidePoint2": "KI-Match-Scores, Lebenslauf-Hilfe und Einblicke ins Berufsrisiko.",
+    "sidePoint3": "Transparente Gehälter und ein Profil für jede Bewerbung.",
+    "sideFooter": "Kostenlos registrieren. Keine Kreditkarte nötig.",
+    "hidePassword": "Passwort verbergen",
+    "registeredSuccess": "Konto erstellt. Bitte melde dich an, um fortzufahren.",
+    "sessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+    "showPassword": "Passwort anzeigen",
+    "verifyEmailErrorBody": "Der Link ist ungültig oder abgelaufen.",
+    "verifyEmailErrorTitle": "Bestätigung fehlgeschlagen",
+    "verifyEmailMissingBody": "Diesem Bestätigungslink fehlen erforderliche Parameter.",
+    "verifyEmailMissingTitle": "Ungültiger Link",
+    "verifyEmailResend": "Bestätigungs-E-Mail erneut senden",
+    "verifyEmailResendFailed": "E-Mail konnte nicht gesendet werden. Bitte versuche es später erneut.",
+    "verifyEmailResending": "Wird gesendet…",
+    "verifyEmailResent": "Bestätigungs-E-Mail gesendet. Prüfe dein Postfach.",
+    "verifyEmailSuccessBody": "Deine E-Mail-Adresse wurde erfolgreich bestätigt.",
+    "verifyEmailSuccessTitle": "E-Mail bestätigt!"
   },
   "Contact": {
     "title": "Kontaktiere uns",
@@ -368,7 +411,12 @@
     "errIntentExpired": "Dieses Zahlungsangebot ist abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.",
     "errRecipient": "Wallet-Adresse hat sich geändert. Bitte erstelle ein neues Angebot.",
     "errSubmit": "Übermittlung fehlgeschlagen. Bitte erneut versuchen.",
-    "errWallet": "Diese Krypto ist nicht für Zahlungen konfiguriert."
+    "errWallet": "Diese Krypto ist nicht für Zahlungen konfiguriert.",
+    "cta": "Mit Krypto fortfahren – zur Preisübersicht",
+    "free": "Kostenloser Tarif",
+    "perMonth": "/Monat",
+    "perYear": "/Jahr",
+    "qrAlt": "QR-Code der Zahlungsadresse"
   },
   "Dashboard": {
     "navDashboard": "Dashboard",
@@ -406,7 +454,12 @@
     "remote": "Remote",
     "noJobs": "Noch keine Jobs zum Anzeigen.",
     "recent": "Aktuell",
-    "stats": "Statistiken"
+    "stats": "Statistiken",
+    "completeProfile": "Profil vervollständigen →",
+    "matchNeedProfile": "Füge Fähigkeiten oder eine Kurzbeschreibung hinzu, um persönliche Match-Werte freizuschalten.",
+    "matchScore": "Match-Wert",
+    "matchedJobs": "Beste Treffer für dich",
+    "noMatches": "Noch keine starken Treffer. Aktualisiere deine Fähigkeiten oder durchsuche alle Stellen."
   },
   "Settings": {
     "title": "Einstellungen",
@@ -569,7 +622,15 @@
     "pending": "Ausstehend",
     "salaryNA": "Gehalt nicht angegeben",
     "loadErrorTitle": "Jobs konnten nicht geladen werden",
-    "loadErrorBody": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+    "loadErrorBody": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+    "kicker": "GLOBALE KARRIEREN",
+    "resultsCount": "{count} Stellen",
+    "pagination": "Seitennavigation",
+    "showResults": "Ergebnisse anzeigen",
+    "featured": "Hervorgehoben",
+    "allCategories": "Alle Kategorien",
+    "rateLimitBody": "Bitte warte einen Moment, bevor du es erneut versuchst.",
+    "rateLimitTitle": "Zu viele Anfragen"
   },
   "Applications": {
     "title": "Meine Bewerbungen",
@@ -609,7 +670,8 @@
     "youPrefix": "Du: ",
     "messagePlaceholder": "Nachricht schreiben...",
     "startConversation": "Unterhaltung starten",
-    "selectConversation": "Unterhaltung auswählen"
+    "selectConversation": "Unterhaltung auswählen",
+    "send": "Nachricht senden"
   },
   "Notifications": {
     "title": "Benachrichtigungen",
@@ -802,7 +864,12 @@
     "contactDraft": "Entwurf",
     "contactGenerateDraft": "Entwurf erstellen",
     "contactCopy": "Kopieren",
-    "contactSend": "Senden"
+    "contactSend": "Senden",
+    "loginForMatch": "Melde dich an, um deinen Match-Wert zu sehen",
+    "matchLabel": "Übereinstimmung",
+    "matchLoading": "Match wird geprüft…",
+    "matchNeedProfile": "Profil vervollständigen für Match-Wert",
+    "matchScore": "Dein Match-Wert für diese Stelle"
   },
   "Companies": {
     "title": "Unternehmen",
@@ -813,7 +880,9 @@
     "viewProfile": "Profil ansehen",
     "location": "Standort",
     "website": "Website",
-    "pending": "Ausstehende Unternehmen"
+    "pending": "Ausstehende Unternehmen",
+    "unknown": "Unbekanntes Unternehmen",
+    "emptyBody": "Unternehmen erscheinen hier, sobald Arbeitgeber Profile anlegen."
   },
   "AuthExtra": {
     "forgotTitle": "Passwort vergessen",
@@ -839,7 +908,8 @@
     "browseJobs": "Alle Jobs durchsuchen",
     "activeJobs": "aktive Jobs",
     "viewAllJobs": "Alle Jobs ansehen →",
-    "browseLocations": "Standorte durchsuchen →"
+    "browseLocations": "Standorte durchsuchen →",
+    "alphabet": "Alphabet"
   },
   "CategoryNames": {
     "accounting": "Buchhaltung",
