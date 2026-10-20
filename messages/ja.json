@@ -683,6 +683,7 @@
     "deadline": "応募締切",
     "responsibilities": "主な職務内容",
     "matchScoreTitle": "AIスキル適合度診断",
+    "matchUnavailable": "マッチスコアを取得できません",
     "overallFit": "総合マッチ度",
     "skills": "必須スキルの一致度",
     "experience": "職歴・経験の一致度",

@@ -48,6 +48,19 @@ def one_line(text, limit=200):
     return re.sub(r"\s+", " ", text)[:limit]
 
 
+def visible_text(html: str) -> str:
+    """Strip scripts, styles and comments.
+
+    Client bundles ship translated strings (e.g. the error boundary's
+    "Something went wrong"), so a raw substring match produces false positives.
+    Only text that survives this filter is rendered to the visitor.
+    """
+    html = re.sub(r"(?is)<script\b.*?</script>", " ", html)
+    html = re.sub(r"(?is)<style\b.*?</style>", " ", html)
+    html = re.sub(r"(?s)<!--.*?-->", " ", html)
+    return html
+
+
 def fetch(path, timeout=45):
     req = urllib.request.Request(BASE + path, headers={"User-Agent": UA})
     try:
@@ -142,9 +155,49 @@ record("PASS" if 'lang="en"' in html else "WARN", "lang attribute on <html>")
 record("PASS" if len(re.findall(r"<svg", html)) > 0 else "WARN",
        f"{len(re.findall(r'<svg', html))} inline svg icons on /")
 
+record("--", "job content renders")
+code, _, jobs_html = fetch("/jobs")
+cards = re.findall(r'href="[^"]*/jobs/([a-z0-9]{20,})"', jobs_html)
+record("PASS" if len(cards) >= 5 else "FAIL",
+       f"/jobs lists {len(cards)} job links")
+record("PASS" if "Could not load jobs" not in visible_text(jobs_html) else "FAIL",
+       "/jobs has no 'Could not load jobs' error")
+if cards:
+    detail = f"/jobs/{cards[0]}"
+    code, _, detail_html = fetch(detail)
+    record("PASS" if code == 200 else "FAIL", f"GET {detail} → {code}")
+    visible_detail = visible_text(detail_html)
+    if "Something went wrong" in visible_detail:
+        at = visible_detail.find("Something went wrong")
+        record("FAIL", "job detail has no error boundary"
+               f" | context: {one_line(visible_detail[max(0, at - 300):at + 80], 380)}")
+    else:
+        record("PASS", "job detail has no error boundary")
+    record("PASS" if len(detail_html) > 4000 else "WARN",
+           f"job detail payload {len(detail_html)} bytes")
+    record("PASS" if "<h1" in detail_html else "FAIL", "job detail has an <h1> title")
+    visible = visible_text(detail_html)
+    record("PASS" if "Apply" in visible or "Sign In" in visible else "FAIL",
+           "job detail shows an apply / sign-in call to action")
+    # The match-score card used to fall through to the error paragraph before
+    # hydration, so a logged-out visitor saw "Something went wrong" on every
+    # job page. It must show a loading/muted state instead.
+    record("PASS" if "Your match score" in visible else "WARN",
+           "job detail renders the match-score card")
+record("PASS" if "Could not load jobs" not in visible_text(html) else "FAIL",
+       "homepage has no 'Could not load jobs' error")
+code, _, companies = fetch("/companies")
+record("PASS" if code == 200 and re.search(r"/jobs\?company=", companies) else "FAIL",
+       f"/companies → {code} with employer links")
+for loc in ["fa", "ar", "de"]:
+    code, _, body_ = fetch(f"/{loc}/jobs")
+    record("PASS" if code == 200 else "WARN", f"/{loc}/jobs → {code}")
+
 record("--", "API surface")
 code, _, body = fetch("/api/jobs")
 record("PASS" if code == 200 else "FAIL", f"GET /api/jobs → {code} | {one_line(body, 240)}")
+for field in ['"featured"', '"featuredUntil"', '"pagination"']:
+    record("PASS" if field in body else "FAIL", f"/api/jobs payload has {field}")
 for q in ["?limit=1", "?page=1&limit=12", "?search=engineer", "?remote=true&limit=3"]:
     code, _, body = fetch("/api/jobs" + q)
     record("PASS" if code == 200 else "FAIL", f"GET /api/jobs{q} → {code} | {one_line(body, 160)}")
