@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+
 import { db } from "@/lib/db";
+import {
+  getSweepStatus,
+  triggerPaymentSweep,
+} from "@/lib/payment/sweep-scheduler";
 import { getCryptoWallets } from "@/lib/payment/plans";
 import { getRedisEnvStatus, isRedisConfigured } from "@/lib/redis";
 
@@ -16,6 +21,10 @@ function envPresent(name: string): boolean {
  * Never returns secrets — only booleans and safe counts.
  */
 export async function GET() {
+  // Uptime monitors hit this endpoint, so it is a reliable driver for the
+  // in-app payment sweep (the Hobby plan allows only daily crons).
+  after(() => triggerPaymentSweep());
+
   const started = Date.now();
   const production = process.env.NODE_ENV === "production";
 
@@ -135,6 +144,7 @@ export async function GET() {
         payments: {
           walletsConfigured: walletCount,
           ready: walletCount > 0,
+          sweep: await getSweepStatus(),
         },
         config,
       },

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -172,6 +172,19 @@ function relevanceScore(job: RankableJob, tokens: string[]): number {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  // The jobs API is the busiest public endpoint, so its traffic also drives the
+  // in-app 10-minute payment sweep (Vercel Hobby allows only daily crons).
+  // `after` runs it once the response is sent; the scheduler's own throttle and
+  // the SweepState lease keep it to one run per interval across all instances.
+  after(async () => {
+    // Imported lazily so the busiest route does not pull the payment module
+    // graph into every cold start.
+    const { triggerPaymentSweep } = await import(
+      "@/lib/payment/sweep-scheduler"
+    );
+    await triggerPaymentSweep();
+  });
+
   try {
     const ip = getRequestIp(req);
 

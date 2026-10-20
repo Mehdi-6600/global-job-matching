@@ -1,9 +1,14 @@
 name: Verify crypto payments
 
-# Hobby plan limitation: a Vercel cron may run at most once per day, so the
-# 10-minute sweep of /api/cron/verify-payments lives here instead.
+# OPTIONAL external backstop.
+#
+# The 10-minute sweep normally runs inside the app (src/lib/payment/
+# sweep-scheduler.ts) and needs no secret, no scheduler and no paid plan — see
+# docs/PAYMENT-SWEEP.md. This workflow is only useful as an independent second
+# pair of eyes: it calls the same endpoint from GitHub's infrastructure.
+#
 # Requires the repository secret CRON_SECRET (same value as the Vercel env var).
-# Without that secret the job is a no-op and the daily Vercel cron stays in charge.
+# Without that secret the job is a no-op.
 
 on:
   schedule:
