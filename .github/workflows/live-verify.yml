@@ -1,0 +1,146 @@
+name: Live site verification
+
+# Temporary, manual-only probe used to verify a production deployment from
+# outside the sandbox. Not part of the product build.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL to probe
+        required: false
+        default: https://global-job-matching.vercel.app
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: HTTP matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Probe
+        env:
+          BASE: ${{ inputs.base_url }}
+        run: |
+          set -uo pipefail
+          pass=0; fail=0; warn=0
+          declare -a FAILURES
+
+          ok()   { pass=$((pass+1)); printf 'PASS  %s\n' "$1"; }
+          bad()  { fail=$((fail+1)); FAILURES+=("$1"); printf 'FAIL  %s\n' "$1"; }
+          note() { warn=$((warn+1)); printf 'WARN  %s\n' "$1"; }
+
+          # check_status <label> <path> <expected-code>
+          check_status() {
+            local label="$1" path="$2" want="$3"
+            local got
+            got=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE$path")
+            if [ "$got" = "$want" ]; then ok "$label → $got"; else bad "$label → got $got, want $want"; fi
+          }
+
+          # check_body <label> <path> <regex>
+          check_body() {
+            local label="$1" path="$2" pattern="$3"
+            if curl -s --max-time 45 "$BASE$path" | grep -qiE "$pattern"; then ok "$label"; else bad "$label (pattern /$pattern/ not found in $path)"; fi
+          }
+
+          echo "== base: $BASE =="
+          echo
+
+          echo "-- pages --"
+          for p in "/" "/jobs" "/pricing" "/login" "/register" "/forgot-password" "/reset-password" "/verify-email" \
+                   "/companies" "/locations" "/categories" "/crypto-jobs" "/blog" "/career-risk" "/job-alerts" \
+                   "/resume-builder" "/terms" "/privacy" "/about" "/contact"; do
+            check_status "GET $p" "$p" 200
+          done
+
+          echo
+          echo "-- locales / dir --"
+          check_body "/fa is RTL" "/fa" '<html[^>]+dir="rtl"'
+          check_body "/ar is RTL" "/ar" '<html[^>]+dir="rtl"'
+          check_body "/he is RTL" "/he" '<html[^>]+dir="rtl"'
+          check_body "/en is LTR" "/en" '<html[^>]+dir="ltr"'
+          check_body "/de is LTR" "/de" '<html[^>]+dir="ltr"'
+          check_body "/fa has Persian copy" "/fa" '[ا-ی]'
+          check_body "/ar has Arabic copy" "/ar" '[ا-ي]'
+
+          echo
+          echo "-- auth-protected routes redirect, never 200 --"
+          for p in "/dashboard" "/settings" "/saved-jobs" "/applications" "/admin"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE$p")
+            loc=$(curl -s -o /dev/null -w '%{redirect_url}' --max-time 45 "$BASE$p")
+            case "$code" in
+              301|302|303|307|308)
+                if echo "$loc" | grep -qE '/login|/signin|/auth'; then ok "GET $p → $code → $loc"; else note "GET $p → $code → $loc (unexpected target)"; fi ;;
+              200) bad "GET $p returned 200 without a session" ;;
+              *) note "GET $p → $code" ;;
+            esac
+          done
+
+          echo
+          echo "-- API surface --"
+          check_status "GET /api/jobs" "/api/jobs?limit=1" 200
+          if curl -s --max-time 45 "$BASE/api/jobs?limit=1" | grep -q '"jobs"'; then ok "GET /api/jobs returns jobs payload"; else bad "GET /api/jobs payload missing \"jobs\""; fi
+          check_status "GET /api/cron/verify-payments (unauth → 401/503)" "/api/cron/verify-payments" 401
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE/api/admin/stats")
+          case "$code" in 401|403) ok "GET /api/admin/stats unauth → $code" ;; *) bad "GET /api/admin/stats unauth → $code (want 401/403)" ;; esac
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE/api/analytics")
+          note "GET /api/analytics → $code (known gap)"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE/admin/newsletter")
+          note "GET /admin/newsletter → $code (known gap)"
+
+          echo
+          echo "-- design system markers --"
+          html=$(curl -s --max-time 45 "$BASE/")
+          css_url=$(printf '%s' "$html" | grep -oE '/_next/static/css/[a-zA-Z0-9._-]+\.css' | head -1)
+          if [ -n "$css_url" ]; then
+            css=$(curl -s --max-time 45 "$BASE$css_url")
+            printf '%s' "$css" | grep -q -- '--card-accent' && ok "design tokens present in $css_url" || bad "design tokens (--card-accent) missing from $css_url"
+            printf '%s' "$css" | grep -q '\.dark' && ok "dark-theme selectors present" || bad "no .dark selectors in ${css_url}"
+            printf '%s' "$css" | grep -q 'prefers-reduced-motion' && ok "reduced-motion rules present" || note "no prefers-reduced-motion rule in main css"
+          else
+            bad "no stylesheet link found on /"
+          fi
+          if printf '%s' "$html" | grep -qE '/_next/static/media/[a-zA-Z0-9._-]+\.woff2'; then ok "self-hosted woff2 fonts referenced"; else note "no woff2 reference in initial HTML"; fi
+          font_url=$(printf '%s' "$html" | grep -oE '/_next/static/media/[a-zA-Z0-9._-]+\.woff2' | head -1)
+          if [ -n "$font_url" ]; then
+            fcode=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 "$BASE$font_url")
+            ftype=$(curl -s -o /dev/null -w '%{content_type}' --max-time 45 "$BASE$font_url")
+            [ "$fcode" = "200" ] && ok "font asset $font_url → 200 ($ftype)" || bad "font asset $font_url → $fcode"
+          fi
+          printf '%s' "$html" | grep -q 'id="main-content"' && ok "<main id=main-content> landmark present" || bad "main landmark missing"
+
+          echo
+          echo "-- security headers on / --"
+          hdr=$(curl -sI --max-time 45 "$BASE/")
+          for h in "content-security-policy" "x-content-type-options" "referrer-policy" "x-frame-options" "strict-transport-security" "permissions-policy"; do
+            if printf '%s' "$hdr" | grep -qi "^$h:"; then ok "header $h present"; else note "header $h missing"; fi
+          done
+          printf '%s' "$hdr" | grep -qi "content-security-policy:.*frame-ancestors" && ok "CSP frame-ancestors set" || note "CSP frame-ancestors not set"
+          printf '%s' "$hdr" | grep -qi "x-powered-by" && note "x-powered-by exposed" || ok "x-powered-by not exposed"
+
+          echo
+          echo "-- secret leakage --"
+          body=$(curl -s --max-time 60 "$BASE/" ; curl -s --max-time 60 "$BASE/pricing")
+          leaked=0
+          for pat in 'postgres://' 'postgresql://' 'AUTH_SECRET' 'DATABASE_URL' 'sk_live' 'sk-proj' 'BEGIN PRIVATE KEY' 'NEXTAUTH_SECRET' 're_[A-Za-z0-9]{20}'; do
+            if printf '%s' "$body" | grep -qE "$pat"; then bad "possible secret leak: /$pat/"; leaked=1; fi
+          done
+          [ "$leaked" = "0" ] && ok "no secret patterns in homepage/pricing HTML"
+
+          echo
+          echo "-- misc --"
+          check_status "GET /robots.txt" "/robots.txt" 200
+          check_status "GET /sitemap.xml" "/sitemap.xml" 200
+          check_status "GET /nonexistent-page (404)" "/this-page-does-not-exist-9f3a" 404
+
+          echo
+          echo "==================== SUMMARY ===================="
+          printf 'pass=%d fail=%d warn=%d\n' "$pass" "$fail" "$warn"
+          if [ "$fail" -ne 0 ]; then
+            printf 'failures:\n'
+            printf ' - %s\n' "${FAILURES[@]}"
+            exit 1
+          fi
