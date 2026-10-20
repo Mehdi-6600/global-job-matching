@@ -11,16 +11,17 @@
  * refuses to run `migrate deploy` — every deploy then fails, even though the
  * schema itself is correct.
  *
- * What it does: renames those rows to the full names. That is the only change,
- * it is a rename (nothing is deleted, no business table is touched), and it is
- * only attempted when the mapping is unambiguous:
+ * What it does, only when the mapping is unambiguous (the stored name must be a
+ * prefix of exactly ONE migration in prisma/migrations/):
  *
- *   - the stored name must be a prefix of exactly ONE local migration,
- *   - no row may already use that full name,
- *   - two damaged rows may not resolve to the same migration.
+ *   - if no history row uses the full name yet, the row is RENAMED to it;
+ *   - if the full name is already recorded as applied, the shortened row is a
+ *     duplicate of an applied migration, so it is VOIDED by setting
+ *     `rolled_back_at` (Prisma then ignores it; nothing is deleted).
  *
- * Anything else is reported and the script exits 1 WITHOUT writing. All changes
- * run in a single transaction.
+ * Two damaged rows may never resolve to the same migration. Anything else is
+ * reported and the script exits 1 WITHOUT writing. No business table is ever
+ * touched and all changes run in a single transaction.
  *
  *   node scripts/repair-migration-history.mjs           # dry run, prints the plan
  *   node scripts/repair-migration-history.mjs --apply   # applies the plan
@@ -52,20 +53,28 @@ export function localMigrationNames(dir = MIGRATIONS_DIR) {
  *
  * @param {{ id: string, migration_name: string, finished: boolean, rolled_back: boolean }[]} rows
  * @param {string[]} localNames
- * @returns {{ renames: { id: string, from: string, to: string }[], problems: { from: string, reason: string }[] }}
+ * @returns {{
+ *   renames: { id: string, from: string, to: string }[],
+ *   voids: { id: string, from: string, to: string }[],
+ *   problems: { from: string, reason: string }[]
+ * }}
  */
 export function planHistoryRepair(rows, localNames) {
   const local = new Set(localNames);
-  const taken = new Set(rows.map((row) => row.migration_name));
+  const byName = new Map(rows.map((row) => [row.migration_name, row]));
   const renames = [];
+  const voids = [];
   const problems = [];
 
+  const targets = new Set();
   for (const row of rows) {
     const from = row.migration_name;
     if (local.has(from)) continue;
-
-    if (!row.finished || row.rolled_back) {
-      problems.push({ from, reason: "row is failed or rolled back — resolve it by hand" });
+    // Prisma only counts finished, non-rolled-back rows as applied, so a row
+    // that is already voided is invisible to it and needs no action.
+    if (row.rolled_back) continue;
+    if (!row.finished) {
+      problems.push({ from, reason: "row is half-applied — resolve it by hand" });
       continue;
     }
 
@@ -80,16 +89,30 @@ export function planHistoryRepair(rows, localNames) {
     }
 
     const to = candidates[0];
-    if (taken.has(to)) {
-      problems.push({ from, reason: `a history row for ${to} already exists` });
+    if (targets.has(to)) {
+      problems.push({ from, reason: `another history row already maps to ${to}` });
+      continue;
+    }
+    targets.add(to);
+
+    const existing = byName.get(to);
+    if (existing && !existing.finished) {
+      problems.push({ from, reason: `${to} exists but is not applied — resolve it by hand` });
+      continue;
+    }
+    if (existing && existing.rolled_back) {
+      problems.push({ from, reason: `${to} exists but is rolled back — resolve it by hand` });
+      continue;
+    }
+    if (existing) {
+      voids.push({ id: row.id, from, to });
       continue;
     }
 
-    taken.add(to);
     renames.push({ id: row.id, from, to });
   }
 
-  return { renames, problems };
+  return { renames, voids, problems };
 }
 
 async function main() {
@@ -123,7 +146,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { renames, problems } = planHistoryRepair(rows, localNames);
+  const { renames, voids, problems } = planHistoryRepair(rows, localNames);
 
   if (problems.length > 0) {
     console.log(`✗ history needs a human: ${problems.length} unresolved row(s), nothing was changed`);
@@ -134,37 +157,55 @@ async function main() {
     process.exit(1);
   }
 
-  if (renames.length === 0) {
+  if (renames.length === 0 && voids.length === 0) {
     console.log("✓ migration history needs no repair");
     await db.$disconnect().catch(() => {});
     process.exit(0);
   }
 
   if (!apply) {
-    console.log(`would rename ${renames.length} history row(s):`);
-    for (const rename of renames) console.log(`   ${rename.from} → ${rename.to}`);
+    if (renames.length > 0) {
+      console.log(`would rename ${renames.length} history row(s):`);
+      for (const rename of renames) console.log(`   ${rename.from} → ${rename.to}`);
+    }
+    if (voids.length > 0) {
+      console.log(`would void ${voids.length} duplicated history row(s):`);
+      for (const duplicate of voids) console.log(`   ${duplicate.from} (already applied as ${duplicate.to})`);
+    }
     await db.$disconnect().catch(() => {});
     process.exit(0);
   }
 
   try {
-    await db.$transaction(
-      renames.map((rename) =>
+    await db.$transaction([
+      ...renames.map((rename) =>
         db.$executeRawUnsafe(
           `UPDATE "_prisma_migrations" SET migration_name = $1 WHERE id = $2`,
           rename.to,
           rename.id,
         ),
       ),
-    );
+      ...voids.map((duplicate) =>
+        db.$executeRawUnsafe(
+          `UPDATE "_prisma_migrations" SET rolled_back_at = NOW() WHERE id = $1`,
+          duplicate.id,
+        ),
+      ),
+    ]);
   } catch (error) {
-    console.log(`✗ rename failed, nothing was committed: ${String(error.message).split("\n")[0]}`);
+    console.log(`✗ repair failed, nothing was committed: ${String(error.message).split("\n")[0]}`);
     await db.$disconnect().catch(() => {});
     process.exit(1);
   }
 
-  console.log(`✓ renamed ${renames.length} migration-history row(s) to their full names`);
-  for (const rename of renames) console.log(`   ${rename.from} → ${rename.to}`);
+  if (renames.length > 0) {
+    console.log(`✓ renamed ${renames.length} migration-history row(s) to their full names`);
+    for (const rename of renames) console.log(`   ${rename.from} → ${rename.to}`);
+  }
+  if (voids.length > 0) {
+    console.log(`✓ voided ${voids.length} duplicated history row(s)`);
+    for (const duplicate of voids) console.log(`   ${duplicate.from} (already applied as ${duplicate.to})`);
+  }
 
   await db.$disconnect().catch(() => {});
   process.exit(0);

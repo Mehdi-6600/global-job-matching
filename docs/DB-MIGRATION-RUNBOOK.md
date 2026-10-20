@@ -209,11 +209,19 @@ Two read-only/one-write diagnostic tools were added:
 | `node scripts/migration-status-report.mjs [--full]` | Prints local vs. database migration state in ~10 short lines. Runs at the end of every Vercel build, so the tail of the build log always says why a deploy was blocked. Read-only. |
 | `node scripts/repair-migration-history.mjs [--apply]` | Renames history rows whose name is a prefix of **exactly one** migration in `prisma/migrations/`. Dry run without `--apply`. |
 
-The repair is deliberately narrow — it never deletes, never touches a business
-table, and writes only when the mapping is unambiguous (one candidate prefix, no
-existing row with the full name, no two rows mapping to the same migration).
-Otherwise it prints the offending rows and exits 1 without writing. All renames
-commit in a single transaction.
+In the real state, each shortened row came with its full-name row already
+applied, so those 18 rows were duplicates rather than renames. The script handles
+both cases, and only when the mapping is unambiguous (the stored name must be a
+prefix of exactly one migration in `prisma/migrations/`):
+
+| Situation | Action |
+| --- | --- |
+| no row uses the full name | rename the shortened row to the full name |
+| the full name is already applied | void the duplicate by setting `rolled_back_at` (Prisma ignores voided rows; nothing is deleted) |
+| anything else | print the offending rows, exit 1, write nothing |
+
+It never deletes, never touches a business table, and all changes commit in a
+single transaction, so a failure leaves the history exactly as it was.
 
 `deploy-build.sh` runs it automatically when the pre-flight sees a divergence,
 then re-checks `prisma migrate status` and continues to `prisma migrate deploy`
