@@ -66,7 +66,30 @@ The `DROP COLUMN` / `DROP TABLE` entries are leftovers from older schema
 versions. **They must never be applied blindly**: a plain `prisma db push` would
 delete 12 columns and 1 table.
 
-## Repair (owner step — needs database credentials)
+## Status: repaired (2026-10-20, 10:14 UTC)
+
+The owner could not reach the Neon console on the current plan, so the reviewable
+repair was applied through a one-off Vercel build instead (commit `11f53c5`,
+reverted in `c04ec2d`; `vercel.json` was never changed for it).
+
+Evidence after the run:
+
+| Check | Result |
+| --- | --- |
+| `GET /api/jobs?limit=1` | `200`, real payload, `featured`/`featuredUntil`/`featuredTxId` present |
+| `pagination.total` | `21435` jobs readable |
+| `/jobs` | renders the list (Rental Agent @ Roadsurfer, AI Engineer @ Gain, …) |
+| `/jobs/<id>` | `200` |
+| `/companies` | `200` with real employers |
+
+`scripts/verify-schema.mjs` is the check that was run before and after: it
+asserts all 14 columns exist and executes the featured-first query that used to
+return 500. Run it any time with `node scripts/verify-schema.mjs`.
+
+The steps below stay valid for a future database (new environment, restored
+backup, staging) — they are the procedure, not a pending action.
+
+## Repair procedure (needs database credentials)
 
 Two ready-to-paste files, no Node install needed (Option 1), plus fallbacks if editing SQL on a phone or a plan limit gets in the way:
 
