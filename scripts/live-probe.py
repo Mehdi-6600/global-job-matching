@@ -222,6 +222,15 @@ for path in ["/api/analytics", "/admin/newsletter"]:
     code, _, body = fetch(path)
     record("WARN", f"{path} → {code} | {one_line(body, 110)}")
 
+record("--", "payment sweep (in-app, no paid plan)")
+code, _, health_body = fetch("/api/health")
+record("PASS" if code == 200 else "FAIL", f"GET /api/health → {code}")
+record("PASS" if '"sweep"' in health_body else "FAIL",
+       "health exposes the payment sweep state")
+if '"sweep"' in health_body:
+    record("PASS" if '"lastStartedAt"' in health_body else "WARN",
+           "sweep has run at least once")
+
 record("--", "SEO routes")
 for path in ["/robots.txt", "/sitemaps.xml", "/sitemap/0.xml"]:
     check_status(f"GET {path}", path, 200)

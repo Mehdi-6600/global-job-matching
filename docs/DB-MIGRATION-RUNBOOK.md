@@ -183,6 +183,15 @@ created with `pgserver`, starting from `production_baseline` only:
 A local audit also confirms that every scalar field in `schema.prisma` is
 created by at least one migration (0 gaps).
 
+## Payment sweep without a paid plan
+
+The 10-minute payment verification can no longer live in `vercel.json` (that is
+what caused the outage). It now runs in-process, driven by ordinary requests,
+with a database lease so it happens at most once per 10 minutes across all
+instances. New migration `20261020050000_add_sweep_state` adds the lease table
+(idempotent), and `deploy-build.sh` applies it automatically. Full description:
+`docs/PAYMENT-SWEEP.md`.
+
 ## Prevent recurrence (in this PR)
 
 `vercel.json` now uses `bash scripts/deploy-build.sh`:
