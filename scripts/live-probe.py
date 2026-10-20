@@ -225,6 +225,15 @@ for path in ["/api/analytics", "/admin/newsletter"]:
 record("--", "SEO routes")
 for path in ["/robots.txt", "/sitemaps.xml", "/sitemap/0.xml"]:
     check_status(f"GET {path}", path, 200)
+code, _, sitemap = fetch("/sitemap/0.xml")
+locs = re.findall(r"<loc>([^<]+)</loc>", sitemap)
+record("PASS" if len(locs) >= 10 else "WARN", f"sitemap/0.xml lists {len(locs)} urls")
+
+code, _, search_html = fetch("/jobs?search=engineer")
+search_cards = re.findall(r'href="[^"]*/jobs/([a-z0-9]{20,})"', search_html)
+record("PASS" if code == 200 and len(search_cards) >= 1 else "WARN",
+       f"/jobs?search=engineer → {code}, {len(search_cards)} results")
+
 code, _, robots = fetch("/robots.txt")
 record("PASS" if "Sitemap:" in robots else "FAIL",
        "robots.txt sitemap: " + next((l for l in robots.splitlines() if "itemap" in l), "none"))
