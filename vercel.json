@@ -17,5 +17,5 @@
       "schedule": "0 9 * * *"
     }
   ],
-  "buildCommand": "npm run build; npx prisma migrate status || true"
+  "buildCommand": "npx prisma migrate status 2>&1 | grep -Ei \"not yet been applied|up to date|migration\" | head -4; npx prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel prisma/schema.prisma --script 2>&1 | head -30; npm run build"
 }
