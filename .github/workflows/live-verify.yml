@@ -14,7 +14,7 @@ on:
     paths: [.github/workflows/live-verify.yml]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
@@ -150,10 +150,23 @@ jobs:
             exit 1
           fi
 
-      - name: Upload report
+      - name: Publish report as a commit comment
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: live-verify-report
-          path: /tmp/report.txt
-          if-no-files-found: warn
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ ! -f /tmp/report.txt ]; then
+            echo "no report file"
+            exit 0
+          fi
+          {
+            echo 'Live verification report'
+            echo ''
+            echo '```'
+            head -c 50000 /tmp/report.txt
+            echo '```'
+          } > /tmp/comment.md
+          gh api -X POST "repos/$GITHUB_REPOSITORY/commits/$SHA/comments" \
+            -f body="$(cat /tmp/comment.md)" >/dev/null && echo "comment posted on $SHA"
