@@ -25,6 +25,13 @@ set -uo pipefail
 echo "→ prisma generate"
 npx prisma generate || exit 1
 
+# TEMPORARY (owner-approved, removed in the next commit): apply the reviewed
+# additive repair from docs/repair/, because the database console is not
+# reachable from the owner's plan. Idempotent; no DROP/DELETE/TRUNCATE.
+if [ "${SKIP_TEMP_DB_REPAIR:-0}" != "1" ]; then
+  bash scripts/temp-db-repair.sh || exit 1
+fi
+
 should_migrate="${VERCEL_ENV:-}"
 
 if [ -z "${DATABASE_URL:-}" ]; then
