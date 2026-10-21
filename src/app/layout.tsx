@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
-import { GeistSans } from "geist/font/sans";
+import { Inter, Vazirmatn, Noto_Kufi_Arabic } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
-import "./design-system.css";
 import "./home.css";
 import Navbar from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -17,58 +15,39 @@ import { LOCALE_COOKIE, isRtlLocale } from "@/lib/i18n/config";
 import { resolveLocale } from "@/lib/i18n/resolve-locale";
 
 /* ----------------------------------------------------------------
-   Fonts — one self-hosted variable file per script family.
-
-   These are the same typefaces as before (Inter, Vazirmatn, Noto Kufi
-   Arabic) but served from /src/fonts via next/font/local instead of being
-   fetched from Google Fonts at build time. That makes `next build`
-   deterministic and keeps the CSP `font-src 'self'` rule honest.
-   The OFL licence for each family sits next to the file.
-
-   - Inter                 : Latin (en, es, fr, de, pt, tr, id)
-   - Vazirmatn             : Arabic script for Persian (fa)
-   - Noto Kufi Arabic      : Arabic script for Arabic (ar)
-   - Noto Sans Devanagari  : Devanagari for Hindi (hi)
+   Fonts — one per script family
+   - Inter        : Latin  (en, es, fr, de)
+   - Vazirmatn    : Arabic script for Persian (fa)
+   - Noto Kufi    : Arabic script for Arabic (ar)
+   Hindi falls back to Inter, which renders Devanagari correctly
+   via system fallback on modern OSes.
    ---------------------------------------------------------------- */
 
-const inter = localFont({
-  src: "../fonts/Inter-Variable-latin.woff2",
-  weight: "100 900",
-  style: "normal",
+const inter = Inter({
+  subsets: ["latin"],
   display: "swap",
   preload: true,
+  adjustFontFallback: true,
   variable: "--font-inter",
   fallback: ["system-ui", "Segoe UI", "Arial", "sans-serif"],
 });
 
-const vazirmatn = localFont({
-  src: "../fonts/Vazirmatn-Variable-arabic.woff2",
-  weight: "100 900",
-  style: "normal",
+const vazirmatn = Vazirmatn({
+  subsets: ["arabic"],
   display: "swap",
   preload: false,
+  adjustFontFallback: true,
   variable: "--font-vazirmatn",
   fallback: ["Tahoma", "system-ui", "sans-serif"],
 });
 
-const notoKufi = localFont({
-  src: "../fonts/NotoKufiArabic-Variable-arabic.woff2",
-  weight: "100 900",
-  style: "normal",
+const notoKufi = Noto_Kufi_Arabic({
+  subsets: ["arabic"],
   display: "swap",
   preload: false,
+  adjustFontFallback: true,
   variable: "--font-noto-kufi",
   fallback: ["Tahoma", "system-ui", "sans-serif"],
-});
-
-const notoDevanagari = localFont({
-  src: "../fonts/NotoSansDevanagari-Variable-devanagari.woff2",
-  weight: "100 900",
-  style: "normal",
-  display: "swap",
-  preload: false,
-  variable: "--font-noto-devanagari",
-  fallback: ["Nirmala UI", "system-ui", "sans-serif"],
 });
 
 const siteUrl = (
@@ -91,10 +70,7 @@ const GOOGLE_SITE_VERIFICATION =
  * zoom available; all text fields also use a 16px minimum on small screens
  * to avoid iOS focus-zoom without disabling user scaling. */
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f7f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#080d0b" },
-  ],
+  themeColor: "#edf1ee",
   width: "device-width",
   initialScale: 1,
 };
@@ -115,20 +91,17 @@ export const viewport: Viewport = {
 function fontStackForLocale(
   locale: string,
   variables: {
-    geist: string;
     inter: string;
     vazirmatn: string;
     notoKufi: string;
-    notoDevanagari: string;
   },
 ): string {
   switch (locale) {
     case "fa":
-      return `${variables.vazirmatn} ${variables.geist} ${variables.inter} ${variables.notoKufi}`;
+      return `${variables.vazirmatn} ${variables.inter} ${variables.notoKufi}`;
     case "ar":
-      return `${variables.notoKufi} ${variables.geist} ${variables.inter} ${variables.vazirmatn}`;
+      return `${variables.notoKufi} ${variables.inter} ${variables.vazirmatn}`;
     case "hi":
-      return `${variables.notoDevanagari} ${variables.geist} ${variables.inter} ${variables.vazirmatn}`;
     case "en":
     case "es":
     case "fr":
@@ -139,7 +112,7 @@ function fontStackForLocale(
     case "ja":
     case "id":
     default:
-      return `${variables.geist} ${variables.inter} ${variables.notoDevanagari} ${variables.vazirmatn} ${variables.notoKufi}`;
+      return `${variables.inter} ${variables.vazirmatn} ${variables.notoKufi}`;
   }
 }
 
@@ -238,8 +211,6 @@ export default async function RootLayout({
    * script-specific so the correct family wins per locale.
    */
   const fontClasses = fontStackForLocale(locale, {
-    geist: GeistSans.variable,
-    notoDevanagari: notoDevanagari.variable,
     inter: inter.variable,
     vazirmatn: vazirmatn.variable,
     notoKufi: notoKufi.variable,
@@ -249,7 +220,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={dir}
-      className={`${fontClasses}`}
+      className={`light ${fontClasses}`}
       suppressHydrationWarning
     >
       <head>
@@ -278,7 +249,7 @@ export default async function RootLayout({
         <Providers initialLocale={locale}>
           <Navbar />
 
-          <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+          <main className="flex-1">
             {children}
           </main>
 

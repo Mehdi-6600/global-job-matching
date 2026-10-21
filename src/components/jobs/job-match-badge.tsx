@@ -69,7 +69,7 @@ export function JobMatchBadge({ jobId }: { jobId: string }) {
 
   if (loading) {
     return (
-      <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
+      <div className="inline-flex items-center gap-2 text-xs text-slate-400">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
         {t("JobDetail.matchLoading", "Checking match…")}
       </div>
@@ -80,7 +80,7 @@ export function JobMatchBadge({ jobId }: { jobId: string }) {
     return (
       <Link
         href={`/login?callbackUrl=/jobs/${jobId}`}
-        className="inline-flex items-center gap-1.5 text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+        className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300"
       >
         <Target className="w-3.5 h-3.5" />
         {t("JobDetail.loginForMatch", "Log in to see your match score")}
@@ -96,7 +96,7 @@ export function JobMatchBadge({ jobId }: { jobId: string }) {
     return (
       <Link
         href="/profile"
-        className="inline-flex items-center gap-1.5 text-xs text-[var(--warning)] hover:text-[var(--warning)]"
+        className="inline-flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200"
       >
         <Target className="w-3.5 h-3.5" />
         {t(
@@ -116,10 +116,10 @@ export function JobMatchBadge({ jobId }: { jobId: string }) {
 
   const color =
     score >= 75
-      ? "text-[var(--success)] border-[var(--success)] bg-[var(--success-soft)]"
+      ? "text-emerald-300 border-emerald-500/40 bg-emerald-500/10"
       : score >= 50
-        ? "text-[var(--brand-primary)] border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]"
-        : "text-[var(--warning)] border-[var(--warning)] bg-[var(--warning-soft)]";
+        ? "text-cyan-300 border-cyan-500/40 bg-cyan-500/10"
+        : "text-amber-300 border-amber-500/40 bg-amber-500/10";
 
   return (
     <div

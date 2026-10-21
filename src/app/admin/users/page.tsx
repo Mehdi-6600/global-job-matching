@@ -34,9 +34,9 @@ const users: User[] = [
 ];
 
 const statusColors: Record<string, string> = {
-  active: "bg-[var(--success-soft)] text-[var(--success)]",
-  pending: "bg-[var(--warning-soft)] text-[var(--warning)]",
-  banned: "bg-[var(--error-soft)] text-[var(--error)]",
+  active: "bg-emerald-500/10 text-emerald-400",
+  pending: "bg-amber-500/10 text-amber-400",
+  banned: "bg-red-500/10 text-red-400",
 };
 
 export default function AdminUsersPage() {
@@ -57,35 +57,35 @@ export default function AdminUsersPage() {
   });
 
   return (
-    <div className="gjm-page px-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <div className="max-w-6xl mx-auto">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Common.back", "Back")}
         </Link>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+        <h1 className="text-2xl font-bold text-white mb-2">
           {t("Nav.profile", "Users")}
         </h1>
-        <p className="text-[var(--text-muted)] text-sm mb-6">
+        <p className="text-slate-400 text-sm mb-6">
           {t("Dashboard.welcomeSub", "Manage platform users (demo data)")}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("Common.search", "Search...")}
-              className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-muted)]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-500"
             />
           </div>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-sm"
+            className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
           >
             <option value="all">{t("Admin.roleAll", "All roles")}</option>
             <option value="job_seeker">{t("Admin.roleJobSeeker", "Job Seeker")}</option>
@@ -95,7 +95,7 @@ export default function AdminUsersPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-sm"
+            className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
           >
             <option value="all">{t("Admin.statusAll", "All status")}</option>
             <option value="active">{t("Admin.statusActive", "Active")}</option>
@@ -104,11 +104,11 @@ export default function AdminUsersPage() {
           </select>
         </div>
 
-        <div className="glass rounded-2xl border border-[var(--border)] overflow-hidden">
+        <div className="glass rounded-2xl border border-white/10 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-[var(--text-muted)] text-left">
+                <tr className="border-b border-white/10 text-slate-400 text-left">
                   <th className="p-4">{t("Auth.name", "Name")}</th>
                   <th className="p-4">{t("Auth.email", "Email")}</th>
                   <th className="p-4">{t("Profile.role", "Role")}</th>
@@ -125,11 +125,11 @@ export default function AdminUsersPage() {
                 {filtered.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-[var(--border-soft)] hover:bg-[var(--surface-2)]"
+                    className="border-b border-white/5 hover:bg-white/5"
                   >
-                    <td className="p-4 text-[var(--text-primary)]">{user.name}</td>
-                    <td className="p-4 text-[var(--text-muted)]">{user.email}</td>
-                    <td className="p-4 text-[var(--text-body)] text-xs">{user.role}</td>
+                    <td className="p-4 text-white">{user.name}</td>
+                    <td className="p-4 text-slate-400">{user.email}</td>
+                    <td className="p-4 text-slate-300 text-xs">{user.role}</td>
                     <td className="p-4">
                       <span
                         className={`text-xs px-2.5 py-1 rounded-lg ${statusColors[user.status]}`}
@@ -137,36 +137,33 @@ export default function AdminUsersPage() {
                         {user.status}
                       </span>
                     </td>
-                    <td className="p-4 text-[var(--text-muted)] text-xs">{user.joined}</td>
-                    <td className="p-4 text-center text-[var(--text-body)]">
+                    <td className="p-4 text-slate-400 text-xs">{user.joined}</td>
+                    <td className="p-4 text-center text-slate-300">
                       {user.jobsPosted}
                     </td>
-                    <td className="p-4 text-center text-[var(--text-body)]">
+                    <td className="p-4 text-center text-slate-300">
                       {user.applications}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          className="p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--success)]"
+                          className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-emerald-400"
                           title={t("Common.confirm", "Approve")}
-                          aria-label={t("Common.confirm", "Approve")}
                         >
                           <UserCheck className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
-                          className="p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--error)]"
+                          className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-red-400"
                           title={t("Common.cancel", "Ban")}
-                          aria-label={t("Common.cancel", "Ban")}
                         >
                           <UserX className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
-                          className="p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--warning)]"
+                          className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-amber-400"
                           title={t("Nav.admin", "Make Admin")}
-                          aria-label={t("Nav.admin", "Make Admin")}
                         >
                           <Shield className="w-4 h-4" />
                         </button>
@@ -180,27 +177,27 @@ export default function AdminUsersPage() {
 
           {filtered.length === 0 && (
             <div className="text-center py-12">
-              <Search className="w-10 h-10 text-[var(--text-muted)] mx-auto mb-3" />
-              <p className="text-[var(--text-muted)] text-sm">
+              <Search className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+              <p className="text-slate-400 text-sm">
                 {t("Common.noResults", "No users found")}
               </p>
             </div>
           )}
 
-          <div className="flex items-center justify-between p-4 border-t border-[var(--border)]">
-            <p className="text-[var(--text-muted)] text-xs">
+          <div className="flex items-center justify-between p-4 border-t border-white/10">
+            <p className="text-slate-400 text-xs">
               {filtered.length} / {users.length}
             </p>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)]"
+                className="p-2 rounded-lg bg-white/5 text-slate-400"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 type="button"
-                className="p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)]"
+                className="p-2 rounded-lg bg-white/5 text-slate-400"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -208,6 +205,6 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

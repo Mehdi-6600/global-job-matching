@@ -9,13 +9,7 @@ import { verifyPassword } from "@/lib/password";
 import { authRatelimit } from "@/lib/ratelimit";
 import { safeLimit } from "@/lib/safe-ratelimit";
 import { getRequestIp } from "@/lib/client-ip";
-import {
-  hasGoogleAuthCredentials,
-  resolveAuthEnvironment,
-} from "@/lib/auth/environment";
-
-const authEnvironment = resolveAuthEnvironment();
-const googleAuthConfigured = hasGoogleAuthCredentials();
+import { googleAuthConfigured } from "@/lib/env";
 
 /* ------------------------------------------------------------------ */
 /* Custom errors                                                       */
@@ -47,8 +41,8 @@ const SESSION_UPDATE_AGE_SECONDS = 15 * 60;
 const googleProvider = googleAuthConfigured
   ? [
       Google({
-        clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         /**
          * We intentionally do NOT set allowDangerousEmailAccountLinking.
          * Safe account-linking is handled in the signIn callback below.
@@ -59,7 +53,6 @@ const googleProvider = googleAuthConfigured
   : [];
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret: authEnvironment.authSecret,
   adapter: PrismaAdapter(db) as Adapter,
 
   session: {

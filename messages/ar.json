@@ -26,11 +26,7 @@
     "jobAlerts": "تنبيهات الوظائف",
     "help": "المساعدة",
     "profile": "الملف الشخصي",
-    "search": "بحث",
-    "language": "اللغة",
-    "postJob": "نشر وظيفة",
-    "account": "الحساب",
-    "searchJobs": "البحث عن وظائف"
+    "search": "بحث"
   },
   "Home": {
     "eyebrow": "منصة مهنية عالمية",
@@ -136,14 +132,7 @@
     "trustSectionKicker": "مبنيّ على بيانات حقيقية",
     "trustSectionTitle": "بنية موثوقة، لا شهادات.",
     "feedTitle": "تدفق مباشر للفرص",
-    "feedEmpty": "تظهر الوظائف الجديدة هنا فور نشرها.",
-    "popularSearches": "شائع",
-    "featuredFull": "أماكن التمييز ممتلئة — قائمة الانتظار مفتوحة",
-    "featuredSpotsLeft": "بقيت {left}/{total} أماكن مميزة فقط",
-    "featuredStats": "{featured} مميزة · {jobs} وظيفة نشطة",
-    "campaignEnds": "ينتهي في {date}",
-    "featureCta": "تمييز · ${price} / ٧ أيام",
-    "postJobCta": "نشر وظيفة"
+    "feedEmpty": "تظهر الوظائف الجديدة هنا فور نشرها."
   },
   "Common": {
     "loading": "جارٍ التحميل...",
@@ -194,19 +183,7 @@
     "forbidden": "تم رفض الوصول",
     "status": "الحالة",
     "print": "طباعة",
-    "copied": "تم النسخ",
-    "toggleTheme": "تبديل السمة",
-    "skipToContent": "انتقل إلى المحتوى",
-    "pageNotFound": "الصفحة غير موجودة",
-    "pageNotFoundDesc": "هذه الصفحة غير موجودة أو تم نقلها. جرّب أحد هذه الأقسام الشائعة:",
-    "copy": "نسخ",
-    "errorUnexpected": "حدث خطأ غير متوقع. يمكنك المحاولة مجدداً أو العودة للرئيسية.",
-    "planRequired": "تتطلب هذه الميزة خطة أعلى.",
-    "rateLimited": "طلبات كثيرة جداً. يرجى الانتظار والمحاولة مجدداً.",
-    "serviceUnavailable": "الخدمة غير متاحة مؤقتاً. يرجى المحاولة بعد قليل.",
-    "mainNavigation": "التنقل الرئيسي",
-    "relatedSections": "أقسام ذات صلة",
-    "exploreMore": "استكشف المزيد"
+    "copied": "تم النسخ"
   },
   "ApiErrors": {
     "badRequest": "الطلب غير صالح. يرجى التحقق من مدخلاتك.",
@@ -263,28 +240,8 @@
       "emailExists": "البريد الإلكتروني مسجّل بالفعل",
       "generic": "حدث خطأ ما",
       "network": "خطأ في الشبكة. يرجى المحاولة مجددًا.",
-      "rateLimited": "طلبات كثيرة جدًا. يرجى المحاولة لاحقًا.",
-      "unauthorized": "يرجى تسجيل الدخول للمتابعة."
-    },
-    "sideTitle": "وظيفتك التالية تبدأ ببحث أفضل.",
-    "sidePoint1": "وظائف عالمية من جهات موثوقة، تُحدَّث يوميًا.",
-    "sidePoint2": "درجات توافق بالذكاء الاصطناعي، ومساعدة في السيرة الذاتية، ورؤى لمخاطر المسار المهني.",
-    "sidePoint3": "رواتب شفافة وملف واحد لكل طلب.",
-    "sideFooter": "التسجيل مجاني. لا حاجة لبطاقة ائتمان.",
-    "hidePassword": "إخفاء كلمة المرور",
-    "registeredSuccess": "تم إنشاء الحساب. يرجى تسجيل الدخول للمتابعة.",
-    "sessionExpired": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
-    "showPassword": "إظهار كلمة المرور",
-    "verifyEmailErrorBody": "الرابط غير صالح أو منتهي الصلاحية.",
-    "verifyEmailErrorTitle": "فشل التحقق",
-    "verifyEmailMissingBody": "ينقص هذا الرابط معاملات مطلوبة.",
-    "verifyEmailMissingTitle": "رابط غير صالح",
-    "verifyEmailResend": "إعادة إرسال بريد التحقق",
-    "verifyEmailResendFailed": "تعذّر إرسال البريد. يرجى المحاولة لاحقاً.",
-    "verifyEmailResending": "جارٍ الإرسال…",
-    "verifyEmailResent": "تم إرسال بريد التحقق. تحقق من صندوق الوارد.",
-    "verifyEmailSuccessBody": "تم التحقق من بريدك الإلكتروني بنجاح.",
-    "verifyEmailSuccessTitle": "تم التحقق من البريد!"
+      "rateLimited": "طلبات كثيرة جدًا. يرجى المحاولة لاحقًا."
+    }
   },
   "Contact": {
     "title": "اتصل بنا",
@@ -411,12 +368,7 @@
     "errIntentExpired": "انتهى عرض الدفع هذا أو استُخدم سابقًا. يرجى إنشاء عرض جديد.",
     "errRecipient": "تغيّر عنوان المحفظة. يرجى إنشاء عرض جديد.",
     "errSubmit": "فشل الإرسال. يرجى المحاولة مجددًا.",
-    "errWallet": "هذه العملة الرقمية غير مهيّأة للمدفوعات.",
-    "cta": "المتابعة بالعملات الرقمية في الأسعار",
-    "free": "الخطة المجانية",
-    "perMonth": "/شهر",
-    "perYear": "/سنة",
-    "qrAlt": "رمز QR لعنوان الدفع"
+    "errWallet": "هذه العملة الرقمية غير مهيّأة للمدفوعات."
   },
   "Dashboard": {
     "navDashboard": "لوحة التحكم",
@@ -454,12 +406,7 @@
     "remote": "عن بُعد",
     "noJobs": "لا توجد وظائف للعرض بعد.",
     "recent": "الأحدث",
-    "stats": "الإحصاءات",
-    "completeProfile": "أكمل الملف الشخصي ←",
-    "matchNeedProfile": "أضف مهارات أو نبذة إلى ملفك لفتح درجات المطابقة.",
-    "matchScore": "درجة المطابقة",
-    "matchedJobs": "أفضل المطابقات لك",
-    "noMatches": "لا توجد مطابقات قوية بعد. حدّث مهاراتك أو تصفح جميع الوظائف."
+    "stats": "الإحصاءات"
   },
   "Settings": {
     "title": "الإعدادات",
@@ -622,15 +569,7 @@
     "pending": "قيد الانتظار",
     "salaryNA": "الراتب غير محدد",
     "loadErrorTitle": "تعذّر تحميل الوظائف",
-    "loadErrorBody": "حدث خطأ ما. يرجى المحاولة مجددًا.",
-    "kicker": "مسارات مهنية عالمية",
-    "resultsCount": "{count} وظيفة",
-    "pagination": "ترقيم الصفحات",
-    "showResults": "عرض النتائج",
-    "featured": "مميزة",
-    "allCategories": "جميع الفئات",
-    "rateLimitBody": "يرجى الانتظار قليلاً قبل المحاولة مجدداً.",
-    "rateLimitTitle": "طلبات كثيرة جداً"
+    "loadErrorBody": "حدث خطأ ما. يرجى المحاولة مجددًا."
   },
   "Applications": {
     "title": "طلباتي",
@@ -670,8 +609,7 @@
     "youPrefix": "أنت: ",
     "messagePlaceholder": "اكتب رسالة...",
     "startConversation": "ابدأ محادثة",
-    "selectConversation": "اختر محادثة",
-    "send": "إرسال الرسالة"
+    "selectConversation": "اختر محادثة"
   },
   "Notifications": {
     "title": "الإشعارات",
@@ -848,7 +786,6 @@
     "deadline": "الموعد النهائي",
     "responsibilities": "المسؤوليات",
     "matchScoreTitle": "درجة التطابق",
-    "matchUnavailable": "درجة التطابق غير متاحة",
     "overallFit": "مدى التوافق",
     "skills": "المهارات",
     "experience": "الخبرة",
@@ -865,12 +802,7 @@
     "contactDraft": "مسودة",
     "contactGenerateDraft": "أنشئ مسودة",
     "contactCopy": "نسخ",
-    "contactSend": "إرسال",
-    "loginForMatch": "سجّل الدخول لعرض درجة المطابقة",
-    "matchLabel": "مطابقة",
-    "matchLoading": "جارٍ التحقق من المطابقة…",
-    "matchNeedProfile": "أكمل الملف الشخصي لدرجة المطابقة",
-    "matchScore": "درجة مطابقتك لهذه الوظيفة"
+    "contactSend": "إرسال"
   },
   "Companies": {
     "title": "الشركات",
@@ -881,9 +813,7 @@
     "viewProfile": "عرض الملف",
     "location": "الموقع",
     "website": "الموقع الإلكتروني",
-    "pending": "الشركات المعلّقة",
-    "unknown": "شركة غير معروفة",
-    "emptyBody": "ستظهر الشركات هنا بمجرد إنشاء أصحاب العمل لملفاتهم."
+    "pending": "الشركات المعلّقة"
   },
   "AuthExtra": {
     "forgotTitle": "نسيت كلمة المرور",
@@ -909,8 +839,7 @@
     "browseJobs": "تصفّح كل الوظائف",
     "activeJobs": "وظيفة نشطة",
     "viewAllJobs": "عرض كل الوظائف ←",
-    "browseLocations": "تصفّح المواقع ←",
-    "alphabet": "الأبجدية"
+    "browseLocations": "تصفّح المواقع ←"
   },
   "CategoryNames": {
     "accounting": "المحاسبة",

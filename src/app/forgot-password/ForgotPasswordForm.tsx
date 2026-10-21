@@ -44,7 +44,7 @@ export default function ForgotPasswordForm() {
           : t("AuthExtra.sendReset", "Send Reset Link")}
       </button>
       {status === "success" && (
-        <p className="text-sm text-[var(--success)] text-center">
+        <p className="text-sm text-green-500 text-center">
           {t(
             "AuthExtra.forgotSuccess",
             "If an account exists, a reset link has been sent."
@@ -52,7 +52,7 @@ export default function ForgotPasswordForm() {
         </p>
       )}
       {status === "error" && (
-        <p className="text-sm text-[var(--error)] text-center">
+        <p className="text-sm text-red-500 text-center">
           {t("Auth.errors.generic", "Something went wrong. Please try again.")}
         </p>
       )}
@@ -60,7 +60,7 @@ export default function ForgotPasswordForm() {
         {t("AuthExtra.rememberPassword", "Remember your password?")}{" "}
         <Link
           href="/login"
-          className="font-medium text-[var(--brand-primary)] underline-offset-2 hover:underline"
+          className="font-medium text-[var(--ios-blue)] hover:underline"
         >
           {t("Common.signIn", "Sign in")}
         </Link>

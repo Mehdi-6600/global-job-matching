@@ -26,7 +26,7 @@ export default function ContactForm() {
       <div>
         <label
           htmlFor="name"
-          className="block text-sm font-medium text-[var(--text-body)] mb-1"
+          className="block text-sm font-medium text-slate-300 mb-1"
         >
           {t("Contact.name", "Full Name")}
         </label>
@@ -35,14 +35,14 @@ export default function ContactForm() {
           name="name"
           type="text"
           required
-          className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+          className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:ring-2 focus:ring-sky-500"
           placeholder={t("Contact.namePlaceholder", "John Doe")}
         />
       </div>
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-[var(--text-body)] mb-1"
+          className="block text-sm font-medium text-slate-300 mb-1"
         >
           {t("Contact.email", "Email")}
         </label>
@@ -51,14 +51,14 @@ export default function ContactForm() {
           name="email"
           type="email"
           required
-          className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+          className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:ring-2 focus:ring-sky-500"
           placeholder="you@example.com"
         />
       </div>
       <div>
         <label
           htmlFor="subject"
-          className="block text-sm font-medium text-[var(--text-body)] mb-1"
+          className="block text-sm font-medium text-slate-300 mb-1"
         >
           {t("Contact.subject", "Subject")}
         </label>
@@ -67,14 +67,14 @@ export default function ContactForm() {
           name="subject"
           type="text"
           required
-          className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+          className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:ring-2 focus:ring-sky-500"
           placeholder={t("Contact.subjectPlaceholder", "How can we help?")}
         />
       </div>
       <div>
         <label
           htmlFor="message"
-          className="block text-sm font-medium text-[var(--text-body)] mb-1"
+          className="block text-sm font-medium text-slate-300 mb-1"
         >
           {t("Contact.message", "Message")}
         </label>
@@ -83,26 +83,26 @@ export default function ContactForm() {
           name="message"
           rows={5}
           required
-          className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)] resize-none"
+          className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:ring-2 focus:ring-sky-500 resize-none"
           placeholder={t("Contact.messagePlaceholder", "Tell us more...")}
         />
       </div>
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3 rounded-xl bg-[var(--info)] text-[var(--text-on-brand)] font-semibold hover:bg-[var(--info)] disabled:opacity-60"
+        className="w-full py-3 rounded-xl bg-sky-500 text-white font-semibold hover:bg-sky-400 disabled:opacity-60"
       >
         {loading
           ? t("Contact.sending", "Sending...")
           : t("Contact.send", "Send Message")}
       </button>
       {status === "success" && (
-        <p className="text-sm text-[var(--success)] text-center">
+        <p className="text-sm text-emerald-400 text-center">
           {t("Contact.success", "Message sent successfully!")}
         </p>
       )}
       {status === "error" && (
-        <p className="text-sm text-[var(--error)] text-center">
+        <p className="text-sm text-red-400 text-center">
           {t("Contact.error", "Something went wrong. Please try again.")}
         </p>
       )}

@@ -2,11 +2,6 @@ import type { NextAuthConfig } from "next-auth";
 import { ROLES } from "@/lib/roles";
 import { classifyRoute, normalizeRoutePath } from "@/lib/route-access";
 
-// Keep direct process.env references for Next.js Edge's compile-time env
-// replacement while accepting the legacy Auth.js variable.
-const authSecret =
-  process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim();
-
 /**
  * Edge-compatible auth config for middleware only.
  * Full credentials + sessionVersion checks live in src/lib/auth.ts (Node).
@@ -18,7 +13,6 @@ const authSecret =
  * (edge) and API routes (Node).
  */
 export const authConfig = {
-  secret: authSecret,
   pages: {
     signIn: "/login",
     error: "/login",

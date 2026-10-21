@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
 
 export type CategoryRow = {
   id: string;
@@ -36,7 +35,6 @@ export function CategoriesSearch({
   noResults,
   clearLabel,
 }: Props) {
-  const { t } = useLocale();
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -79,7 +77,7 @@ export function CategoriesSearch({
     <div className="space-y-6">
       <div className="relative">
         <Search
-          className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
           aria-hidden
         />
         <input
@@ -88,14 +86,14 @@ export function CategoriesSearch({
           onChange={(e) => setQ(e.target.value)}
           placeholder={searchPlaceholder}
           autoComplete="off"
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] ps-10 pe-24 py-3 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:border-[var(--brand-accent)]"
+          className="w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-24 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/40"
           aria-label={searchPlaceholder}
         />
         {q ? (
           <button
             type="button"
             onClick={() => setQ("")}
-            className="absolute end-2 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] px-2 py-1 rounded-lg hover:bg-[var(--surface-3)]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10"
           >
             {clearLabel}
           </button>
@@ -105,13 +103,13 @@ export function CategoriesSearch({
       {letters.length > 1 ? (
         <nav
           className="flex flex-wrap gap-1.5 justify-center"
-          aria-label={t("Categories.alphabet", "Alphabet")}
+          aria-label="Alphabet"
         >
           {letters.map((L) => (
             <a
               key={L}
               href={`#cat-${L === "#" ? "other" : L}`}
-              className="min-w-[2rem] text-center text-xs font-medium rounded-lg px-2 py-1.5 border border-[var(--border)] text-[var(--text-body)] hover:text-[var(--text-primary)] hover:border-[var(--brand-accent)] hover:bg-[var(--brand-accent-soft)] transition-colors"
+              className="min-w-[2rem] text-center text-xs font-medium rounded-lg px-2 py-1.5 border border-white/10 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:bg-indigo-500/10 transition-colors"
             >
               {L}
             </a>
@@ -120,7 +118,7 @@ export function CategoriesSearch({
       ) : null}
 
       {filtered.length === 0 ? (
-        <div className="glass rounded-2xl p-8 text-center border border-[var(--border)] text-[var(--text-muted)]">
+        <div className="glass rounded-2xl p-8 text-center border border-white/10 text-slate-400">
           {noResults}
         </div>
       ) : (
@@ -131,7 +129,7 @@ export function CategoriesSearch({
             const anchor = L === "#" ? "other" : L;
             return (
               <section key={L} id={`cat-${anchor}`} className="scroll-mt-24">
-                <h2 className="text-sm font-semibold text-[var(--brand-accent)] mb-3 tracking-wide">
+                <h2 className="text-sm font-semibold text-indigo-300 mb-3 tracking-wide">
                   {L}
                 </h2>
                 <ul className="grid sm:grid-cols-2 gap-4">
@@ -139,12 +137,12 @@ export function CategoriesSearch({
                     <li key={c.id}>
                       <Link
                         href={`/categories/${c.slug}`}
-                        className="glass block rounded-2xl border border-[var(--border)] p-5 hover:border-[var(--brand-accent)] transition-all"
+                        className="glass block rounded-2xl border border-white/10 p-5 hover:border-indigo-500/30 transition-all"
                       >
-                        <span className="text-lg font-semibold text-[var(--text-primary)]">
+                        <span className="text-lg font-semibold text-white">
                           {c.displayName}
                         </span>
-                        <span className="block text-sm text-[var(--text-muted)] mt-1">
+                        <span className="block text-sm text-slate-400 mt-1">
                           {c.count} {activeJobsLabel}
                         </span>
                       </Link>

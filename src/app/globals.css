@@ -1447,7 +1447,7 @@
    ============================================================ */
 
 .gjm-card-accent {
-  --card-accent: var(--brand-primary);
+  --card-accent: #22d3ee;
   box-shadow:
     var(--elev-2),
     inset 0 0 0 1.5px var(--card-accent);
@@ -1461,23 +1461,23 @@
 }
 
 .gjm-card-accent--cyan {
-  --card-accent: var(--brand-primary);
+  --card-accent: #22d3ee;
 }
 
 .gjm-card-accent--emerald {
-  --card-accent: var(--success);
+  --card-accent: #34d399;
 }
 
 .gjm-card-accent--amber {
-  --card-accent: var(--warning);
+  --card-accent: #fbbf24;
 }
 
 .gjm-card-accent--red {
-  --card-accent: var(--error);
+  --card-accent: #f87171;
 }
 
 .gjm-card-accent--violet {
-  --card-accent: var(--brand-accent);
+  --card-accent: #a78bfa;
 }
 
 /* ============================================================

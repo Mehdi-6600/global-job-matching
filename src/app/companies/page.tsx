@@ -101,21 +101,16 @@ export default async function CompaniesPage() {
     "Explore employers hiring on Global Job Matching"
   );
   const emptyTitle = t(dict, "Companies.noCompanies", "No companies found");
-  const emptyBody = t(
-    dict,
-    "Companies.emptyBody",
-    "Companies will appear here once employers create profiles.",
-  );
   const jobsLabel = t(dict, "Companies.jobs", "Jobs");
   const websiteLabel = t(dict, "Companies.website", "Website");
   const viewProfileLabel = t(dict, "Companies.viewProfile", "View profile");
 
   return (
-    <div className="gjm-page px-4 sm:px-6">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">{title}</h1>
-          <p className="text-[var(--text-muted)]">{subtitle}</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+          <p className="text-slate-400">{subtitle}</p>
         </div>
 
         {companies.length > 0 ? (
@@ -123,10 +118,10 @@ export default async function CompaniesPage() {
             {companies.map((company: typeof companies[number]) => (
               <div
                 key={company.id}
-                className="glass rounded-2xl p-5 border border-[var(--border)] hover:border-[var(--border)] transition-all"
+                className="glass rounded-2xl p-5 border border-white/10 hover:border-cyan-500/20 transition-all"
               >
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--brand-primary-soft)] flex items-center justify-center text-[var(--brand-primary)] font-bold text-sm shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-cyan-500/15 flex items-center justify-center text-cyan-300 font-bold text-sm shrink-0">
                     {company.logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -139,11 +134,11 @@ export default async function CompaniesPage() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold text-[var(--text-primary)] truncate">
+                    <h2 className="text-lg font-semibold text-white truncate">
                       {company.name}
                     </h2>
                     {company.location && (
-                      <p className="text-xs text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                         <MapPin className="w-3 h-3" />
                         {company.location}
                       </p>
@@ -152,13 +147,13 @@ export default async function CompaniesPage() {
                 </div>
 
                 {company.description && (
-                  <p className="text-sm text-[var(--text-muted)] line-clamp-2 mb-4">
+                  <p className="text-sm text-slate-400 line-clamp-2 mb-4">
                     {company.description}
                   </p>
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-body)] text-xs border border-[var(--border-soft)]">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 text-slate-300 text-xs border border-white/5">
                     <Briefcase className="w-3 h-3" />
                     {company.activeJobs} {jobsLabel}
                   </span>
@@ -167,7 +162,7 @@ export default async function CompaniesPage() {
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/jobs?company=${company.id}`}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] px-4 py-2 rounded-xl text-xs font-medium transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 px-4 py-2 rounded-xl text-xs font-medium transition-all"
                   >
                     {viewProfileLabel}
                   </Link>
@@ -176,7 +171,7 @@ export default async function CompaniesPage() {
                       href={company.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
+                      className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
                       aria-label={websiteLabel}
                     >
                       <Globe className="w-4 h-4" />
@@ -188,14 +183,14 @@ export default async function CompaniesPage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <Building2 className="w-12 h-12 text-[var(--text-subtle)] mx-auto mb-4" />
-            <p className="text-[var(--text-muted)] font-medium mb-1">{emptyTitle}</p>
-            <p className="text-[var(--text-muted)] text-sm mb-6">
-              {emptyBody}
+            <Building2 className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 font-medium mb-1">{emptyTitle}</p>
+            <p className="text-slate-500 text-sm mb-6">
+              Companies will appear here once employers create profiles.
             </p>
             <Link
               href="/jobs"
-              className="inline-flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] hover:text-[var(--text-primary)] px-5 py-2 rounded-xl text-sm transition-all"
+              className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm transition-all"
             >
               <Search className="w-3.5 h-3.5" />
               Browse Jobs
@@ -203,6 +198,6 @@ export default async function CompaniesPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

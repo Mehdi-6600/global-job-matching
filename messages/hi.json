@@ -26,11 +26,7 @@
     "jobAlerts": "नौकरी अलर्ट",
     "help": "सहायता",
     "profile": "प्रोफ़ाइल",
-    "search": "खोजें",
-    "language": "भाषा",
-    "postJob": "नौकरी पोस्ट करें",
-    "account": "खाता",
-    "searchJobs": "नौकरियाँ खोजें"
+    "search": "खोजें"
   },
   "Home": {
     "eyebrow": "वैश्विक करियर प्लेटफ़ॉर्म",
@@ -136,14 +132,7 @@
     "trustSectionKicker": "वास्तविक डेटा पर आधारित",
     "trustSectionTitle": "विश्वसनीय अवसंरचना, प्रशंसापत्र नहीं।",
     "feedTitle": "लाइव अवसर फ़ीड",
-    "feedEmpty": "नई नौकरियाँ प्रकाशित होते ही यहाँ दिखाई देती हैं।",
-    "popularSearches": "लोकप्रिय",
-    "featuredFull": "विशेष स्लॉट भर गए हैं — प्रतीक्षा सूची खुली है",
-    "featuredSpotsLeft": "केवल {left}/{total} विशेष स्लॉट शेष",
-    "featuredStats": "{featured} विशेष · {jobs} सक्रिय नौकरियाँ",
-    "campaignEnds": "{date} को समाप्त",
-    "featureCta": "विशेष · ${price} / 7 दिन",
-    "postJobCta": "नौकरी पोस्ट करें"
+    "feedEmpty": "नई नौकरियाँ प्रकाशित होते ही यहाँ दिखाई देती हैं।"
   },
   "Common": {
     "loading": "लोड हो रहा है...",
@@ -194,19 +183,7 @@
     "forbidden": "पहुँच अस्वीकृत",
     "status": "स्थिति",
     "print": "प्रिंट करें",
-    "copied": "कॉपी किया गया",
-    "toggleTheme": "थीम बदलें",
-    "skipToContent": "सामग्री पर जाएँ",
-    "pageNotFound": "पेज नहीं मिला",
-    "pageNotFoundDesc": "यह पेज मौजूद नहीं है या स्थानांतरित हो गया है। इन लोकप्रिय अनुभागों में से कोई आज़माएँ:",
-    "copy": "कॉपी करें",
-    "errorUnexpected": "अप्रत्याशित त्रुटि हुई। पुनः प्रयास करें या होम पर लौटें।",
-    "planRequired": "इस सुविधा के लिए उच्चतर प्लान आवश्यक है।",
-    "rateLimited": "बहुत अधिक अनुरोध। कृपया प्रतीक्षा करें और पुनः प्रयास करें।",
-    "serviceUnavailable": "सेवा अस्थायी रूप से उपलब्ध नहीं है। कृपया कुछ देर बाद पुनः प्रयास करें।",
-    "mainNavigation": "मुख्य नेविगेशन",
-    "relatedSections": "संबंधित अनुभाग",
-    "exploreMore": "और देखें"
+    "copied": "कॉपी किया गया"
   },
   "ApiErrors": {
     "badRequest": "अनुरोध अमान्य था। कृपया अपनी प्रविष्टियाँ जाँचें।",
@@ -263,28 +240,8 @@
       "emailExists": "ईमेल पहले से पंजीकृत है",
       "generic": "कुछ गलत हो गया",
       "network": "नेटवर्क त्रुटि। कृपया पुनः प्रयास करें।",
-      "rateLimited": "बहुत अधिक अनुरोध। कृपया बाद में पुनः प्रयास करें।",
-      "unauthorized": "जारी रखने के लिए साइन इन करें।"
-    },
-    "sideTitle": "आपकी अगली भूमिका बेहतर खोज से शुरू होती है।",
-    "sidePoint1": "सत्यापित नियोक्ताओं से वैश्विक नौकरियाँ, प्रतिदिन अद्यतन।",
-    "sidePoint2": "AI मैच स्कोर, रिज़्यूमे सहायता और करियर-जोखिम जानकारी।",
-    "sidePoint3": "पारदर्शी वेतन और हर आवेदन के लिए एक ही प्रोफ़ाइल।",
-    "sideFooter": "मुफ़्त जुड़ें। क्रेडिट कार्ड की आवश्यकता नहीं।",
-    "hidePassword": "पासवर्ड छिपाएं",
-    "registeredSuccess": "खाता बन गया। जारी रखने के लिए साइन इन करें।",
-    "sessionExpired": "आपका सत्र समाप्त हो गया है। कृपया दोबारा साइन इन करें।",
-    "showPassword": "पासवर्ड दिखाएं",
-    "verifyEmailErrorBody": "लिंक अमान्य है या समाप्त हो गया है।",
-    "verifyEmailErrorTitle": "सत्यापन विफल",
-    "verifyEmailMissingBody": "इस सत्यापन लिंक में आवश्यक पैरामीटर नहीं हैं।",
-    "verifyEmailMissingTitle": "अमान्य लिंक",
-    "verifyEmailResend": "सत्यापन ईमेल फिर भेजें",
-    "verifyEmailResendFailed": "ईमेल नहीं भेजा जा सका। कृपया बाद में पुनः प्रयास करें।",
-    "verifyEmailResending": "भेजा जा रहा है…",
-    "verifyEmailResent": "सत्यापन ईमेल भेजा गया। अपना इनबॉक्स देखें।",
-    "verifyEmailSuccessBody": "आपका ईमेल सफलतापूर्वक सत्यापित हो गया।",
-    "verifyEmailSuccessTitle": "ईमेल सत्यापित!"
+      "rateLimited": "बहुत अधिक अनुरोध। कृपया बाद में पुनः प्रयास करें।"
+    }
   },
   "Contact": {
     "title": "हमसे संपर्क करें",
@@ -411,12 +368,7 @@
     "errIntentExpired": "यह भुगतान कोट समाप्त हो गया या पहले ही उपयोग किया जा चुका है। कृपया नया बनाएँ।",
     "errRecipient": "वॉलेट पता बदल गया है। कृपया नया कोट बनाएँ।",
     "errSubmit": "सबमिशन विफल। कृपया पुनः प्रयास करें।",
-    "errWallet": "वह क्रिप्टो भुगतान के लिए कॉन्फ़िगर नहीं है।",
-    "cta": "मूल्य निर्धारण पर क्रिप्टो के साथ जारी रखें",
-    "free": "मुफ़्त प्लान",
-    "perMonth": "/माह",
-    "perYear": "/वर्ष",
-    "qrAlt": "भुगतान पते का QR कोड"
+    "errWallet": "वह क्रिप्टो भुगतान के लिए कॉन्फ़िगर नहीं है।"
   },
   "Dashboard": {
     "navDashboard": "डैशबोर्ड",
@@ -454,12 +406,7 @@
     "remote": "रिमोट",
     "noJobs": "अभी दिखाने के लिए कोई नौकरी नहीं।",
     "recent": "हाल का",
-    "stats": "आँकड़े",
-    "completeProfile": "प्रोफ़ाइल पूरी करें →",
-    "matchNeedProfile": "मैच स्कोर अनलॉक करने के लिए अपनी प्रोफ़ाइल में कौशल या बायो जोड़ें।",
-    "matchScore": "मैच स्कोर",
-    "matchedJobs": "आपके लिए सर्वश्रेष्ठ मैच",
-    "noMatches": "अभी कोई मजबूत मैच नहीं। अपने कौशल अपडेट करें या सभी नौकरियाँ देखें।"
+    "stats": "आँकड़े"
   },
   "Settings": {
     "title": "सेटिंग्स",
@@ -622,15 +569,7 @@
     "pending": "लंबित",
     "salaryNA": "वेतन निर्दिष्ट नहीं",
     "loadErrorTitle": "नौकरियाँ लोड नहीं हो सकीं",
-    "loadErrorBody": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
-    "kicker": "वैश्विक करियर",
-    "resultsCount": "{count} नौकरियाँ",
-    "pagination": "पेजिंग",
-    "showResults": "परिणाम दिखाएँ",
-    "featured": "विशेष",
-    "allCategories": "सभी श्रेणियाँ",
-    "rateLimitBody": "पुनः प्रयास करने से पहले कृपया प्रतीक्षा करें।",
-    "rateLimitTitle": "बहुत अधिक अनुरोध"
+    "loadErrorBody": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
   },
   "Applications": {
     "title": "मेरे आवेदन",
@@ -670,8 +609,7 @@
     "youPrefix": "आप: ",
     "messagePlaceholder": "संदेश लिखें...",
     "startConversation": "बातचीत शुरू करें",
-    "selectConversation": "एक बातचीत चुनें",
-    "send": "संदेश भेजें"
+    "selectConversation": "एक बातचीत चुनें"
   },
   "Notifications": {
     "title": "सूचनाएँ",
@@ -848,7 +786,6 @@
     "deadline": "अंतिम तिथि",
     "responsibilities": "जिम्मेदारियाँ",
     "matchScoreTitle": "आपका मैच स्कोर",
-    "matchUnavailable": "मैच स्कोर उपलब्ध नहीं है",
     "overallFit": "कुल फिट",
     "skills": "कौशल",
     "experience": "अनुभव",
@@ -865,12 +802,7 @@
     "contactDraft": "ड्राफ़्ट",
     "contactGenerateDraft": "ड्राफ़्ट बनाएँ",
     "contactCopy": "कॉपी",
-    "contactSend": "भेजें",
-    "loginForMatch": "अपना मैच स्कोर देखने के लिए साइन इन करें",
-    "matchLabel": "मैच",
-    "matchLoading": "मैच जाँचा जा रहा है…",
-    "matchNeedProfile": "मैच स्कोर के लिए प्रोफ़ाइल पूरी करें",
-    "matchScore": "इस नौकरी के लिए आपका मैच स्कोर"
+    "contactSend": "भेजें"
   },
   "Companies": {
     "title": "कंपनियाँ",
@@ -881,9 +813,7 @@
     "viewProfile": "प्रोफ़ाइल देखें",
     "location": "स्थान",
     "website": "वेबसाइट",
-    "pending": "लंबित कंपनियाँ",
-    "unknown": "अज्ञात कंपनी",
-    "emptyBody": "नियोक्ता प्रोफ़ाइल बनाने के बाद कंपनियाँ यहाँ दिखाई देंगी।"
+    "pending": "लंबित कंपनियाँ"
   },
   "AuthExtra": {
     "forgotTitle": "पासवर्ड भूल गए",
@@ -909,8 +839,7 @@
     "browseJobs": "सभी नौकरियाँ ब्राउज़ करें",
     "activeJobs": "सक्रिय नौकरियाँ",
     "viewAllJobs": "सभी नौकरियाँ देखें →",
-    "browseLocations": "स्थान ब्राउज़ करें →",
-    "alphabet": "वर्णमाला"
+    "browseLocations": "स्थान ब्राउज़ करें →"
   },
   "CategoryNames": {
     "accounting": "लेखा",

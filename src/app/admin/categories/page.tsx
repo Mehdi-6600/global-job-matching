@@ -24,27 +24,27 @@ interface Category {
 }
 
 const initialCategories: Category[] = [
-  { id: "c1", name: "Technology", slug: "technology", jobCount: 156, color: "bg-[var(--brand-primary)]" },
-  { id: "c2", name: "Design", slug: "design", jobCount: 48, color: "bg-[var(--brand-accent)]" },
-  { id: "c3", name: "Marketing", slug: "marketing", jobCount: 32, color: "bg-[var(--warning)]" },
-  { id: "c4", name: "Finance", slug: "finance", jobCount: 24, color: "bg-[var(--success)]" },
-  { id: "c5", name: "Healthcare", slug: "healthcare", jobCount: 18, color: "bg-[var(--error)]" },
-  { id: "c6", name: "Education", slug: "education", jobCount: 12, color: "bg-[var(--warning)]" },
-  { id: "c7", name: "Sales", slug: "sales", jobCount: 28, color: "bg-[var(--info)]" },
-  { id: "c8", name: "HR", slug: "hr", jobCount: 9, color: "bg-[var(--brand-primary)]" },
+  { id: "c1", name: "Technology", slug: "technology", jobCount: 156, color: "bg-cyan-500" },
+  { id: "c2", name: "Design", slug: "design", jobCount: 48, color: "bg-purple-500" },
+  { id: "c3", name: "Marketing", slug: "marketing", jobCount: 32, color: "bg-pink-500" },
+  { id: "c4", name: "Finance", slug: "finance", jobCount: 24, color: "bg-emerald-500" },
+  { id: "c5", name: "Healthcare", slug: "healthcare", jobCount: 18, color: "bg-red-500" },
+  { id: "c6", name: "Education", slug: "education", jobCount: 12, color: "bg-amber-500" },
+  { id: "c7", name: "Sales", slug: "sales", jobCount: 28, color: "bg-blue-500" },
+  { id: "c8", name: "HR", slug: "hr", jobCount: 9, color: "bg-teal-500" },
 ];
 
 const colorOptions = [
-  "bg-[var(--brand-primary)]",
-  "bg-[var(--info)]",
-  "bg-[var(--brand-accent)]",
-  "bg-[var(--warning)]",
-  "bg-[var(--success)]",
-  "bg-[var(--brand-primary)]",
-  "bg-[var(--warning)]",
-  "bg-[var(--error)]",
-  "bg-[var(--warning)]",
-  "bg-[var(--brand-accent)]",
+  "bg-cyan-500",
+  "bg-blue-500",
+  "bg-purple-500",
+  "bg-pink-500",
+  "bg-emerald-500",
+  "bg-teal-500",
+  "bg-amber-500",
+  "bg-red-500",
+  "bg-orange-500",
+  "bg-indigo-500",
 ];
 
 export default function AdminCategoriesPage() {
@@ -53,7 +53,7 @@ export default function AdminCategoriesPage() {
   const [search, setSearch] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", slug: "", color: "bg-[var(--brand-primary)]" });
+  const [form, setForm] = useState({ name: "", slug: "", color: "bg-cyan-500" });
 
   const filtered = categories.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
@@ -69,7 +69,7 @@ export default function AdminCategoriesPage() {
       color: form.color,
     };
     setCategories([...categories, newCat]);
-    setForm({ name: "", slug: "", color: "bg-[var(--brand-primary)]" });
+    setForm({ name: "", slug: "", color: "bg-cyan-500" });
     setIsAdding(false);
   };
 
@@ -93,7 +93,7 @@ export default function AdminCategoriesPage() {
       )
     );
     setEditingId(null);
-    setForm({ name: "", slug: "", color: "bg-[var(--brand-primary)]" });
+    setForm({ name: "", slug: "", color: "bg-cyan-500" });
   };
 
   const handleDelete = (id: string) => {
@@ -103,83 +103,83 @@ export default function AdminCategoriesPage() {
   const cancelEdit = () => {
     setIsAdding(false);
     setEditingId(null);
-    setForm({ name: "", slug: "", color: "bg-[var(--brand-primary)]" });
+    setForm({ name: "", slug: "", color: "bg-cyan-500" });
   };
 
   return (
-    <div className="gjm-page px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Common.back", "Back")}
         </Link>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
               {t("Jobs.category", "Categories")}
             </h1>
-            <p className="text-[var(--text-muted)] text-sm">
+            <p className="text-slate-400 text-sm">
               {t("Dashboard.welcomeSub", "Manage job categories and tags")}
             </p>
           </div>
           <button
             type="button"
             onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+            className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           >
             <Plus className="w-4 h-4" />
             {t("Common.add", "Add Category")}
           </button>
         </div>
 
-        <div className="glass rounded-2xl p-4 mb-6 border border-[var(--border)]">
+        <div className="glass rounded-2xl p-4 mb-6 border border-white/10">
           <div className="relative">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("Common.search", "Search categories...")}
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl ps-10 pe-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] placeholder:text-[var(--text-muted)]"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50 placeholder:text-slate-500"
             />
           </div>
         </div>
 
         {(isAdding || editingId) && (
-          <div className="glass rounded-2xl p-5 md:p-6 mb-6 border border-[var(--border)]">
-            <h3 className="text-[var(--text-primary)] font-semibold mb-4">
+          <div className="glass rounded-2xl p-5 md:p-6 mb-6 border border-cyan-500/20">
+            <h3 className="text-white font-semibold mb-4">
               {editingId
                 ? t("Common.edit", "Edit Category")
                 : t("Common.add", "New Category")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+                <label className="block text-xs text-slate-400 mb-1.5">
                   {t("Auth.name", "Name")}
                 </label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+                <label className="block text-xs text-slate-400 mb-1.5">
                   Slug
                 </label>
                 <input
                   type="text"
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)]"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-cyan-500/50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+                <label className="block text-xs text-slate-400 mb-1.5">
                   Color
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -203,7 +203,7 @@ export default function AdminCategoriesPage() {
               <button
                 type="button"
                 onClick={editingId ? handleSaveEdit : handleAdd}
-                className="flex items-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] px-5 py-2 rounded-xl text-sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2 rounded-xl text-sm"
               >
                 <Save className="w-4 h-4" />
                 {editingId
@@ -213,7 +213,7 @@ export default function AdminCategoriesPage() {
               <button
                 type="button"
                 onClick={cancelEdit}
-                className="flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] hover:text-[var(--text-primary)] px-5 py-2 rounded-xl text-sm"
+                className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm"
               >
                 <XCircle className="w-4 h-4" />
                 {t("Common.cancel", "Cancel")}
@@ -226,7 +226,7 @@ export default function AdminCategoriesPage() {
           {filtered.map((cat) => (
             <div
               key={cat.id}
-              className="glass rounded-2xl p-5 group hover:bg-white/[0.03] transition-all border border-transparent hover:border-[var(--border)]"
+              className="glass rounded-2xl p-5 group hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/10"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className={`w-4 h-4 rounded-full ${cat.color}`} />
@@ -234,7 +234,7 @@ export default function AdminCategoriesPage() {
                   <button
                     type="button"
                     onClick={() => handleEdit(cat)}
-                    className="p-1.5 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]"
+                    className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-cyan-400"
                     title={t("Common.edit", "Edit")}
                   >
                     <Edit3 className="w-3.5 h-3.5" />
@@ -242,16 +242,16 @@ export default function AdminCategoriesPage() {
                   <button
                     type="button"
                     onClick={() => handleDelete(cat.id)}
-                    className="p-1.5 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--error)]"
+                    className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-red-400"
                     title={t("Common.delete", "Delete")}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-              <h3 className="text-[var(--text-primary)] font-semibold mb-1">{cat.name}</h3>
-              <p className="text-[var(--text-muted)] text-xs mb-3">/{cat.slug}</p>
-              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <h3 className="text-white font-semibold mb-1">{cat.name}</h3>
+              <p className="text-slate-400 text-xs mb-3">/{cat.slug}</p>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
                 <Briefcase className="w-3 h-3" />
                 <span>
                   {cat.jobCount} {t("Companies.jobs", "jobs")}
@@ -263,13 +263,13 @@ export default function AdminCategoriesPage() {
 
         {filtered.length === 0 && (
           <div className="text-center py-12">
-            <Tag className="w-10 h-10 text-[var(--text-subtle)] mx-auto mb-3" />
-            <p className="text-[var(--text-muted)] text-sm">
+            <Tag className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-500 text-sm">
               {t("Common.noResults", "No categories found.")}
             </p>
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

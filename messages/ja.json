@@ -26,11 +26,7 @@
     "jobAlerts": "求人アラート",
     "help": "ヘルプ",
     "profile": "プロフィール",
-    "search": "検索",
-    "language": "言語",
-    "postJob": "求人を掲載",
-    "account": "アカウント",
-    "searchJobs": "求人を検索"
+    "search": "検索"
   },
   "Common": {
     "loading": "読み込み中...",
@@ -81,19 +77,7 @@
     "forbidden": "アクセスが拒否されました",
     "status": "ステータス",
     "print": "印刷",
-    "copied": "コピーしました",
-    "toggleTheme": "テーマを切り替え",
-    "skipToContent": "コンテンツへスキップ",
-    "pageNotFound": "ページが見つかりません",
-    "pageNotFoundDesc": "このページは存在しないか、移動されました。人気のセクションをお試しください：",
-    "copy": "コピー",
-    "errorUnexpected": "予期しないエラーが発生しました。再試行するかホームに戻ってください。",
-    "planRequired": "この機能には上位プランが必要です。",
-    "rateLimited": "リクエストが多すぎます。しばらく待ってから再度お試しください。",
-    "serviceUnavailable": "サービスは一時的に利用できません。しばらくしてから再度お試しください。",
-    "mainNavigation": "メインナビゲーション",
-    "relatedSections": "関連セクション",
-    "exploreMore": "さらに見る"
+    "copied": "コピーしました"
   },
   "Footer": {
     "tagline": "世界中の才能とグローバルな機会をスマートかつ安全につなぎます。",
@@ -153,8 +137,7 @@
     "browseJobs": "求人を表示",
     "activeJobs": "件の募集",
     "viewAllJobs": "すべての求人を見る",
-    "browseLocations": "地域から探す",
-    "alphabet": "アルファベット"
+    "browseLocations": "地域から探す"
   },
   "Locations": {
     "title": "勤務地・エリア",
@@ -285,9 +268,7 @@
     "viewProfile": "企業詳細を見る",
     "location": "所在地",
     "website": "公式サイト",
-    "pending": "保留中",
-    "unknown": "不明な企業",
-    "emptyBody": "雇用主がプロフィールを作成すると、ここに企業が表示されます。"
+    "pending": "保留中"
   },
   "Auth": {
     "loginTitle": "アカウントにログイン",
@@ -316,28 +297,8 @@
       "emailExists": "このメールアドレスは既に登録されています。",
       "generic": "問題が発生しました。もう一度お試しください。",
       "network": "ネットワークエラーです。接続を確認して再試行してください。",
-      "rateLimited": "リクエストが多すぎます。しばらく時間をおいて再度お試しください。",
-      "unauthorized": "続行するにはサインインしてください。"
-    },
-    "sideTitle": "次の仕事は、より良い検索から。",
-    "sidePoint1": "審査済み企業のグローバル求人を毎日更新。",
-    "sidePoint2": "AI マッチスコア、履歴書サポート、キャリアリスク分析。",
-    "sidePoint3": "透明な給与と、すべての応募に使える1つのプロフィール。",
-    "sideFooter": "無料登録。クレジットカード不要。",
-    "hidePassword": "パスワードを隠す",
-    "registeredSuccess": "アカウントを作成しました。続行するにはサインインしてください。",
-    "sessionExpired": "セッションの有効期限が切れました。もう一度サインインしてください。",
-    "showPassword": "パスワードを表示",
-    "verifyEmailErrorBody": "リンクが無効か、期限が切れています。",
-    "verifyEmailErrorTitle": "認証に失敗しました",
-    "verifyEmailMissingBody": "この認証リンクには必要なパラメーターがありません。",
-    "verifyEmailMissingTitle": "無効なリンク",
-    "verifyEmailResend": "認証メールを再送する",
-    "verifyEmailResendFailed": "メールを送信できませんでした。しばらくしてから再度お試しください。",
-    "verifyEmailResending": "送信中…",
-    "verifyEmailResent": "認証メールを送信しました。受信トレイをご確認ください。",
-    "verifyEmailSuccessBody": "メールアドレスが認証されました。",
-    "verifyEmailSuccessTitle": "メール認証完了！"
+      "rateLimited": "リクエストが多すぎます。しばらく時間をおいて再度お試しください。"
+    }
   },
   "AuthExtra": {
     "forgotTitle": "パスワードの再設定",
@@ -420,12 +381,7 @@
     "remote": "リモート",
     "noJobs": "現在おすすめの求人はありません。",
     "recent": "新着",
-    "stats": "ステータス",
-    "completeProfile": "プロフィールを完成させる →",
-    "matchNeedProfile": "プロフィールにスキルや自己紹介を追加すると、マッチスコアが利用できます。",
-    "matchScore": "マッチスコア",
-    "matchedJobs": "あなたへのおすすめ",
-    "noMatches": "まだ強いマッチはありません。スキルを更新するか、すべての求人をご覧ください。"
+    "stats": "ステータス"
   },
   "Settings": {
     "title": "アカウント設定",
@@ -501,8 +457,7 @@
     "youPrefix": "自分: ",
     "messagePlaceholder": "メッセージを入力...",
     "startConversation": "新規メッセージ作成",
-    "selectConversation": "やり取りを表示するには左側の会話を選択してください。",
-    "send": "メッセージを送信"
+    "selectConversation": "やり取りを表示するには左側の会話を選択してください。"
   },
   "Notifications": {
     "title": "通知一覧",
@@ -648,15 +603,7 @@
     "pending": "審査中",
     "salaryNA": "応相談",
     "loadErrorTitle": "求人情報の取得エラー",
-    "loadErrorBody": "現在求人情報を読み込めません。時間をおいて再読み込みしてください。",
-    "kicker": "グローバルキャリア",
-    "resultsCount": "{count} 件の求人",
-    "pagination": "ページ送り",
-    "showResults": "結果を表示",
-    "featured": "注目",
-    "allCategories": "すべてのカテゴリ",
-    "rateLimitBody": "再試行する前にお待ちください。",
-    "rateLimitTitle": "リクエストが多すぎます"
+    "loadErrorBody": "現在求人情報を読み込めません。時間をおいて再読み込みしてください。"
   },
   "JobDetail": {
     "apply": "この求人に応募する",
@@ -683,7 +630,6 @@
     "deadline": "応募締切",
     "responsibilities": "主な職務内容",
     "matchScoreTitle": "AIスキル適合度診断",
-    "matchUnavailable": "マッチスコアを取得できません",
     "overallFit": "総合マッチ度",
     "skills": "必須スキルの一致度",
     "experience": "職歴・経験の一致度",
@@ -700,12 +646,7 @@
     "contactDraft": "AIでメッセージ案を作成",
     "contactGenerateDraft": "文章案を生成",
     "contactCopy": "コピー",
-    "contactSend": "企業へ送信",
-    "loginForMatch": "マッチスコアを見るにはサインインしてください",
-    "matchLabel": "マッチ",
-    "matchLoading": "マッチを確認中…",
-    "matchNeedProfile": "マッチスコアにはプロフィールを完成させてください",
-    "matchScore": "この求人へのマッチスコア"
+    "contactSend": "企業へ送信"
   },
   "Pricing": {
     "title": "グローバルキャリアを加速させる明確な料金体系",
@@ -781,12 +722,7 @@
     "errIntentExpired": "決済の有効期限が切れました。再度お見積もりください。",
     "errRecipient": "受取先アドレスが不正です。",
     "errSubmit": "決済情報の送信中にエラーが発生しました。",
-    "errWallet": "ウォレット機能が一時的にご利用いただけません。",
-    "cta": "料金ページで暗号通貨に進む",
-    "free": "無料プラン",
-    "perMonth": "/月",
-    "perYear": "/年",
-    "qrAlt": "支払いアドレスのQRコード"
+    "errWallet": "ウォレット機能が一時的にご利用いただけません。"
   },
   "CareerRisk": {
     "title": "AIキャリアリスク診断",
@@ -976,13 +912,6 @@
     "trustSectionKicker": "信頼と実績",
     "trustSectionTitle": "世界中のプロフェッショナルに選ばれる安全な雇用基盤",
     "feedTitle": "新着求人タイムライン",
-    "feedEmpty": "現在表示できるタイムライン項目はありません。",
-    "popularSearches": "人気",
-    "featuredFull": "注目枠は満席です — キャンセル待ちを受付中",
-    "featuredSpotsLeft": "注目枠は残り {left}/{total} 件",
-    "featuredStats": "注目 {featured} 件 · 募集中 {jobs} 件",
-    "campaignEnds": "{date} 終了",
-    "featureCta": "注目掲載 · ${price} / 7日",
-    "postJobCta": "求人を掲載"
+    "feedEmpty": "現在表示できるタイムライン項目はありません。"
   }
 }

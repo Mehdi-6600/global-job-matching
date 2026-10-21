@@ -61,22 +61,22 @@ export default async function LocationsIndexPage() {
   });
 
   return (
-    <div className="gjm-page px-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(listLd) }}
       />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
-          <MapPin className="w-10 h-10 text-[var(--brand-primary)] mx-auto mb-3" />
-          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">{title}</h1>
-          <p className="text-[var(--text-muted)] text-sm max-w-xl mx-auto">{subtitle}</p>
+          <MapPin className="w-10 h-10 text-cyan-400 mx-auto mb-3" />
+          <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+          <p className="text-slate-400 text-sm max-w-xl mx-auto">{subtitle}</p>
         </div>
 
         {stats.length === 0 ? (
-          <div className="glass rounded-2xl p-10 text-center border border-[var(--border)] text-[var(--text-muted)]">
+          <div className="glass rounded-2xl p-10 text-center border border-white/10 text-slate-400">
             {empty}{" "}
-            <Link href="/jobs" className="text-[var(--brand-primary)] hover:underline">
+            <Link href="/jobs" className="text-cyan-400 hover:underline">
               {browseJobs}
             </Link>
             .
@@ -87,12 +87,12 @@ export default async function LocationsIndexPage() {
               <li key={loc.slug}>
                 <Link
                   href={`/locations/${loc.slug}`}
-                  className="glass block rounded-2xl border border-[var(--border)] p-5 hover:border-[var(--brand-primary)] transition-all"
+                  className="glass block rounded-2xl border border-white/10 p-5 hover:border-cyan-500/30 transition-all"
                 >
-                  <span className="text-lg font-semibold text-[var(--text-primary)]">
+                  <span className="text-lg font-semibold text-white">
                     {loc.name}
                   </span>
-                  <span className="block text-sm text-[var(--text-muted)] mt-1">
+                  <span className="block text-sm text-slate-400 mt-1">
                     {loc.count} {activeJobs}
                   </span>
                 </Link>
@@ -102,14 +102,14 @@ export default async function LocationsIndexPage() {
         )}
 
         <p className="text-center mt-10 flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/jobs" className="text-[var(--brand-primary)] hover:underline">
+          <Link href="/jobs" className="text-cyan-400 hover:underline">
             {viewAll}
           </Link>
-          <Link href="/categories" className="text-[var(--brand-primary)] hover:underline">
+          <Link href="/categories" className="text-cyan-400 hover:underline">
             {browseCat}
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

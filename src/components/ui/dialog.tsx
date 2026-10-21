@@ -21,7 +21,6 @@
 import * as React from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale } from "@/components/locale-provider";
 
 export interface DialogProps {
   open: boolean;
@@ -48,7 +47,6 @@ export function Dialog({
   hideCloseButton = false,
   className,
 }: DialogProps) {
-  const { t } = useLocale();
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const previouslyFocusedRef = React.useRef<HTMLElement | null>(null);
 
@@ -120,7 +118,7 @@ export function Dialog({
           <button
             type="button"
             onClick={onClose}
-            aria-label={t("Common.close", "Close")}
+            aria-label="Close"
             className="absolute top-4 end-4 inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors"
           >
             <X className="w-4 h-4" />

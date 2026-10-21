@@ -131,22 +131,22 @@ export default async function CategoriesIndexPage() {
   });
 
   return (
-    <div className="gjm-page px-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(listLd) }}
       />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
-          <Layers className="w-10 h-10 text-[var(--brand-accent)] mx-auto mb-3" />
-          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">{title}</h1>
-          <p className="text-[var(--text-muted)] text-sm max-w-xl mx-auto">{subtitle}</p>
+          <Layers className="w-10 h-10 text-indigo-400 mx-auto mb-3" />
+          <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+          <p className="text-slate-400 text-sm max-w-xl mx-auto">{subtitle}</p>
         </div>
 
         {rows.length === 0 ? (
-          <div className="glass rounded-2xl p-10 text-center border border-[var(--border)] text-[var(--text-muted)]">
+          <div className="glass rounded-2xl p-10 text-center border border-white/10 text-slate-400">
             {empty}{" "}
-            <Link href="/jobs" className="text-[var(--brand-primary)] hover:underline">
+            <Link href="/jobs" className="text-cyan-400 hover:underline">
               {browseJobs}
             </Link>
           </div>
@@ -161,14 +161,14 @@ export default async function CategoriesIndexPage() {
         )}
 
         <p className="text-center mt-10 flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/jobs" className="text-[var(--brand-accent)] hover:underline">
+          <Link href="/jobs" className="text-indigo-400 hover:underline">
             {viewAll}
           </Link>
-          <Link href="/locations" className="text-[var(--brand-accent)] hover:underline">
+          <Link href="/locations" className="text-indigo-400 hover:underline">
             {browseLoc}
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

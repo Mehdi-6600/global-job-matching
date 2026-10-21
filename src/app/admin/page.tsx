@@ -11,6 +11,7 @@ import {
   XCircle,
   Loader2,
   BarChart3,
+  Mail,
   CreditCard,
   RefreshCw,
   Database,
@@ -181,8 +182,8 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="gjm-page">
-        <Loader2 className="w-8 h-8 text-[var(--brand-accent)] animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
         <span className="sr-only">{t("Common.loading", "Loading...")}</span>
       </div>
     );
@@ -217,42 +218,48 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="gjm-page">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+            <h1 className="text-2xl font-bold text-white">
               {t("Nav.admin", "Admin Panel")}
             </h1>
-            <p className="text-[var(--text-muted)] text-sm">
+            <p className="text-slate-400 text-sm">
               {t("Dashboard.welcomeSub", "Manage platform settings")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/admin/sync"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--success-soft)] border border-[var(--success)] text-[var(--success)] hover:bg-[var(--success-soft)] transition-all text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all text-sm font-medium"
             >
               <RefreshCw className="w-4 h-4" /> Sync
             </Link>
             <Link
               href="/admin/source-companies"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--brand-primary-soft)] border border-[var(--border)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)] transition-all text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 transition-all text-sm font-medium"
             >
               <Database className="w-4 h-4" /> Sources
             </Link>
             <Link
               href="/admin/analytics"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] hover:bg-[var(--surface-3)] transition-all text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
             >
               <BarChart3 className="w-4 h-4" />{" "}
               {t("Dashboard.stats", "Analytics")}
+            </Link>
+            <Link
+              href="/admin/newsletter"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-sm font-medium"
+            >
+              <Mail className="w-4 h-4" /> Newsletter
             </Link>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm">
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
             {error}
           </div>
         )}
@@ -265,8 +272,8 @@ export default function AdminPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "bg-[var(--brand-accent)] text-[var(--text-on-brand)]"
-                  : "bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
               }`}
             >
               {tab.icon}
@@ -281,62 +288,62 @@ export default function AdminPage() {
               {
                 label: t("Nav.profile", "Total Users"),
                 value: stats.totalUsers,
-                icon: <Users className="w-5 h-5 text-[var(--brand-accent)]" />,
-                color: "from-[var(--brand-accent)] to-[var(--brand-accent-hover)]",
+                icon: <Users className="w-5 h-5 text-indigo-400" />,
+                color: "from-indigo-500 to-purple-500",
               },
               {
                 label: t("Nav.companies", "Total Companies"),
                 value: stats.totalCompanies,
-                icon: <Building2 className="w-5 h-5 text-[var(--brand-primary)]" />,
-                color: "bg-[image:var(--gradient-brand)]",
+                icon: <Building2 className="w-5 h-5 text-cyan-400" />,
+                color: "from-cyan-500 to-blue-500",
               },
               {
                 label: t("Nav.jobs", "Total Jobs"),
                 value: stats.totalJobs,
-                icon: <Briefcase className="w-5 h-5 text-[var(--success)]" />,
-                color: "from-[var(--success)] to-[var(--success-hover)]",
+                icon: <Briefcase className="w-5 h-5 text-emerald-400" />,
+                color: "from-emerald-500 to-teal-500",
               },
               {
                 label: t("Nav.applications", "Total Applications"),
                 value: stats.totalApplications,
-                icon: <CheckCircle2 className="w-5 h-5 text-[var(--warning)]" />,
-                color: "from-[var(--warning)] to-[var(--warning-hover)]",
+                icon: <CheckCircle2 className="w-5 h-5 text-amber-400" />,
+                color: "from-amber-500 to-orange-500",
               },
               {
                 label: t("Companies.pending", "Pending Companies"),
                 value: stats.pendingCompanies,
-                icon: <Building2 className="w-5 h-5 text-[var(--brand-accent)]" />,
-                color: "from-[var(--brand-accent)] to-[var(--error)]",
+                icon: <Building2 className="w-5 h-5 text-pink-400" />,
+                color: "from-pink-500 to-rose-500",
               },
               {
                 label: t("Jobs.pending", "Pending Jobs"),
                 value: stats.pendingJobs,
-                icon: <Briefcase className="w-5 h-5 text-[var(--brand-accent)]" />,
-                color: "from-[var(--brand-accent)] to-[var(--brand-accent-hover)]",
+                icon: <Briefcase className="w-5 h-5 text-violet-400" />,
+                color: "from-violet-500 to-purple-500",
               },
             ].map((card) => (
               <div
                 key={card.label}
-                className="glass rounded-2xl p-5 border border-[var(--border)]"
+                className="glass rounded-2xl p-5 border border-white/10"
               >
                 <div
                   className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} bg-opacity-10 flex items-center justify-center mb-3`}
                 >
                   {card.icon}
                 </div>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">{card.value}</p>
-                <p className="text-[var(--text-muted)] text-sm">{card.label}</p>
+                <p className="text-2xl font-bold text-white">{card.value}</p>
+                <p className="text-slate-400 text-sm">{card.label}</p>
               </div>
             ))}
           </div>
         )}
 
         {activeTab === "users" && (
-          <div className="glass rounded-2xl border border-[var(--border)] overflow-hidden">
+          <div className="glass rounded-2xl border border-white/10 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--border)] text-[var(--text-muted)] text-left">
+                  <tr className="border-b border-white/10 text-slate-400 text-left">
                     <th className="p-4 font-medium">
                       {t("Auth.name", "Name")}
                     </th>
@@ -358,19 +365,19 @@ export default function AdminPage() {
                   {users.map((user) => (
                     <tr
                       key={user.id}
-                      className="border-b border-[var(--border-soft)] hover:bg-[var(--surface-2)] transition-colors"
+                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
-                      <td className="p-4 text-[var(--text-primary)]">{user.name || "—"}</td>
-                      <td className="p-4 text-[var(--text-muted)]">{user.email}</td>
+                      <td className="p-4 text-white">{user.name || "—"}</td>
+                      <td className="p-4 text-slate-400">{user.email}</td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-body)] text-xs">
+                        <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300 text-xs">
                           {user.role}
                         </span>
                       </td>
-                      <td className="p-4 text-[var(--text-muted)] text-xs">
+                      <td className="p-4 text-slate-400 text-xs">
                         {user.plan || "free"}
                       </td>
-                      <td className="p-4 text-[var(--text-muted)]">
+                      <td className="p-4 text-slate-500">
                         {new Date(user.createdAt).toLocaleDateString(locale)}
                       </td>
                     </tr>
@@ -384,27 +391,27 @@ export default function AdminPage() {
         {activeTab === "companies" && (
           <div className="space-y-3">
             {companies.length === 0 && (
-              <p className="text-[var(--text-muted)] text-sm">
+              <p className="text-slate-500 text-sm">
                 {t("Companies.noCompanies", "No companies")}
               </p>
             )}
             {companies.map((company) => (
               <div
                 key={company.id}
-                className="glass rounded-xl p-5 border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="glass rounded-xl p-5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div>
-                  <h3 className="font-medium text-[var(--text-primary)]">{company.name}</h3>
-                  <p className="text-[var(--text-muted)] text-sm">
+                  <h3 className="font-medium text-white">{company.name}</h3>
+                  <p className="text-slate-500 text-sm">
                     {company.owner?.email || t("Common.noResults", "No owner")}
                   </p>
                   <span
                     className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                       company.status === "active"
-                        ? "bg-[var(--success-soft)] text-[var(--success)]"
+                        ? "bg-emerald-500/10 text-emerald-400"
                         : company.status === "pending"
-                          ? "bg-[var(--warning-soft)] text-[var(--warning)]"
-                          : "bg-[var(--error-soft)] text-[var(--error)]"
+                          ? "bg-amber-500/10 text-amber-400"
+                          : "bg-red-500/10 text-red-400"
                     }`}
                   >
                     {company.status}
@@ -419,7 +426,7 @@ export default function AdminPage() {
                           updateCompanyStatus(company.id, "active")
                         }
                         disabled={actionLoading === company.id}
-                        className="p-2 rounded-lg bg-[var(--success-soft)] text-[var(--success)] hover:bg-[var(--success-soft)] transition-colors"
+                        className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                         aria-label={t("Common.confirm", "Approve")}
                       >
                         <CheckCircle2 className="w-4 h-4" />
@@ -430,7 +437,7 @@ export default function AdminPage() {
                           updateCompanyStatus(company.id, "rejected")
                         }
                         disabled={actionLoading === company.id}
-                        className="p-2 rounded-lg bg-[var(--error-soft)] text-[var(--error)] hover:bg-[var(--error-soft)] transition-colors"
+                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                         aria-label={t("Common.cancel", "Reject")}
                       >
                         <XCircle className="w-4 h-4" />
@@ -446,27 +453,27 @@ export default function AdminPage() {
         {activeTab === "jobs" && (
           <div className="space-y-3">
             {jobs.length === 0 && (
-              <p className="text-[var(--text-muted)] text-sm">
+              <p className="text-slate-500 text-sm">
                 {t("Jobs.noJobs", "No jobs")}
               </p>
             )}
             {jobs.map((job) => (
               <div
                 key={job.id}
-                className="glass rounded-xl p-5 border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="glass rounded-xl p-5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div>
-                  <h3 className="font-medium text-[var(--text-primary)]">{job.title}</h3>
-                  <p className="text-[var(--text-muted)] text-sm">
+                  <h3 className="font-medium text-white">{job.title}</h3>
+                  <p className="text-slate-500 text-sm">
                     {job.company?.name || t("Common.noResults", "Unknown")}
                   </p>
                   <span
                     className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                       job.status === "active"
-                        ? "bg-[var(--success-soft)] text-[var(--success)]"
+                        ? "bg-emerald-500/10 text-emerald-400"
                         : job.status === "pending"
-                          ? "bg-[var(--warning-soft)] text-[var(--warning)]"
-                          : "bg-[var(--error-soft)] text-[var(--error)]"
+                          ? "bg-amber-500/10 text-amber-400"
+                          : "bg-red-500/10 text-red-400"
                     }`}
                   >
                     {job.status}
@@ -479,7 +486,7 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => updateJobStatus(job.id, "active")}
                         disabled={actionLoading === job.id}
-                        className="p-2 rounded-lg bg-[var(--success-soft)] text-[var(--success)] hover:bg-[var(--success-soft)] transition-colors"
+                        className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                         aria-label={t("Common.confirm", "Approve")}
                       >
                         <CheckCircle2 className="w-4 h-4" />
@@ -488,7 +495,7 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => updateJobStatus(job.id, "rejected")}
                         disabled={actionLoading === job.id}
-                        className="p-2 rounded-lg bg-[var(--error-soft)] text-[var(--error)] hover:bg-[var(--error-soft)] transition-colors"
+                        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                         aria-label={t("Common.cancel", "Reject")}
                       >
                         <XCircle className="w-4 h-4" />
@@ -504,32 +511,32 @@ export default function AdminPage() {
         {activeTab === "payments" && (
           <div className="space-y-3">
             {transactions.length === 0 && (
-              <p className="text-[var(--text-muted)] text-sm">
+              <p className="text-slate-500 text-sm">
                 {t("Common.noResults", "No transactions yet")}
               </p>
             )}
             {transactions.map((tx) => (
               <div
                 key={tx.id}
-                className="glass rounded-xl p-5 border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="glass rounded-xl p-5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="min-w-0">
-                  <h3 className="font-medium text-[var(--text-primary)]">
+                  <h3 className="font-medium text-white">
                     {tx.planId} · ${tx.amount} · {tx.cryptoType || "—"}
                   </h3>
-                  <p className="text-[var(--text-muted)] text-sm truncate">
+                  <p className="text-slate-400 text-sm truncate">
                     {tx.user?.email} ({tx.user?.name || "—"})
                   </p>
-                  <p className="text-[var(--text-muted)] text-xs mt-1 break-all">
+                  <p className="text-slate-500 text-xs mt-1 break-all">
                     {tx.txHash || "—"}
                   </p>
                   <span
                     className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                       tx.status === "confirmed"
-                        ? "bg-[var(--success-soft)] text-[var(--success)]"
+                        ? "bg-emerald-500/10 text-emerald-400"
                         : tx.status === "pending"
-                          ? "bg-[var(--warning-soft)] text-[var(--warning)]"
-                          : "bg-[var(--error-soft)] text-[var(--error)]"
+                          ? "bg-amber-500/10 text-amber-400"
+                          : "bg-red-500/10 text-red-400"
                     }`}
                   >
                     {tx.status}
@@ -541,7 +548,7 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => updatePayment(tx.id, "confirmed")}
                       disabled={actionLoading === tx.id}
-                      className="px-3 py-2 rounded-lg bg-[var(--success)] text-[var(--text-on-brand)] text-xs font-medium hover:bg-[var(--success)] disabled:opacity-50"
+                      className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500 disabled:opacity-50"
                     >
                       {t("Common.confirm", "Confirm")}
                     </button>
@@ -549,7 +556,7 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => updatePayment(tx.id, "rejected")}
                       disabled={actionLoading === tx.id}
-                      className="px-3 py-2 rounded-lg bg-[var(--error)] text-[var(--text-on-brand)] text-xs font-medium hover:bg-[var(--error)] disabled:opacity-50"
+                      className="px-3 py-2 rounded-lg bg-red-600/80 text-white text-xs font-medium hover:bg-red-500 disabled:opacity-50"
                     >
                       {t("Common.cancel", "Reject")}
                     </button>

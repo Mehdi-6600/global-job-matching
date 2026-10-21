@@ -64,9 +64,9 @@ export default function VerifyEmailHandler({
   if (status === "success") {
     return (
       <>
-        <div className="mx-auto w-12 h-12 bg-[var(--success-soft)] rounded-full flex items-center justify-center mb-4">
+        <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
           <svg
-            className="w-6 h-6 text-[var(--success)]"
+            className="w-6 h-6 text-green-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -116,9 +116,9 @@ export default function VerifyEmailHandler({
 
   return (
     <>
-      <div className="mx-auto w-12 h-12 bg-[var(--error-soft)] rounded-full flex items-center justify-center mb-4">
+      <div className="mx-auto w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
         <svg
-          className="w-6 h-6 text-[var(--error)]"
+          className="w-6 h-6 text-red-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -156,7 +156,7 @@ export default function VerifyEmailHandler({
           </button>
 
           {resent === "ok" && (
-            <p className="text-sm text-[var(--success)]">
+            <p className="text-sm text-green-400">
               {t(
                 "Auth.verifyEmailResent",
                 "Verification email sent. Check your inbox.",
@@ -164,7 +164,7 @@ export default function VerifyEmailHandler({
             </p>
           )}
           {resent === "err" && (
-            <p className="text-sm text-[var(--error)]">
+            <p className="text-sm text-red-400">
               {t(
                 "Auth.verifyEmailResendFailed",
                 "Could not send the email. Please try again later.",

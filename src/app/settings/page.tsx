@@ -265,57 +265,57 @@ export default function SettingsPage() {
 
   if (loading || unauthorized) {
     return (
-      <div className="gjm-page flex min-h-[60vh] items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin mx-auto" />
+          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
           {unauthorized && (
-            <p className="text-[var(--text-muted)] text-sm mt-3">
+            <p className="text-slate-400 text-sm mt-3">
               {t("Common.loading", "Loading...")}
             </p>
           )}
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!profile) {
     return (
-      <div className="gjm-page flex items-center justify-center p-4">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="text-center space-y-4">
-          <AlertCircle className="w-10 h-10 text-[var(--error)] mx-auto" />
-          <p className="text-[var(--text-body)]">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
+          <p className="text-slate-300">
             {error || t("Settings.notFound", "Profile not found")}
           </p>
           <Link
             href="/login"
-            className="text-[var(--brand-primary)] hover:underline text-sm"
+            className="text-cyan-400 hover:underline text-sm"
           >
             {t("Common.signIn", "Sign in")}
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
   const resumeIsUrl = isHttpUrl(profile.resumeUrl);
 
   return (
-    <div className="gjm-page py-10 px-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
-            className="p-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] hover:text-[var(--text-primary)]"
+            className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white"
             aria-label={t("Common.back", "Back")}
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
-              <Settings className="w-6 h-6 text-[var(--brand-primary)]" />
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Settings className="w-6 h-6 text-cyan-400" />
               {t("Settings.title", "Settings")}
             </h1>
-            <p className="text-[var(--text-muted)] text-sm">
+            <p className="text-slate-400 text-sm">
               {t(
                 "Settings.subtitle",
                 "Manage your profile, plan, and resume",
@@ -325,19 +325,19 @@ export default function SettingsPage() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {error}
           </div>
         )}
         {success && (
-          <div className="p-3 rounded-xl bg-[var(--success-soft)] border border-[var(--success)] text-[var(--success)] text-sm flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             {t("Settings.saved", "Profile saved")}
           </div>
         )}
         {resumeMessage && (
-          <div className="p-3 rounded-xl bg-[var(--brand-primary-soft)] border border-[var(--border)] text-[var(--brand-primary)] text-sm flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             {resumeMessage}
           </div>
@@ -348,19 +348,19 @@ export default function SettingsPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-3xl p-6 sm:p-8 bg-[var(--surface-2)] border border-[var(--border)] space-y-5"
+          className="rounded-3xl p-6 sm:p-8 bg-white/5 border border-white/10 space-y-5"
         >
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-            <User className="w-5 h-5 text-[var(--brand-primary)]" />
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <User className="w-5 h-5 text-cyan-400" />
             {t("Settings.profile", "Profile")}
           </h2>
 
           <div>
             <label
               htmlFor="settings-email"
-              className="block text-sm text-[var(--text-body)] mb-1.5"
+              className="block text-sm text-slate-300 mb-1.5"
             >
-              <Mail className="w-3.5 h-3.5 inline me-1" />
+              <Mail className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.email", "Email")}
             </label>
             <input
@@ -368,14 +368,14 @@ export default function SettingsPage() {
               type="email"
               value={profile.email || ""}
               disabled
-              className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)]"
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-slate-400"
             />
           </div>
 
           <div>
             <label
               htmlFor="settings-name"
-              className="block text-sm text-[var(--text-body)] mb-1.5"
+              className="block text-sm text-slate-300 mb-1.5"
             >
               {t("Settings.name", "Name")}
             </label>
@@ -384,16 +384,16 @@ export default function SettingsPage() {
               name="name"
               value={form.name}
               onChange={handleChange}
-              className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--focus-ring)] outline-none"
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
             />
           </div>
 
           <div>
             <label
               htmlFor="settings-title"
-              className="block text-sm text-[var(--text-body)] mb-1.5"
+              className="block text-sm text-slate-300 mb-1.5"
             >
-              <Briefcase className="w-3.5 h-3.5 inline me-1" />
+              <Briefcase className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.headline", "Title / Skills headline")}
             </label>
             <input
@@ -401,14 +401,14 @@ export default function SettingsPage() {
               name="title"
               value={form.title}
               onChange={handleChange}
-              className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--focus-ring)] outline-none"
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
             />
           </div>
 
           <div>
             <label
               htmlFor="settings-bio"
-              className="block text-sm text-[var(--text-body)] mb-1.5"
+              className="block text-sm text-slate-300 mb-1.5"
             >
               {t("Settings.bio", "Bio")}
             </label>
@@ -418,16 +418,16 @@ export default function SettingsPage() {
               value={form.bio}
               onChange={handleChange}
               rows={4}
-              className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--focus-ring)] outline-none resize-y"
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none resize-y"
             />
           </div>
 
           <div>
             <label
               htmlFor="settings-location"
-              className="block text-sm text-[var(--text-body)] mb-1.5"
+              className="block text-sm text-slate-300 mb-1.5"
             >
-              <MapPin className="w-3.5 h-3.5 inline me-1" />
+              <MapPin className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.location", "Location")}
             </label>
             <input
@@ -435,16 +435,16 @@ export default function SettingsPage() {
               name="location"
               value={form.location}
               onChange={handleChange}
-              className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--focus-ring)] outline-none"
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
             />
           </div>
 
           <div>
             <label
               htmlFor="settings-phone"
-              className="block text-sm text-[var(--text-body)] mb-1.5"
+              className="block text-sm text-slate-300 mb-1.5"
             >
-              <Phone className="w-3.5 h-3.5 inline me-1" />
+              <Phone className="w-3.5 h-3.5 inline mr-1" />
               {t("Settings.phone", "Phone")}
             </label>
             <input
@@ -452,14 +452,14 @@ export default function SettingsPage() {
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              className="w-full py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--focus-ring)] outline-none"
+              className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-cyan-500 outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-60"
           >
             {saving ? (
               <>
@@ -475,9 +475,9 @@ export default function SettingsPage() {
           </button>
         </form>
 
-        <section className="rounded-3xl p-6 sm:p-8 bg-[var(--surface-2)] border border-[var(--border)] space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[var(--brand-primary)]" />
+        <section className="rounded-3xl p-6 sm:p-8 bg-white/5 border border-white/10 space-y-4">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-cyan-400" />
             {t("Settings.resume", "Resume")}
           </h2>
 
@@ -488,20 +488,20 @@ export default function SettingsPage() {
                   href={profile.resumeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-[var(--brand-primary)] text-sm hover:underline"
+                  className="inline-flex items-center gap-2 text-cyan-300 text-sm hover:underline"
                 >
                   <ExternalLink className="w-4 h-4" />
                   {t("Settings.viewResume", "View current resume")}
                 </a>
               ) : (
-                <span className="text-sm text-[var(--text-body)]">
+                <span className="text-sm text-slate-300">
                   {profile.resumeUrl}
                 </span>
               )}
               <button
                 type="button"
                 onClick={handleResumeDelete}
-                className="p-2 rounded-lg bg-[var(--error-soft)] text-[var(--error)] hover:bg-[var(--error-soft)]"
+                className="p-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/20"
                 title={t("Settings.removeResume", "Remove resume")}
                 aria-label={t("Settings.removeResume", "Remove resume")}
               >
@@ -510,23 +510,23 @@ export default function SettingsPage() {
             </div>
           ) : (
             <form onSubmit={handleResumeUpload} className="space-y-4">
-              <div className="border-2 border-dashed border-[var(--border)] rounded-xl p-8 text-center hover:border-[var(--brand-primary)] transition-all">
+              <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-cyan-500/30 transition-all">
                 <input
                   type="file"
                   name="resume"
                   accept=".pdf,application/pdf"
                   required
                   aria-label={t("Settings.uploadResume", "Upload resume")}
-                  className="block w-full text-sm text-[var(--text-muted)] file:me-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--brand-primary-soft)] file:text-[var(--brand-primary)]"
+                  className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300"
                 />
-                <p className="text-xs text-[var(--text-muted)] mt-3">
+                <p className="text-xs text-slate-500 mt-3">
                   {t("Settings.pdfOnly", "PDF only · max 5MB")}
                 </p>
               </div>
               <button
                 type="submit"
                 disabled={resumeUploading}
-                className="w-full flex items-center justify-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] py-2.5 rounded-xl text-sm font-medium hover:bg-[var(--surface-3)] disabled:opacity-60"
+                className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-white/10 disabled:opacity-60"
               >
                 {resumeUploading
                   ? t("Settings.uploading", "Uploading...")
@@ -539,7 +539,7 @@ export default function SettingsPage() {
             <form onSubmit={handleResumeUpload} className="pt-2">
               <label
                 htmlFor="settings-replace-resume"
-                className="block text-xs text-[var(--text-muted)] mb-2"
+                className="block text-xs text-slate-400 mb-2"
               >
                 {t("Settings.replacePdf", "Replace with a new PDF")}
               </label>
@@ -550,12 +550,12 @@ export default function SettingsPage() {
                   name="resume"
                   accept=".pdf,application/pdf"
                   required
-                  className="flex-1 text-sm text-[var(--text-muted)] file:me-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--brand-primary-soft)] file:text-[var(--brand-primary)]"
+                  className="flex-1 text-sm text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-300"
                 />
                 <button
                   type="submit"
                   disabled={resumeUploading}
-                  className="px-4 py-2 rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary-hover)] text-sm font-medium hover:bg-[var(--brand-primary-soft)] disabled:opacity-60"
+                  className="px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-200 text-sm font-medium hover:bg-cyan-500/30 disabled:opacity-60"
                 >
                   {resumeUploading
                     ? t("Settings.uploading", "Uploading...")
@@ -566,6 +566,6 @@ export default function SettingsPage() {
           )}
         </section>
       </div>
-    </div>
+    </main>
   );
 }
