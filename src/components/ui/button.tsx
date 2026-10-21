@@ -1,13 +1,17 @@
 /**
- * Button — Ink & Signal design system.
+ * Unified Button — neumorphic design system.
  *
- * Backward-compatible with the existing API:
- *   <Button variant="default|primary|secondary|outline|ghost|link|white|destructive"
+ * Backward-compatible with the previous shadcn-style API:
+ *   <Button variant="default|destructive|outline|secondary|ghost|link"
  *           size="default|sm|lg|icon"
  *           asChild>
  *
- * All colours come from semantic tokens, so light and dark themes are handled
- * automatically and RTL needs no special casing.
+ * Under the hood it uses the gjm-* neumorphic classes so the visual
+ * language matches HomePage and the rest of the soft neumorphic system.
+ *
+ * New variants (also supported):
+ *   variant="white"   — for use on dark backgrounds (final CTA, employer)
+ *   variant="primary" — alias for "default"
  */
 
 import * as React from "react";
@@ -16,36 +20,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  [
-    "inline-flex items-center justify-center gap-2 whitespace-normal text-center",
-    "font-semibold tracking-[-0.005em] select-none",
-    "transition-[background-color,border-color,color,box-shadow,transform] duration-200",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-page)]",
-    "disabled:pointer-events-none disabled:opacity-50 active:translate-y-px",
-  ].join(" "),
+  "gjm-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)] disabled:pointer-events-none disabled:opacity-50 select-none",
   {
     variants: {
       variant: {
-        default:
-          "bg-[var(--brand-action)] text-[var(--text-muted)] border border-transparent shadow-sm hover:bg-[var(--brand-action-hover)]",
-        primary:
-          "bg-[var(--brand-action)] text-[var(--text-muted)] border border-transparent shadow-sm hover:bg-[var(--brand-action-hover)]",
-        secondary:
-          "bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] shadow-sm hover:bg-[var(--surface-2)]",
-        white:
-          "bg-[var(--surface)] text-[var(--brand-primary-hover)] border border-[var(--border-soft)] shadow-sm hover:bg-[var(--surface-2)]",
+        default: "gjm-btn-primary",
+        primary: "gjm-btn-primary",
+        secondary: "gjm-btn-secondary",
+        white: "gjm-btn-white",
         destructive:
-          "bg-[var(--error)] text-[var(--text-on-brand)] border border-transparent hover:brightness-110",
+          "bg-[var(--error)] text-white shadow-[var(--elev-2)] hover:brightness-110 active:shadow-[var(--inset-2)]",
         outline:
-          "bg-transparent text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--surface-2)]",
+          "bg-transparent border border-[var(--border)] text-[var(--text-primary)] shadow-none hover:bg-[var(--surface)] hover:shadow-[var(--elev-1)]",
         ghost:
-          "bg-transparent text-[var(--text-body)] border border-transparent hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]",
-        link: "bg-transparent text-[var(--brand-primary-hover)] underline-offset-4 hover:underline p-0 h-auto min-h-0 border-transparent",
+          "bg-transparent text-[var(--text-body)] shadow-none hover:bg-[var(--surface)] hover:shadow-[var(--elev-1)]",
+        link:
+          "bg-transparent text-[var(--brand-primary-hover)] shadow-none underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {
-        default: "h-11 px-5 text-[0.9375rem] rounded-[var(--radius-md)]",
-        sm: "h-9 px-3.5 text-[0.8125rem] rounded-[var(--radius-sm)]",
-        lg: "h-12 px-6 text-base rounded-[var(--radius-lg)]",
+        default: "h-10 px-5 text-sm",
+        sm: "h-8 px-3 text-xs rounded-[var(--radius-sm)]",
+        lg: "h-12 px-8 text-base rounded-[var(--radius-xl)]",
         icon: "h-10 w-10 p-0 rounded-[var(--radius-md)]",
       },
     },

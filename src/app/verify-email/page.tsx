@@ -45,15 +45,13 @@ export default async function VerifyEmailPage({
   const result = await tryVerify(token, email);
 
   return (
-    <div className="gjm-page flex min-h-[70vh] items-center justify-center">
-      <div className="gjm-container">
-        <div className="mx-auto w-full max-w-md rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-6 text-center shadow-[var(--shadow-2)] sm:p-8">
+    <main className="min-h-screen bg-[var(--page-bg)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full glass-card p-8 text-center">
         <VerifyEmailHandler
           status={result.status}
           errorCode={result.status === "error" ? result.errorCode : undefined}
         />
-        </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -41,36 +41,36 @@ export default function AdminCompaniesPage() {
   });
 
   return (
-    <div className="gjm-page px-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <div className="max-w-5xl mx-auto">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Common.back", "Back")}
         </Link>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2 flex items-center gap-2">
-          <Building2 className="w-6 h-6 text-[var(--brand-primary)]" />
+        <h1 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+          <Building2 className="w-6 h-6 text-cyan-400" />
           {t("Nav.companies", "Companies")}
         </h1>
-        <p className="text-[var(--text-muted)] text-sm mb-6">
+        <p className="text-slate-400 text-sm mb-6">
           {t("Dashboard.welcomeSub", "Review company registrations (demo)")}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("Common.search", "Search...")}
-              className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-sm"
+            className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm"
           >
             <option value="all">{t("Jobs.filters", "All")}</option>
             <option value="active">Active</option>
@@ -81,27 +81,27 @@ export default function AdminCompaniesPage() {
 
         <div className="space-y-3">
           {filtered.length === 0 && (
-            <p className="text-[var(--text-muted)] text-sm">
+            <p className="text-slate-500 text-sm">
               {t("Companies.noCompanies", "No companies")}
             </p>
           )}
           {filtered.map((c) => (
             <div
               key={c.id}
-              className="glass rounded-xl p-5 border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="glass rounded-xl p-5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div>
-                <h3 className="font-medium text-[var(--text-primary)]">{c.name}</h3>
-                <p className="text-[var(--text-muted)] text-sm">
+                <h3 className="font-medium text-white">{c.name}</h3>
+                <p className="text-slate-500 text-sm">
                   {c.owner} · {c.location} · {c.jobs} {t("Companies.jobs", "jobs")}
                 </p>
                 <span
                   className={`inline-flex items-center gap-1 mt-2 text-xs px-2 py-0.5 rounded-full ${
                     c.status === "active"
-                      ? "bg-[var(--success-soft)] text-[var(--success)]"
+                      ? "bg-emerald-500/10 text-emerald-400"
                       : c.status === "pending"
-                        ? "bg-[var(--warning-soft)] text-[var(--warning)]"
-                        : "bg-[var(--error-soft)] text-[var(--error)]"
+                        ? "bg-amber-500/10 text-amber-400"
+                        : "bg-red-500/10 text-red-400"
                   }`}
                 >
                   {c.status === "pending" && <Clock className="w-3 h-3" />}
@@ -112,17 +112,15 @@ export default function AdminCompaniesPage() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="p-2 rounded-lg bg-[var(--success-soft)] text-[var(--success)]"
+                    className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400"
                     title={t("Common.confirm", "Approve")}
-                    aria-label={t("Common.confirm", "Approve")}
                   >
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
-                    className="p-2 rounded-lg bg-[var(--error-soft)] text-[var(--error)]"
+                    className="p-2 rounded-lg bg-red-500/10 text-red-400"
                     title={t("Common.cancel", "Reject")}
-                    aria-label={t("Common.cancel", "Reject")}
                   >
                     <XCircle className="w-4 h-4" />
                   </button>
@@ -132,6 +130,6 @@ export default function AdminCompaniesPage() {
           ))}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

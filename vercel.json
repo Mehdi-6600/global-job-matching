@@ -1,5 +1,4 @@
 {
-  "buildCommand": "bash scripts/deploy-build.sh",
   "crons": [
     {
       "path": "/api/jobs/sync",
@@ -11,7 +10,7 @@
     },
     {
       "path": "/api/cron/verify-payments",
-      "schedule": "30 5 * * *"
+      "schedule": "*/10 * * * *"
     },
     {
       "path": "/api/cron/outreach",

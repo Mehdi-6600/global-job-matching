@@ -33,7 +33,7 @@ export function CompanyLogo({
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-xl bg-[var(--brand-primary-soft)] border border-[var(--brand-primary)] flex items-center justify-center ${className}`}
+      className={`relative shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center ${className}`}
       style={{ width: size, height: size }}
     >
       {showImage ? (
@@ -49,7 +49,7 @@ export function CompanyLogo({
         />
       ) : (
         <span
-          className="font-bold text-[var(--brand-primary)]"
+          className="font-bold text-cyan-400"
           style={{ fontSize: Math.max(12, size * 0.28) }}
         >
           {initials(name)}

@@ -30,12 +30,12 @@ type RegistrySource = {
  * fallback (indigo). Keeps new sources usable without a code change.
  */
 const COLOR_BY_KEY: Record<string, string> = {
-  arbeitnow: "bg-[var(--surface-3)]",
-  jobicy: "bg-[var(--success)]",
-  remoteok: "bg-[var(--brand-accent)]",
-  greenhouse: "bg-[var(--info)]",
-  lever: "bg-[var(--warning)]",
-  ashby: "bg-[var(--brand-accent)]",
+  arbeitnow: "bg-gray-700",
+  jobicy: "bg-green-600",
+  remoteok: "bg-purple-600",
+  greenhouse: "bg-blue-600",
+  lever: "bg-orange-600",
+  ashby: "bg-pink-600",
   usajobs: "bg-[#003366]",
   themuse: "bg-[#53b6ac]",
   recruitee: "bg-[#ff6b35]",
@@ -44,7 +44,7 @@ const COLOR_BY_KEY: Record<string, string> = {
 };
 
 function colorFor(key: string): string {
-  return COLOR_BY_KEY[key] ?? "bg-[var(--brand-accent)]";
+  return COLOR_BY_KEY[key] ?? "bg-indigo-600";
 }
 
 export default function SyncClient() {
@@ -114,7 +114,7 @@ export default function SyncClient() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="mb-2 text-2xl font-bold">اجرای دستی sync</h1>
-      <p className="mb-6 text-sm text-[var(--text-subtle)]">
+      <p className="mb-6 text-sm text-gray-600">
         Cron خودکار هر شب ساعت ۳ بامداد UTC اجرا می‌شود. این صفحه فقط
         برای وقتی است که می‌خواهی <strong>الان</strong> نتیجه را ببینی.
         <br />
@@ -126,7 +126,7 @@ export default function SyncClient() {
       <button
         onClick={() => runSync()}
         disabled={busy !== null}
-        className="mb-4 w-full rounded-2xl bg-[var(--info)] px-6 py-4 text-lg font-bold text-[var(--text-primary)] shadow-lg active:scale-95 disabled:opacity-50"
+        className="mb-4 w-full rounded-2xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-lg active:scale-95 disabled:opacity-50"
       >
         {busy === "all" ? "در حال اجرا..." : "🔄 اجرای همه منابع"}
       </button>
@@ -135,21 +135,21 @@ export default function SyncClient() {
       <button
         onClick={() => void loadSources()}
         disabled={busy !== null || sources === null}
-        className="mb-6 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] active:scale-95 disabled:opacity-50"
+        className="mb-6 w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 active:scale-95 disabled:opacity-50"
       >
         🔃 بارگذاری مجدد لیست منابع
       </button>
 
       {/* --- خطای بارگذاری --- */}
       {sourcesError && (
-        <div className="mb-4 rounded-lg bg-[var(--error-soft)] px-4 py-3 text-sm text-[var(--error-strong)]">
+        <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
           خطا در بارگذاری منابع: {sourcesError}
         </div>
       )}
 
       {/* --- دکمه‌های per-source --- */}
       {sources === null ? (
-        <div className="mb-4 text-center text-sm text-[var(--text-muted)]">
+        <div className="mb-4 text-center text-sm text-gray-500">
           در حال بارگذاری لیست منابع...
         </div>
       ) : (
@@ -161,7 +161,7 @@ export default function SyncClient() {
                 key={s.key}
                 onClick={() => runSync(s.key)}
                 disabled={disabled}
-                className={`w-full rounded-2xl px-6 py-4 text-lg font-bold text-[var(--text-on-brand)] shadow-lg active:scale-95 disabled:opacity-50 ${colorFor(
+                className={`w-full rounded-2xl px-6 py-4 text-lg font-bold text-white shadow-lg active:scale-95 disabled:opacity-50 ${colorFor(
                   s.key,
                 )}`}
                 title={
@@ -183,7 +183,7 @@ export default function SyncClient() {
 
       {/* --- پیام --- */}
       {message && (
-        <div className="mb-6 rounded-lg bg-[var(--surface-2)] px-4 py-3 text-center text-sm">
+        <div className="mb-6 rounded-lg bg-gray-100 px-4 py-3 text-center text-sm">
           {message}
         </div>
       )}
@@ -194,25 +194,25 @@ export default function SyncClient() {
           {stats.map((s) => (
             <div
               key={s.sourceKey}
-              className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] p-4 shadow-sm"
+              className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
             >
               <div className="mb-2 flex items-center justify-between">
                 <div className="text-lg font-bold">{s.sourceKey}</div>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
                     s.completeness === "FULL"
-                      ? "bg-[var(--success-soft)] text-[var(--success-strong)]"
+                      ? "bg-green-100 text-green-900"
                       : s.completeness === "FAILED"
-                        ? "bg-[var(--error-soft)] text-[var(--error-strong)]"
-                        : "bg-[var(--warning-soft)] text-[var(--warning)]"
+                        ? "bg-red-100 text-red-900"
+                        : "bg-yellow-100 text-yellow-900"
                   }`}
                 >
                   {s.completeness}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm text-[var(--text-primary)] sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 sm:grid-cols-3">
                 <div>دریافت: {s.fetched}</div>
-                <div className="font-semibold text-[var(--success)]">
+                <div className="font-semibold text-green-700">
                   ایجاد جدید: {s.created}
                 </div>
                 <div>به‌روزرسانی: {s.updated}</div>
@@ -221,7 +221,7 @@ export default function SyncClient() {
                 <div>خطا: {s.failed}</div>
               </div>
               {s.errors.length > 0 && (
-                <div className="mt-3 rounded bg-[var(--error-soft)] px-2 py-1 text-xs text-[var(--error-strong)]">
+                <div className="mt-3 rounded bg-red-50 px-2 py-1 text-xs text-red-800">
                   {s.errors.slice(0, 5).join(" • ")}
                 </div>
               )}

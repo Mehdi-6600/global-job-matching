@@ -26,11 +26,7 @@
     "jobAlerts": "Pemberitahuan Lowongan",
     "help": "Bantuan",
     "profile": "Profil",
-    "search": "Cari",
-    "language": "Bahasa",
-    "postJob": "Pasang lowongan",
-    "account": "Akun",
-    "searchJobs": "Cari lowongan"
+    "search": "Cari"
   },
   "Common": {
     "loading": "Memuat...",
@@ -81,19 +77,7 @@
     "forbidden": "Akses ditolak",
     "status": "Status",
     "print": "Cetak",
-    "copied": "Tersalin",
-    "toggleTheme": "Ubah tema",
-    "skipToContent": "Lewati ke konten",
-    "pageNotFound": "Halaman tidak ditemukan",
-    "pageNotFoundDesc": "Halaman ini tidak ada atau telah dipindahkan. Coba salah satu bagian populer ini:",
-    "copy": "Salin",
-    "errorUnexpected": "Terjadi kesalahan tak terduga. Coba lagi atau kembali ke beranda.",
-    "planRequired": "Fitur ini memerlukan paket yang lebih tinggi.",
-    "rateLimited": "Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.",
-    "serviceUnavailable": "Layanan sementara tidak tersedia. Coba lagi sebentar lagi.",
-    "mainNavigation": "Navigasi utama",
-    "relatedSections": "Bagian terkait",
-    "exploreMore": "Jelajahi lebih banyak"
+    "copied": "Tersalin"
   },
   "Footer": {
     "tagline": "Menghubungkan talenta berbakat dengan peluang kerja global secara aman dan cerdas.",
@@ -153,8 +137,7 @@
     "browseJobs": "Lihat Lowongan",
     "activeJobs": "lowongan aktif",
     "viewAllJobs": "Lihat Semua Lowongan",
-    "browseLocations": "Cari Berdasarkan Lokasi",
-    "alphabet": "Alfabet"
+    "browseLocations": "Cari Berdasarkan Lokasi"
   },
   "Locations": {
     "title": "Lokasi Kerja",
@@ -285,9 +268,7 @@
     "viewProfile": "Lihat Profil",
     "location": "Lokasi",
     "website": "Situs Web",
-    "pending": "Menunggu",
-    "unknown": "Perusahaan tidak dikenal",
-    "emptyBody": "Perusahaan akan muncul di sini setelah pemberi kerja membuat profil."
+    "pending": "Menunggu"
   },
   "Auth": {
     "loginTitle": "Masuk ke Akun Anda",
@@ -316,28 +297,8 @@
       "emailExists": "Email sudah terdaftar.",
       "generic": "Terjadi kesalahan sistem.",
       "network": "Gangguan jaringan. Silakan periksa koneksi dan coba lagi.",
-      "rateLimited": "Terlalu banyak permintaan. Silakan coba beberapa saat lagi.",
-      "unauthorized": "Silakan masuk untuk melanjutkan."
-    },
-    "sideTitle": "Peran berikutnya dimulai dari pencarian yang lebih baik.",
-    "sidePoint1": "Lowongan global dari pemberi kerja terverifikasi, diperbarui setiap hari.",
-    "sidePoint2": "Skor kecocokan AI, bantuan resume, dan wawasan risiko karier.",
-    "sidePoint3": "Gaji transparan dan satu profil untuk setiap lamaran.",
-    "sideFooter": "Gratis bergabung. Tanpa kartu kredit.",
-    "hidePassword": "Sembunyikan kata sandi",
-    "registeredSuccess": "Akun dibuat. Silakan masuk untuk melanjutkan.",
-    "sessionExpired": "Sesi Anda telah berakhir. Silakan masuk lagi.",
-    "showPassword": "Tampilkan kata sandi",
-    "verifyEmailErrorBody": "Tautan tidak valid atau sudah kedaluwarsa.",
-    "verifyEmailErrorTitle": "Verifikasi gagal",
-    "verifyEmailMissingBody": "Tautan verifikasi ini tidak memiliki parameter yang diperlukan.",
-    "verifyEmailMissingTitle": "Tautan tidak valid",
-    "verifyEmailResend": "Kirim ulang email verifikasi",
-    "verifyEmailResendFailed": "Tidak dapat mengirim email. Silakan coba lagi nanti.",
-    "verifyEmailResending": "Mengirim…",
-    "verifyEmailResent": "Email verifikasi terkirim. Periksa kotak masuk Anda.",
-    "verifyEmailSuccessBody": "Email Anda berhasil diverifikasi.",
-    "verifyEmailSuccessTitle": "Email terverifikasi!"
+      "rateLimited": "Terlalu banyak permintaan. Silakan coba beberapa saat lagi."
+    }
   },
   "AuthExtra": {
     "forgotTitle": "Lupa Kata Sandi",
@@ -420,12 +381,7 @@
     "remote": "Kerja Jarak Jauh",
     "noJobs": "Belum ada lowongan yang tersedia saat ini.",
     "recent": "Terbaru",
-    "stats": "Statistik",
-    "completeProfile": "Lengkapi profil →",
-    "matchNeedProfile": "Tambahkan keterampilan atau bio di profil untuk membuka skor kecocokan.",
-    "matchScore": "Skor kecocokan",
-    "matchedJobs": "Kecocokan terbaik untuk Anda",
-    "noMatches": "Belum ada kecocokan kuat. Perbarui keterampilan atau jelajahi semua lowongan."
+    "stats": "Statistik"
   },
   "Settings": {
     "title": "Pengaturan Akun",
@@ -501,8 +457,7 @@
     "youPrefix": "Anda: ",
     "messagePlaceholder": "Tulis pesan...",
     "startConversation": "Mulai obrolan",
-    "selectConversation": "Pilih percakapan di sebelah kiri untuk melihat pesan.",
-    "send": "Kirim pesan"
+    "selectConversation": "Pilih percakapan di sebelah kiri untuk melihat pesan."
   },
   "Notifications": {
     "title": "Notifikasi",
@@ -648,15 +603,7 @@
     "pending": "Menunggu",
     "salaryNA": "Dapat dinegosiasikan",
     "loadErrorTitle": "Gagal memuat lowongan",
-    "loadErrorBody": "Tidak dapat mengambil data lowongan saat ini. Silakan coba lagi nanti.",
-    "kicker": "KARIER GLOBAL",
-    "resultsCount": "{count} lowongan",
-    "pagination": "Penomoran halaman",
-    "showResults": "Tampilkan hasil",
-    "featured": "Unggulan",
-    "allCategories": "Semua kategori",
-    "rateLimitBody": "Tunggu sebentar sebelum mencoba lagi.",
-    "rateLimitTitle": "Terlalu banyak permintaan"
+    "loadErrorBody": "Tidak dapat mengambil data lowongan saat ini. Silakan coba lagi nanti."
   },
   "JobDetail": {
     "apply": "Lamar Sekarang",
@@ -683,7 +630,6 @@
     "deadline": "Batas Akhir Pendaftaran",
     "responsibilities": "Tanggung Jawab Utama",
     "matchScoreTitle": "Analisis Kecocokan AI",
-    "matchUnavailable": "Skor kecocokan tidak tersedia",
     "overallFit": "Kesesuaian Total",
     "skills": "Penguasaan Keahlian",
     "experience": "Kecocokan Pengalaman",
@@ -700,12 +646,7 @@
     "contactDraft": "Rancang draf dengan AI",
     "contactGenerateDraft": "Buat Draf Pesan",
     "contactCopy": "Salin teks",
-    "contactSend": "Kirim ke Perusahaan",
-    "loginForMatch": "Masuk untuk melihat skor kecocokan",
-    "matchLabel": "kecocokan",
-    "matchLoading": "Memeriksa kecocokan…",
-    "matchNeedProfile": "Lengkapi profil untuk skor kecocokan",
-    "matchScore": "Skor kecocokan Anda untuk lowongan ini"
+    "contactSend": "Kirim ke Perusahaan"
   },
   "Pricing": {
     "title": "Paket Transparan untuk Mengakselerasi Karier Anda",
@@ -781,12 +722,7 @@
     "errIntentExpired": "Waktu pembayaran telah habis. Silakan buat penawaran baru.",
     "errRecipient": "Alamat dompet penerima tidak valid.",
     "errSubmit": "Terjadi galat saat mengirimkan bukti pembayaran.",
-    "errWallet": "Layanan dompet pembayaran sedang tidak tersedia.",
-    "cta": "Lanjutkan dengan kripto di Harga",
-    "free": "Paket gratis",
-    "perMonth": "/bulan",
-    "perYear": "/tahun",
-    "qrAlt": "Kode QR alamat pembayaran"
+    "errWallet": "Layanan dompet pembayaran sedang tidak tersedia."
   },
   "CareerRisk": {
     "title": "Evaluasi Risiko Karier Berbasis AI",
@@ -976,13 +912,6 @@
     "trustSectionKicker": "Keamanan dan Kepercayaan",
     "trustSectionTitle": "Standar terpercaya dalam ekosistem ketenagakerjaan global",
     "feedTitle": "Pemberitahuan Lowongan",
-    "feedEmpty": "Belum ada informasi lowongan yang dapat ditampilkan.",
-    "popularSearches": "Populer",
-    "featuredFull": "Slot unggulan penuh — daftar tunggu dibuka",
-    "featuredSpotsLeft": "Tersisa {left}/{total} slot unggulan",
-    "featuredStats": "{featured} unggulan · {jobs} lowongan aktif",
-    "campaignEnds": "Berakhir {date}",
-    "featureCta": "Unggulkan · ${price} / 7 hari",
-    "postJobCta": "Pasang lowongan"
+    "feedEmpty": "Belum ada informasi lowongan yang dapat ditampilkan."
   }
 }

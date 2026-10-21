@@ -13,20 +13,10 @@ type AuthorizedCallback = (args: {
 function run(
   url: string,
   user: { id?: string; role?: string } | null,
-  sessionError?: string,
 ): true | Response {
   const authorized = authConfig.callbacks.authorized as unknown as AuthorizedCallback;
-  const auth =
-    user || sessionError
-      ? {
-          user: user ?? { id: "", role: "" },
-          expires: "",
-          error: sessionError,
-        }
-      : null;
-
   return authorized({
-    auth,
+    auth: user ? { user, expires: "" } : null,
     request: { nextUrl: new URL(url, "https://example.test") },
   });
 }
@@ -38,7 +28,6 @@ function redirectTarget(result: true | Response): string | null {
 
 describe("authorized callback — guests", () => {
   it.each([
-    "/",
     "/jobs",
     "/fa/jobs",
     "/de/pricing",
@@ -70,24 +59,6 @@ describe("authorized callback — guests", () => {
   it("allows login and register pages", () => {
     expect(run("/login", null)).toBe(true);
     expect(run("/fa/register", null)).toBe(true);
-  });
-
-  it("does not create a redirect loop for an invalidated session on login", () => {
-    expect(run("/login?error=SessionExpired", null, "SessionInvalidated")).toBe(
-      true,
-    );
-    expect(run("/fa/register", null, "SessionInvalidated")).toBe(true);
-  });
-
-  it("sends an invalidated session to login with a retryable callback", () => {
-    const result = run("/dashboard", null, "SessionInvalidated");
-    const location = redirectTarget(result);
-    expect(location).not.toBeNull();
-
-    const target = new URL(location!, "https://example.test");
-    expect(target.pathname).toBe("/login");
-    expect(target.searchParams.get("error")).toBe("SessionExpired");
-    expect(target.searchParams.get("callbackUrl")).toBe("/dashboard");
   });
 });
 

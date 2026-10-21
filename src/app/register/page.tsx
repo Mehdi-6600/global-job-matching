@@ -5,22 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import {
+  Briefcase,
   Eye,
   EyeOff,
-  Loader2,
-  Lock,
   Mail,
+  Lock,
   User,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
-import { AuthShell } from "@/components/auth-shell";
 import { safeCallbackOr } from "@/lib/url-safety";
-
-const fieldClass =
-  "h-11 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] ps-10 pe-3.5 text-[0.9375rem] text-[var(--text-primary)] placeholder:text-[var(--text-subtle)] transition-colors focus-visible:border-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary-soft)]";
-
-const labelClass =
-  "mb-1.5 block text-[0.8125rem] font-semibold text-[var(--text-body)]";
 
 function RegisterForm() {
   const router = useRouter();
@@ -97,7 +92,9 @@ function RegisterForm() {
       }
       router.push(loginUrl.pathname + "?" + loginUrl.searchParams.toString());
     } catch {
-      setError(t("Auth.errors.network", "Network error. Please try again."));
+      setError(
+        t("Auth.errors.network", "Network error. Please try again."),
+      );
     } finally {
       setLoading(false);
     }
@@ -110,152 +107,184 @@ function RegisterForm() {
   }, [callbackUrlParam]);
 
   return (
-    <AuthShell
-      title={t("Auth.registerTitle", "Create Account")}
-      subtitle={t(
-        "Auth.registerSubtitle",
-        "Start your journey to find your dream job",
-      )}
-      footer={
-        <>
-          {t("Auth.hasAccount", "Already have an account?")}{" "}
-          <Link
-            href={loginHref}
-            className="font-semibold text-[var(--brand-primary-hover)] hover:underline"
-          >
-            {t("Auth.submitLogin", "Sign In")}
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center py-10 px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">
+              Global<span className="text-sky-400">Job</span>
+            </span>
           </Link>
-        </>
-      }
-    >
-      {error && (
-        <div
-          role="alert"
-          className="mb-4 rounded-[var(--radius-md)] border border-[var(--error-soft)] bg-[var(--error-soft)] px-3.5 py-3 text-[0.8125rem] font-medium text-[var(--error)]"
-        >
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="register-name" className={labelClass}>
-            {t("Auth.name", "Full Name")}
-          </label>
-          <div className="relative">
-            <User
-              size={16}
-              aria-hidden="true"
-              className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-            />
-            <input
-              id="register-name"
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder={t("Auth.namePlaceholder", "John Doe")}
-              required
-              minLength={2}
-              autoComplete="name"
-              className={fieldClass}
-            />
-          </div>
         </div>
 
-        <div>
-          <label htmlFor="register-email" className={labelClass}>
-            {t("Auth.email", "Email")}
-          </label>
-          <div className="relative">
-            <Mail
-              size={16}
-              aria-hidden="true"
-              className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-            />
-            <input
-              id="register-email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-              className={fieldClass}
-            />
-          </div>
-        </div>
+        <div className="rounded-3xl p-8 sm:p-10 bg-white/5 border border-white/10">
+          <h2 className="text-xl font-bold text-center text-white mb-1">
+            {t("Auth.registerTitle", "Create Account")}
+          </h2>
+          <p className="text-sm text-slate-400 text-center mb-6">
+            {t(
+              "Auth.registerSubtitle",
+              "Start your journey to find your dream job",
+            )}
+          </p>
 
-        <div>
-          <label htmlFor="register-password" className={labelClass}>
-            {t("Auth.password", "Password")}
-          </label>
-          <div className="relative">
-            <Lock
-              size={16}
-              aria-hidden="true"
-              className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-            />
-            <input
-              id="register-password"
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder={t("Auth.passwordHint", "At least 8 characters")}
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className={`${fieldClass} pe-11`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute end-3 top-1/2 inline-flex -translate-y-1/2 items-center justify-center text-[var(--text-subtle)] transition-colors hover:text-[var(--text-primary)]"
-              aria-label={
-                showPassword
-                  ? t("Auth.hidePassword", "Hide password")
-                  : t("Auth.showPassword", "Show password")
-              }
+          {error && (
+            <div
+              role="alert"
+              className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center"
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="register-role" className={labelClass}>
-            {t("Auth.role", "I am a...")}
-          </label>
-          <select
-            id="register-role"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="gjm-select"
-          >
-            <option value="JOB_SEEKER">{t("Auth.jobSeeker", "Job Seeker")}</option>
-            <option value="EMPLOYER">{t("Auth.employer", "Employer")}</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--brand-action)] py-3 text-[0.9375rem] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-action-hover)] disabled:opacity-60"
-        >
-          {loading ? (
-            <>
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-              {t("Auth.creatingAccount", "Creating account...")}
-            </>
-          ) : (
-            t("Auth.submitRegister", "Create Account")
+              {error}
+            </div>
           )}
-        </button>
-      </form>
-    </AuthShell>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="register-name"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
+                {t("Auth.name", "Full Name")}
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  id="register-name"
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder={t("Auth.namePlaceholder", "John Doe")}
+                  required
+                  minLength={2}
+                  autoComplete="name"
+                  className="w-full py-3.5 pl-11 pr-5 rounded-xl outline-none bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="register-email"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
+                {t("Auth.email", "Email")}
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  id="register-email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                  className="w-full py-3.5 pl-11 pr-5 rounded-xl outline-none bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="register-password"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
+                {t("Auth.password", "Password")}
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  id="register-password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder={t(
+                    "Auth.passwordHint",
+                    "At least 8 characters",
+                  )}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  className="w-full py-3.5 pl-11 pr-11 rounded-xl outline-none bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  aria-label={
+                    showPassword
+                      ? t("Auth.hidePassword", "Hide password")
+                      : t("Auth.showPassword", "Show password")
+                  }
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="register-role"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
+                {t("Auth.role", "I am a...")}
+              </label>
+              <select
+                id="register-role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full py-3.5 px-5 rounded-xl outline-none appearance-none bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-sky-500"
+              >
+                <option value="JOB_SEEKER">
+                  {t("Auth.jobSeeker", "Job Seeker")}
+                </option>
+                <option value="EMPLOYER">
+                  {t("Auth.employer", "Employer")}
+                </option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl bg-sky-500 text-white font-semibold hover:bg-sky-400 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("Auth.creatingAccount", "Creating account...")}
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  {t("Auth.submitRegister", "Create Account")}
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="mt-7 text-center text-sm text-slate-400">
+            {t("Auth.hasAccount", "Already have an account?")}{" "}
+            <Link
+              href={loginHref}
+              className="font-medium text-sky-400 hover:underline"
+            >
+              {t("Auth.submitLogin", "Sign In")}
+            </Link>
+          </p>
+        </div>
+      </div>
+    </main>
   );
 }
 
@@ -263,15 +292,9 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="gjm-page">
-          <div className="gjm-container flex justify-center py-20">
-            <Loader2
-              size={26}
-              className="animate-spin text-[var(--brand-primary)]"
-              aria-hidden="true"
-            />
-          </div>
-        </div>
+        <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-sky-400 animate-spin" />
+        </main>
       }
     >
       <RegisterForm />

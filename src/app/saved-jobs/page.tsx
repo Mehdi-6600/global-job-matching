@@ -170,30 +170,30 @@ export default function SavedJobsPage() {
 
   if (loading) {
     return (
-      <div className="gjm-page px-4 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-10 h-10 text-[var(--brand-primary)] animate-spin mx-auto mb-4" />
-          <p className="text-[var(--text-muted)]">
+          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">
             {t("SavedJobs.loading", "Loading saved jobs...")}
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="gjm-page px-4 flex items-center justify-center">
-        <div className="text-center glass rounded-2xl p-8 border border-[var(--border)] max-w-sm">
-          <p className="text-[var(--error)] font-medium mb-4">{error}</p>
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 flex items-center justify-center">
+        <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
+          <p className="text-red-400 font-medium mb-4">{error}</p>
           <Link
             href="/login?callbackUrl=/saved-jobs"
-            className="inline-flex items-center gap-2 bg-[var(--brand-primary)] text-[var(--text-on-brand)] px-5 py-2.5 rounded-xl text-sm font-medium"
+            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium"
           >
             {t("Common.signIn", "Sign in")}
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -204,24 +204,24 @@ export default function SavedJobsPage() {
   });
 
   return (
-    <div className="gjm-page px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-4 transition-colors"
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             {t("Common.back", "Back to Dashboard")}
           </Link>
           <div className="glass rounded-2xl p-5 gjm-card-accent gjm-card-accent--emerald">
             <div className="flex items-center gap-3 mb-2">
-              <Bookmark className="w-7 h-7 text-[var(--brand-primary)]" />
-              <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">
+              <Bookmark className="w-7 h-7 text-cyan-400" />
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
                 {t("SavedJobs.title", "Saved Jobs")}
               </h1>
             </div>
-            <p className="text-[var(--text-muted)] text-sm">{countLabel}</p>
+            <p className="text-slate-400 text-sm">{countLabel}</p>
           </div>
         </div>
 
@@ -237,13 +237,13 @@ export default function SavedJobsPage() {
               return (
                 <div
                   key={job.id}
-                  className="glass rounded-2xl p-5 border border-transparent hover:border-[var(--border)] transition-all relative"
+                  className="glass rounded-2xl p-5 border border-transparent hover:border-white/10 transition-all relative"
                 >
                   <button
                     type="button"
                     onClick={() => handleRemove(job.id)}
                     disabled={removingId === job.id}
-                    className="absolute top-3 end-3 p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error-soft)] transition-all z-10"
+                    className="absolute top-3 right-3 p-2 rounded-lg bg-white/5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all z-10"
                     title={t("SavedJobs.remove", "Remove")}
                   >
                     {removingId === job.id ? (
@@ -253,17 +253,17 @@ export default function SavedJobsPage() {
                     )}
                   </button>
 
-                  <div className="flex items-start gap-3 mb-4 pe-8">
-                    <div className="w-11 h-11 rounded-xl bg-[var(--brand-primary-soft)] border border-[var(--border)] flex items-center justify-center shrink-0">
-                      <span className="text-[var(--brand-primary)] font-bold text-xs">
+                  <div className="flex items-start gap-3 mb-4 pr-8">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                      <span className="text-cyan-400 font-bold text-xs">
                         {getLogo(job.company?.name)}
                       </span>
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-[var(--text-primary)] font-semibold text-sm truncate">
+                      <h3 className="text-white font-semibold text-sm truncate">
                         {job.title}
                       </h3>
-                      <p className="text-[var(--text-muted)] text-xs flex items-center gap-1 mt-0.5">
+                      <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
                         <Building2 className="w-3 h-3" />
                         {job.company?.name ||
                           t("Common.companyFallback", "Company")}
@@ -271,7 +271,7 @@ export default function SavedJobsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)] mb-4">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mb-4">
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       {job.location}
@@ -287,7 +287,7 @@ export default function SavedJobsPage() {
                       </span>
                     )}
                     {job.remote && (
-                      <span className="text-[var(--success)]">
+                      <span className="text-emerald-400">
                         {t("Common.remote", "Remote")}
                       </span>
                     )}
@@ -300,7 +300,7 @@ export default function SavedJobsPage() {
                       .map((tag) => (
                         <span
                           key={tag}
-                          className="text-[10px] px-2 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--text-body)] border border-[var(--border-soft)]"
+                          className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/5"
                         >
                           {tag}
                         </span>
@@ -308,12 +308,12 @@ export default function SavedJobsPage() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[var(--text-muted)]">
+                    <span className="text-[10px] text-slate-500">
                       {timeAgo(job.createdAt)}
                     </span>
                     <Link
                       href={`/jobs/${job.id}`}
-                      className="flex items-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] px-4 py-2 rounded-xl text-xs font-medium"
+                      className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-xl text-xs font-medium"
                     >
                       {t("SavedJobs.viewJob", "View Job")}
                     </Link>
@@ -324,11 +324,11 @@ export default function SavedJobsPage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <Bookmark className="w-12 h-12 text-[var(--text-subtle)] mx-auto mb-4" />
-            <p className="text-[var(--text-muted)] font-medium mb-1">
+            <Bookmark className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 font-medium mb-1">
               {t("SavedJobs.emptyTitle", "No saved jobs yet")}
             </p>
-            <p className="text-[var(--text-muted)] text-sm mb-6">
+            <p className="text-slate-500 text-sm mb-6">
               {t(
                 "SavedJobs.emptyDesc",
                 "Browse jobs and save the ones you like",
@@ -336,7 +336,7 @@ export default function SavedJobsPage() {
             </p>
             <Link
               href="/jobs"
-              className="inline-flex items-center gap-2 bg-[image:var(--gradient-brand)] text-[var(--text-primary)] px-6 py-2.5 rounded-xl text-sm font-medium"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium"
             >
               <Search className="w-4 h-4" />
               {t("SavedJobs.browseJobs", "Browse Jobs")}
@@ -344,6 +344,6 @@ export default function SavedJobsPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

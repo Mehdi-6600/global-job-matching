@@ -37,16 +37,16 @@ function Bar({ used, limit, label }: { used: number; limit: number; label: strin
   const near = pct >= 85;
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-[var(--text-muted)]">
+      <div className="flex justify-between text-xs text-slate-400">
         <span>{label}</span>
-        <span className={near ? "text-[var(--warning)]" : ""}>
+        <span className={near ? "text-amber-400" : ""}>
           {used} / {limit}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
-            near ? "bg-[var(--warning)]" : "bg-[var(--brand-primary-hover)]"
+            near ? "bg-amber-400" : "bg-cyan-400"
           }`}
           style={{ width: `${pct}%` }}
         />
@@ -89,7 +89,7 @@ export function PlanUsageCard() {
 
   if (loading) {
     return (
-      <div className="glass rounded-2xl p-5 flex items-center gap-2 text-[var(--text-muted)] border border-[var(--border)]">
+      <div className="glass rounded-2xl p-5 flex items-center gap-2 text-slate-400 border border-white/10">
         <Loader2 className="h-4 w-4 animate-spin" />
         {t("PlanUsage.loading", "Loading plan…")}
       </div>
@@ -98,9 +98,9 @@ export function PlanUsageCard() {
 
   if (error || !data) {
     return (
-      <div className="glass rounded-2xl p-5 text-sm text-[var(--text-muted)] border border-[var(--border)]">
+      <div className="glass rounded-2xl p-5 text-sm text-slate-400 border border-white/10">
         {error || t("PlanUsage.noData", "No plan data.")}{" "}
-        <Link href="/login" className="text-[var(--brand-primary)] underline">
+        <Link href="/login" className="text-cyan-400 underline">
           {t("PlanUsage.signInLink", "Sign in")}
         </Link>
       </div>
@@ -134,13 +134,13 @@ export function PlanUsageCard() {
       : null;
 
   return (
-    <div className="glass rounded-2xl p-5 space-y-4 border border-[var(--border)]">
+    <div className="glass rounded-2xl p-5 space-y-4 border border-white/10">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Crown className="h-5 w-5 text-[var(--brand-primary)]" />
+          <Crown className="h-5 w-5 text-cyan-400" />
           <div>
-            <p className="text-sm text-[var(--text-muted)]">{t("PlanUsage.currentPlan", "Current plan")}</p>
-            <p className="text-lg font-semibold capitalize text-[var(--text-primary)]">
+            <p className="text-sm text-slate-400">{t("PlanUsage.currentPlan", "Current plan")}</p>
+            <p className="text-lg font-semibold capitalize text-white">
               {data.plan}
               {data.expired ? ` (${t("PlanUsage.expired", "expired")})` : ""}
             </p>
@@ -148,16 +148,16 @@ export function PlanUsageCard() {
         </div>
         <Link
           href="/pricing"
-          className="text-xs px-3 py-1.5 rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+          className="text-xs px-3 py-1.5 rounded-full bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
         >
           {t("PlanUsage.upgrade", "Upgrade")}
         </Link>
       </div>
 
       {daysText && (
-        <p className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+        <p className="text-xs text-slate-400 flex items-center gap-1">
           {typeof daysRemaining === "number" && daysRemaining <= 7 && (
-            <AlertTriangle className="h-3.5 w-3.5 text-[var(--warning)]" />
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
           )}
           {daysText}
         </p>
@@ -171,11 +171,11 @@ export function PlanUsageCard() {
         <Bar label={t("PlanUsage.activeEmployerJobsLabel", "Active job posts (employer)")} {...u.activeEmployerJobs} />
       </div>
 
-      {pendingText && <p className="text-xs text-[var(--warning)]">{pendingText}</p>}
+      {pendingText && <p className="text-xs text-amber-300">{pendingText}</p>}
 
       <Link
         href="/pricing"
-        className="block text-center text-sm text-[var(--brand-primary)] hover:underline pt-1"
+        className="block text-center text-sm text-cyan-400 hover:underline pt-1"
       >
         {t("PlanUsage.viewPricingLink", "View pricing & payment history →")}
       </Link>

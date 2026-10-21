@@ -24,10 +24,10 @@ export function Providers({
 
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
-        enableSystem
+        defaultTheme="light"
+        forcedTheme="light"
+        enableSystem={false}
         disableTransitionOnChange
-        storageKey="gjm-theme"
       >
         <LocaleProvider initialLocale={initialLocale}>
           <AnalyticsTracker />

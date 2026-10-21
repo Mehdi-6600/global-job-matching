@@ -1,10 +1,5 @@
-import { NextResponse, after } from "next/server";
-
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import {
-  getSweepStatus,
-  triggerPaymentSweep,
-} from "@/lib/payment/sweep-scheduler";
 import { getCryptoWallets } from "@/lib/payment/plans";
 import { getRedisEnvStatus, isRedisConfigured } from "@/lib/redis";
 
@@ -21,10 +16,6 @@ function envPresent(name: string): boolean {
  * Never returns secrets — only booleans and safe counts.
  */
 export async function GET() {
-  // Uptime monitors hit this endpoint, so it is a reliable driver for the
-  // in-app payment sweep (the Hobby plan allows only daily crons).
-  after(() => triggerPaymentSweep());
-
   const started = Date.now();
   const production = process.env.NODE_ENV === "production";
 
@@ -52,13 +43,9 @@ export async function GET() {
 
   const config = {
     databaseUrl: envPresent("DATABASE_URL"),
-    authSecret: envPresent("AUTH_SECRET") || envPresent("NEXTAUTH_SECRET"),
+    authSecret: envPresent("AUTH_SECRET"),
     appUrl:
-      envPresent("NEXT_PUBLIC_APP_URL") ||
-      envPresent("NEXT_PUBLIC_SITE_URL") ||
-      envPresent("AUTH_URL") ||
-      envPresent("NEXTAUTH_URL") ||
-      envPresent("VERCEL_URL"),
+      envPresent("NEXT_PUBLIC_APP_URL") || envPresent("NEXT_PUBLIC_SITE_URL"),
     ownerEmail: envPresent("OWNER_EMAIL"),
     resend: envPresent("RESEND_API_KEY"),
     cronSecret: envPresent("CRON_SECRET"),
@@ -148,7 +135,6 @@ export async function GET() {
         payments: {
           walletsConfigured: walletCount,
           ready: walletCount > 0,
-          sweep: await getSweepStatus(),
         },
         config,
       },

@@ -218,7 +218,7 @@ export default function DashboardPage() {
       value: totalJobs.toString(),
       change: t("Dashboard.live", "Live"),
       trend: "up" as const,
-      icon: <Briefcase className="w-5 h-5 text-[var(--brand-primary)]" />,
+      icon: <Briefcase className="w-5 h-5 text-cyan-400" />,
       href: "/jobs",
     },
     {
@@ -226,7 +226,7 @@ export default function DashboardPage() {
       value: appCount.toString(),
       change: t("Dashboard.track", "Track"),
       trend: "neutral" as const,
-      icon: <CheckCircle2 className="w-5 h-5 text-[var(--brand-accent)]" />,
+      icon: <CheckCircle2 className="w-5 h-5 text-purple-400" />,
       href: "/my-applications",
     },
     {
@@ -234,7 +234,7 @@ export default function DashboardPage() {
       value: savedCount.toString(),
       change: t("Dashboard.bookmarked", "Bookmarked"),
       trend: "neutral" as const,
-      icon: <Heart className="w-5 h-5 text-[var(--brand-accent)]" />,
+      icon: <Heart className="w-5 h-5 text-pink-400" />,
       href: "/saved-jobs",
     },
     {
@@ -245,7 +245,7 @@ export default function DashboardPage() {
           ? t("Dashboard.unread", "Unread")
           : t("Dashboard.allRead", "All read"),
       trend: unreadCount > 0 ? ("up" as const) : ("neutral" as const),
-      icon: <Bell className="w-5 h-5 text-[var(--warning)]" />,
+      icon: <Bell className="w-5 h-5 text-amber-400" />,
       href: "/notifications",
     },
   ];
@@ -259,25 +259,25 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="gjm-page flex min-h-[60vh] items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-10 h-10 text-[var(--brand-primary)] animate-spin mx-auto mb-4" />
-          <p className="text-[var(--text-muted)]">
+          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">
             {t("Dashboard.loading", "Loading dashboard...")}
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="gjm-page">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           <button
             type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden glass rounded-xl p-3 text-[var(--text-primary)] mb-4 flex items-center gap-2 w-fit"
+            className="lg:hidden glass rounded-xl p-3 text-white mb-4 flex items-center gap-2 w-fit"
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>{t("Dashboard.menu", "Menu")}</span>
@@ -288,9 +288,9 @@ export default function DashboardPage() {
               sidebarOpen ? "block" : "hidden lg:block"
             }`}
           >
-            <div className="glass rounded-2xl p-4 sticky top-24 border border-[var(--border)]">
-              <div className="flex items-center gap-3 p-3 mb-4 border-b border-[var(--border)] pb-4">
-                <div className="w-12 h-12 rounded-full bg-[image:var(--gradient-brand)] flex items-center justify-center text-[var(--text-primary)] font-bold text-lg">
+            <div className="glass rounded-2xl p-4 sticky top-24 border border-white/10">
+              <div className="flex items-center gap-3 p-3 mb-4 border-b border-white/10 pb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
                   {userName
                     .split(" ")
                     .map((n) => n[0])
@@ -299,8 +299,8 @@ export default function DashboardPage() {
                     .toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-[var(--text-primary)] font-semibold">{userName}</h3>
-                  <p className="text-[var(--text-muted)] text-sm line-clamp-1">
+                  <h3 className="text-white font-semibold">{userName}</h3>
+                  <p className="text-slate-400 text-sm line-clamp-1">
                     {userTitle}
                   </p>
                 </div>
@@ -313,14 +313,14 @@ export default function DashboardPage() {
                     href={item.href}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                       item.active
-                        ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border border-[var(--border)]"
-                        : "text-[var(--text-body)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/20"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     {item.icon}
                     {item.label}
                     {item.href === "/notifications" && unreadCount > 0 && (
-                      <span className="ms-auto text-[10px] bg-[var(--error)] text-[var(--text-on-brand)] rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className="ms-auto text-[10px] bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
@@ -328,22 +328,22 @@ export default function DashboardPage() {
                 ))}
               </nav>
 
-              <div className="mt-6 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-2">
+              <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
                 <Link
                   href="/jobs"
-                  className="block text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+                  className="block text-xs text-cyan-400 hover:text-cyan-300"
                 >
                   {t("Dashboard.linkJobs", "Browse jobs →")}
                 </Link>
                 <Link
                   href="/employer/dashboard"
-                  className="block text-xs text-[var(--success)] hover:text-[var(--success)]"
+                  className="block text-xs text-emerald-400 hover:text-emerald-300"
                 >
                   {t("Dashboard.linkEmployer", "Employer panel →")}
                 </Link>
                 <Link
                   href="/settings"
-                  className="block text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  className="block text-xs text-slate-400 hover:text-white"
                 >
                   {t("Dashboard.linkProfile", "Edit profile →")}
                 </Link>
@@ -353,13 +353,13 @@ export default function DashboardPage() {
 
           <div className="flex-1 space-y-8">
             <div className="glass rounded-2xl p-6 md:p-8 gjm-card-accent gjm-card-accent--cyan">
-              <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
                 {t("Dashboard.welcome", "Welcome back")},{" "}
                 {userName.split(" ")[0]}!
               </h1>
-              <p className="text-[var(--text-body)]">
+              <p className="text-slate-300">
                 {t("Dashboard.thereAre", "There are")}{" "}
-                <span className="text-[var(--brand-primary)] font-semibold">
+                <span className="text-cyan-400 font-semibold">
                   {totalJobs} {t("Dashboard.activeJobs", "active jobs")}
                 </span>{" "}
                 {t(
@@ -374,42 +374,42 @@ export default function DashboardPage() {
                 <Link
                   key={stat.title}
                   href={stat.href}
-                  className="glass rounded-2xl p-5 hover:bg-[var(--surface-3)] transition-all border border-[var(--border)]"
+                  className="glass rounded-2xl p-5 hover:bg-white/10 transition-all border border-white/10"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="p-2.5 rounded-xl bg-[var(--surface-2)]">
+                    <div className="p-2.5 rounded-xl bg-white/5">
                       {stat.icon}
                     </div>
                     <span
                       className={`text-xs font-semibold px-2 py-1 rounded-full ${
                         stat.trend === "up"
-                          ? "text-[var(--success)] bg-[var(--success-soft)]"
-                          : "text-[var(--text-muted)] bg-[var(--surface-2)]"
+                          ? "text-emerald-400 bg-emerald-500/10"
+                          : "text-slate-400 bg-white/5"
                       }`}
                     >
                       {stat.change}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-1">
+                  <h3 className="text-2xl font-bold text-white mb-1">
                     {stat.value}
                   </h3>
-                  <p className="text-[var(--text-muted)] text-sm">{stat.title}</p>
+                  <p className="text-slate-400 text-sm">{stat.title}</p>
                 </Link>
               ))}
             </div>
 
             {/* Personalized match scores */}
-            <div className="glass rounded-2xl overflow-hidden border border-[var(--border)]">
-              <div className="p-6 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="glass rounded-2xl overflow-hidden border border-white/10">
+              <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[var(--brand-primary)]" />
-                  <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                  <h2 className="text-xl font-bold text-white">
                     {t("Dashboard.matchedJobs", "Best matches for you")}
                   </h2>
                 </div>
                 <Link
                   href="/jobs"
-                  className="text-[var(--brand-primary)] text-sm font-medium hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1"
+                  className="text-cyan-400 text-sm font-medium hover:text-cyan-300 transition-colors flex items-center gap-1"
                 >
                   {t("Dashboard.browseAll", "Browse All")}{" "}
                   <ArrowRight className="w-4 h-4" />
@@ -418,7 +418,7 @@ export default function DashboardPage() {
 
               {matchProfileComplete === false ? (
                 <div className="p-8 text-center space-y-3">
-                  <p className="text-[var(--text-body)] text-sm">
+                  <p className="text-slate-300 text-sm">
                     {matchMessage ||
                       t(
                         "Dashboard.matchNeedProfile",
@@ -427,7 +427,7 @@ export default function DashboardPage() {
                   </p>
                   <Link
                     href="/profile"
-                    className="inline-flex text-sm font-medium text-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+                    className="inline-flex text-sm font-medium text-cyan-400 hover:text-cyan-300"
                   >
                     {t("Dashboard.completeProfile", "Complete profile →")}
                   </Link>
@@ -438,26 +438,26 @@ export default function DashboardPage() {
                     const score = Math.round(job.match?.score ?? 0);
                     const scoreColor =
                       score >= 75
-                        ? "text-[var(--success)] bg-[var(--success-soft)] border-[var(--success)]"
+                        ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30"
                         : score >= 50
-                          ? "text-[var(--brand-primary)] bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]"
-                          : "text-[var(--warning)] bg-[var(--warning-soft)] border-[var(--warning)]";
+                          ? "text-cyan-300 bg-cyan-500/15 border-cyan-500/30"
+                          : "text-amber-300 bg-amber-500/15 border-amber-500/30";
                     return (
                       <Link
                         key={job.id}
                         href={`/jobs/${job.id}`}
-                        className="glass rounded-xl p-4 border border-transparent hover:border-[var(--brand-primary)] transition-all group"
+                        className="glass rounded-xl p-4 border border-transparent hover:border-cyan-500/30 transition-all group"
                       >
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 shrink-0 rounded-lg bg-[var(--brand-primary-soft)] flex items-center justify-center text-[var(--brand-primary)] text-xs font-bold">
+                            <div className="w-10 h-10 shrink-0 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center text-cyan-300 text-xs font-bold">
                               {getLogo(job.company?.name)}
                             </div>
                             <div className="min-w-0">
-                              <h4 className="text-[var(--text-primary)] font-medium text-sm group-hover:text-[var(--brand-primary)] transition-colors line-clamp-2">
+                              <h4 className="text-white font-medium text-sm group-hover:text-cyan-300 transition-colors line-clamp-2">
                                 {job.title}
                               </h4>
-                              <p className="text-[var(--text-muted)] text-xs flex items-center gap-1">
+                              <p className="text-slate-400 text-xs flex items-center gap-1">
                                 <Building2 className="w-3 h-3 shrink-0" />
                                 <span className="truncate">
                                   {job.company?.name ||
@@ -473,7 +473,7 @@ export default function DashboardPage() {
                             {score}%
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
                           {job.location && (
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
@@ -481,7 +481,7 @@ export default function DashboardPage() {
                             </span>
                           )}
                           {job.remote && (
-                            <span className="text-[var(--success)]">
+                            <span className="text-emerald-400">
                               {t("Dashboard.remote", "Remote")}
                             </span>
                           )}
@@ -491,7 +491,7 @@ export default function DashboardPage() {
                   })}
                 </div>
               ) : (
-                <div className="p-8 text-center text-[var(--text-muted)] text-sm">
+                <div className="p-8 text-center text-slate-400 text-sm">
                   {t(
                     "Dashboard.noMatches",
                     "No strong matches yet. Update your skills or browse all jobs."
@@ -500,17 +500,17 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="glass rounded-2xl overflow-hidden border border-[var(--border)]">
-              <div className="p-6 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="glass rounded-2xl overflow-hidden border border-white/10">
+              <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[var(--warning)]" />
-                  <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                  <h2 className="text-xl font-bold text-white">
                     {t("Dashboard.latestJobs", "Latest Jobs")}
                   </h2>
                 </div>
                 <Link
                   href="/jobs"
-                  className="text-[var(--brand-primary)] text-sm font-medium hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1"
+                  className="text-cyan-400 text-sm font-medium hover:text-cyan-300 transition-colors flex items-center gap-1"
                 >
                   {t("Dashboard.browseAll", "Browse All")}{" "}
                   <ArrowRight className="w-4 h-4" />
@@ -523,18 +523,18 @@ export default function DashboardPage() {
                     <Link
                       key={job.id}
                       href={`/jobs/${job.id}`}
-                      className="glass rounded-xl p-4 border border-transparent hover:border-[var(--border)] transition-all group"
+                      className="glass rounded-xl p-4 border border-transparent hover:border-white/10 transition-all group"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-[var(--brand-primary-soft)] flex items-center justify-center text-[var(--brand-primary)] text-xs font-bold">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center text-cyan-300 text-xs font-bold">
                             {getLogo(job.company?.name)}
                           </div>
                           <div>
-                            <h4 className="text-[var(--text-primary)] font-medium text-sm group-hover:text-[var(--brand-primary)] transition-colors">
+                            <h4 className="text-white font-medium text-sm group-hover:text-cyan-300 transition-colors">
                               {job.title}
                             </h4>
-                            <p className="text-[var(--text-muted)] text-xs flex items-center gap-1">
+                            <p className="text-slate-400 text-xs flex items-center gap-1">
                               <Building2 className="w-3 h-3" />
                               {job.company?.name ||
                                 t("Dashboard.company", "Company")}
@@ -543,7 +543,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
                           {job.location}
@@ -558,7 +558,7 @@ export default function DashboardPage() {
                           )}
                         </span>
                         {job.remote && (
-                          <span className="text-[var(--success)]">
+                          <span className="text-emerald-400">
                             {t("Dashboard.remote", "Remote")}
                           </span>
                         )}
@@ -567,7 +567,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="p-10 text-center text-[var(--text-muted)] text-sm">
+                <div className="p-10 text-center text-slate-400 text-sm">
                   {t("Dashboard.noJobs", "No jobs to show yet.")}
                 </div>
               )}
@@ -575,6 +575,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

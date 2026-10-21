@@ -61,13 +61,13 @@ function ResetPasswordForm() {
   if (success) {
     return (
       <div className="text-center space-y-4">
-        <CheckCircle className="w-12 h-12 text-[var(--success)] mx-auto" />
-        <p className="text-[var(--text-body)] text-sm">
+        <CheckCircle className="w-12 h-12 text-green-400 mx-auto" />
+        <p className="text-slate-300 text-sm">
           {t("Common.success", "Success")}
         </p>
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 text-sm text-[var(--brand-accent)]"
+          className="inline-flex items-center gap-2 text-sm text-indigo-400"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("AuthExtra.backToLogin", "Back to login")}
@@ -79,7 +79,7 @@ function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-[var(--text-body)] mb-2">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
           {t("AuthExtra.newPassword", "New password")}
         </label>
         <input
@@ -89,12 +89,12 @@ function ResetPasswordForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent transition-all"
+          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[var(--text-body)] mb-2">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
           {t("AuthExtra.confirmPassword", "Confirm password")}
         </label>
         <input
@@ -104,12 +104,12 @@ function ResetPasswordForm() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="••••••••"
-          className="w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent transition-all"
+          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
         />
       </div>
 
       {error && (
-        <div className="p-3 rounded-lg bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm">
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -117,7 +117,7 @@ function ResetPasswordForm() {
       <button
         type="submit"
         disabled={loading || !token}
-        className="w-full py-3 px-4 rounded-xl bg-[var(--brand-accent)] hover:bg-[var(--brand-accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text-on-brand)] font-medium transition-all flex items-center justify-center gap-2"
+        className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
@@ -132,7 +132,7 @@ function ResetPasswordForm() {
       <div className="text-center">
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("AuthExtra.backToLogin", "Back to login")}
@@ -146,17 +146,17 @@ export default function ResetPasswordPage() {
   const { t } = useLocale();
 
   return (
-    <div className="gjm-page flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="w-full max-w-md">
-        <div className="glass rounded-2xl p-8 border border-[var(--border)] shadow-2xl">
+        <div className="glass rounded-2xl p-8 border border-white/10 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--brand-accent-soft)] mb-4">
-              <Lock className="w-6 h-6 text-[var(--brand-accent)]" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-500/20 mb-4">
+              <Lock className="w-6 h-6 text-indigo-400" />
             </div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+            <h1 className="text-2xl font-bold text-white">
               {t("AuthExtra.resetTitle", "Reset password")}
             </h1>
-            <p className="text-[var(--text-muted)] mt-2 text-sm">
+            <p className="text-slate-400 mt-2 text-sm">
               {t(
                 "AuthExtra.resetSubtitle",
                 "Choose a new password for your account"
@@ -167,7 +167,7 @@ export default function ResetPasswordPage() {
           <Suspense
             fallback={
               <div className="flex justify-center py-8">
-                <Loader2 className="w-8 h-8 text-[var(--brand-accent)] animate-spin" />
+                <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
               </div>
             }
           >

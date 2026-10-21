@@ -4,13 +4,9 @@ import { useState, Suspense, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { AlertCircle, Loader2, Lock, Mail } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
-import { AuthShell } from "@/components/auth-shell";
 import { safeCallbackOr } from "@/lib/url-safety";
-
-const fieldClass =
-  "h-11 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] ps-10 pe-3.5 text-[0.9375rem] text-[var(--text-primary)] placeholder:text-[var(--text-subtle)] transition-colors focus-visible:border-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary-soft)]";
 
 function LoginForm() {
   const router = useRouter();
@@ -52,7 +48,8 @@ function LoginForm() {
     }
   }, [sessionExpired, registered, t]);
 
-  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "1";
+  const googleEnabled =
+    process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "1";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,51 +57,35 @@ function LoginForm() {
     setNotice("");
     setLoading(true);
 
-    try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-        callbackUrl,
-      });
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+      callbackUrl,
+    });
 
-      if (result?.error) {
-        const code = String(result.error).toLowerCase();
-        if (code.includes("rate_limited") || code.includes("ratelimit")) {
-          setError(
-            t(
-              "Auth.errors.rateLimited",
-              "Too many login attempts. Please wait a minute and try again.",
-            ),
-          );
-        } else {
-          setError(
-            t("Auth.errors.invalidCredentials", "Invalid email or password"),
-          );
-        }
-        return;
+    setLoading(false);
+
+    if (result?.error) {
+      const code = String(result.error).toLowerCase();
+      if (code.includes("rate_limited") || code.includes("ratelimit")) {
+        setError(
+          t(
+            "Auth.errors.rateLimited",
+            "Too many login attempts. Please wait a minute and try again.",
+          ),
+        );
+      } else {
+        setError(
+          t("Auth.errors.invalidCredentials", "Invalid email or password"),
+        );
       }
+      return;
+    }
 
-      if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
-        return;
-      }
-
-      // Auth.js can return an unsuccessful response without an error code
-      // (for example, when the auth endpoint responds unexpectedly). Never
-      // leave the user on the form without feedback in that case.
-      setError(
-        t("Auth.errors.network", "Network error. Please try again."),
-      );
-    } catch {
-      // A failed fetch used to leave `loading` true forever, making the login
-      // page look frozen. Show a retryable error and always release the form.
-      setError(
-        t("Auth.errors.network", "Network error. Please try again."),
-      );
-    } finally {
-      setLoading(false);
+    if (result?.ok) {
+      router.push(callbackUrl);
+      router.refresh();
     }
   };
 
@@ -115,145 +96,149 @@ function LoginForm() {
   }, [callbackUrlParam]);
 
   return (
-    <AuthShell
-      title={t("Auth.loginTitle", "Welcome back")}
-      subtitle={t("Auth.loginSubtitle", "Sign in to continue")}
-      footer={
-        <>
-          {t("Auth.noAccount", "Don't have an account?")}{" "}
-          <Link
-            href={registerHref}
-            className="font-semibold text-[var(--brand-primary-hover)] hover:underline"
-          >
-            {t("Auth.submitRegister", "Create Account")}
-          </Link>
-        </>
-      }
-    >
-      {notice && (
-        <div
-          role="status"
-          className="mb-5 flex items-start gap-2.5 rounded-[var(--radius-md)] border border-[var(--info-soft)] bg-[var(--info-soft)] px-3.5 py-3 text-[0.8125rem] text-[var(--info)]"
-        >
-          <AlertCircle size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
-          <span>{notice}</span>
-        </div>
-      )}
-
-      {googleEnabled && (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              void signIn("google", { callbackUrl });
-            }}
-            className="mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)]"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="#EA4335"
-                d="M12 10.2v3.6h5.1c-.2 1.2-1.5 3.6-5.1 3.6-3.1 0-5.6-2.5-5.6-5.6S8.9 6.2 12 6.2c1.8 0 3 .7 3.7 1.4l2.5-2.4C16.8 3.8 14.6 3 12 3 7.6 3 4 6.6 4 11s3.6 8 8 8c4.6 0 7.6-3.2 7.6-7.8 0-.5 0-.9-.1-1.3H12z"
-              />
-            </svg>
-            {t("Auth.continueGoogle", "Continue with Google")}
-          </button>
-
-          <div className="mb-5 flex items-center gap-3">
-            <span className="h-px flex-1 bg-[var(--border-soft)]" />
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-[var(--text-subtle)]">
-              {t("Auth.continueEmail", "Continue with email")}
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center py-10 px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block">
+            <span className="text-2xl font-bold text-white">
+              Global Job Matching
             </span>
-            <span className="h-px flex-1 bg-[var(--border-soft)]" />
-          </div>
-        </>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div
-            role="alert"
-            className="rounded-[var(--radius-md)] border border-[var(--error-soft)] bg-[var(--error-soft)] px-3.5 py-3 text-[0.8125rem] font-medium text-[var(--error)]"
-          >
-            {error}
-          </div>
-        )}
-
-        <div>
-          <label
-            htmlFor="login-email"
-            className="mb-1.5 block text-[0.8125rem] font-semibold text-[var(--text-body)]"
-          >
-            {t("Auth.email", "Email")}
-          </label>
-          <div className="relative">
-            <Mail
-              size={16}
-              aria-hidden="true"
-              className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-            />
-            <input
-              id="login-email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={fieldClass}
-            />
-          </div>
+          </Link>
+          <p className="mt-2 text-slate-400 text-sm">
+            {t("Auth.loginSubtitle", "Sign in to continue")}
+          </p>
         </div>
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <label
-              htmlFor="login-password"
-              className="block text-[0.8125rem] font-semibold text-[var(--text-body)]"
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+          {notice && (
+            <div
+              role="status"
+              className="mb-5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-200 text-sm px-4 py-3"
             >
-              {t("Auth.password", "Password")}
-            </label>
-            <Link
-              href="/forgot-password"
-              className="text-[0.75rem] font-semibold text-[var(--brand-primary-hover)] hover:underline"
-            >
-              {t("Auth.forgotPassword", "Forgot password?")}
-            </Link>
-          </div>
-          <div className="relative">
-            <Lock
-              size={16}
-              aria-hidden="true"
-              className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-            />
-            <input
-              id="login-password"
-              type="password"
-              required
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={fieldClass}
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--brand-action)] py-3 text-[0.9375rem] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-action-hover)] disabled:opacity-60"
-        >
-          {loading ? (
-            <>
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-              {t("Auth.signingIn", "Signing in...")}
-            </>
-          ) : (
-            t("Auth.submitLogin", "Sign In")
+              {notice}
+            </div>
           )}
-        </button>
-      </form>
-    </AuthShell>
+
+          {googleEnabled && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  void signIn("google", { callbackUrl });
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-white text-slate-900 font-semibold hover:bg-slate-100 active:scale-[0.98] transition-all mb-5"
+              >
+                <svg
+                  className="w-5 h-5"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="#EA4335"
+                    d="M12 10.2v3.6h5.1c-.2 1.2-1.5 3.6-5.1 3.6-3.1 0-5.6-2.5-5.6-5.6S8.9 6.2 12 6.2c1.8 0 3 .7 3.7 1.4l2.5-2.4C16.8 3.8 14.6 3 12 3 7.6 3 4 6.6 4 11s3.6 8 8 8c4.6 0 7.6-3.2 7.6-7.8 0-.5 0-.9-.1-1.3H12z"
+                  />
+                </svg>
+                {t("Auth.continueGoogle", "Continue with Google")}
+              </button>
+
+              <div className="relative mb-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-3 bg-transparent text-slate-500">
+                    {t("Auth.continueEmail", "Continue with email")}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div
+                role="alert"
+                className="rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm px-4 py-3"
+              >
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label
+                htmlFor="login-email"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
+                {t("Auth.email", "Email")}
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full py-3.5 px-5 rounded-xl outline-none transition-all bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-medium text-slate-300 mb-1.5"
+              >
+                {t("Auth.password", "Password")}
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full py-3.5 px-5 rounded-xl outline-none transition-all bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end text-sm">
+              <Link
+                href="/forgot-password"
+                className="text-sky-400 hover:underline font-medium"
+              >
+                {t("Auth.forgotPassword", "Forgot password?")}
+              </Link>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl bg-sky-500 text-white font-semibold hover:bg-sky-400 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("Auth.signingIn", "Signing in...")}
+                </>
+              ) : (
+                t("Auth.submitLogin", "Sign In")
+              )}
+            </button>
+          </form>
+
+          <p className="mt-7 text-center text-sm text-slate-400">
+            {t("Auth.noAccount", "Don't have an account?")}{" "}
+            <Link
+              href={registerHref}
+              className="font-medium text-sky-400 hover:underline"
+            >
+              {t("Auth.submitRegister", "Create Account")}
+            </Link>
+          </p>
+        </div>
+      </div>
+    </main>
   );
 }
 
@@ -261,15 +246,9 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="gjm-page">
-          <div className="gjm-container flex justify-center py-20">
-            <Loader2
-              size={26}
-              className="animate-spin text-[var(--brand-primary)]"
-              aria-hidden="true"
-            />
-          </div>
-        </div>
+        <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-sky-400 animate-spin" />
+        </main>
       }
     >
       <LoginForm />

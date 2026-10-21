@@ -11,10 +11,9 @@ import {
   Building2,
   ChevronDown,
   FileText,
+  Loader2,
   LogOut,
   Menu,
-  Plus,
-  Search,
   ShieldAlert,
   ShieldCheck,
   UserRound,
@@ -22,12 +21,13 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandMark } from "@/components/brand-logo";
 
-/* ------------------------------------------------------------------ *
- * Unread notification count — one request per session, never polled.
- * ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------
+ * Notification badge — lightweight unread count for the signed-in
+ * user. One request per session, cached in local component state.
+ * We intentionally do NOT poll.
+ * ---------------------------------------------------------------- */
 function useUnreadNotifications(enabled: boolean): number {
   const [count, setCount] = useState(0);
 
@@ -59,10 +59,10 @@ function useUnreadNotifications(enabled: boolean): number {
   return count;
 }
 
-/* ------------------------------------------------------------------ *
- * Profile dropdown — keyboard accessible, closes on Escape / outside
- * click / route change.
- * ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------
+ * Profile dropdown — small, keyboard accessible.
+ * Closes on Escape, outside click, or route change.
+ * ---------------------------------------------------------------- */
 interface ProfileMenuProps {
   isAdmin: boolean;
   isEmployer: boolean;
@@ -76,18 +76,13 @@ interface ProfileMenuProps {
     employer: string;
     logout: string;
   };
-  initials: string;
 }
-
-const menuItemClass =
-  "flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-start text-sm text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none";
 
 function ProfileMenu({
   isAdmin,
   isEmployer,
   onNavigate,
   labels,
-  initials,
 }: ProfileMenuProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -101,7 +96,9 @@ function ProfileMenu({
     if (!open) return;
     function onDocClick(e: MouseEvent) {
       if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (!wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -121,29 +118,22 @@ function ProfileMenu({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={labels.dashboard}
-        className="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] ps-1 pe-2.5 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--border)] hover:bg-[var(--surface-2)]"
+        className="gjm-nav-profile"
       >
-        <span
-          aria-hidden="true"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[11px] font-bold text-[var(--brand-primary-hover)]"
-        >
-          {initials}
-        </span>
-        <span className="hidden max-w-[7.5rem] truncate lg:inline">
-          {labels.dashboard}
-        </span>
+        <UserRound size={16} />
+        <span className="hidden sm:inline">{labels.dashboard}</span>
         <ChevronDown
           size={14}
-          aria-hidden="true"
-          className={open ? "rotate-180 transition-transform" : "transition-transform"}
+          className={
+            open ? "rotate-180 transition-transform" : "transition-transform"
+          }
         />
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute end-0 z-50 mt-2 w-60 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-3)]"
+          className="absolute end-0 mt-2 w-56 rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border-soft)] shadow-[var(--elev-4)] p-1.5 z-50"
         >
           <Link
             href="/dashboard"
@@ -152,9 +142,9 @@ function ProfileMenu({
               onNavigate();
               setOpen(false);
             }}
-            className={menuItemClass}
+            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--text-body)] hover:bg-[var(--surface-2)]"
           >
-            <UserRound size={15} aria-hidden="true" />
+            <UserRound size={15} />
             {labels.dashboard}
           </Link>
 
@@ -165,9 +155,9 @@ function ProfileMenu({
               onNavigate();
               setOpen(false);
             }}
-            className={menuItemClass}
+            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--text-body)] hover:bg-[var(--surface-2)]"
           >
-            <ShieldAlert size={15} aria-hidden="true" />
+            <ShieldAlert size={15} />
             {labels.careerRisk}
           </Link>
 
@@ -178,9 +168,9 @@ function ProfileMenu({
               onNavigate();
               setOpen(false);
             }}
-            className={menuItemClass}
+            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--text-body)] hover:bg-[var(--surface-2)]"
           >
-            <FileText size={15} aria-hidden="true" />
+            <FileText size={15} />
             {labels.resumeBuilder}
           </Link>
 
@@ -191,7 +181,7 @@ function ProfileMenu({
               onNavigate();
               setOpen(false);
             }}
-            className={menuItemClass}
+            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--text-body)] hover:bg-[var(--surface-2)]"
           >
             {labels.settings}
           </Link>
@@ -208,9 +198,9 @@ function ProfileMenu({
                 onNavigate();
                 setOpen(false);
               }}
-              className={`${menuItemClass} text-[var(--error)] hover:bg-[var(--error-soft)] hover:text-[var(--error)]`}
+              className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--error)] hover:bg-[var(--error-soft)]"
             >
-              <ShieldCheck size={15} aria-hidden="true" />
+              <ShieldCheck size={15} />
               {labels.admin}
             </Link>
           )}
@@ -223,9 +213,9 @@ function ProfileMenu({
                 onNavigate();
                 setOpen(false);
               }}
-              className={`${menuItemClass} text-[var(--brand-primary-hover)]`}
+              className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--brand-primary-hover)] hover:bg-[var(--brand-primary-tint)]"
             >
-              <Building2 size={15} aria-hidden="true" />
+              <Building2 size={15} />
               {labels.employer}
             </Link>
           )}
@@ -240,9 +230,9 @@ function ProfileMenu({
               setOpen(false);
               signOut({ callbackUrl: "/" });
             }}
-            className={`${menuItemClass} hover:bg-[var(--error-soft)] hover:text-[var(--error)]`}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--text-muted)] hover:bg-[var(--error-soft)] hover:text-[var(--error)]"
           >
-            <LogOut size={15} aria-hidden="true" />
+            <LogOut size={15} />
             {labels.logout}
           </button>
         </div>
@@ -262,7 +252,16 @@ export default function Navbar() {
   const isAdmin = isAdminRole(userRole);
   const isEmployer = isEmployerRole(userRole) && !isAdmin;
 
-  /* Session invalidation detection (defense-in-depth). */
+  /* ---------------------------------------------------------------
+   * Session invalidation detection (defense-in-depth).
+   *
+   * If SessionGuard already fired, we won't normally get here. But
+   * navbar can render briefly before the guard's redirect lands, and
+   * a middleware-served route can also surface this state. Treating
+   * `error === "SessionInvalidated"` as logged-out prevents the "ghost
+   * logged-in" state where the navbar shows a profile menu while every
+   * API call returns 401.
+   * --------------------------------------------------------------- */
   const sessionError = (session as { error?: string } | null)?.error;
   const isSessionInvalidated = sessionError === "SessionInvalidated";
 
@@ -270,29 +269,6 @@ export default function Navbar() {
     status === "authenticated" && !!session && !isSessionInvalidated;
 
   const unreadCount = useUnreadNotifications(isLoggedIn);
-
-  const userName =
-    session?.user?.name || session?.user?.email?.split("@")[0] || "";
-  const initials = userName
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setMobileOpen(false);
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [mobileOpen]);
 
   const links = [
     { href: "/jobs", label: t("Nav.jobs", "Jobs") },
@@ -345,177 +321,30 @@ export default function Navbar() {
 
   return (
     <header className="gjm-header">
-      <a
-        href="#main-content"
-        className="gjm-sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-3 focus:z-[70] focus:rounded-[var(--radius-md)] focus:bg-[var(--surface)] focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--text-primary)] focus:shadow-[var(--shadow-2)]"
-      >
-        {t("Common.skipToContent", "Skip to content")}
-      </a>
-
-      <nav aria-label={t("Common.mainNavigation", "Main navigation")} className="gjm-container">
-        <div className="flex h-16 items-center justify-between gap-3">
-          {/* Brand */}
-          <Link
-            href="/"
-            onClick={closeMobile}
-            className="inline-flex shrink-0 items-center gap-2.5 rounded-[var(--radius-md)] transition-opacity hover:opacity-85"
-          >
-            <span
-              aria-hidden="true"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] p-0.5"
-            >
-              <BrandMark size={30} />
+      <nav className="gjm-nav" aria-label="Main">
+        <div className="gjm-nav-inner">
+          <Link href="/" className="gjm-brand" onClick={closeMobile}>
+            <span className="gjm-brand-mark" aria-hidden="true">
+              <BrandMark size={36} />
             </span>
-            <span className="flex flex-col leading-none">
-              <strong className="text-[0.8125rem] font-bold tracking-[0.06em] text-[var(--text-primary)]">
-                GLOBAL JOB
-              </strong>
-              <span className="text-[0.625rem] font-semibold tracking-[0.22em] text-[var(--text-subtle)]">
-                MATCHING
-              </span>
+
+            <span className="gjm-brand-copy">
+              <strong>GLOBAL JOB</strong>
+              <span>MATCHING</span>
             </span>
           </Link>
 
-          {/* Desktop nav */}
-          <div className="hidden items-center gap-1 lg:flex">
-            {links.map((link) => {
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={[
-                    "rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-[var(--brand-primary-tint)] text-[var(--brand-primary-hover)]"
-                      : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]",
-                  ].join(" ")}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Actions */}
-          <div className="hidden items-center gap-1.5 lg:flex">
-            <Link
-              href="/jobs"
-              aria-label={t("Nav.searchJobs", "Search jobs")}
-              className="gjm-icon-btn"
-            >
-              <Search size={17} aria-hidden="true" />
-            </Link>
-
-            <ThemeToggle />
-            <LanguageSwitcher />
-
-            {isLoggedIn ? (
-              <>
-                {isEmployer && (
-                  <Link
-                    href="/employer/post-job"
-                    className="ms-1 inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[0.8125rem] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)]"
-                  >
-                    <Plus size={15} aria-hidden="true" />
-                    <span className="hidden xl:inline">
-                      {t("Nav.postJob", "Post a job")}
-                    </span>
-                  </Link>
-                )}
-
-                <Link
-                  href="/notifications"
-                  className="gjm-icon-btn relative ms-1"
-                  aria-label={
-                    unreadCount > 0
-                      ? `${notificationsLabel} (${unreadCount})`
-                      : notificationsLabel
-                  }
-                >
-                  <Bell size={18} aria-hidden="true" />
-                  {unreadCount > 0 && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -top-0.5 -end-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[var(--error)] px-1 text-[10px] font-bold leading-none text-[var(--text-on-brand)]"
-                    >
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
-                </Link>
-
-                <ProfileMenu
-                  isAdmin={isAdmin}
-                  isEmployer={isEmployer}
-                  onNavigate={closeMobile}
-                  labels={profileLabels}
-                  initials={initials || "U"}
-                />
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="ms-1 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
-                >
-                  {t("Nav.login", "Login")}
-                </Link>
-
-                <Link
-                  href="/register"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-action)] px-3.5 text-[0.8125rem] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-action-hover)]"
-                >
-                  <BriefcaseBusiness size={15} aria-hidden="true" />
-                  {t("Nav.register", "Get Started")}
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* Mobile actions */}
-          <div className="flex items-center gap-1 lg:hidden">
-            <ThemeToggle />
-            <LanguageSwitcher compact />
-
-            <button
-              type="button"
-              className="gjm-icon-btn"
-              onClick={() => setMobileOpen((v) => !v)}
-              aria-label={mobileOpen ? menuCloseLabel : menuOpenLabel}
-              aria-expanded={mobileOpen}
-              aria-controls="gjm-mobile-menu"
-            >
-              {mobileOpen ? (
-                <X size={20} aria-hidden="true" />
-              ) : (
-                <Menu size={20} aria-hidden="true" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile sheet */}
-        {mobileOpen && (
-          <div
-            id="gjm-mobile-menu"
-            className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-[var(--border-soft)] pb-5 pt-3 lg:hidden"
-          >
-            <div className="grid gap-1">
+          <div className="gjm-desktop-nav">
+            <div className="gjm-main-links">
               {links.map((link) => {
                 const active = isActive(link.href);
+
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    onClick={closeMobile}
                     aria-current={active ? "page" : undefined}
-                    className={[
-                      "rounded-[var(--radius-md)] px-3 py-2.5 text-[0.9375rem] font-medium transition-colors",
-                      active
-                        ? "bg-[var(--brand-primary-tint)] text-[var(--brand-primary-hover)]"
-                        : "text-[var(--text-body)] hover:bg-[var(--surface-2)]",
-                    ].join(" ")}
+                    className={`gjm-nav-link ${active ? "active" : ""}`}
                   >
                     {link.label}
                   </Link>
@@ -523,88 +352,208 @@ export default function Navbar() {
               })}
             </div>
 
-            {isLoggedIn && (
-              <>
-                <p className="mt-4 mb-1.5 px-3 text-[0.6875rem] font-bold uppercase tracking-[0.13em] text-[var(--text-subtle)]">
-                  {t("Nav.account", "Account")}
-                </p>
-                <div className="grid gap-1">
-                  {accountLinks.map((link) => {
+            <div className="gjm-nav-actions">
+              {isLoggedIn ? (
+                <>
+                  {isEmployer && (
+                    <Link
+                      href="/employer/dashboard"
+                      className="gjm-nav-utility"
+                      aria-current={
+                        isActive("/employer/dashboard") ? "page" : undefined
+                      }
+                    >
+                      <Building2 size={16} />
+                      <span className="hidden lg:inline">
+                        {t("Nav.employer", "Employer")}
+                      </span>
+                    </Link>
+                  )}
+
+                  <Link
+                    href="/notifications"
+                    className="gjm-nav-icon relative"
+                    aria-label={
+                      unreadCount > 0
+                        ? `${notificationsLabel} (${unreadCount})`
+                        : notificationsLabel
+                    }
+                  >
+                    <Bell size={18} />
+                    {unreadCount > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute -top-1 -end-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--error)] text-white text-[10px] font-bold leading-none"
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <ProfileMenu
+                    isAdmin={isAdmin}
+                    isEmployer={isEmployer}
+                    onNavigate={closeMobile}
+                    labels={profileLabels}
+                  />
+                </>
+              ) : status === "loading" ? (
+                <Loader2 size={18} className="gjm-nav-loader" />
+              ) : (
+                <>
+                  <Link href="/login" className="gjm-nav-login">
+                    {t("Nav.login", "Login")}
+                  </Link>
+
+                  <Link href="/register" className="gjm-nav-cta">
+                    {t("Nav.register", "Get Started")}
+                    <BriefcaseBusiness size={15} />
+                  </Link>
+                </>
+              )}
+
+              <LanguageSwitcher />
+            </div>
+          </div>
+
+          <div className="gjm-mobile-actions">
+            <LanguageSwitcher compact />
+
+            <button
+              type="button"
+              className="gjm-mobile-menu-button"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label={mobileOpen ? menuCloseLabel : menuOpenLabel}
+              aria-expanded={mobileOpen}
+              aria-controls="gjm-mobile-menu"
+            >
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
+        </div>
+
+        {mobileOpen && (
+          <div className="gjm-mobile-menu" id="gjm-mobile-menu">
+            <div className="gjm-mobile-scroll">
+              <div className="gjm-mobile-links">
+                {links.map((link) => {
+                  const active = isActive(link.href);
+
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={closeMobile}
+                      aria-current={active ? "page" : undefined}
+                      className={`gjm-mobile-link ${active ? "active" : ""}`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+
+                {isLoggedIn &&
+                  accountLinks.map((link) => {
                     const Icon = link.icon;
+                    const active = isActive(link.href);
+
                     return (
                       <Link
                         key={link.href}
                         href={link.href}
                         onClick={closeMobile}
-                        className="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-[0.9375rem] font-medium text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)]"
+                        aria-current={active ? "page" : undefined}
+                        className={`gjm-mobile-link ${active ? "active" : ""}`}
                       >
-                        <Icon size={17} aria-hidden="true" />
+                        <Icon size={17} />
                         {link.label}
                       </Link>
                     );
                   })}
-                  <Link
-                    href="/dashboard"
-                    onClick={closeMobile}
-                    className="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-[0.9375rem] font-medium text-[var(--text-body)] transition-colors hover:bg-[var(--surface-2)]"
-                  >
-                    <UserRound size={17} aria-hidden="true" />
-                    {t("Nav.dashboard", "Dashboard")}
-                  </Link>
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      onClick={closeMobile}
-                      className="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-[0.9375rem] font-medium text-[var(--error)] transition-colors hover:bg-[var(--error-soft)]"
-                    >
-                      <ShieldCheck size={17} aria-hidden="true" />
-                      {t("Nav.admin", "Admin Panel")}
-                    </Link>
-                  )}
-                  {isEmployer && (
-                    <Link
-                      href="/employer/dashboard"
-                      onClick={closeMobile}
-                      className="flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-[0.9375rem] font-medium text-[var(--brand-primary-hover)] transition-colors hover:bg-[var(--brand-primary-tint)]"
-                    >
-                      <Building2 size={17} aria-hidden="true" />
-                      {t("Nav.employer", "Employer")}
-                    </Link>
-                  )}
-                </div>
-              </>
-            )}
+              </div>
 
-            <div className="mt-4 grid gap-2 border-t border-[var(--border-soft)] pt-4">
-              {isLoggedIn ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeMobile();
-                    signOut({ callbackUrl: "/" });
-                  }}
-                  className="gjm-btn gjm-btn-secondary w-full"
-                >
-                  {t("Nav.logout", "Logout")}
-                </button>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    onClick={closeMobile}
-                    className="gjm-btn gjm-btn-secondary w-full"
-                  >
-                    {t("Nav.login", "Login")}
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={closeMobile}
-                    className="gjm-btn gjm-btn-primary w-full"
-                  >
-                    {t("Nav.register", "Get Started")}
-                  </Link>
-                </>
-              )}
+              <div className="gjm-mobile-account">
+                {isLoggedIn ? (
+                  <>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        onClick={closeMobile}
+                        className="gjm-mobile-account-link gjm-mobile-admin-link"
+                      >
+                        <ShieldCheck size={17} />
+                        {t("Nav.admin", "Admin Panel")}
+                      </Link>
+                    )}
+
+                    {isEmployer && (
+                      <Link
+                        href="/employer/dashboard"
+                        onClick={closeMobile}
+                        className="gjm-mobile-account-link"
+                      >
+                        <Building2 size={17} />
+                        {t("Nav.employer", "Employer")}
+                      </Link>
+                    )}
+
+                    <Link
+                      href="/dashboard"
+                      onClick={closeMobile}
+                      className="gjm-mobile-account-link"
+                    >
+                      <UserRound size={17} />
+                      {t("Nav.dashboard", "Dashboard")}
+                    </Link>
+
+                    <Link
+                      href="/notifications"
+                      onClick={closeMobile}
+                      className="gjm-mobile-account-link"
+                    >
+                      <Bell size={17} />
+                      {t("Nav.notifications", "Notifications")}
+                      {unreadCount > 0 && (
+                        <span
+                          aria-hidden="true"
+                          className="ms-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--error)] text-white text-[10px] font-bold leading-none"
+                        >
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+
+                    <button
+                      type="button"
+                      className="gjm-mobile-signout"
+                      onClick={() => {
+                        closeMobile();
+                        signOut({ callbackUrl: "/" });
+                      }}
+                    >
+                      {t("Nav.logout", "Logout")}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={closeMobile}
+                      className="gjm-mobile-login"
+                    >
+                      {t("Nav.login", "Login")}
+                    </Link>
+
+                    <Link
+                      href="/register"
+                      onClick={closeMobile}
+                      className="gjm-mobile-cta"
+                    >
+                      {t("Nav.register", "Get Started")}
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}

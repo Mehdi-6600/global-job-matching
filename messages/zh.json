@@ -26,11 +26,7 @@
     "jobAlerts": "职位提醒",
     "help": "帮助中心",
     "profile": "个人资料",
-    "search": "搜索",
-    "language": "语言",
-    "postJob": "发布职位",
-    "account": "账户",
-    "searchJobs": "搜索职位"
+    "search": "搜索"
   },
   "Common": {
     "loading": "加载中...",
@@ -81,19 +77,7 @@
     "forbidden": "无权访问",
     "status": "状态",
     "print": "打印",
-    "copied": "已复制",
-    "toggleTheme": "切换主题",
-    "skipToContent": "跳到主要内容",
-    "pageNotFound": "页面未找到",
-    "pageNotFoundDesc": "此页面不存在或已被移动。试试这些常用板块：",
-    "copy": "复制",
-    "errorUnexpected": "发生意外错误。您可以重试或返回首页。",
-    "planRequired": "此功能需要更高等级的计划。",
-    "rateLimited": "请求过多，请稍后重试。",
-    "serviceUnavailable": "服务暂时不可用，请稍后重试。",
-    "mainNavigation": "主导航",
-    "relatedSections": "相关栏目",
-    "exploreMore": "了解更多"
+    "copied": "已复制"
   },
   "Footer": {
     "tagline": "连接全球优秀人才与跨国工作机会，安全且智能。",
@@ -153,8 +137,7 @@
     "browseJobs": "查看职位",
     "activeJobs": "个有效职位",
     "viewAllJobs": "查看所有职位",
-    "browseLocations": "按地区浏览",
-    "alphabet": "字母顺序"
+    "browseLocations": "按地区浏览"
   },
   "Locations": {
     "title": "地区与城市",
@@ -285,9 +268,7 @@
     "viewProfile": "查看主页",
     "location": "总部所在地",
     "website": "官方网站",
-    "pending": "待审核",
-    "unknown": "未知公司",
-    "emptyBody": "雇主创建公司资料后，公司会显示在这里。"
+    "pending": "待审核"
   },
   "Auth": {
     "loginTitle": "登录您的账户",
@@ -316,28 +297,8 @@
       "emailExists": "该邮箱地址已被注册。",
       "generic": "发生意外错误，请稍后重试。",
       "network": "网络异常，请检查网络连接后重试。",
-      "rateLimited": "请求尝试过于频繁，请稍后再试。",
-      "unauthorized": "请登录后继续。"
-    },
-    "sideTitle": "下一份工作，始于更好的搜索。",
-    "sidePoint1": "来自可靠雇主的全球职位，每日更新。",
-    "sidePoint2": "AI 匹配评分、简历助手与职业风险洞察。",
-    "sidePoint3": "薪资透明，一份资料即可申请所有职位。",
-    "sideFooter": "免费加入，无需信用卡。",
-    "hidePassword": "隐藏密码",
-    "registeredSuccess": "账户已创建。请登录后继续。",
-    "sessionExpired": "会话已过期，请重新登录。",
-    "showPassword": "显示密码",
-    "verifyEmailErrorBody": "链接无效或已过期。",
-    "verifyEmailErrorTitle": "验证失败",
-    "verifyEmailMissingBody": "此验证链接缺少必要参数。",
-    "verifyEmailMissingTitle": "无效链接",
-    "verifyEmailResend": "重新发送验证邮件",
-    "verifyEmailResendFailed": "无法发送邮件，请稍后重试。",
-    "verifyEmailResending": "发送中…",
-    "verifyEmailResent": "验证邮件已发送，请查收。",
-    "verifyEmailSuccessBody": "您的邮箱已验证成功。",
-    "verifyEmailSuccessTitle": "邮箱已验证！"
+      "rateLimited": "请求尝试过于频繁，请稍后再试。"
+    }
   },
   "AuthExtra": {
     "forgotTitle": "重置登录密码",
@@ -420,12 +381,7 @@
     "remote": "远程办公",
     "noJobs": "暂无职位推荐。",
     "recent": "最新发布",
-    "stats": "核心指标",
-    "completeProfile": "完善资料 →",
-    "matchNeedProfile": "在个人资料中添加技能或简介即可解锁匹配分数。",
-    "matchScore": "匹配分数",
-    "matchedJobs": "为您推荐的最佳匹配",
-    "noMatches": "暂无匹配度高的职位。请更新技能或浏览所有职位。"
+    "stats": "核心指标"
   },
   "Settings": {
     "title": "账户与偏好设置",
@@ -501,8 +457,7 @@
     "youPrefix": "您: ",
     "messagePlaceholder": "输入沟通内容...",
     "startConversation": "发起新沟通",
-    "selectConversation": "从左侧选择对话以查看聊天详情。",
-    "send": "发送消息"
+    "selectConversation": "从左侧选择对话以查看聊天详情。"
   },
   "Notifications": {
     "title": "系统通知",
@@ -648,15 +603,7 @@
     "pending": "待审核",
     "salaryNA": "面议",
     "loadErrorTitle": "职位加载受阻",
-    "loadErrorBody": "暂时无法拉取职位数据，请稍后刷新重试。",
-    "kicker": "全球职业机会",
-    "resultsCount": "{count} 个职位",
-    "pagination": "分页",
-    "showResults": "查看结果",
-    "featured": "精选",
-    "allCategories": "所有类别",
-    "rateLimitBody": "请稍候再重试。",
-    "rateLimitTitle": "请求过多"
+    "loadErrorBody": "暂时无法拉取职位数据，请稍后刷新重试。"
   },
   "JobDetail": {
     "apply": "立即申请",
@@ -683,7 +630,6 @@
     "deadline": "截止日期",
     "responsibilities": "核心工作内容",
     "matchScoreTitle": "人岗匹配度智能分析",
-    "matchUnavailable": "匹配分数暂不可用",
     "overallFit": "综合匹配指数",
     "skills": "技能重合度",
     "experience": "年限背景契合",
@@ -700,12 +646,7 @@
     "contactDraft": "使用 AI 润色求职信",
     "contactGenerateDraft": "生成草稿",
     "contactCopy": "复制文本",
-    "contactSend": "发送给雇主",
-    "loginForMatch": "登录后查看匹配分数",
-    "matchLabel": "匹配",
-    "matchLoading": "正在检查匹配…",
-    "matchNeedProfile": "完善资料以获取匹配分数",
-    "matchScore": "您与该职位的匹配分数"
+    "contactSend": "发送给雇主"
   },
   "Pricing": {
     "title": "透明公道的方案，加速您的全球职场跃迁",
@@ -781,12 +722,7 @@
     "errIntentExpired": "当前支付会话已超时，请重新核算。",
     "errRecipient": "收款地址校验异常。",
     "errSubmit": "提交支付凭证时发生错误。",
-    "errWallet": "收款钱包通道维护中。",
-    "cta": "在定价页继续使用加密货币",
-    "free": "免费计划",
-    "perMonth": "/月",
-    "perYear": "/年",
-    "qrAlt": "付款地址的二维码"
+    "errWallet": "收款钱包通道维护中。"
   },
   "CareerRisk": {
     "title": "AI 职业替代风险深度评估",
@@ -976,13 +912,6 @@
     "trustSectionKicker": "信赖与安全",
     "trustSectionTitle": "深受国际专业人士信赖的数字化招聘平台",
     "feedTitle": "实时职位流",
-    "feedEmpty": "当前列表暂无内容展示。",
-    "popularSearches": "热门",
-    "featuredFull": "精选名额已满 — 可加入等候名单",
-    "featuredSpotsLeft": "仅剩 {left}/{total} 个精选名额",
-    "featuredStats": "{featured} 个精选 · {jobs} 个在招职位",
-    "campaignEnds": "{date} 截止",
-    "featureCta": "置顶 · ${price} / 7 天",
-    "postJobCta": "发布职位"
+    "feedEmpty": "当前列表暂无内容展示。"
   }
 }

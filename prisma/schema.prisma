@@ -589,17 +589,3 @@ model OutreachAttempt {
   @@index([createdAt])
   @@index([windowKey])
 }
-
-/// One row per background job. Used as a time-based lease so the payment sweep
-/// can run at most once per interval no matter how many serverless instances
-/// handle requests. Written by src/lib/payment/sweep-scheduler.ts.
-model SweepState {
-  id             String    @id
-  lastStartedAt  DateTime  @default(now())
-  lastFinishedAt DateTime?
-  lastResult     Json?
-  lastError      String?   @db.Text
-  updatedAt      DateTime  @default(now()) @updatedAt
-
-  @@index([lastStartedAt])
-}

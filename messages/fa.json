@@ -26,11 +26,7 @@
     "jobAlerts": "هشدارهای شغلی",
     "help": "راهنما",
     "profile": "پروفایل",
-    "search": "جستجو",
-    "language": "زبان",
-    "postJob": "ثبت آگهی شغلی",
-    "account": "حساب کاربری",
-    "searchJobs": "جستجوی شغل"
+    "search": "جستجو"
   },
   "Home": {
     "eyebrow": "پلتفرم شغلی جهانی",
@@ -136,14 +132,7 @@
     "trustSectionKicker": "بر پایه‌ی داده‌های واقعی",
     "trustSectionTitle": "زیرساخت قابل‌اعتماد، نه شعار.",
     "feedTitle": "جریان زندهٔ فرصت‌های شغلی",
-    "feedEmpty": "موقعیت‌های جدید به‌محض انتشار، همین‌جا نمایش داده می‌شوند.",
-    "popularSearches": "پرطرفدار",
-    "featuredFull": "ظرفیت آگهی‌های ویژه پر شده — لیست انتظار باز است",
-    "featuredSpotsLeft": "تنها {left}/{total} جایگاه ویژه باقی مانده",
-    "featuredStats": "{featured} ویژه · {jobs} شغل فعال",
-    "campaignEnds": "پایان در {date}",
-    "featureCta": "ویژه‌سازی · ${price} / ۷ روز",
-    "postJobCta": "ثبت آگهی شغلی"
+    "feedEmpty": "موقعیت‌های جدید به‌محض انتشار، همین‌جا نمایش داده می‌شوند."
   },
   "Common": {
     "loading": "در حال بارگذاری...",
@@ -194,19 +183,7 @@
     "forbidden": "دسترسی مجاز نیست",
     "status": "وضعیت",
     "print": "چاپ",
-    "copied": "کپی شد",
-    "toggleTheme": "تغییر پوسته",
-    "skipToContent": "پرش به محتوا",
-    "pageNotFound": "صفحه پیدا نشد",
-    "pageNotFoundDesc": "این صفحه وجود ندارد یا جابه‌جا شده است. یکی از بخش‌های پرطرفدار را امتحان کنید:",
-    "copy": "کپی",
-    "errorUnexpected": "خطای غیرمنتظره رخ داد. دوباره تلاش کنید یا به خانه بازگردید.",
-    "planRequired": "این ویژگی به طرح بالاتری نیاز دارد.",
-    "rateLimited": "درخواست‌های بیش از حد. لطفاً صبر کنید و دوباره تلاش کنید.",
-    "serviceUnavailable": "سرویس موقتاً در دسترس نیست. لطفاً کمی بعد دوباره تلاش کنید.",
-    "mainNavigation": "پیمایش اصلی",
-    "relatedSections": "بخش‌های مرتبط",
-    "exploreMore": "بیشتر کاوش کنید"
+    "copied": "کپی شد"
   },
   "ApiErrors": {
     "badRequest": "درخواست نامعتبر بود. لطفاً ورودی‌هایتان را بررسی کنید.",
@@ -263,28 +240,8 @@
       "emailExists": "این ایمیل قبلاً ثبت شده است",
       "generic": "مشکلی پیش آمد",
       "network": "خطای شبکه. لطفاً دوباره تلاش کنید.",
-      "rateLimited": "درخواست‌های بیش از حد. لطفاً کمی بعد دوباره تلاش کنید.",
-      "unauthorized": "برای ادامه وارد شوید."
-    },
-    "sideTitle": "شغل بعدی شما با جستجوی بهتر آغاز می‌شود.",
-    "sidePoint1": "فرصت‌های جهانی از کارفرمایان معتبر، هر روز به‌روزرسانی می‌شود.",
-    "sidePoint2": "امتیاز تطابق هوش مصنوعی، کمک در ساخت رزومه و تحلیل ریسک شغلی.",
-    "sidePoint3": "حقوق شفاف و یک پروفایل برای همه درخواست‌ها.",
-    "sideFooter": "عضویت رایگان. بدون نیاز به کارت بانکی.",
-    "hidePassword": "پنهان کردن رمز عبور",
-    "registeredSuccess": "حساب ساخته شد. برای ادامه وارد شوید.",
-    "sessionExpired": "نشست شما منقضی شد. لطفاً دوباره وارد شوید.",
-    "showPassword": "نمایش رمز عبور",
-    "verifyEmailErrorBody": "پیوند نامعتبر است یا منقضی شده.",
-    "verifyEmailErrorTitle": "تأیید ناموفق",
-    "verifyEmailMissingBody": "این پیوند تأیید پارامترهای لازم را ندارد.",
-    "verifyEmailMissingTitle": "پیوند نامعتبر",
-    "verifyEmailResend": "ارسال دوباره ایمیل تأیید",
-    "verifyEmailResendFailed": "ارسال ایمیل ممکن نشد. لطفاً بعداً تلاش کنید.",
-    "verifyEmailResending": "در حال ارسال…",
-    "verifyEmailResent": "ایمیل تأیید ارسال شد. صندوق ورودی را بررسی کنید.",
-    "verifyEmailSuccessBody": "ایمیل شما با موفقیت تأیید شد.",
-    "verifyEmailSuccessTitle": "ایمیل تأیید شد!"
+      "rateLimited": "درخواست‌های بیش از حد. لطفاً کمی بعد دوباره تلاش کنید."
+    }
   },
   "Contact": {
     "title": "تماس با ما",
@@ -411,12 +368,7 @@
     "errIntentExpired": "این نرخ پرداخت منقضی شده یا قبلاً استفاده شده است. لطفاً یکی جدید بسازید.",
     "errRecipient": "آدرس کیف‌پول تغییر کرده است. لطفاً نرخ جدیدی بسازید.",
     "errSubmit": "ارسال ناموفق بود. لطفاً دوباره تلاش کنید.",
-    "errWallet": "این رمزارز برای پرداخت‌ها تنظیم نشده است.",
-    "cta": "ادامه با رمزارز در صفحه قیمت‌ها",
-    "free": "طرح رایگان",
-    "perMonth": "/ماه",
-    "perYear": "/سال",
-    "qrAlt": "کد QR آدرس پرداخت"
+    "errWallet": "این رمزارز برای پرداخت‌ها تنظیم نشده است."
   },
   "Dashboard": {
     "navDashboard": "داشبورد",
@@ -454,12 +406,7 @@
     "remote": "دورکاری",
     "noJobs": "هنوز شغلی برای نمایش نیست.",
     "recent": "اخیر",
-    "stats": "آمار",
-    "completeProfile": "تکمیل نمایه ←",
-    "matchNeedProfile": "برای فعال‌شدن امتیاز تطابق، مهارت یا معرفی به نمایه خود اضافه کنید.",
-    "matchScore": "امتیاز تطابق",
-    "matchedJobs": "بهترین تطابق‌ها برای شما",
-    "noMatches": "هنوز تطابق قوی‌ای نیست. مهارت‌های خود را به‌روز کنید یا همه مشاغل را ببینید."
+    "stats": "آمار"
   },
   "Settings": {
     "title": "تنظیمات",
@@ -622,15 +569,7 @@
     "pending": "در انتظار",
     "salaryNA": "حقوق مشخص نشده",
     "loadErrorTitle": "بارگذاری شغل‌ها ممکن نبود",
-    "loadErrorBody": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.",
-    "kicker": "مسیرهای شغلی جهانی",
-    "resultsCount": "{count} شغل",
-    "pagination": "صفحه‌بندی",
-    "showResults": "نمایش نتایج",
-    "featured": "ویژه",
-    "allCategories": "همه دسته‌ها",
-    "rateLimitBody": "لطفاً کمی صبر کنید و دوباره تلاش کنید.",
-    "rateLimitTitle": "درخواست‌های بیش از حد"
+    "loadErrorBody": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
   },
   "Applications": {
     "title": "درخواست‌های من",
@@ -670,8 +609,7 @@
     "youPrefix": "شما: ",
     "messagePlaceholder": "پیام بنویسید...",
     "startConversation": "شروع گفتگو",
-    "selectConversation": "یک گفتگو را انتخاب کنید",
-    "send": "ارسال پیام"
+    "selectConversation": "یک گفتگو را انتخاب کنید"
   },
   "Notifications": {
     "title": "اعلان‌ها",
@@ -848,7 +786,6 @@
     "deadline": "مهلت",
     "responsibilities": "مسئولیت‌ها",
     "matchScoreTitle": "امتیاز تطبیق شما",
-    "matchUnavailable": "امتیاز تطبیق در دسترس نیست",
     "overallFit": "تناسب کلی",
     "skills": "مهارت‌ها",
     "experience": "تجربه",
@@ -865,12 +802,7 @@
     "contactDraft": "پیش‌نویس",
     "contactGenerateDraft": "ساخت پیش‌نویس",
     "contactCopy": "کپی",
-    "contactSend": "ارسال",
-    "loginForMatch": "برای دیدن امتیاز تطابق وارد شوید",
-    "matchLabel": "تطابق",
-    "matchLoading": "در حال بررسی تطابق…",
-    "matchNeedProfile": "برای امتیاز تطابق نمایه را کامل کنید",
-    "matchScore": "امتیاز تطابق شما برای این شغل"
+    "contactSend": "ارسال"
   },
   "Companies": {
     "title": "شرکت‌ها",
@@ -881,9 +813,7 @@
     "viewProfile": "مشاهده‌ی پروفایل",
     "location": "مکان",
     "website": "وب‌سایت",
-    "pending": "شرکت‌های در انتظار",
-    "unknown": "شرکت ناشناس",
-    "emptyBody": "پس از ایجاد نمایه توسط کارفرمایان، شرکت‌ها در اینجا نمایش داده می‌شوند."
+    "pending": "شرکت‌های در انتظار"
   },
   "AuthExtra": {
     "forgotTitle": "فراموشی گذرواژه",
@@ -909,8 +839,7 @@
     "browseJobs": "مرور همه‌ی شغل‌ها",
     "activeJobs": "شغل فعال",
     "viewAllJobs": "مشاهده‌ی همه‌ی شغل‌ها ←",
-    "browseLocations": "مرور مکان‌ها ←",
-    "alphabet": "الفبا"
+    "browseLocations": "مرور مکان‌ها ←"
   },
   "CategoryNames": {
     "accounting": "حسابداری",

@@ -79,38 +79,38 @@ export default function MyApplicationsPage() {
       pending: {
         label: t("Applications.statusPending", "Pending"),
         icon: <Clock className="w-3.5 h-3.5" />,
-        bg: "bg-[var(--warning-soft)] border-[var(--warning)]",
-        color: "text-[var(--warning)]",
+        bg: "bg-amber-500/10 border-amber-500/20",
+        color: "text-amber-400",
       },
       applied: {
         label: t("Applications.statusPending", "Pending"),
         icon: <Clock className="w-3.5 h-3.5" />,
-        bg: "bg-[var(--warning-soft)] border-[var(--warning)]",
-        color: "text-[var(--warning)]",
+        bg: "bg-amber-500/10 border-amber-500/20",
+        color: "text-amber-400",
       },
       viewed: {
         label: t("Applications.statusViewed", "Viewed"),
         icon: <Eye className="w-3.5 h-3.5" />,
-        bg: "bg-[var(--info-soft)] border-[var(--info)]",
-        color: "text-[var(--info)]",
+        bg: "bg-blue-500/10 border-blue-500/20",
+        color: "text-blue-400",
       },
       interview: {
         label: t("Applications.statusInterview", "Interview"),
         icon: <Users className="w-3.5 h-3.5" />,
-        bg: "bg-[var(--brand-primary-soft)] border-[var(--border)]",
-        color: "text-[var(--brand-primary)]",
+        bg: "bg-cyan-500/10 border-cyan-500/20",
+        color: "text-cyan-400",
       },
       rejected: {
         label: t("Applications.statusRejected", "Rejected"),
         icon: <XCircle className="w-3.5 h-3.5" />,
-        bg: "bg-[var(--error-soft)] border-[var(--error)]",
-        color: "text-[var(--error)]",
+        bg: "bg-red-500/10 border-red-500/20",
+        color: "text-red-400",
       },
       hired: {
         label: t("Applications.statusHired", "Hired"),
         icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-        bg: "bg-[var(--success-soft)] border-[var(--success)]",
-        color: "text-[var(--success)]",
+        bg: "bg-emerald-500/10 border-emerald-500/20",
+        color: "text-emerald-400",
       },
     };
     return statusMap[status] || statusMap.pending;
@@ -148,9 +148,9 @@ export default function MyApplicationsPage() {
 
   if (loading) {
     return (
-      <div className="gjm-page flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
-      </div>
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      </main>
     );
   }
 
@@ -161,41 +161,41 @@ export default function MyApplicationsPage() {
   });
 
   return (
-    <div className="gjm-page px-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("Common.back", "Back to Dashboard")}
         </Link>
 
         <div className="flex items-center gap-3 mb-8">
-          <Briefcase className="w-7 h-7 text-[var(--brand-primary)]" />
+          <Briefcase className="w-7 h-7 text-cyan-400" />
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+            <h1 className="text-2xl font-bold text-white">
               {t("Applications.title", "My Applications")}
             </h1>
-            <p className="text-[var(--text-muted)] text-sm">{countLabel}</p>
+            <p className="text-slate-400 text-sm">{countLabel}</p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
             {error}
           </div>
         )}
 
         {applications.length === 0 && !error ? (
-          <div className="glass rounded-2xl p-12 text-center border border-[var(--border)]">
-            <Briefcase className="w-12 h-12 text-[var(--text-subtle)] mx-auto mb-4" />
-            <p className="text-[var(--text-muted)] mb-4">
+          <div className="glass rounded-2xl p-12 text-center border border-white/10">
+            <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 mb-4">
               {t("Applications.empty", "No applications yet")}
             </p>
             <Link
               href="/jobs"
-              className="inline-flex px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-[var(--text-on-brand)] text-sm font-semibold"
+              className="inline-flex px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-semibold"
             >
               {t("Applications.browseJobs", "Browse Jobs")}
             </Link>
@@ -223,26 +223,26 @@ export default function MyApplicationsPage() {
               return (
                 <div
                   key={app.id}
-                  className="glass rounded-2xl p-5 border border-[var(--border)]"
+                  className="glass rounded-2xl p-5 border border-white/10"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="min-w-0">
                       {app.job ? (
                         <Link
                           href={`/jobs/${app.job.id}`}
-                          className="text-[var(--text-primary)] font-semibold hover:text-[var(--brand-primary)] transition-colors"
+                          className="text-white font-semibold hover:text-cyan-300 transition-colors"
                         >
                           {app.job.title}
                         </Link>
                       ) : (
-                        <span className="text-[var(--text-primary)] font-semibold">
+                        <span className="text-white font-semibold">
                           {t(
                             "Applications.jobUnavailable",
                             "Job unavailable",
                           )}
                         </span>
                       )}
-                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-[var(--text-muted)]">
+                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
                         {app.job?.company?.name && (
                           <span className="flex items-center gap-1">
                             <Building2 className="w-3 h-3" />
@@ -257,7 +257,7 @@ export default function MyApplicationsPage() {
                         )}
                         {salary && <span>{salary}</span>}
                       </div>
-                      <p className="text-[var(--text-subtle)] text-xs mt-2">
+                      <p className="text-slate-600 text-xs mt-2">
                         {appliedText}
                       </p>
                     </div>
@@ -275,6 +275,6 @@ export default function MyApplicationsPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

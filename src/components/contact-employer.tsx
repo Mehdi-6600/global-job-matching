@@ -113,18 +113,18 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-sm text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-200 hover:bg-white/10 transition-colors"
       >
-        <Mail className="w-4 h-4 text-[var(--brand-primary)]" />
+        <Mail className="w-4 h-4 text-cyan-400" />
         {t("JobDetail.contactEmployer", "Contact employer")}
       </button>
 
       {open && (
-        <div className="mt-4 glass rounded-2xl border border-[var(--border)] p-5 space-y-4">
+        <div className="mt-4 glass rounded-2xl border border-white/10 p-5 space-y-4">
           <div>
             <label
               htmlFor="contact-subject"
-              className="block text-xs text-[var(--text-muted)] mb-1.5"
+              className="block text-xs text-slate-400 mb-1.5"
             >
               {t("JobDetail.contactSubject", "Subject (optional)")}
             </label>
@@ -132,7 +132,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               id="contact-subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50"
               placeholder={jobTitle}
             />
           </div>
@@ -140,7 +140,7 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
           <div>
             <label
               htmlFor="contact-message"
-              className="block text-xs text-[var(--text-muted)] mb-1.5"
+              className="block text-xs text-slate-400 mb-1.5"
             >
               {t("JobDetail.contactMessage", "Message")}
             </label>
@@ -149,34 +149,34 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
-              className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] resize-y"
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50 resize-y"
             />
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 text-sm text-[var(--error)]">
+            <div className="flex items-start gap-2 text-sm text-red-400">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           )}
           {success && (
-            <div className="flex items-start gap-2 text-sm text-[var(--success)]">
+            <div className="flex items-start gap-2 text-sm text-emerald-400">
               <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{success}</span>
             </div>
           )}
 
           {draft && (
-            <div className="rounded-xl bg-black/20 border border-[var(--border)] p-3">
+            <div className="rounded-xl bg-black/20 border border-white/10 p-3">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                <span className="text-xs text-slate-400 flex items-center gap-1">
                   <FileText className="w-3.5 h-3.5" />
                   {t("JobDetail.contactDraft", "Draft")}
                 </span>
                 <button
                   type="button"
                   onClick={copyDraft}
-                  className="text-xs text-[var(--brand-primary)] inline-flex items-center gap-1"
+                  className="text-xs text-cyan-400 inline-flex items-center gap-1"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   {copied
@@ -184,13 +184,13 @@ export function ContactEmployer({ jobId, jobTitle }: Props) {
                     : t("JobDetail.contactCopy", "Copy")}
                 </button>
               </div>
-              <pre className="text-xs text-[var(--text-body)] whitespace-pre-wrap font-sans">
+              <pre className="text-xs text-slate-300 whitespace-pre-wrap font-sans">
                 {draft}
               </pre>
             </div>
           )}
 
-          <label className="flex items-start gap-2 text-xs text-[var(--text-muted)] cursor-pointer">
+          <label className="flex items-start gap-2 text-xs text-slate-400 cursor-pointer">
             <input
               type="checkbox"
               checked={confirmSend}

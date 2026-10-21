@@ -167,15 +167,15 @@ function formatSalary(
 }
 
 function scoreColor(score: number): string {
-  if (score >= 75) return "text-[var(--success)]";
-  if (score >= 50) return "text-[var(--warning)]";
-  return "text-[var(--text-muted)]";
+  if (score >= 75) return "text-emerald-400";
+  if (score >= 50) return "text-amber-400";
+  return "text-slate-400";
 }
 
 function scoreBar(score: number): string {
-  if (score >= 75) return "bg-[var(--success)]";
-  if (score >= 50) return "bg-[var(--warning)]";
-  return "bg-[var(--surface-3)]";
+  if (score >= 75) return "bg-emerald-500";
+  if (score >= 50) return "bg-amber-500";
+  return "bg-slate-500";
 }
 
 export default function JobDetailClient({
@@ -206,7 +206,7 @@ export default function JobDetailClient({
   } | null>(null);
 
   const [match, setMatch] = useState<MatchData | null>(null);
-  const [matchLoading, setMatchLoading] = useState(true);
+  const [matchLoading, setMatchLoading] = useState(false);
   const [matchMessage, setMatchMessage] = useState("");
 
   const timeAgo = useCallback(
@@ -382,7 +382,7 @@ export default function JobDetailClient({
           } else {
             setMatch(null);
             setMatchMessage(
-              t("JobDetail.matchUnavailable", "Match score unavailable"),
+              t("Common.error", "Could not load match score"),
             );
           }
         } else {
@@ -399,7 +399,7 @@ export default function JobDetailClient({
       .catch(() => {
         if (!cancelled) {
           setMatch(null);
-          setMatchMessage(t("JobDetail.matchUnavailable", "Match score unavailable"));
+          setMatchMessage(t("Common.error", "Could not load match score"));
         }
       })
       .finally(() => {
@@ -517,34 +517,34 @@ export default function JobDetailClient({
 
   if (loading) {
     return (
-      <div className="gjm-page flex items-center justify-center px-4">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
         <div className="text-center">
-          <Loader2 className="w-10 h-10 text-[var(--brand-primary)] animate-spin mx-auto mb-4" />
-          <p className="text-[var(--text-muted)]">
+          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">
             {t("Common.loading", "Loading...")}
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (error || !job) {
     return (
-      <div className="gjm-page flex items-center justify-center px-4">
-        <div className="text-center glass rounded-2xl p-8 border border-[var(--border)] max-w-sm">
-          <AlertCircle className="w-12 h-12 text-[var(--error)] mx-auto mb-4" />
-          <p className="text-[var(--error)] font-medium mb-4">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-24 pb-16 flex items-center justify-center px-4">
+        <div className="text-center glass rounded-2xl p-8 border border-white/10 max-w-sm">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-400 font-medium mb-4">
             {error || t("JobDetail.notFound", "Job not found")}
           </p>
           <Link
             href="/jobs"
-            className="inline-flex items-center gap-2 bg-[var(--brand-primary)] text-[var(--text-on-brand)] px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+            className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
             {t("JobDetail.backToJobs", "Back to Jobs")}
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -552,11 +552,11 @@ export default function JobDetailClient({
     job.company?.name || t("Companies.unknown", "Unknown company");
 
   return (
-    <div className="gjm-page">
-      <div className="gjm-container max-w-5xl">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
         <Link
           href="/jobs"
-          className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t("JobDetail.backToJobs", "Back to all jobs")}
@@ -574,7 +574,7 @@ export default function JobDetailClient({
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0 space-y-6">
-            <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                 <div className="flex items-start gap-4">
                   <CompanyLogo
@@ -584,19 +584,19 @@ export default function JobDetailClient({
                     priority
                   />
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] mb-1">
+                    <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">
                       {job.title}
                     </h1>
                     <div className="mb-2">
                       <JobMatchBadge jobId={job.id} />
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
                       <span className="flex items-center gap-1">
                         <Building2 className="w-3.5 h-3.5" />
                         {companyName}
                       </span>
                       {job.category && (
-                        <span className="px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-xs">
+                        <span className="px-2 py-0.5 rounded-full bg-white/5 text-xs">
                           {job.category.name}
                         </span>
                       )}
@@ -609,15 +609,10 @@ export default function JobDetailClient({
                   disabled={saveLoading || !savedInitialized}
                   className={`p-2.5 rounded-xl border transition-all disabled:opacity-60 ${
                     saved
-                      ? "bg-[var(--brand-accent-soft)] border-[var(--brand-accent)] text-[var(--brand-accent)]"
-                      : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      ? "bg-pink-500/10 border-pink-500/30 text-pink-400"
+                      : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
                   }`}
                   title={
-                    saved
-                      ? t("JobDetail.unsave", "Unsave")
-                      : t("JobDetail.save", "Save job")
-                  }
-                  aria-label={
                     saved
                       ? t("JobDetail.unsave", "Unsave")
                       : t("JobDetail.save", "Save job")
@@ -633,23 +628,23 @@ export default function JobDetailClient({
                 </button>
               </div>
 
-              <div className="flex flex-wrap gap-3 text-sm text-[var(--text-body)] mb-6">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-2)]">
-                  <MapPin className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+              <div className="flex flex-wrap gap-3 text-sm text-slate-300 mb-6">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <MapPin className="w-3.5 h-3.5 text-cyan-400" />
                   {job.location}
                 </span>
                 {job.remote && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--success-soft)] text-[var(--success)]">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300">
                     <Wifi className="w-3.5 h-3.5" />
                     {t("JobDetail.remote", "Remote")}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-2)]">
-                  <Briefcase className="w-3.5 h-3.5 text-[var(--brand-accent)]" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
                   {job.type}
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-2)]">
-                  <DollarSign className="w-3.5 h-3.5 text-[var(--warning)]" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <DollarSign className="w-3.5 h-3.5 text-amber-400" />
                   {formatSalary(
                     t,
                     locale,
@@ -658,13 +653,13 @@ export default function JobDetailClient({
                     job.salaryMax,
                   )}
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-2)]">
-                  <Clock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
                   {timeAgo(job.createdAt)}
                 </span>
                 {job.deadline && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-2)]">
-                    <Calendar className="w-3.5 h-3.5 text-[var(--error)]" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5">
+                    <Calendar className="w-3.5 h-3.5 text-rose-400" />
                     {t("JobDetail.deadline", "Deadline")}{" "}
                     {new Date(job.deadline).toLocaleDateString(locale)}
                   </span>
@@ -685,7 +680,7 @@ export default function JobDetailClient({
                     href={job.company.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-body)] text-sm hover:bg-[var(--surface-3)]"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10"
                   >
                     <Globe className="w-4 h-4" />
                     {t("Companies.website", "Website")}
@@ -697,12 +692,12 @@ export default function JobDetailClient({
                   RemoteOK's API ToS requires a follow link (no rel="nofollow")
                   plus naming the source. */}
               {job.attribution && job.externalUrl && (
-                <p className="text-xs text-[var(--text-muted)] mt-3">
+                <p className="text-xs text-slate-500 mt-3">
                   <a
                     href={job.externalUrl}
                     target="_blank"
                     rel="noopener"
-                    className="inline-flex items-center gap-1 underline decoration-dotted hover:text-[var(--text-body)] transition-colors"
+                    className="inline-flex items-center gap-1 underline decoration-dotted hover:text-slate-300 transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" />
                     {job.attribution}
@@ -711,14 +706,14 @@ export default function JobDetailClient({
               )}
             </div>
 
-            <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
-              <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <Target className="w-5 h-5 text-[var(--brand-primary)]" />
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-cyan-400" />
                 {t("JobDetail.matchScoreTitle", "Your match score")}
               </h2>
 
               {matchLoading ? (
-                <div className="flex items-center gap-2 text-[var(--text-muted)] text-sm">
+                <div className="flex items-center gap-2 text-slate-400 text-sm">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   {t("Common.loading", "Loading...")}
                 </div>
@@ -732,7 +727,7 @@ export default function JobDetailClient({
                     >
                       {match.score}%
                     </span>
-                    <span className="text-[var(--text-muted)] text-sm pb-1">
+                    <span className="text-slate-400 text-sm pb-1">
                       {t("JobDetail.overallFit", "overall fit")}
                     </span>
                   </div>
@@ -753,11 +748,11 @@ export default function JobDetailClient({
                       ] as const
                     ).map(([label, value]) => (
                       <div key={label}>
-                        <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
+                        <div className="flex justify-between text-xs text-slate-400 mb-1">
                           <span>{label}</span>
                           <span>{value}%</span>
                         </div>
-                        <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
                           <div
                             className={`h-full rounded-full ${scoreBar(value)}`}
                             style={{ width: `${value}%` }}
@@ -772,9 +767,9 @@ export default function JobDetailClient({
                       {match.reasons.map((r: string) => (
                         <li
                           key={r}
-                          className="text-sm text-[var(--text-body)] flex items-start gap-2"
+                          className="text-sm text-slate-300 flex items-start gap-2"
                         >
-                          <CheckCircle2 className="w-4 h-4 text-[var(--brand-primary)] shrink-0 mt-0.5" />
+                          <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                           {r}
                         </li>
                       ))}
@@ -782,15 +777,15 @@ export default function JobDetailClient({
                   )}
                 </div>
               ) : (
-                <div className="text-sm text-[var(--text-muted)] space-y-3">
+                <div className="text-sm text-slate-400 space-y-3">
                   <p>
                     {matchMessage ||
-                      t("JobDetail.matchUnavailable", "Match score unavailable")}
+                      t("Common.error", "Match score unavailable.")}
                   </p>
                   {(matchMessage || "").toLowerCase().includes("sign in") && (
                     <Link
                       href={`/login?callbackUrl=/jobs/${id}`}
-                      className="inline-flex text-[var(--brand-primary)] hover:text-[var(--brand-primary)] font-medium"
+                      className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
                     >
                       {t("Common.signIn", "Sign in")}
                     </Link>
@@ -798,7 +793,7 @@ export default function JobDetailClient({
                   {(matchMessage || "").toLowerCase().includes("profile") && (
                     <Link
                       href="/profile"
-                      className="inline-flex text-[var(--brand-primary)] hover:text-[var(--brand-primary)] font-medium"
+                      className="inline-flex text-cyan-400 hover:text-cyan-300 font-medium"
                     >
                       {t("Nav.settings", "Settings")}
                     </Link>
@@ -807,30 +802,30 @@ export default function JobDetailClient({
               )}
             </div>
 
-            <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
-              <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-[var(--brand-primary)]" />
+            <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-cyan-400" />
                 {t("JobDetail.description", "Description")}
               </h2>
-              <div className="text-[var(--text-body)] text-sm sm:text-base leading-relaxed whitespace-pre-line">
+              <div className="text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-line">
                 {job.description}
               </div>
             </div>
 
             {job.requirements.length > 0 && (
-              <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
-                <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-[var(--brand-accent)]" />
+              <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-purple-400" />
                   {t("JobDetail.requirements", "Requirements")}
                 </h2>
                 <ul className="space-y-3">
                   {job.requirements.map((req, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-3 text-[var(--text-body)] text-sm sm:text-base"
+                      className="flex items-start gap-3 text-slate-300 text-sm sm:text-base"
                     >
-                      <span className="w-5 h-5 rounded-full bg-[var(--brand-accent-soft)] border border-[var(--brand-accent)] flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-[var(--brand-accent)] text-xs font-bold">
+                      <span className="w-5 h-5 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-purple-400 text-xs font-bold">
                           {i + 1}
                         </span>
                       </span>
@@ -842,19 +837,19 @@ export default function JobDetailClient({
             )}
 
             {job.responsibilities.length > 0 && (
-              <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
-                <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-[var(--success)]" />
+              <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-400" />
                   {t("JobDetail.responsibilities", "Responsibilities")}
                 </h2>
                 <ul className="space-y-3">
                   {job.responsibilities.map((resp, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-3 text-[var(--text-body)] text-sm sm:text-base"
+                      className="flex items-start gap-3 text-slate-300 text-sm sm:text-base"
                     >
-                      <span className="w-5 h-5 rounded-full bg-[var(--success-soft)] border border-[var(--success)] flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-[var(--success)] text-xs font-bold">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-emerald-400 text-xs font-bold">
                           {i + 1}
                         </span>
                       </span>
@@ -866,17 +861,17 @@ export default function JobDetailClient({
             )}
 
             {job.benefits.length > 0 && (
-              <div className="glass rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
-                <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">
+              <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+                <h2 className="text-lg font-bold text-white mb-4">
                   {t("JobDetail.benefits", "Benefits")}
                 </h2>
                 <ul className="grid sm:grid-cols-2 gap-2">
                   {job.benefits.map((b, i) => (
                     <li
                       key={i}
-                      className="text-sm text-[var(--text-body)] flex items-center gap-2"
+                      className="text-sm text-slate-300 flex items-center gap-2"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-[var(--brand-primary)] shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
                       {b}
                     </li>
                   ))}
@@ -885,9 +880,9 @@ export default function JobDetailClient({
             )}
           </div>
 
-          <aside className="w-full shrink-0 space-y-4 lg:sticky lg:top-24 lg:w-80">
-            <div className="glass rounded-2xl p-5 border border-[var(--border)] space-y-3">
-              <p className="text-xs text-[var(--text-muted)]">
+          <aside className="w-full lg:w-80 shrink-0 space-y-4">
+            <div className="glass rounded-2xl p-5 border border-white/10 space-y-3">
+              <p className="text-xs text-slate-500">
                 {t("JobDetail.stats", "{views} views · {applicants} applicants")
                   .split("{views}")
                   .join(String(job.viewCount))
@@ -899,12 +894,12 @@ export default function JobDetailClient({
               </DynamicButton>
               {/* Sidebar attribution — appears only for aggregated jobs. */}
               {job.attribution && job.externalUrl && (
-                <p className="text-[11px] text-[var(--text-muted)]">
+                <p className="text-[11px] text-slate-500">
                   <a
                     href={job.externalUrl}
                     target="_blank"
                     rel="noopener"
-                    className="underline decoration-dotted hover:text-[var(--text-body)] transition-colors"
+                    className="underline decoration-dotted hover:text-slate-300 transition-colors"
                   >
                     {job.attribution}
                   </a>
@@ -924,7 +919,7 @@ export default function JobDetailClient({
 
       {applyOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="glass w-full max-w-md rounded-2xl p-6 border border-[var(--border)] relative">
+          <div className="glass w-full max-w-md rounded-2xl p-6 border border-white/10 relative">
             <button
               type="button"
               onClick={() => {
@@ -933,7 +928,7 @@ export default function JobDetailClient({
                 setApplySuccess(false);
                 setPlanLimit(null);
               }}
-              className="absolute top-4 end-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
               aria-label={t("Common.close", "Close")}
             >
               <X className="w-5 h-5" />
@@ -964,10 +959,10 @@ export default function JobDetailClient({
               </div>
             ) : (
               <>
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1 pe-8">
+                <h3 className="text-lg font-semibold text-white mb-1 pr-8">
                   {t("JobDetail.apply", "Apply now")} — {job.title}
                 </h3>
-                <p className="text-[var(--text-muted)] text-sm mb-4">{companyName}</p>
+                <p className="text-slate-400 text-sm mb-4">{companyName}</p>
 
                 {planLimit && (
                   <div className="mb-4">
@@ -980,7 +975,7 @@ export default function JobDetailClient({
                 )}
 
                 {applyError && (
-                  <div className="mb-4 p-3 rounded-xl bg-[var(--error-soft)] border border-[var(--error)] text-[var(--error)] text-sm">
+                  <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                     {applyError}
                   </div>
                 )}
@@ -989,7 +984,7 @@ export default function JobDetailClient({
                   <div>
                     <label
                       htmlFor="apply-coverletter"
-                      className="block text-sm font-medium text-[var(--text-body)] mb-2"
+                      className="block text-sm font-medium text-slate-300 mb-2"
                     >
                       {t("JobDetail.coverLetterLabel", "Cover Letter (Optional)")}
                     </label>
@@ -1002,7 +997,7 @@ export default function JobDetailClient({
                         "Tell us why you are a great fit for this role...",
                       )}
                       rows={5}
-                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm outline-none focus:border-[var(--brand-primary)] transition-all placeholder:text-[var(--text-subtle)] resize-none"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-600 resize-none"
                     />
                   </div>
 
@@ -1032,6 +1027,6 @@ export default function JobDetailClient({
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
