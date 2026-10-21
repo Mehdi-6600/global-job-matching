@@ -60,35 +60,51 @@ function LoginForm() {
     setNotice("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-      callbackUrl,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+        callbackUrl,
+      });
 
-    setLoading(false);
-
-    if (result?.error) {
-      const code = String(result.error).toLowerCase();
-      if (code.includes("rate_limited") || code.includes("ratelimit")) {
-        setError(
-          t(
-            "Auth.errors.rateLimited",
-            "Too many login attempts. Please wait a minute and try again.",
-          ),
-        );
-      } else {
-        setError(
-          t("Auth.errors.invalidCredentials", "Invalid email or password"),
-        );
+      if (result?.error) {
+        const code = String(result.error).toLowerCase();
+        if (code.includes("rate_limited") || code.includes("ratelimit")) {
+          setError(
+            t(
+              "Auth.errors.rateLimited",
+              "Too many login attempts. Please wait a minute and try again.",
+            ),
+          );
+        } else {
+          setError(
+            t("Auth.errors.invalidCredentials", "Invalid email or password"),
+          );
+        }
+        return;
       }
-      return;
-    }
 
-    if (result?.ok) {
-      router.push(callbackUrl);
-      router.refresh();
+      if (result?.ok) {
+        router.push(callbackUrl);
+        router.refresh();
+        return;
+      }
+
+      // Auth.js can return an unsuccessful response without an error code
+      // (for example, when the auth endpoint responds unexpectedly). Never
+      // leave the user on the form without feedback in that case.
+      setError(
+        t("Auth.errors.network", "Network error. Please try again."),
+      );
+    } catch {
+      // A failed fetch used to leave `loading` true forever, making the login
+      // page look frozen. Show a retryable error and always release the form.
+      setError(
+        t("Auth.errors.network", "Network error. Please try again."),
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
