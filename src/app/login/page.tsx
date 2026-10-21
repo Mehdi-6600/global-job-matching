@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { safeCallbackOr } from "@/lib/url-safety";
+import { classifyCredentialSignInError } from "@/lib/auth/login-error";
 
 function LoginForm() {
   const router = useRouter();
@@ -57,35 +58,47 @@ function LoginForm() {
     setNotice("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-      callbackUrl,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+        callbackUrl,
+      });
 
-    setLoading(false);
-
-    if (result?.error) {
-      const code = String(result.error).toLowerCase();
-      if (code.includes("rate_limited") || code.includes("ratelimit")) {
-        setError(
-          t(
-            "Auth.errors.rateLimited",
-            "Too many login attempts. Please wait a minute and try again.",
-          ),
-        );
-      } else {
-        setError(
-          t("Auth.errors.invalidCredentials", "Invalid email or password"),
-        );
+      if (result?.error) {
+        const errorKey = classifyCredentialSignInError(result.error);
+        if (errorKey === "rateLimited") {
+          setError(
+            t(
+              "Auth.errors.rateLimited",
+              "Too many login attempts. Please wait a minute and try again.",
+            ),
+          );
+        } else if (errorKey === "invalidCredentials") {
+          setError(
+            t("Auth.errors.invalidCredentials", "Invalid email or password"),
+          );
+        } else {
+          setError(t("Auth.errors.generic", "Something went wrong"));
+        }
+        return;
       }
-      return;
-    }
 
-    if (result?.ok) {
-      router.push(callbackUrl);
-      router.refresh();
+      if (result?.ok) {
+        router.push(callbackUrl);
+        router.refresh();
+      } else {
+        setError(t("Auth.errors.generic", "Something went wrong"));
+      }
+    } catch {
+      // Keep infrastructure failures (for example, an unreachable database)
+      // out of the invalid-credentials path and always release the submit UI.
+      setError(
+        t("Auth.errors.network", "Network error. Please try again."),
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
