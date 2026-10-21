@@ -1,5 +1,8 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+import { resolveAuthEnvironment } from "@/lib/auth/environment";
+
+const authEnvironment = resolveAuthEnvironment();
 
 /**
  * RESEND_FROM_EMAIL accepts plain emails and "Name <email@domain>" forms.
@@ -19,10 +22,8 @@ export const env = createEnv({
     AUTH_URL: z.string().url().optional(),
 
     /**
-     * Google OAuth.
-     * Both must be set together, or both must be unset.
-     * If unset, the Google provider is removed from Auth.js
-     * (and the login page hides the Google button — see LoginPage).
+     * Optional Google OAuth credentials. Auth.js enables this provider only
+     * when both values are present; a partial config must not break email login.
      */
     GOOGLE_CLIENT_ID: optionalNonEmpty,
     GOOGLE_CLIENT_SECRET: optionalNonEmpty,
@@ -35,7 +36,9 @@ export const env = createEnv({
     KV_REST_API_READ_ONLY_TOKEN: z.string().optional(),
 
     OWNER_EMAIL: z.string().email().optional(),
-    SYNC_SECRET: z.string().min(32),
+    // Only ingestion endpoints use this value. Missing it must not prevent
+    // authentication routes from loading; those endpoints fail closed without it.
+    SYNC_SECRET: z.string().min(32).optional(),
 
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENROUTER_API_KEY: z.string().min(1).optional(),
@@ -60,8 +63,8 @@ export const env = createEnv({
 
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
-    AUTH_SECRET: process.env.AUTH_SECRET,
-    AUTH_URL: process.env.AUTH_URL,
+    AUTH_SECRET: authEnvironment.authSecret,
+    AUTH_URL: authEnvironment.authUrl,
 
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
@@ -82,7 +85,7 @@ export const env = createEnv({
     CRON_SECRET: process.env.CRON_SECRET,
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
 
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_APP_URL: authEnvironment.appUrl,
     NEXT_PUBLIC_GOOGLE_AUTH_ENABLED:
       process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED,
   },
@@ -109,24 +112,13 @@ export const env = createEnv({
 });
 
 /* ------------------------------------------------------------------ */
-/* Cross-field checks (run once at import time)                        */
+/* Optional Google OAuth configuration                                */
 /* ------------------------------------------------------------------ */
 
-const hasGoogleId = Boolean(env.GOOGLE_CLIENT_ID);
-const hasGoogleSecret = Boolean(env.GOOGLE_CLIENT_SECRET);
+const hasGoogleId = Boolean(env.GOOGLE_CLIENT_ID?.trim());
+const hasGoogleSecret = Boolean(env.GOOGLE_CLIENT_SECRET?.trim());
 
-if (hasGoogleId !== hasGoogleSecret) {
-  throw new Error(
-    "❌ GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together, or both unset."
-  );
-}
-
-/**
- * If secrets are present, require the public flag to be "1" so the UI
- * shows the button. If secrets are missing, force the flag to "0".
- * We never throw here for the mismatch — we just compute the effective
- * value and let auth.ts hide the provider. The UI reads the public flag.
- */
+/** An incomplete Google config disables only Google sign-in, not all auth. */
 export const googleAuthConfigured = hasGoogleId && hasGoogleSecret;
 
 export function isGoogleLoginEnabled(): boolean {

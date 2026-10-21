@@ -52,9 +52,13 @@ export async function GET() {
 
   const config = {
     databaseUrl: envPresent("DATABASE_URL"),
-    authSecret: envPresent("AUTH_SECRET"),
+    authSecret: envPresent("AUTH_SECRET") || envPresent("NEXTAUTH_SECRET"),
     appUrl:
-      envPresent("NEXT_PUBLIC_APP_URL") || envPresent("NEXT_PUBLIC_SITE_URL"),
+      envPresent("NEXT_PUBLIC_APP_URL") ||
+      envPresent("NEXT_PUBLIC_SITE_URL") ||
+      envPresent("AUTH_URL") ||
+      envPresent("NEXTAUTH_URL") ||
+      envPresent("VERCEL_URL"),
     ownerEmail: envPresent("OWNER_EMAIL"),
     resend: envPresent("RESEND_API_KEY"),
     cronSecret: envPresent("CRON_SECRET"),

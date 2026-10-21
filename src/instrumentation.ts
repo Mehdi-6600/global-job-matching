@@ -16,9 +16,14 @@
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  const missing = ["DATABASE_URL", "AUTH_SECRET"].filter(
-    (name) => !process.env[name]?.trim(),
-  );
+  const missing = [
+    ...(!process.env.DATABASE_URL?.trim() ? ["DATABASE_URL"] : []),
+    ...(!(
+      process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim()
+    )
+      ? ["AUTH_SECRET (or NEXTAUTH_SECRET)"]
+      : []),
+  ];
   if (missing.length > 0) {
     console.error(
       `[startup] missing required environment variables: ${missing.join(", ")}`,
